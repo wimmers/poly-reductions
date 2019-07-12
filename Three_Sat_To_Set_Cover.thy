@@ -1,6 +1,8 @@
 theory Three_Sat_To_Set_Cover
-  imports Main
+  imports Main "HOL-ex.Sketch_and_Explore"
 begin
+
+subsection \<open>Preliminaries\<close>
 
 datatype 'a lit = Pos 'a | Neg 'a
 
@@ -51,6 +53,11 @@ definition
     if ugraph E \<and> k \<le> card (\<Union> E) then ({{e. e \<in> E \<and> v \<in> e} | v. v \<in> \<Union>E}, k)
     else ({{undefined}}, 0)"
 
+lemma is_reduction_trans:
+  assumes "is_reduction f A B" "is_reduction g B C"
+  shows "is_reduction (g o f) A C"
+  using assms unfolding is_reduction_def by auto
+
 lemma is_independent_set_is_vertex_cover:
   "is_independent_set E V \<longleftrightarrow> is_vertex_cover E ((\<Union>E) - V)" if "ugraph E"
   using that unfolding is_independent_set_def is_vertex_cover_def
@@ -70,36 +77,38 @@ next
     by force
 qed
 
-lemma is_reduction_is_vc:
+lemma ugraph_vertex_set_finite:
+  assumes "ugraph E"
+  shows "finite (\<Union>E)"
+  using assms by (auto 4 3 intro: card_ge_0_finite simp: ugraph_def)
+
+
+subsection \<open>Independent Set to Set Cover\<close>
+theorem is_reduction_is_vc:
   "is_reduction is_vc independent_set vertex_cover"
   unfolding is_reduction_def is_vc_def independent_set_def vertex_cover_def
-  apply (simp add: is_independent_set_is_vertex_cover)
-  apply safe
-  subgoal for E k V
-    by (auto 4 4 intro: card_ge_0_finite simp: ugraph_def dest: card_mono[rotated])
-  subgoal for E k V
-    apply (subst (asm) is_independent_set_is_vertex_cover)
-     apply auto
-    apply (intro exI conjI)
-      prefer 3
-      apply assumption
-     apply force
-    apply (subst card_Diff_subset)
-      apply (auto 4 3 intro: card_ge_0_finite elim!: finite_subset simp: ugraph_def)
-    done
-  subgoal for E k V
-    apply (subst is_independent_set_is_vertex_cover)
-     apply auto
-    apply (rule exI[where x = "\<Union> E - V"])
-    apply auto
-    subgoal
-      apply (subst card_Diff_subset)
-        apply (auto 4 3 intro: card_ge_0_finite elim!: finite_subset simp: ugraph_def)
-      done
-    apply (subgoal_tac "\<Union> E - (\<Union> E - V) = V")
-     apply auto
-    done
-  done
+proof (simp add: is_independent_set_is_vertex_cover , safe)
+  show False if "card (\<Union> E) < k" "ugraph E" "k \<le> card V" "V \<subseteq> \<Union> E" for E k and V :: "'a set"
+    using that by (auto 4 4 intro: card_ge_0_finite simp: ugraph_def dest: card_mono[rotated])
+next
+  show "\<exists>V. V \<subseteq> \<Union> E \<and> card V \<le> card (\<Union> E) - k \<and> is_vertex_cover E V"
+    if "ugraph E" "V \<subseteq> \<Union> E" "k \<le> card V" "is_independent_set E V" for E k and V :: "'a set"
+    using that
+    by (subst (asm) is_independent_set_is_vertex_cover, (simp; fail))
+      (intro exI conjI,
+        auto simp: card_Diff_subset[OF finite_subset] dest: ugraph_vertex_set_finite)
+next
+  fix E :: "'a set set" and k :: nat and V :: "'a set"
+  assume A: "\<not> card (\<Union>E) < k" "ugraph E" "V \<subseteq> \<Union> E" "card V \<le> card (\<Union>E) - k" "is_vertex_cover E V"
+  then have "\<Union> E - (\<Union> E - V) = V"
+    by auto
+  with A show "\<exists>V. V \<subseteq> \<Union> E \<and> k \<le> card V \<and> is_independent_set E V"
+    by (auto simp: is_independent_set_is_vertex_cover card_Diff_subset[OF finite_subset]
+        dest: ugraph_vertex_set_finite intro!: exI[where x = "\<Union> E - V"])
+qed
+
+
+subsection \<open>Three Sat to Independent Set\<close>
 
 definition
   "conflict l1 l2 \<equiv> \<exists>a. l1 = Pos a \<and> l2 = Neg a"
@@ -120,7 +129,7 @@ lemma conflict_same[simp]:
   "conflict l l \<longleftrightarrow> False"
   unfolding conflict_def by simp
 
-lemma is_reduction_sat_is:
+theorem is_reduction_sat_is:
   "is_reduction sat_is three_cnf_sat independent_set"
   unfolding is_reduction_def
 proof safe
@@ -244,12 +253,8 @@ next
   qed
 qed
 
-lemma is_reduction_trans:
-  assumes "is_reduction f A B" "is_reduction g B C"
-  shows "is_reduction (g o f) A C"
-  using assms unfolding is_reduction_def by auto
-
-lemma is_reduction_vc_sc:
+subsection \<open>Vertex Cover to Set Cover\<close>
+theorem is_reduction_vc_sc:
   "is_reduction vc_sc vertex_cover set_cover"
   unfolding is_reduction_def vc_sc_def vertex_cover_def set_cover_def
   apply clarsimp
@@ -268,11 +273,7 @@ lemma is_reduction_vc_sc:
       done
     subgoal
       unfolding setcompr_eq_image
-      apply (rule order.trans, rule card_image_le)
-      subgoal
-        unfolding ugraph_def using finite_Union finite_subset by fastforce
-      apply simp
-      done
+      by (rule order.trans, rule card_image_le) (auto dest: ugraph_vertex_set_finite finite_subset)
     done
   subgoal premises prems for E k S
   proof -
@@ -284,38 +285,51 @@ lemma is_reduction_vc_sc:
       using that by auto
     then have 1: "vv X \<in> \<Union>E" if "X \<in> S" for X
       using \<open>S \<subseteq> _\<close> that by blast
-    from \<open>ugraph _\<close> have "finite E" "finite (\<Union>E)"
-      unfolding ugraph_def using finite_Union finite_subset by fastforce+
+    from \<open>ugraph _\<close> have "finite E"
+      unfolding ugraph_def by auto
     moreover have "S \<subseteq> Pow E"
       by (rule order.trans, rule prems) auto
     ultimately have "finite S"
       using \<open>finite E\<close> finite_subset by auto
-    show ?thesis
-      apply (rule exI[where x = ?S])
-      apply (intro conjI)
-      subgoal
-        by (auto dest: 1)
-      subgoal
-        using \<open>card S \<le> _\<close> \<open>finite S\<close> by (auto intro: card_image_le order.trans)
-      subgoal
-        using prems
-        unfolding is_vertex_cover_def
-        apply auto
-        subgoal premises prems for e
-        proof -
-          from \<open>e \<in> E\<close> \<open>ugraph E\<close> have "card e = 2"
-            unfolding ugraph_def by auto
-          then obtain v where "v \<in> e"
-            by force
-          with \<open>\<Union> S = _\<close> \<open>e \<in> E\<close> have "e \<in> \<Union> S"
-            by auto
-          with \<open>S \<subseteq> {_ | _. _}\<close> obtain v where "{e \<in> E. v \<in> e} \<in> S" "v \<in> e"
-            by auto
-          with *[of v] \<open>e \<in> E\<close> show ?thesis
-            by auto
-        qed
-        done
+    have "is_vertex_cover E ?S"
+      unfolding is_vertex_cover_def
+    proof safe
+      fix e :: "'a set" assume "e \<in> E"
+      from \<open>e \<in> E\<close> \<open>ugraph E\<close> have "card e = 2"
+        unfolding ugraph_def by auto
+      then obtain v where "v \<in> e"
+        by force
+      with \<open>\<Union> S = _\<close> \<open>e \<in> E\<close> have "e \<in> \<Union> S"
+        by auto
+      with \<open>S \<subseteq> {_ | _. _}\<close> obtain v where "{e \<in> E. v \<in> e} \<in> S" "v \<in> e"
+        by auto
+      with *[of v] \<open>e \<in> E\<close> show "\<exists>v\<in>vv ` S. v \<in> e"
+        by auto
+    qed
+    have "?S \<subseteq> \<Union> E"
+      by (auto dest: 1)
+    moreover have "card ?S \<le> k"
+      using \<open>card S \<le> _\<close> \<open>finite S\<close> by (auto intro: card_image_le order.trans)
+    moreover have "is_vertex_cover E ?S"
+      using prems
+      unfolding is_vertex_cover_def
+      apply auto
+      subgoal premises prems for e
+      proof -
+        from \<open>e \<in> E\<close> \<open>ugraph E\<close> have "card e = 2"
+          unfolding ugraph_def by auto
+        then obtain v where "v \<in> e"
+          by force
+        with \<open>\<Union> S = _\<close> \<open>e \<in> E\<close> have "e \<in> \<Union> S"
+          by auto
+        with \<open>S \<subseteq> {_ | _. _}\<close> obtain v where "{e \<in> E. v \<in> e} \<in> S" "v \<in> e"
+          by auto
+        with *[of v] \<open>e \<in> E\<close> show ?thesis
+          by auto
+      qed
       done
+    ultimately show ?thesis
+      by auto
   qed
   by (simp add: finite_subset)+
 
