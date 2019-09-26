@@ -96,7 +96,7 @@ section "IS to VC"
 
 definition "mop_get_vertices_card E = REST [(card (\<Union> E)) \<mapsto> card E]"
 
-definition "vc_to_sc = (\<lambda>(E,k). 
+definition "is_to_vc = (\<lambda>(E,k). 
           do {
             s \<leftarrow> mop_get_vertices_card E;
             if k > s  then
@@ -109,14 +109,14 @@ definition "vc_time n = n"
 definition "vc_space n = n" 
 
 
-lemma vc_to_sc_refines:
-  "vc_to_sc vc \<le> SPEC (\<lambda>y. y = is_vc vc) (\<lambda>_. vc_time (size_IS vc))"
-  unfolding vc_to_sc_def is_vc_def SPEC_def mop_get_vertices_card_def
+lemma is_to_vc_refines:
+  "is_to_vc vc \<le> SPEC (\<lambda>y. y = is_vc vc) (\<lambda>_. vc_time (size_IS vc))"
+  unfolding is_to_vc_def is_vc_def SPEC_def mop_get_vertices_card_def
   apply(rule T_specifies_I)
   apply(vcg' \<open>-\<close>)
   by (auto simp: size_IS_def size_VC_def vc_time_def vc_space_def) 
 
-lemma vc_to_sc_size:
+lemma is_to_vc_size:
   "size_VC (is_vc a) \<le> vc_space (size_IS a)"
   apply(cases a)
   by (auto simp: is_vc_def size_IS_def size_VC_def vc_time_def vc_space_def) 
@@ -125,14 +125,14 @@ thm is_reduction_is_vc
 
 
 term vertex_cover
-lemma "ispolyred vc_to_sc independent_set vertex_cover size_IS size_VC" 
+lemma "ispolyred is_to_vc independent_set vertex_cover size_IS size_VC" 
   unfolding ispolyred_def
   apply(rule exI[where x=is_vc])
   apply(rule exI[where x=vc_time])
   apply(rule exI[where x=vc_space])
   apply(safe)
-  subgoal using vc_to_sc_refines by blast
-  subgoal using vc_to_sc_size  by blast 
+  subgoal using is_to_vc_refines by blast
+  subgoal using is_to_vc_size  by blast 
   subgoal unfolding poly_def vc_time_def apply(rule exI[where x=1]) by simp
   subgoal unfolding poly_def vc_space_def apply(rule exI[where x=1]) by simp
   subgoal using is_reduction_is_vc .
