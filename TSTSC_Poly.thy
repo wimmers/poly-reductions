@@ -1,6 +1,6 @@
 theory TSTSC_Poly
-  imports "../Sepreftime/Sepreftime" Three_Sat_To_Set_Cover  "Landau_Symbols.Landau_More"
-  "../Sepreftime/RefineMonadicVCG"
+  imports "NREST.NREST" Three_Sat_To_Set_Cover  "Landau_Symbols.Landau_More"
+  "NREST.RefineMonadicVCG"
 begin
 
 
