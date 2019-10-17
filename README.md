@@ -1,5 +1,5 @@
 # Polynomial-Time Reductions in Isabelle/HOL
-This repository sets out to formalize some classic results about NP-completeness in Isabelle/HOL.
+This repository sets out to formalize some classic results about NP-completeness in Isabelle/HOL. It is a fork of https://github.com/wimmers/poly-reductions.
 
 ## Index
 ### Polynomial-Time Reductions
