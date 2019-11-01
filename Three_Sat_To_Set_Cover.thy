@@ -111,7 +111,7 @@ qed
 subsection \<open>Three Sat to Independent Set\<close>
 
 definition
-  "conflict l1 l2 \<equiv> \<exists>a. l1 = Pos a \<and> l2 = Neg a"
+  "conflict l1 l2 \<equiv> \<exists>a. l1 = Pos a \<and> l2 = Neg a \<or> l1 = Neg a \<and> l2 = Pos a"
 
 definition
   "sat_is F \<equiv> if (\<forall>cls \<in> set F. card cls = 3) then (
