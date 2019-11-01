@@ -6,7 +6,7 @@ subsection \<open>Preliminaries\<close>
 
 
 definition
-  "ugraph_nodes E V \<equiv> finite E \<and> (\<forall>e \<in> E. card e = 2) \<and>  \<Union> E \<subseteq> V"
+  "ugraph_nodes E V \<equiv> ugraph E \<and>  \<Union> E \<subseteq> V"
 
 definition cnf_sat where
   "cnf_sat \<equiv> {F. sat F \<and> (\<forall>c \<in> set F. finite c)}"
@@ -16,18 +16,18 @@ definition
 
 
 definition
-  "clique \<equiv> {(E, k). \<exists>C. ugraph E \<and> C \<subseteq> \<Union> E \<and> card C \<ge> k \<and> is_clique E C}"
+  "clique_old \<equiv> {(E, k). \<exists>C. ugraph E \<and> C \<subseteq> \<Union> E \<and> card C \<ge> k \<and> is_clique E C}"
 
 definition
- "clique_new \<equiv> {(E, V , k). \<exists>C. ugraph_nodes E V \<and> C \<subseteq> V \<and> card C \<ge> k \<and> is_clique E C}"
+ "clique \<equiv> {(E, V , k). \<exists>C. ugraph_nodes E V \<and> C \<subseteq> V \<and> card C \<ge> k \<and> is_clique E C}"
 
 definition
-  "cnf_sat_to_clique F \<equiv> (
+  "cnf_sat_to_clique_old F \<equiv> (
     {{(l1, i), (l2, j)} | l1 l2 i j. i < length F \<and> j < length F \<and> i\<noteq> j \<and> \<not> conflict l1 l2 \<and>
          l1 \<in> F ! i \<and> l2 \<in> F ! j}, length F)"
 
 definition
-  "cnf_sat_to_clique_new F \<equiv> (
+  "cnf_sat_to_clique F \<equiv> (
     {{(l1, i), (l2, j)} | l1 l2 i j. i < length F \<and> j < length F \<and> i\<noteq> j \<and> \<not> conflict l1 l2 \<and>
          l1 \<in> F ! i \<and> l2 \<in> F ! j},
     {(l1, i) | l1 i. i < length F \<and>   l1 \<in> F ! i},
@@ -48,7 +48,7 @@ lemma models_smaller: "models \<sigma> (a#F) \<Longrightarrow> models \<sigma> F
 text\<open>Similar to the proof in Three_Sat_To_Set_Cover\<close>
 lemma cnf_sat_to_clique_ugraph: "F\<in> cnf_sat \<Longrightarrow> ugraph (fst (cnf_sat_to_clique F))"
 proof - 
-  obtain E k where "cnf_sat_to_clique F = (E, k)" by force
+  obtain E V k where "cnf_sat_to_clique F = (E, V, k)" using prod_cases3 by blast
   assume "F \<in> cnf_sat"
   then have "\<forall>c \<in> set F. finite c" by(auto simp add: cnf_sat_def)
   then have "\<forall>c \<in> set F. \<exists>s. card c \<le> s" by auto
@@ -58,14 +58,39 @@ proof -
   from \<open>F \<in> cnf_sat\<close> have fin_1: "finite (\<Union> (set F))" unfolding cnf_sat_def by (auto 4 3 intro: card_ge_0_finite)
   let ?S = "((\<Union> (set F)) \<times> {0..<length F}) \<times> ((\<Union> (set F)) \<times> {0..<length F})"
   have "ugraph E"
-    using \<open>cnf_sat_to_clique F = (E, k)\<close> wf unfolding cnf_sat_to_clique_def is_clique_def ugraph_def
+    using \<open>cnf_sat_to_clique F = (E,V, k)\<close> wf unfolding cnf_sat_to_clique_def is_clique_def ugraph_def
     apply safe
     subgoal
       using fin_1 by (fastforce intro: finite_surj[where A = "?S"])
     by (force simp: card_insert_if)+
   then show ?thesis
-    by (simp add: \<open>cnf_sat_to_clique F = (E, k)\<close>)
+    by (simp add: \<open>cnf_sat_to_clique F = (E, V, k)\<close>)
 qed
+
+lemma edges_between_nodes:
+  assumes "F \<in> cnf_sat" "E  = fst (cnf_sat_to_clique F)" "V  = fst ( snd (cnf_sat_to_clique F))" "X \<in> E"
+  shows " X \<subseteq> V"
+proof -
+  have e_def: "E = {{(l1, i), (l2, j)} | l1 l2 i j. i < length F \<and> j < length F \<and> i\<noteq> j \<and> \<not> conflict l1 l2 \<and>
+         l1 \<in> F ! i \<and> l2 \<in> F ! j} " using cnf_sat_to_clique_def assms 
+    by (metis (mono_tags, lifting) fst_eqD)
+  have v_def: "V = {(l1, i) | l1 i. i < length F \<and>   l1 \<in> F ! i}" using cnf_sat_to_clique_def assms
+    by (metis (mono_tags, lifting) fst_conv old.prod.exhaust snd_conv)
+  then obtain l1 l2 i j where "X = {(l1, i), (l2, j)}" using e_def assms by(force)
+  then have i1: "i < length F" using e_def \<open>X \<in> E \<close> by (smt Pair_inject doubleton_eq_iff mem_Collect_eq)
+  then have i2: " l1 \<in> F !i" using e_def \<open>X \<in> E\<close> \<open>X = {(l1, i), (l2, j)}\<close> by (smt Pair_inject doubleton_eq_iff mem_Collect_eq)
+  then have j1: "j < length F" using e_def \<open>X \<in> E \<close> \<open>X = {(l1, i), (l2, j)}\<close> by (smt Pair_inject doubleton_eq_iff mem_Collect_eq)
+  then have j2: " l2 \<in> F !j" using e_def \<open>X \<in> E\<close> \<open>X = {(l1, i), (l2, j)}\<close> by (smt Pair_inject doubleton_eq_iff mem_Collect_eq)
+  have "(l1, i) \<in> V \<and> (l2, j) \<in> V" using i1 i2 j1 j2 v_def by(auto)
+  then show ?thesis using assms  \<open>X = {(l1, i), (l2, j)}\<close>
+    by blast
+qed
+
+lemma cnf_sat_to_clique_ugraph_nodes:
+  assumes "F \<in> cnf_sat"
+  shows "ugraph_nodes (fst(cnf_sat_to_clique F)) (fst (snd (cnf_sat_to_clique F)))"
+  apply(auto simp add: cnf_sat_to_clique_ugraph ugraph_nodes_def assms)
+  using edges_between_nodes assms by blast
 
 definition get_some_true where
   "get_some_true F \<sigma> i \<equiv> SOME l. lift \<sigma> l \<and> l \<in> F ! i"
@@ -119,8 +144,31 @@ lemma card_clique:
   shows "card C \<ge> length F"
 unfolding assms setcompr_eq_image by (subst card_image) (auto intro: inj_onI)
 
+lemma aux4:
+  assumes "F \<in> cnf_sat" "i<length F" "models \<sigma> F"
+  shows "get_some_true F \<sigma> i \<in> F!i"
+proof-
+  obtain v where "v = get_some_true F \<sigma> i" unfolding get_some_true_def by force
+  then have "v \<in> F ! i" unfolding get_some_true_def apply(auto) 
+    by (metis (lifting) all_clauses_have_pos assms some_eq_ex)
+  then show ?thesis using \<open>v=_\<close> by(auto)
+qed
 
+lemma aux3:
+  assumes "F \<in> cnf_sat" "models \<sigma> F" "C =  {( get_some_true F \<sigma> i, i) | i. i < length F}" " v \<in> C"
+  shows "v \<in> fst(snd(cnf_sat_to_clique F))"
+proof -
+  obtain E V k where "cnf_sat_to_clique F = (E, V, k)" using cnf_sat_to_clique_def by force
+  then have " V = {(l1, i) | l1 i. i < length F \<and>   l1 \<in> F ! i}" using cnf_sat_to_clique_def \<open>cnf_sat_to_clique F = (E, V, k)\<close> assms 
+    by (metis (mono_tags, lifting) Pair_inject)
+  have "\<forall> i < length F. get_some_true F \<sigma> i \<in> F!i" using assms aux4 by(auto)
+  then show ?thesis using assms using \<open>V = {(l1, i) |l1 i. i < length F \<and> l1 \<in> F ! i}\<close> \<open>cnf_sat_to_clique F = (E, V, k)\<close> by force
+qed
 
+lemma clique_in_graph: 
+  assumes  "F \<in> cnf_sat" "models \<sigma> F" "C =  {( get_some_true F \<sigma> i, i) | i. i < length F}"
+  shows "C\<subseteq> fst(snd (cnf_sat_to_clique F))"
+  using aux3 assms by blast
 
 
 lemma cnf_sat_impl_clique: "F \<in> cnf_sat \<Longrightarrow> cnf_sat_to_clique F \<in> clique"
@@ -133,43 +181,14 @@ proof -
   then have c_def: "C =  {( get_some_true F \<sigma> i, i) | i. i < length F}" by auto
   then have is_c: "is_clique (fst (cnf_sat_to_clique F)) C" using f_cnf_sat models_sigma is_clique  by auto
   then have card_C_length: "card C \<ge> (length F)" using card_clique f_cnf_sat models_sigma c_def by auto
-  then have card_C: "card C \<ge> (snd (cnf_sat_to_clique F))" using cnf_sat_to_clique_def by (simp add: cnf_sat_to_clique_def)
-(*This is false for one-elemnt F, need to rewrite definition of clique and ugraph. I need the set of nodes*)
-  have clique_contained: "C \<subseteq> \<Union> (fst (cnf_sat_to_clique F))" using c_def f_cnf_sat sorry
-  have ug: "ugraph (fst(cnf_sat_to_clique F))" using  cnf_sat_to_clique_ugraph f_cnf_sat by(auto)
-  then have "\<exists> C'. ugraph (fst (cnf_sat_to_clique F)) \<and> C' \<subseteq> \<Union> (fst (cnf_sat_to_clique F)) \<and> card C' \<ge> (snd (cnf_sat_to_clique F)) \<and> is_clique (fst (cnf_sat_to_clique F)) C'"
-    using card_C is_c clique_contained ug by(auto)   then have "cnf_sat_to_clique F \<in> {(E, k). \<exists>C. ugraph E \<and> C \<subseteq> \<Union> E \<and> card C \<ge> k \<and> is_clique E C}" by (simp add: case_prod_beta')
+  then have card_C: "card C \<ge> (snd (snd (cnf_sat_to_clique F)))" using cnf_sat_to_clique_def by (simp add: cnf_sat_to_clique_def)
+  have clique_contained: "C \<subseteq> fst(snd (cnf_sat_to_clique F))" using c_def f_cnf_sat clique_in_graph models_sigma by blast
+  have ug: "ugraph_nodes (fst(cnf_sat_to_clique F)) (fst (snd (cnf_sat_to_clique F)))" using  cnf_sat_to_clique_ugraph_nodes f_cnf_sat by(auto)
+  then have "\<exists> C'. ugraph_nodes (fst (cnf_sat_to_clique F)) (fst (snd( cnf_sat_to_clique F))) \<and> C' \<subseteq> fst(snd (cnf_sat_to_clique F)) \<and> card C' \<ge> (snd (snd(cnf_sat_to_clique F))) \<and> is_clique (fst (cnf_sat_to_clique F)) C'"
+    using card_C is_c clique_contained ug by(auto)   
+  then have "cnf_sat_to_clique F \<in> {(E, V, k). \<exists>C. ugraph_nodes E V \<and> C \<subseteq> V \<and> card C \<ge> k \<and> is_clique E C}" by (simp add: case_prod_beta')
   then show ?thesis using clique_def by(auto simp add: clique_def)
 qed
-
-(*lemma  cnf_sat_impl_clique:  "F \<in> cnf_sat \<Longrightarrow> cnf_sat_to_clique F \<in> clique"
-proof (induction F)
-  case Nil
-  then show ?case unfolding cnf_sat_to_clique_def clique_def cnf_sat_def sat_def models_def 
-      is_clique_def ugraph_def by auto
-next
-  case (Cons a F)
-  then have a1: "(a#F) \<in> cnf_sat" by simp
-  then obtain \<sigma>1 where "\<sigma>1 \<Turnstile> a#F" unfolding cnf_sat_def sat_def by auto
-  have "F \<in> cnf_sat" 
-    by (metis \<open>\<sigma>1 \<Turnstile> a # F\<close> cnf_sat_def mem_Collect_eq models_def sat_def set_subset_Cons subset_code(1))
-  then have "cnf_sat_to_clique F \<in> clique" using Cons.IH by auto
-  then have "\<exists>l. l\<in> a \<and> (lift \<sigma>1 l)" unfolding lift_def models_def using \<open>\<sigma>1 \<Turnstile> a # F\<close> all_clauses_have_pos a1 apply(auto split: lit.split) sorry
-  then obtain l where "l\<in> a \<and> (lift \<sigma>1 l)" by auto
-
-  (*parameter k*)
-  then obtain E k where "cnf_sat_to_clique F = (E, k)" by force
-  then have k_length: "k = length F" unfolding cnf_sat_to_clique_def by auto
-  obtain E' k' where "cnf_sat_to_clique (a#F) = (E', k')" by force
-  then have "k' = length (a#F)" unfolding cnf_sat_to_clique_def by auto 
-  then have "k' = k+1" unfolding cnf_sat_to_clique_def  using k_length by auto
-  then show ?case sorry
-
-  (*parameter E, (l, i) war vorher nicht drin, jetzt schon und hat verbindungen in die clique*)
-(*exists cliqeu, die nur models parameter enthält*)
-(*verbindung zu l1*)
-(*size ist eins größer*)
-qed*)
  
 
 theorem is_reduction_cnf_sat_to_clique: 
@@ -180,7 +199,7 @@ proof safe
   assume f_cnf_sat: "F\<in> cnf_sat"
   then obtain \<sigma>1 where "\<sigma>1 \<Turnstile> F" 
     unfolding cnf_sat_def sat_def by auto
-  obtain E k where "cnf_sat_to_clique F = (E, k)" by force
+  obtain E V k where "cnf_sat_to_clique F = (E, V, k)" using cnf_sat_to_clique_def by force
   show "cnf_sat_to_clique F \<in> clique" by (simp add: cnf_sat_impl_clique f_cnf_sat)
 next
   fix F:: "'a lit set list"
