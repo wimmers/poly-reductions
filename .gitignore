@@ -1,0 +1,5 @@
+*.thy~
+*.aux
+*.log
+*.out
+*.gz

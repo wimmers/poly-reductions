@@ -1,0 +1,113 @@
+\documentclass[11pt,a4paper]{scrartcl}
+\usepackage[latin1]{inputenc}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage{wasysym}
+\usepackage[dvipsnames]{xcolor}
+\usepackage{hyperref}
+\author{Sabine Rieder}
+\title{Plan for practical course "Specification and Verification"}
+\date{}
+\begin{document}
+	\maketitle
+	\section{Aim}
+	\begin{itemize}
+		\item CNF-SAT $\varpropto$ Clique
+		\item Vertex Cover $\varpropto$ Directed Hamilton Cycle (I'm not completely sure, that this will work. I could also try undirected Hamilton Cycle)
+		\item Directed Hamilton Cycle $\varpropto$ Undirected Hamilton Cycle
+	\end{itemize}
+	
+	\subsection{Also possible}
+	\begin{itemize}
+		\item Vertex Cover $\varpropto$ Feedback Node Set
+		\item Clique $\varpropto$ Vertex Cover
+		\item Vertex Cover $\varpropto$ Feedback Arc Set
+	\end{itemize}
+	
+	\section{Time schedule}
+	ToDo: Formalize reduction, proof correctness, Write Algorithm and check time
+	
+	\begin{description}
+		\item[Week 0 (14.10. - 20.10. )] \hfill
+		\begin{description}
+			\item[\textcolor{Green}{\CheckedBox}] Set up of Git
+			\item[\textcolor{Green}{\CheckedBox}] Write plan for project 
+		\end{description}
+		\item[ Week 1 (21.10. - 27.10. )] \hfill 
+		\begin{description}
+			\item[\textcolor{Green}{\CheckedBox}] Problem definition of CNF-SAT and Clique
+			\item[\textcolor{Green}{\CheckedBox}] Definition of CNF-SAT $\varpropto$ Clique
+			\item[] \textcolor{gray}{Additional: Also changed the plan}
+		\end{description}
+		\item[Week 2 (28.10. - 3.11. )] \hfill
+		\begin{description}
+			\item[\textcolor{Green}{\CheckedBox}]Proof of CNF-SAT $\varpropto$ Clique
+			\item[\Square] Write Algorithm for CNF-SAT $\varpropto$ Clique
+			\end{description}
+		\item[Week 3 (4.11. - 10.11. )]\hfill \begin{description}
+			\item[\Square] Polynomial Time of CNF-SAT $\varpropto$ Clique
+		\end{description} 
+		\item[Week 4 (11.11. - 17.11. )] \hfill
+		\begin{description}
+			\item[\Square] Definition of  Directed Hamilton Cycle
+			\item[\Square] Definition of Vertex Cover $\varpropto$ Directed Hamilton Cycle
+		\end{description} 
+		\item[Week 5 (18.11. - 24.11)] \hfill
+		\begin{description}
+			\item[\Square] Proof of Vertex Cover $\varpropto$ Directed Hamilton Cycle
+			\item[\Square] Maybe Algorithm
+		\end{description}
+		\item[Week 6 +7(25.11. - 8.12. )] \hfill
+		\begin{description}
+			\item[\Square] Polynomial time for Vertex Cover $\varpropto$ Directed Hamilton Cycle
+		\end{description}
+		\item[Week 8 (9.12. - 15.12. )] \hfill 
+		\begin{description}
+			\item[\Square] Buffer
+			\item[\Square] Talk to advisors
+		\end{description}
+		\item[Week 9 (16.12. - 22.12.)]\hfill 
+		\begin{description}
+			\item[\Square] Definition of Undirected Hamiltonian Cycle
+			\item[\Square] Definition of Directed Hamilton Cycle $\varpropto$ Undirected Hamilton Cycle
+			\item[\Square] Proof of Directed Hamilton Cycle $\varpropto$ Undirected Hamilton Cycle
+		\end{description}
+		\item[Week W.1(23.12. - 29.12.)] \hfill
+		\begin{description}
+			\item[\Square] Polynomial Time of Directed Hamilton Cycle $\varpropto$ Undirected Hamilton Cycle
+		\end{description}
+		\item[Week W.2 (30.12. - 5.1.)] \hfill 
+		\begin{description}
+			\item[\Square] ??
+		\end{description}
+		\item[Week 10 (6.1. - 12.1. )]  \hfill 
+		\begin{description}
+			\item[\Square] ??
+		\end{description}
+		\item[Week 11 (13.1. - 19.1. )]  \hfill 
+		\begin{description}
+			\item[\Square] ??
+		\end{description}
+		\item[Week 12 (20.1. - 26.1.)]  \hfill 
+		\begin{description}
+			\item[\Square] ??
+		\end{description}
+		\item[Week 13 + 14 (27.1. - 9.2. )]  \hfill 
+		\begin{description}
+			\item[\Square] Buffer and maybe clean up
+		\end{description}
+	\end{description}
+
+	I will try to keep this document up to date. 
+
+	\section{Links}
+	\begin{itemize}
+		\item Github: \url{https://github.com/riedersa/poly-reductions}
+		\item Wikipedia: \url{https://en.wikipedia.org/wiki/Karp\%27s_21_NP-complete_problems} 
+	\end{itemize}
+	
+	
+	
+\end{document}
