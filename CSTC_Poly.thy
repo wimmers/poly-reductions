@@ -1,5 +1,5 @@
 theory CSTC_Poly
-  imports "NREST.NREST" CNF_SAT_to_Clique  "Landau_Symbols.Landau_More"
+  imports "NREST.NREST" CNF_SAT_to_Clique_2  "Landau_Symbols.Landau_More"
   "NREST.RefineMonadicVCG" "NREST.Refine_Foreach" TSTSC_Poly
 begin  
 
@@ -14,9 +14,10 @@ definition "add_nodes_cstc F V =
   SPECT [ V \<union>  {(l1, i) | l1 i. i < length F \<and>   l1 \<in> F ! i}
        \<mapsto> max_size_clauses F * length F]"
 
-
 definition cnf_sat_to_clique_alg :: "'a lit set list \<Rightarrow> (('a lit \<times> nat) set set \<times> ('a lit \<times> nat) set  \<times> nat) nrest" where 
   "cnf_sat_to_clique_alg = (\<lambda>F. do {
+      b \<leftarrow> SPECT [ finite (\<Union> (set F)) \<mapsto> 1];
+      if b then
         do {
           l \<leftarrow> mop_list_length F; 
           S \<leftarrow> mop_set_empty_set;
@@ -25,12 +26,13 @@ definition cnf_sat_to_clique_alg :: "'a lit set list \<Rightarrow> (('a lit \<ti
           V \<leftarrow> add_nodes_cstc F V;
           RETURNT ( S, V, l)
         }
+      else RETURNT ( {}, {}, 1 )
     })"
 
 definition "number_clauses_CNF_SAT xs = length xs"
 definition "size_CNF_SAT xs = number_clauses_CNF_SAT xs * max_size_clauses xs"
 (*with number of clauses time  maximum length of the clauses n*)
-definition "cnf_sat_to_clique_time n = 3 + n * n  + n"
+definition "cnf_sat_to_clique_time n = 4 + n * n  + n"
 definition "size_Clique = (\<lambda>(E,V,k). card E + card V)"
 definition "cnf_sat_to_clique_space n  = n +n * n"
 
