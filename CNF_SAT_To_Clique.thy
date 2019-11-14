@@ -14,19 +14,8 @@ definition cnf_sat where
 definition
   "is_clique E C \<equiv> \<forall>u \<in> C. \<forall>v \<in> C. v=u \<or> {u, v} \<in> E"
 
-
-definition
-  "clique_old \<equiv> {(E, k). \<exists>C. ugraph E \<and> C \<subseteq> \<Union> E \<and> card C \<ge> k \<and> is_clique E C}"
-
 definition
  "clique \<equiv> {(E, V , k). \<exists>C. ugraph_nodes E V \<and> C \<subseteq> V \<and> card C \<ge> k \<and> is_clique E C}"
-
-definition
-  "cnf_sat_to_clique_old F \<equiv> (
-    {{(l1, i), (l2, j)} | l1 l2 i j. i < length F \<and> j < length F \<and> i\<noteq> j \<and> \<not> conflict l1 l2 \<and>
-         l1 \<in> F ! i \<and> l2 \<in> F ! j},
-    {(l1, i) | l1 i. i < length F \<and>   l1 \<in> F ! i},
-    length F)"
 
 definition
   "cnf_sat_to_clique F \<equiv> (if finite (\<Union> (set F)) then (
