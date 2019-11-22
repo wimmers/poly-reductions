@@ -1,5 +1,5 @@
 theory CNF_SAT_To_Clique
-  imports Main "Three_Sat_To_Set_Cover" HOL.Enum
+  imports Main "Three_Sat_To_Set_Cover"
 begin
 
 subsection \<open>Preliminaries\<close>
