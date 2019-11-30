@@ -131,7 +131,7 @@ lemma is_wf_digraph:
 lemma  aux4: "set (vwalk_arcs Cycle) \<subseteq> arcs G" sorry
 
 lemma aux1:assumes "card (verts G) > 1" shows"1 < size Cycle" sorry
-lemma aux2: assumes "v = (hd Cycle)" shows "v \<in> (verts G)" using is_wf_digraph aux4 wf_digraph_def sledgehammer  sorry
+lemma aux2: assumes "v = (hd Cycle)" "card (verts G) > 1" shows "v \<in> (verts G)" using is_wf_digraph aux4 wf_digraph_def aux1  sorry
 
 lemma aux3: assumes "1 < size Cycle" shows "vwalk_arcs Cycle \<noteq> []" proof -
     obtain x y cs where "Cycle = x#y#cs" using assms 
