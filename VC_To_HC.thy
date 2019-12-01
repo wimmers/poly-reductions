@@ -179,19 +179,26 @@ lemma aux4_4:
   using assms apply(auto)
   sorry
 
-lemma aux4_5: 
-  assumes "v \<in> set (construct_cycle_1 E (CS) n C)" "v \<noteq> Cover k'"
-  shows "\<exists> x. v \<in> set (construct_cycle_add_edge_nodes E x C)"
-  using assms apply(induction CS)
-  apply(auto)
+lemma aux4_6:
+  assumes "k\<le>k'" "0<k"
+  shows "Cover k' \<notin> set (construct_cycle_1 E (Cov) 0 C)"
+  using assms apply(induction Cov)
+  apply(auto) 
+  using aux4_4 apply blast
   sorry
+
+lemma aux4_5: 
+  assumes "v \<in> set (construct_cycle_1 E (CS) n C)" "\<forall>k'. v \<noteq> Cover k'"
+  shows "\<exists> x. v \<in> set (construct_cycle_add_edge_nodes E x C)"
+  using assms apply(induction CS arbitrary: n)
+  by(auto) 
   
 
 lemma aux4:
-  assumes "v\<in> set Cycle"
+  assumes "v\<in> set Cycle" "k>0"
   shows "(\<exists>k'. v = Cover k' \<and> k' <k) \<or> (\<exists>e u. v = Edge u e 0 \<and> e \<in> set E \<and> u \<in> e) \<or> (\<exists>e u. v = Edge u e 1\<and> e \<in> set E \<and> u \<in> e)"
-  using assms aux4_4 Cycle_def aux4_5 
-  by (metis hc_node.inject(1) zero_neq_one)
+  using assms aux4_4 Cycle_def aux4_5 aux4_6 
+  by (metis not_le)
 
 lemma aux4_1:
   assumes "k' < k" "v = Cover k'"
@@ -210,7 +217,7 @@ lemma aux4_3:
 
 
 lemma in_cycle_in_verts: 
-  assumes "v \<in> set Cycle" 
+  assumes "v \<in> set Cycle" "k>0"
   shows "v\<in> verts G" 
   using assms aux4 aux4_2 aux4_3 aux4_1 by blast
 
@@ -225,10 +232,24 @@ proof -
   then show ?thesis by auto
 qed
 
+lemma aux5:
+  assumes "card (verts G) > 1"
+  shows "k>0"
+proof (rule ccontr)
+  assume "\<not> 0 < k" 
+  then have "0 = k" by(auto)
+  then have "Cov = []" using Cov_def by(auto)
+  then have "Cycle = [(Cover 0)]" using Cycle_def by(auto)
+  then have "set Cycle = {(Cover 0)}" by auto
+  then have "verts G = {(Cover 0)}" using cycle_contains_all_verts assms apply(auto) 
+    using aux1_1 by fastforce
+  then show False using assms by(auto)
+qed
+
 lemma aux2: 
   assumes "v = (hd Cycle)" "card (verts G) > 1" "Cycle \<noteq> []"
   shows "v \<in> (verts G)" 
-  using in_cycle_in_verts assms by(auto) 
+  using in_cycle_in_verts assms aux5 by(auto) 
 
 lemma aux3: 
   assumes "1 < size Cycle" 
