@@ -81,8 +81,9 @@ fun construct_cycle_add_edge_nodes:: "('a set list) \<Rightarrow> 'a \<Rightarro
   where 
 "construct_cycle_add_edge_nodes [] v C = []" |
 "construct_cycle_add_edge_nodes (e#es) v C = (if v \<in> e then 
-    (let u = (get_second (e-{v})) in (if u\<in> C then [(Edge v e 0), (Edge v e 1)] 
-      else [(Edge v e 0), (Edge u e 0), (Edge u e 1), (Edge v e 1)]))  
+    (let u = (get_second (e-{v})) in 
+      (if u\<in> C then [(Edge v e 0), (Edge v e 1)] 
+      else [(Edge v e 0), (Edge u e 0), (Edge u e 1), (Edge v e 1)])) @ construct_cycle_add_edge_nodes es v C 
     else construct_cycle_add_edge_nodes es v C)"
 
 fun construct_cycle_1::"'a set list \<Rightarrow> 'a list \<Rightarrow> nat \<Rightarrow> 'a set \<Rightarrow> (('a, 'a set) hc_node) list"  where
@@ -134,7 +135,7 @@ lemma cycle_contains_all_verts:
   sorry
 
 
-lemma aux1_1:
+lemma card_greater_1_contains_two_elements:
   assumes "card S > 1"
   shows "\<exists>u v. v\<in> S \<and> u\<in> S \<and> u \<noteq> v"
 proof -
@@ -155,63 +156,100 @@ proof -
 qed
 
 
-lemma aux1_2:
+lemma contains_two_card_greater_1:
   assumes "v \<in> S" "u \<in> S" "u \<noteq> v" "finite S"
   shows "1 < card S"
 using assms apply(auto) 
   by (meson card_le_Suc0_iff_eq not_le_imp_less) 
 
 
-lemma aux1:
+lemma length_cycle:
   assumes "card (verts G) > 1" 
   shows "1 < length Cycle" 
 proof -
-  obtain u v where "u\<in> verts G" "v \<in> verts G" "u \<noteq> v" using aux1_1 assms by blast
+  obtain u v where "u\<in> verts G" "v \<in> verts G" "u \<noteq> v" using card_greater_1_contains_two_elements assms by blast
   then have "u\<in> set Cycle" "v\<in> set Cycle" using cycle_contains_all_verts assms by blast+ 
-  then have "card (set Cycle) > 1" using \<open>u\<noteq>v\<close> aux1_2 by fastforce 
+  then have "card (set Cycle) > 1" using \<open>u\<noteq>v\<close> contains_two_card_greater_1 by fastforce 
   then show ?thesis 
     by (metis \<open>u \<in> set Cycle\<close> card_length leD length_pos_if_in_set less_numeral_extra(3) less_one linorder_neqE_nat)
 qed
 
-lemma aux4_4: 
-  assumes "v \<in> set (construct_cycle_add_edge_nodes E x C)"
-  shows "(\<exists> e u. v = Edge u e 0 \<and> u \<in> e \<and> e \<in> set E) \<or> (\<exists> e u. v = Edge u e 1 \<and> u \<in> e \<and> e \<in> set E)"
-  using assms apply(auto)
-  sorry
+lemma get_second_in_edge:
+  assumes "u = get_second e" "e \<noteq> {}"
+  shows "u \<in> e"
+  using assms unfolding  get_second_def apply(auto) 
+  using some_in_eq by auto 
 
-lemma aux4_6:
+lemma edge_contains_minus_one_not_empty: 
+  assumes "e \<in> set E'" "ugraph (set E')" "u \<in> e"
+  shows "e-{u} \<noteq> {}"
+using subset_singletonD assms ugraph_def by fastforce
+
+lemma ugraph_implies_smaller_set_ugraph:
+  assumes "ugraph (insert a (set E'))"
+  shows "ugraph (set E')"
+  using assms by (simp add: ugraph_def)
+
+lemma edge_0_with_many_prems:
+  assumes "ugraph (insert a (set Ea))" "v \<in> set (let u = get_second (a - {x}) in if u \<in> C then [Edge x a 0, Edge x a 1] else [Edge x a 0, Edge u a 0, Edge u a 1, Edge x a 1])"
+    "x \<in> a" "\<forall>e u. u \<in> e \<longrightarrow> v = Edge u e (Suc 0) \<longrightarrow> e \<noteq> a \<and> e \<notin> set Ea"
+  shows "\<exists>e u. v = Edge u e 0 \<and> u \<in> e \<and> (e = a \<or> e \<in> set Ea)"
+proof -
+  have not_empty: "(a - {x}) \<noteq> {}" 
+    using edge_contains_minus_one_not_empty assms 
+    by (metis list.set_intros(1) list.simps(15))
+  then obtain u where u_def: "u = get_second (a-{x})" by(auto)
+  then have "u \<in> a" 
+    using not_empty get_second_in_edge by fast
+  then show ?thesis using u_def assms apply(auto)
+    by (smt One_nat_def empty_set insert_iff set_ConsD singleton_iff)
+qed
+
+
+lemma no_Cover_in_edge_function: 
+  assumes "v \<in> set (construct_cycle_add_edge_nodes E x C)" "ugraph (set E)"
+  shows "(\<exists> e u. v = Edge u e 0 \<and> u \<in> e \<and> e \<in> set E) \<or> (\<exists> e u. v = Edge u e 1 \<and> u \<in> e \<and> e \<in> set E)"
+using assms apply(induction E arbitrary: ) apply(auto split: if_split_asm simp add: ugraph_implies_smaller_set_ugraph) 
+  by(auto simp add: edge_0_with_many_prems)
+
+lemma only_small_Cover_nodes_in_Cycle:
+  assumes "length Cs +n \<le> k'" "0<k'"
+  shows "Cover k' \<notin> set (construct_cycle_1 E (Cs) n C)"
+  using assms 
+  apply(induction Cs arbitrary: n) 
+   apply(auto) 
+  using no_Cover_in_edge_function in_vc vertex_cover_list_def by(blast) 
+
+lemma function_of_cover_nodes:
   assumes "k\<le>k'" "0<k"
   shows "Cover k' \<notin> set (construct_cycle_1 E (Cov) 0 C)"
-  using assms apply(induction Cov)
-  apply(auto) 
-  using aux4_4 apply blast
-  sorry
+  using Cov_def assms by(auto simp add: only_small_Cover_nodes_in_Cycle) 
 
-lemma aux4_5: 
+lemma function_of_edge_nodes: 
   assumes "v \<in> set (construct_cycle_1 E (CS) n C)" "\<forall>k'. v \<noteq> Cover k'"
   shows "\<exists> x. v \<in> set (construct_cycle_add_edge_nodes E x C)"
   using assms apply(induction CS arbitrary: n)
   by(auto) 
   
 
-lemma aux4:
+lemma nodes_of_cycle:
   assumes "v\<in> set Cycle" "k>0"
   shows "(\<exists>k'. v = Cover k' \<and> k' <k) \<or> (\<exists>e u. v = Edge u e 0 \<and> e \<in> set E \<and> u \<in> e) \<or> (\<exists>e u. v = Edge u e 1\<and> e \<in> set E \<and> u \<in> e)"
-  using assms aux4_4 Cycle_def aux4_5 aux4_6 
-  by (metis not_le)
+  using assms no_Cover_in_edge_function Cycle_def function_of_edge_nodes function_of_cover_nodes in_vc vertex_cover_list_def 
+  by (metis (no_types, lifting) case_prodD le_eq_less_or_eq linorder_neqE_nat mem_Collect_eq)
 
-lemma aux4_1:
+lemma Cover_in_G:
   assumes "k' < k" "v = Cover k'"
   shows "v \<in> verts G"
   using G_def_2 assms by(auto)
 
-lemma aux4_2:
+lemma Edge0_in_G:
   assumes "e \<in> set E" "u\<in> e" "v = Edge u e 0"
   shows "v \<in> verts G"
   using G_def_2 assms by(auto)
 
-lemma aux4_3:
-  assumes "e \<in> set E" "u\<in> e" "v = Edge u e 1"
+lemma Edge1_in_G:
+  assumes "e \<in> set E" "u \<in> e" "v = Edge u e 1"
   shows "v \<in> verts G"
   using G_def_2 assms by auto
 
@@ -219,7 +257,7 @@ lemma aux4_3:
 lemma in_cycle_in_verts: 
   assumes "v \<in> set Cycle" "k>0"
   shows "v\<in> verts G" 
-  using assms aux4 aux4_2 aux4_3 aux4_1 by blast
+  using assms nodes_of_cycle Edge0_in_G Edge1_in_G Cover_in_G by blast
 
 
 lemma 
@@ -232,7 +270,7 @@ proof -
   then show ?thesis by auto
 qed
 
-lemma aux5:
+lemma many_verts_impl_k_greater_0:
   assumes "card (verts G) > 1"
   shows "k>0"
 proof (rule ccontr)
@@ -242,18 +280,19 @@ proof (rule ccontr)
   then have "Cycle = [(Cover 0)]" using Cycle_def by(auto)
   then have "set Cycle = {(Cover 0)}" by auto
   then have "verts G = {(Cover 0)}" using cycle_contains_all_verts assms apply(auto) 
-    using aux1_1 by fastforce
+    using card_greater_1_contains_two_elements by fastforce
   then show False using assms by(auto)
 qed
 
-lemma aux2: 
+lemma head_cycle_in_verts: 
   assumes "v = (hd Cycle)" "card (verts G) > 1" "Cycle \<noteq> []"
   shows "v \<in> (verts G)" 
-  using in_cycle_in_verts assms aux5 by(auto) 
+  using in_cycle_in_verts assms many_verts_impl_k_greater_0 by(auto) 
 
-lemma aux3: 
+lemma cycle_arcs_not_empty: 
   assumes "1 < size Cycle" 
-  shows "vwalk_arcs Cycle \<noteq> []" proof -
+  shows "vwalk_arcs Cycle \<noteq> []"
+proof - (*Faster than sledgehammer generated*)
     obtain x y cs where "Cycle = x#y#cs" using assms 
       by (metis One_nat_def length_0_conv length_Cons less_numeral_extra(4) not_one_less_zero vwalk_arcs.cases)
     then have "vwalk_arcs Cycle = (x,y)#(vwalk_arcs (y#cs))" by simp
@@ -265,9 +304,9 @@ lemma is_cylce:
   assumes "card (verts G) > 1" "v \<in> (verts G)" "v =(hd Cycle)" 
   shows "pre_digraph.cycle G (vwalk_arcs Cycle)"
 proof -
-  have "1 < size Cycle" using assms aux1 by auto
+  have "1 < size Cycle" using assms length_cycle by auto
   then have not_empty: "vwalk_arcs Cycle \<noteq> []" 
-    using assms aux3 by auto
+    using assms cycle_arcs_not_empty by auto
   have distinct: "distinct (tl (pre_digraph.awalk_verts G v (vwalk_arcs Cycle)))"sorry
   have contained: "set (vwalk_arcs Cycle) \<subseteq> arcs G" sorry
   have awalk: "pre_digraph.awalk G v (vwalk_arcs Cycle) v" sorry
@@ -276,7 +315,7 @@ qed
 
 lemma is_hc_cycle_graph: 
   shows "is_hc G Cycle"
-  using cycle_contains_all_verts is_cylce is_hc_def aux2 
+  using cycle_contains_all_verts is_cylce is_hc_def head_cycle_in_verts 
   by fastforce
 
 
@@ -320,14 +359,14 @@ theorem is_reduction_vc_to_hc:
 
 subsection\<open>Need to prove equivalence of Vertex-Cover\<close>
 
-lemma aux: 
+lemma is_vc_list_equal: 
   assumes "distinct E" "distinct V" 
   shows "is_vertex_cover (set E) (set V)\<longleftrightarrow> is_vertex_cover_list E V"
   apply(auto) 
   sorry
 
 lemma "(set E, k) \<in> vertex_cover \<longleftrightarrow> (E, k) \<in> vertex_cover_list"
-  using vertex_cover_def vertex_cover_list_def aux apply(auto)
+  using vertex_cover_def vertex_cover_list_def is_vc_list_equal apply(auto)
   sorry
 
 
