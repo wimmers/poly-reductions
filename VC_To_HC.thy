@@ -72,10 +72,52 @@ lemma if_else_wf_digraph:
   shows "wf_digraph G"
   by(auto simp add: hc_def wf_digraph_def is_hc_def assms)
 
+lemma card_greater_1_contains_two_elements:
+  assumes "card S > 1"
+  shows "\<exists>u v. v\<in> S \<and> u\<in> S \<and> u \<noteq> v"
+proof -
+  have "S \<noteq> {}"
+    using assms by(auto)
+  then have "\<exists>v. v \<in> S" by(auto)
+  then obtain v where "v \<in> S" by auto 
+  have "(S-{v}) \<noteq> {}" 
+    using assms
+    by (metis Diff_empty Diff_idemp Diff_insert0 \<open>S \<noteq> {}\<close> card.insert_remove card_empty finite.emptyI insert_Diff less_Suc0 less_numeral_extra(4) less_one)
+  then have "\<exists>u. u \<in> S-{v}" 
+    by(auto)
+  then obtain u where "u\<in> S-{v}"
+    by auto
+  then have "u\<in> S" by(auto)
+  then have "u \<noteq> v" using \<open>u\<in>S-{v}\<close> by(auto)
+  then show ?thesis using \<open>u\<in> S\<close> \<open>v \<in> S\<close> by auto
+qed
+
+lemma contains_two_card_greater_1:
+  assumes "v \<in> S" "u \<in> S" "u \<noteq> v" "finite S"
+  shows "1 < card S"
+using assms apply(auto) 
+  by (meson card_le_Suc0_iff_eq not_le_imp_less) 
+
 subsection\<open>(E,k) \<in> vc \<Longrightarrow> vc_hc (E, k) f \<in> hc\<close>
 
 definition get_second where
   "get_second e \<equiv> SOME v. v \<in> e"
+
+lemma edge_contains_minus_one_not_empty: 
+  assumes "e \<in> set E'" "ugraph (set E')" "u \<in> e"
+  shows "e-{u} \<noteq> {}"
+using subset_singletonD assms ugraph_def by fastforce
+
+lemma ugraph_implies_smaller_set_ugraph:
+  assumes "ugraph (insert a (set E'))"
+  shows "ugraph (set E')"
+  using assms by (simp add: ugraph_def)
+
+lemma get_second_in_edge:
+  assumes "u = get_second e" "e \<noteq> {}"
+  shows "u \<in> e"
+  using assms unfolding  get_second_def apply(auto) 
+  using some_in_eq by auto
 
 fun construct_cycle_add_edge_nodes:: "('a set list) \<Rightarrow> 'a \<Rightarrow> ('a set) \<Rightarrow>  (('a, 'a set) hc_node) list"
   where 
@@ -129,66 +171,11 @@ lemma is_wf_digraph:
   shows "wf_digraph G"
   by(auto simp add: G_def_2 wf_digraph_def) 
 
-lemma cycle_contains_all_verts:
-  assumes "card (verts G) > 1"
-  shows "(\<forall>x\<in> verts G. x \<in> set Cycle)"  
-  sorry
-
-
-lemma card_greater_1_contains_two_elements:
-  assumes "card S > 1"
-  shows "\<exists>u v. v\<in> S \<and> u\<in> S \<and> u \<noteq> v"
-proof -
-  have "S \<noteq> {}"
-    using assms by(auto)
-  then have "\<exists>v. v \<in> S" by(auto)
-  then obtain v where "v \<in> S" by auto 
-  have "(S-{v}) \<noteq> {}" 
-    using assms
-    by (metis Diff_empty Diff_idemp Diff_insert0 \<open>S \<noteq> {}\<close> card.insert_remove card_empty finite.emptyI insert_Diff less_Suc0 less_numeral_extra(4) less_one)
-  then have "\<exists>u. u \<in> S-{v}" 
-    by(auto)
-  then obtain u where "u\<in> S-{v}"
-    by auto
-  then have "u\<in> S" by(auto)
-  then have "u \<noteq> v" using \<open>u\<in>S-{v}\<close> by(auto)
-  then show ?thesis using \<open>u\<in> S\<close> \<open>v \<in> S\<close> by auto
-qed
-
-
-lemma contains_two_card_greater_1:
-  assumes "v \<in> S" "u \<in> S" "u \<noteq> v" "finite S"
-  shows "1 < card S"
-using assms apply(auto) 
-  by (meson card_le_Suc0_iff_eq not_le_imp_less) 
-
-
-lemma length_cycle:
-  assumes "card (verts G) > 1" 
-  shows "1 < length Cycle" 
-proof -
-  obtain u v where "u\<in> verts G" "v \<in> verts G" "u \<noteq> v" using card_greater_1_contains_two_elements assms by blast
-  then have "u\<in> set Cycle" "v\<in> set Cycle" using cycle_contains_all_verts assms by blast+ 
-  then have "card (set Cycle) > 1" using \<open>u\<noteq>v\<close> contains_two_card_greater_1 by fastforce 
-  then show ?thesis 
-    by (metis \<open>u \<in> set Cycle\<close> card_length leD length_pos_if_in_set less_numeral_extra(3) less_one linorder_neqE_nat)
-qed
-
-lemma get_second_in_edge:
-  assumes "u = get_second e" "e \<noteq> {}"
-  shows "u \<in> e"
-  using assms unfolding  get_second_def apply(auto) 
-  using some_in_eq by auto 
-
-lemma edge_contains_minus_one_not_empty: 
-  assumes "e \<in> set E'" "ugraph (set E')" "u \<in> e"
-  shows "e-{u} \<noteq> {}"
-using subset_singletonD assms ugraph_def by fastforce
-
-lemma ugraph_implies_smaller_set_ugraph:
-  assumes "ugraph (insert a (set E'))"
-  shows "ugraph (set E')"
-  using assms by (simp add: ugraph_def)
+lemma function_of_edge_nodes: 
+  assumes "v \<in> set (construct_cycle_1 E (CS) n C)" "\<forall>k'. v \<noteq> Cover k'"
+  shows "\<exists> x. v \<in> set (construct_cycle_add_edge_nodes E x C)"
+  using assms apply(induction CS arbitrary: n)
+  by(auto) 
 
 lemma edge_0_with_many_prems:
   assumes "ugraph (insert a (set Ea))" "v \<in> set (let u = get_second (a - {x}) in if u \<in> C then [Edge x a 0, Edge x a 1] else [Edge x a 0, Edge u a 0, Edge u a 1, Edge x a 1])"
@@ -212,6 +199,49 @@ lemma no_Cover_in_edge_function:
 using assms apply(induction E arbitrary: ) apply(auto split: if_split_asm simp add: ugraph_implies_smaller_set_ugraph) 
   by(auto simp add: edge_0_with_many_prems)
 
+
+lemma aux1:
+  assumes "i<length Cs +n" "0<length Cs"
+  shows "Cover i \<in> set (construct_cycle_1 E Cs n (set Cs))"
+  using assms apply(induction Cs arbitrary: n) apply(simp) apply(auto) using no_Cover_in_edge_function
+  sorry
+
+lemma aux2:
+  assumes "e \<in> set E" "v \<in> e"
+  shows "Edge v e 0 \<in> set (construct_cycle_1 E Cov 0 (set Cov))"
+  sorry
+
+lemma aux3:
+  assumes "e \<in> set E" "v \<in> e"
+  shows "Edge v e 1 \<in> set (construct_cycle_1 E Cov 0 (set Cov))"
+  sorry
+
+lemma cycle_contains_all_verts:
+  assumes "card (verts G) > 1"
+  shows "(\<forall>x\<in> verts G. x \<in> set Cycle)" 
+  apply(auto simp add: G_def Cycle_def vc_hc_def) 
+  using aux1 
+      apply (simp add: Cov_def(3)) 
+      apply (metis Cov_def(3) gr_implies_not_zero list.size(3) trans_less_add1)
+  using aux2 apply(blast)
+  using aux3 apply(simp)
+  using in_vc vertex_cover_list_def apply blast
+  using in_vc in_vc_k_smaller apply blast
+  done
+
+
+lemma length_cycle:
+  assumes "card (verts G) > 1" 
+  shows "1 < length Cycle" 
+proof -
+  obtain u v where "u\<in> verts G" "v \<in> verts G" "u \<noteq> v" using card_greater_1_contains_two_elements assms by blast
+  then have "u\<in> set Cycle" "v\<in> set Cycle" using cycle_contains_all_verts assms by blast+ 
+  then have "card (set Cycle) > 1" using \<open>u\<noteq>v\<close> contains_two_card_greater_1 by fastforce 
+  then show ?thesis 
+    by (metis \<open>u \<in> set Cycle\<close> card_length leD length_pos_if_in_set less_numeral_extra(3) less_one linorder_neqE_nat)
+qed 
+
+
 lemma only_small_Cover_nodes_in_Cycle:
   assumes "length Cs +n \<le> k'" "0<k'"
   shows "Cover k' \<notin> set (construct_cycle_1 E (Cs) n C)"
@@ -224,12 +254,6 @@ lemma function_of_cover_nodes:
   assumes "k\<le>k'" "0<k"
   shows "Cover k' \<notin> set (construct_cycle_1 E (Cov) 0 C)"
   using Cov_def assms by(auto simp add: only_small_Cover_nodes_in_Cycle) 
-
-lemma function_of_edge_nodes: 
-  assumes "v \<in> set (construct_cycle_1 E (CS) n C)" "\<forall>k'. v \<noteq> Cover k'"
-  shows "\<exists> x. v \<in> set (construct_cycle_add_edge_nodes E x C)"
-  using assms apply(induction CS arbitrary: n)
-  by(auto) 
   
 
 lemma nodes_of_cycle:
