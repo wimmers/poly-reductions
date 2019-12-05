@@ -218,17 +218,12 @@ lemma Edge_nodes_in_construct_edge:
    apply(smt list.set_intros(1))
   by (smt One_nat_def list.set_intros(1) list.set_intros(2)) 
 
-lemma aux7:
+lemma edge_nodes_in_construct_cycle_both_in_Cover:
   assumes "e \<in> set E" "u\<in> e" "v\<in> e" "u \<in> set Cs" "v \<in> Cs'" "u\<in> Cs'"
-  shows "(Edge u e 0) \<in> set  (construct_cycle_1 E Cs n Cs')"
-  using assms apply(induction Cs arbitrary: n) using Edge_nodes_in_construct_edge apply(auto simp add: Edge_nodes_in_construct_edge(1))
+  shows "(Edge u e 0) \<in> set  (construct_cycle_1 E Cs n Cs')" "(Edge u e 1) \<in> set  (construct_cycle_1 E Cs n Cs')"
+  using assms apply(induction Cs arbitrary: n) using Edge_nodes_in_construct_edge by(auto simp add: Edge_nodes_in_construct_edge)
 
-lemma aux10:
-  assumes "e \<in> set E" "u\<in> e" "v\<in> e" "u \<in> set Cs" "v \<in> Cs'" "u\<in> Cs'"
-  shows "(Edge u e 1) \<in> set  (construct_cycle_1 E Cs n Cs')"
-  using assms apply(induction Cs arbitrary: n) using Edge_nodes_in_construct_edge apply(auto) by fast
-
-lemma aux13:
+lemma edge_nodes_construct_edges_expanded:
   assumes "u \<in> e" "u \<notin> Cs'"  "v \<in> e"  "card e = 2" "u \<noteq> v"
   shows "Edge u e 0 \<in> set (let u' = get_second (e - {v}) in if u' \<in> Cs' then [Edge v e 0, Edge v e 1] else [Edge v e 0, Edge u' e 0, Edge u' e 1, Edge v e 1])
    \<and>Edge u e 1 \<in> set (let u' = get_second (e - {v}) in if u' \<in> Cs' then [Edge v e 0, Edge v e 1] else [Edge v e 0, Edge u' e 0, Edge u' e 1, Edge v e 1])"
@@ -245,17 +240,17 @@ proof -
   then show ?thesis using assms by(auto)
 qed
 
-lemma aux12:
+lemma edge_nodes_in_construct_edgess:
   assumes "v \<in> e" "u \<in> e" "e \<in> set E'" "u \<notin> Cs'" "card e = 2" "v \<noteq> u"
-  shows "Edge u e 0 \<in> set (construct_cycle_add_edge_nodes E' v Cs') \<and>  Edge u e 1 \<in> set (construct_cycle_add_edge_nodes E' v Cs')"
-  using assms apply(induction E') using ugraph_def aux13 apply(auto) 
+  shows "Edge u e 0 \<in> set (construct_cycle_add_edge_nodes E' v Cs') \<and> Edge u e 1 \<in> set (construct_cycle_add_edge_nodes E' v Cs')"
+  using assms apply(induction E') using ugraph_def edge_nodes_construct_edges_expanded apply(auto) 
   by fast+
 
-lemma edge_nodes_in_construct_cycle:
+lemma edge_nodes_in_construct_cycle_one_in_Cover:
   assumes "e \<in> set E" "u\<in> e" "v\<in> e" "u \<in> set Cs" "u \<in> Cs'" "v \<notin> Cs'"
   shows "(Edge v e 0) \<in> set  (construct_cycle_1 E Cs n Cs') \<and> (Edge v e 1) \<in> set  (construct_cycle_1 E Cs n Cs')"
-  using assms apply(induction Cs arbitrary: n) using aux9 aux12 card_dedges  apply(auto) 
-  by (smt assms(3) assms(6) aux12 card_dedges numeral_1_eq_Suc_0 numeral_2_eq_2 numerals(1))+   
+  using assms apply(induction Cs arbitrary: n) using Edge_nodes_in_construct_edge edge_nodes_in_construct_edgess card_dedges  apply(auto) 
+  by (smt assms(3) assms(6) edge_nodes_in_construct_edgess card_dedges numeral_1_eq_Suc_0 numeral_2_eq_2 numerals(1))+   
 
 lemma edge_nodes_in_cycle:
   assumes "e \<in> set E" "v \<in> e"
@@ -263,12 +258,12 @@ lemma edge_nodes_in_cycle:
 proof (cases "v\<in> set Cov")
   case True
   then show ?thesis 
-    using assms aux7 aux10 Cycle_def by(auto)
+    using assms edge_nodes_in_construct_cycle_one_in_Cover edge_nodes_in_construct_cycle_both_in_Cover Cycle_def by(auto)
 next
   case False
   then have "\<exists>u. u \<in> e \<and> u \<in> set Cov" using assms Cov_def is_vertex_cover_list_def by fast 
   then obtain u where "u\<in> e" "u \<in> set Cov" by auto
-  then show ?thesis using False assms edge_nodes_in_construct_cycle  Cycle_def by(auto)
+  then show ?thesis using False assms edge_nodes_in_construct_cycle_one_in_Cover  Cycle_def by(auto)
 qed
 
 lemma cycle_contains_all_verts:
