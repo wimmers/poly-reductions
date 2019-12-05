@@ -421,10 +421,29 @@ lemma aux13:
   using assms apply(induction C arbitrary: n) apply(auto simp add: )   
   sorry
 
+lemma aux21: 
+  assumes "Suc 0 < i" "Edge u1 e1 i \<in> set (construct_cycle_add_edge_nodes E' a C')"
+  shows "False"
+  using assms apply(induction E')
+  apply(auto split: if_split_asm) 
+  sorry
+
+lemma aux20:
+  assumes "v1 = Edge u1 e1 i" "v1 \<in> set (construct_cycle_1 E C n C')" "i>1"
+  shows "False"
+  using assms apply(induction C arbitrary: n) apply(auto simp add: aux21) using aux21 by blast
+  sorry
+
 lemma aux14:
   assumes "\<exists>p1 p2. p1@ [v1, v2] @ p2 = construct_cycle_1 E C 0 (set C)" "v1 = Edge u1 e1 i" "v2 = Edge u2 e2 j" "j > 1 \<or> i > 1"
   shows "False"
-  sorry
+proof -
+  from \<open>\<exists>p1 p2. p1@ [v1, v2] @ p2 = construct_cycle_1 E C 0 (set C)\<close> have v1_in:  "v1 \<in> set (construct_cycle_1 E C 0 (set C))" 
+    by (metis Cons_eq_appendI in_set_conv_decomp self_append_conv2)
+  from \<open>\<exists>p1 p2. p1@ [v1, v2] @ p2 = construct_cycle_1 E C 0 (set C)\<close> have v2_in: "v2 \<in> set (construct_cycle_1 E C 0 (set C))" 
+    by (metis (no_types, hide_lams) append_eq_Cons_conv append_eq_append_conv2 in_set_conv_decomp self_append_conv2) 
+  then show False using assms v1_in v2_in aux20 \<open>j> 1 \<or> i > 1\<close> by meson +
+qed
 
 lemma aux16:
   assumes "v1 = Edge u1 e1 0" "v2 = Edge u2 e2 i2""\<exists>p1 p2. p1@ [v1, v2] @ p2 = construct_cycle_1 E C 0 (set C)" "is_vertex_cover_list E C"
