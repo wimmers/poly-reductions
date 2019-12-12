@@ -401,7 +401,7 @@ lemma aux26:
   shows "False"
   using assms by(auto split: if_split_asm)
 
-lemma aux25:
+lemma Cover_not_in_edge_nodes:
   assumes "Cover i \<in> set (construct_cycle_add_edge_nodes E' a C')"
   shows False
   using assms apply(induction E') apply(auto simp add: aux26 split: if_split_asm) 
@@ -410,7 +410,7 @@ lemma aux25:
 lemma constraints_for_Cover_nodes: 
   assumes "Cover i \<in> set (construct_cycle_1 E C n C')"
   shows "(i<length C +n \<and> i\<ge> n)  \<or> i = 0"
-  using assms apply(induction C arbitrary: n) apply(auto simp add: aux25) using aux25 
+  using assms apply(induction C arbitrary: n) apply(auto simp add: Cover_not_in_edge_nodes) using Cover_not_in_edge_nodes 
   by fastforce+
 
 lemma in_cycle:
@@ -827,13 +827,100 @@ proof
 qed
 
 subsection\<open>Cycle is distince\<close>
+lemma distinct_edges:
+  shows "distinct E"
+  using in_vc vertex_cover_list_def by(auto)
 
-lemma distinct_nodes: "distinct (tl (construct_cycle_1 E Cs n C'))"
+lemma distinct_cover:
+  shows "distinct Cov"
+  using Cov_def by simp
+
+lemma aux100:
+  assumes "u = get_second (aa - {a})" "ugraph (insert aa (set E'))" 
+  shows "distinct (if u \<in> C' then [Edge a aa 0, Edge a aa 1] 
+      else [Edge a aa 0, Edge u aa 0, Edge u aa 1, Edge a aa 1])"
+proof -
+  have "card aa = 2" 
+    using assms 
+    by (simp add: ugraph_def) 
+  then have "u \<in> (aa - {a})" 
+    using assms  
+    by (metis Diff_empty Diff_insert0 add_diff_cancel_right' card_Diff_singleton finite.emptyI get_second_in_edge infinite_remove insert_Diff_if is_singletonI is_singleton_altdef less_diff_conv not_add_less2 numeral_less_iff odd_card_imp_not_empty odd_one one_add_one semiring_norm(76) singletonI) 
+  then have "u \<noteq> a" 
+    using assms by blast
+  then show ?thesis by(auto)
+qed
+
+lemma aux103:
+  assumes 
+      "Edge u e i
+        \<in> set (if u \<in> C' then [Edge a aa 0, Edge a aa 1] else [Edge a aa 0, Edge u aa 0, Edge u aa 1, Edge a aa 1])"
+    shows "aa = e"
+  using assms by(auto split: if_split_asm)
+
+lemma aux102:
+  assumes "Edge u e i
+        \<in> set (let u = get_second (aa - {a}) in if u \<in> C' then [Edge a aa 0, Edge a aa 1] else [Edge a aa 0, Edge u aa 0, Edge u aa 1, Edge a aa 1])"
+  shows "e = aa"
+  using assms aux103 
+  by (smt empty_set hc_node.inject(2) list.simps(15) set_ConsD singleton_iff)
+
+
+lemma aux101:
+  assumes "e \<notin> set E'" "\<exists>u i. Edge u e i \<in> set (construct_cycle_add_edge_nodes E' a C')"
+  shows False
+  using assms apply(induction E') apply(auto split: if_split_asm)
+  using aux102 by fastforce+
+
+lemma distinct_construct_edge_nodes:
+  assumes "distinct E'" "ugraph (set E')"
+  shows "distinct (construct_cycle_add_edge_nodes E' a C')"
+  using assms apply(induction E') apply(auto)
+  using aux100 apply smt
+    apply (auto simp add: ugraph_implies_smaller_set_ugraph) 
+  using aux101 
+  by (smt empty_set list.simps(15) set_ConsD singleton_iff)
+
+lemma aux104:
+  assumes "Edge v e i \<in> set (construct_cycle_add_edge_nodes E a C')"
+  shows "v = a \<or> v \<notin> C'"
   sorry
+
+lemma aux105:
+  assumes "x \<in> set (construct_cycle_add_edge_nodes E v C')" "v \<in> C'" "v \<noteq> u"
+    "u \<in> C'" "x \<in> set (construct_cycle_add_edge_nodes E u C')"
+  shows  False
+  sorry
+
+lemma cover_node_not_in_other_edge:
+  assumes "x \<in> set (construct_cycle_add_edge_nodes E a C')"
+    "a \<notin> set Cs" "distinct Cs" "a \<in> C'" "set Cs \<subseteq> C'"
+  shows "x \<notin> set (construct_cycle_1 E Cs n C')"
+  using assms apply(induction Cs arbitrary: n) apply(auto)
+  using Cover_not_in_edge_nodes apply fast+
+  using aux105 by blast
+
+lemma distinct_n_greater_0:  
+  assumes "distinct E" "distinct Cs" "n>0"  "set Cs \<subseteq> C'"
+  shows "distinct ((construct_cycle_1 E Cs n C'))"
+  using assms apply(induction Cs arbitrary: n) apply(auto simp add: distinct_construct_edge_nodes)
+    apply (meson Cover_not_in_edge_nodes)
+  using Suc_n_not_le_n constraints_for_Cover_nodes apply blast
+  using distinct_construct_edge_nodes in_vc vertex_cover_list_def apply fast
+  using cover_node_not_in_other_edge by auto
+
+lemma distinct_nodes: 
+  assumes "distinct E" "distinct Cs" "set Cs \<subseteq> C'"
+  shows "distinct (tl (construct_cycle_1 E Cs n C'))"
+  using assms apply(induction Cs arbitrary: n) 
+   apply(auto)
+  using vertex_cover_list_def in_vc
+  by(auto simp add: distinct_construct_edge_nodes distinct_n_greater_0 cover_node_not_in_other_edge in_vc vertex_cover_list_def)
+  
 
 lemma cycle_distinct:
   "distinct (tl Cycle)"
-  using Cycle_def distinct_nodes by(auto)
+  using Cycle_def distinct_nodes Cycle_def distinct_edges distinct_cover by(auto)
 
 lemma vwalk_arcs_awalk_verts_equal: 
   assumes "length C \<ge> 2"
