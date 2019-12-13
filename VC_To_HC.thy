@@ -835,7 +835,7 @@ lemma distinct_cover:
   shows "distinct Cov"
   using Cov_def by simp
 
-lemma aux100:
+lemma distinct_edge_lists:
   assumes "u = get_second (aa - {a})" "ugraph (insert aa (set E'))" 
   shows "distinct (if u \<in> C' then [Edge a aa 0, Edge a aa 1] 
       else [Edge a aa 0, Edge u aa 0, Edge u aa 1, Edge a aa 1])"
@@ -851,46 +851,157 @@ proof -
   then show ?thesis by(auto)
 qed
 
-lemma aux103:
+lemma edge_in_list_construction_contains_given_e:
   assumes 
       "Edge u e i
         \<in> set (if u \<in> C' then [Edge a aa 0, Edge a aa 1] else [Edge a aa 0, Edge u aa 0, Edge u aa 1, Edge a aa 1])"
     shows "aa = e"
   using assms by(auto split: if_split_asm)
 
-lemma aux102:
+lemma edge_in_list_construction_contains_given_e2:
   assumes "Edge u e i
         \<in> set (let u = get_second (aa - {a}) in if u \<in> C' then [Edge a aa 0, Edge a aa 1] else [Edge a aa 0, Edge u aa 0, Edge u aa 1, Edge a aa 1])"
   shows "e = aa"
-  using assms aux103 
+  using assms edge_in_list_construction_contains_given_e 
   by (smt empty_set hc_node.inject(2) list.simps(15) set_ConsD singleton_iff)
 
 
-lemma aux101:
+lemma only_previous_edges_in_new_edges:
   assumes "e \<notin> set E'" "\<exists>u i. Edge u e i \<in> set (construct_cycle_add_edge_nodes E' a C')"
   shows False
   using assms apply(induction E') apply(auto split: if_split_asm)
-  using aux102 by fastforce+
+  using edge_in_list_construction_contains_given_e2 by fastforce+
 
 lemma distinct_construct_edge_nodes:
   assumes "distinct E'" "ugraph (set E')"
   shows "distinct (construct_cycle_add_edge_nodes E' a C')"
   using assms apply(induction E') apply(auto)
-  using aux100 apply smt
+  using distinct_edge_lists apply smt
     apply (auto simp add: ugraph_implies_smaller_set_ugraph) 
-  using aux101 
+  using only_previous_edges_in_new_edges 
   by (smt empty_set list.simps(15) set_ConsD singleton_iff)
 
-lemma aux104:
-  assumes "Edge v e i \<in> set (construct_cycle_add_edge_nodes E a C')"
-  shows "v = a \<or> v \<notin> C'"
-  sorry
+lemma card_3_element_set:
+  assumes "v\<in> e" "u\<in> e" "x\<in> e" "v \<noteq> u" "x \<noteq> u" "v \<noteq> x" "finite e"
+  shows "card e \<ge> 3"
+proof -
+  have 1: "{x, u, v} \<subseteq> e" using assms by simp
+  have "finite {x, u, v}" by simp
+  then have "card {x, u, v} = 3" using assms by(auto)
+  then show ?thesis 
+    using 1 assms by (metis card_mono)
+qed
 
-lemma aux105:
+lemma elements_of_edges_helper:
+  assumes "v\<in> e" "u\<in> e" "card e = 2" "v \<noteq> u" "finite e"
+  shows "e = {v, u}"
+  using assms apply(auto) apply(rule ccontr) using card_3_element_set 
+  by (metis add_le_cancel_right numeral_le_one_iff numeral_plus_one one_add_one semiring_norm(5) semiring_norm(69))
+
+lemma node_of_node_of_edge_construction:
+  assumes "Edge v e i \<in> set (construct_cycle_add_edge_nodes E' a C')"
+  shows "v = a \<or> v \<notin> C'"
+  using assms apply(induction E') apply(auto split: if_split_asm) 
+  by (smt empty_set hc_node.inject(2) insertCI set_ConsD singleton_iff)
+
+lemma node_of_edge_construction_contains_a: 
+  assumes "Edge v e i \<in> set (construct_cycle_add_edge_nodes E' a C')"
+  shows "a \<in> e"
+  using assms apply(induction E') apply(auto split: if_split_asm) 
+  using edge_in_list_construction_contains_given_e2 by fastforce
+
+lemma vertex_in_dege_of_node_helper2:
+  assumes "Edge v e i
+        \<in> set (if u \<in> C' then [Edge a aa 0, Edge a aa 1] else [Edge a aa 0, Edge u aa 0, Edge u aa 1, Edge a aa 1])"
+      "u = get_second (aa - {a})"
+    shows "v = a \<or> v = u"
+  using assms by(auto split: if_split_asm)
+
+lemma vertex_in_edge_of_node_helper2: 
+  assumes "Edge v e i
+        \<in> set (if u \<in> C' then [Edge a aa 0, Edge a aa 1] else [Edge a aa 0, Edge u aa 0, Edge u aa 1, Edge a aa 1])"
+      "u = get_second (aa - {a})" "a \<in> aa" "card e \<ge> 2"
+    shows "v \<in> e"
+proof -
+  have 2: "e = aa" using assms by(auto split: if_split_asm)
+  have 1: "v = a \<or> v = u" 
+    using vertex_in_dege_of_node_helper2 assms by fast
+  have "u \<in> aa" using assms 
+    by (metis Suc_1 \<open>e = aa\<close> card_empty card_insert_le_m1 diff_is_0_eq' get_second_in_edge insert_Diff insert_iff le_numeral_extra(3) le_numeral_extra(4) less_numeral_extra(1) not_less_eq_eq)
+  then show ?thesis using 1 2 assms by(auto)
+qed
+
+lemma vertex_in_edge_of_node_helpe3:
+  assumes "ugraph (insert aa (set E'))" "a \<in> aa" 
+      "Edge v e i
+        \<in> set (let u = get_second (aa - {a}) in if u \<in> C' then [Edge a aa 0, Edge a aa 1] else [Edge a aa 0, Edge u aa 0, Edge u aa 1, Edge a aa 1])"
+    shows "v \<in> e"
+proof -
+  have 1: "card aa = 2" 
+    using assms by (simp add: ugraph_def)
+  then have "e = aa" 
+    using edge_in_list_construction_contains_given_e2 assms by fastforce
+  then have "card e = 2" 
+    using 1 by auto
+  then show ?thesis using assms vertex_in_edge_of_node_helper2 
+    by (smt Suc_1 Suc_le_mono le_numeral_extra(4))
+qed
+
+lemma vertex_in_edge_of_node: 
+  assumes "Edge v e i \<in> set (construct_cycle_add_edge_nodes E' a C')" "ugraph (set E')"
+  shows "v \<in> e"
+  using assms apply(induction E') apply(auto split: if_split_asm) 
+  using assms vertex_in_edge_of_node_helpe3 apply fast    
+  using ugraph_implies_smaller_set_ugraph by auto
+ 
+
+lemma edge_of_vertex_contains: 
+  assumes "Edge v e i \<in> set (construct_cycle_add_edge_nodes E a C')" "v \<noteq> a" "ugraph (set E)"
+  shows "e = {v,a}"
+proof -
+  have 1: "a\<in> e" 
+    using node_of_edge_construction_contains_a assms by fast
+  have 2: "v \<in> e" 
+    using vertex_in_edge_of_node assms by fast
+  have 3: "card e = 2" 
+    using assms ugraph_def only_previous_edges_in_new_edges by metis
+  then have "finite e" 
+    using card_infinite by force 
+  then show ?thesis 
+    using 1 2 3 assms elements_of_edges_helper by metis 
+qed
+
+lemma edge_vertex_not_in_two_lists:
   assumes "x \<in> set (construct_cycle_add_edge_nodes E v C')" "v \<in> C'" "v \<noteq> u"
-    "u \<in> C'" "x \<in> set (construct_cycle_add_edge_nodes E u C')"
+    "u \<in> C'" "x \<in> set (construct_cycle_add_edge_nodes E u C')" "ugraph (set E)"
   shows  False
-  sorry
+proof -
+  have "\<exists>w e i. x = Edge w e i" 
+    using assms by (metis Cover_not_in_edge_nodes hc_node.exhaust)
+  then obtain w e i where "x = Edge w e i" by blast
+  then have 1: "w = v \<or> w \<notin> C'" 
+    using node_of_node_of_edge_construction assms by simp
+  then have 2: "w\<noteq> u" 
+    using assms by auto
+  show False proof(cases "w = v")
+    case True
+    then have "x\<notin> set (construct_cycle_add_edge_nodes E u C')" 
+      using assms node_of_node_of_edge_construction \<open>x = Edge w e i\<close> by fast
+    then show ?thesis 
+      using assms by simp
+  next
+    case False
+    then have "w \<notin> C'" 
+      using 1 by auto
+    then have "e = {w, v}" 
+      using False assms edge_of_vertex_contains by (simp add: \<open>x = Edge w e i\<close>)
+    then have "u \<notin> e" using assms 2 by simp
+    then have "x\<notin> set (construct_cycle_add_edge_nodes E u C')" 
+      using node_of_edge_construction_contains_a \<open>x = Edge w e i\<close> by fast
+    then show ?thesis 
+      using assms by simp
+  qed
+qed
 
 lemma cover_node_not_in_other_edge:
   assumes "x \<in> set (construct_cycle_add_edge_nodes E a C')"
@@ -898,7 +1009,8 @@ lemma cover_node_not_in_other_edge:
   shows "x \<notin> set (construct_cycle_1 E Cs n C')"
   using assms apply(induction Cs arbitrary: n) apply(auto)
   using Cover_not_in_edge_nodes apply fast+
-  using aux105 by blast
+  using edge_vertex_not_in_two_lists assms in_vc vertex_cover_list_def 
+  by fast
 
 lemma distinct_n_greater_0:  
   assumes "distinct E" "distinct Cs" "n>0"  "set Cs \<subseteq> C'"
