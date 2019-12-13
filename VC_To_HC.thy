@@ -1096,6 +1096,66 @@ qed
 lemma distinct_arcs: "distinct (tl (pre_digraph.awalk_verts G v (vwalk_arcs Cycle)))"
   using cycle_distinct distinct_nodes_implie_distinct_edges by(auto)
 
+subsection\<open>Cycle is awalk\<close>
+
+lemma hd_construct_cycle_Cover_0:
+  shows "(hd (construct_cycle_1 E C 0 C')) = Cover 0"
+  apply(induction C) by(auto) 
+
+lemma head_construct_cycle_Cover_n:
+  assumes "C \<noteq> []"
+  shows "(hd (construct_cycle_1 E C n C')) = Cover n"
+  using assms apply(induction C)by(auto) 
+
+lemma last_construct_cycle_Cover_0:
+  shows "(last (construct_cycle_1 E C n C')) = Cover 0"
+  apply(induction C arbitrary: n) apply(auto)
+  using construct_cycle_1.elims apply blast
+  by (metis construct_cycle_1.elims last_append neq_Nil_conv)
+
+lemma step_vwalk_arcs_impl_cas:
+  assumes "pre_digraph.cas G (hd L) (vwalk_arcs L) (last L)"  "(a, hd L) \<in> arcs G" 
+  shows "pre_digraph.cas G a ((a, hd L) # vwalk_arcs L) (last L)"
+proof -
+  have 3: "pre_digraph.cas G a ((a, hd L) # vwalk_arcs L) (last L) = (tail G (a, hd L) = a \<and> pre_digraph.cas G (head G (a, hd L)) (vwalk_arcs L) (last L))"
+    by (simp add: pre_digraph.cas.simps(2)) 
+  have 1: "tail G (a, hd L) = a" using G_def_2 by(auto)
+  have 2: "head G (a, hd L) = (hd L)" using G_def_2 by(auto)
+  with 1 2 3 assms show ?thesis by simp
+qed
+
+lemma vwalk_arcs_impl_cas:
+  assumes "set (vwalk_arcs L) \<subseteq> arcs G" "L\<noteq> []"
+  shows "pre_digraph.cas G (hd L) (vwalk_arcs L) (last L)"
+  using assms apply(induction L)
+   apply (metis last_ConsL list.distinct(1) list.sel(1) pre_digraph.cas.simps(1) vwalk_arcs.elims)
+  apply(auto) 
+   apply (simp add: pre_digraph.cas.simps(1))
+  using step_vwalk_arcs_impl_cas by simp
+
+lemma general_cas_construct_cycle: 
+  assumes "(set (vwalk_arcs (construct_cycle_1 E C n C'))) \<subseteq> arcs G" "C \<noteq> []"
+  shows "pre_digraph.cas G (Cover n) (vwalk_arcs (construct_cycle_1 E C n C')) (Cover 0)"
+proof -
+  have 1: "construct_cycle_1 E C n C' \<noteq> []" 
+    apply(induction C arbitrary: n) by(auto)
+  have 2: "hd (construct_cycle_1 E C n C') = (Cover n)" 
+    using assms by (simp add: head_construct_cycle_Cover_n)
+  have 3: "last (construct_cycle_1 E C n C') = Cover 0" 
+    using last_construct_cycle_Cover_0 by(auto)
+  then show ?thesis 
+    using 1 2 3 assms vwalk_arcs_impl_cas by fastforce
+qed
+
+lemma is_awalk:
+  assumes "card (verts G) > 1" "v \<in> (verts G)" "v =(hd Cycle)" 
+  shows "pre_digraph.awalk G v (vwalk_arcs Cycle) v"
+  using assms pre_digraph.awalk_def  apply(auto simp add: pre_digraph.awalk_def)
+  using assms(1) edges_of_cycle_are_in_Graph apply blast
+  using Cycle_def apply(auto simp add: hd_construct_cycle_Cover_0 general_cas_construct_cycle) 
+  using general_cas_construct_cycle Cov_def(3) edges_of_cycle_are_in_Graph many_verts_impl_k_greater_0 by auto 
+
+
 subsection\<open>Is in hc\<close>
 
 lemma is_cylce: 
@@ -1110,7 +1170,7 @@ proof -
     using distinct_arcs by(auto)
   have contained: "set (vwalk_arcs Cycle) \<subseteq> arcs G" 
     using assms edges_of_cycle_are_in_Graph by(auto)
-  have awalk: "pre_digraph.awalk G v (vwalk_arcs Cycle) v" sorry
+  have awalk: "pre_digraph.awalk G v (vwalk_arcs Cycle) v" using assms is_awalk by(auto)
   show ?thesis using not_empty distinct contained awalk pre_digraph.cycle_def pre_digraph.awalk_def by(auto)  
 qed
 
