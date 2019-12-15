@@ -374,27 +374,7 @@ proof - (*Faster than sledgehammer generated*)
   then show ?thesis .
 qed
 
-subsection\<open>Test\<close>
-lemma aux22:
-  assumes " u = get_second (aa - {a})" "1<i" "Edge u1 e1 i
-        \<in> set (if u \<in> C' then [Edge a aa 0, Edge a aa 1] else [Edge a aa 0, Edge u aa 0, Edge u aa 1, Edge a aa 1])"
-  shows "False"
-  using assms by(auto split: if_split_asm)
-
-lemma aux21: 
-  assumes "Suc 0 < i" "Edge u1 e1 i \<in> set (construct_cycle_add_edge_nodes E' a C')"
-  shows "False"
-  using assms apply(induction E')
-   apply(auto split: if_split_asm) 
-  using aux22
-  by (smt One_nat_def)
-
-lemma aux20:
-  assumes "v1 = Edge u1 e1 i" "v1 \<in> set (construct_cycle_1 E C n C')" "i>1"
-  shows "False"
-  using assms apply(induction C arbitrary: n) apply(auto simp add: aux21) using aux21 by metis
-
-lemma aux26:
+lemma Cover_not_in_sublists:
   assumes " u = get_second (aa - {a})" 
       "Cover i
         \<in> set (if u \<in> C' then [Edge a aa 0, Edge a aa 1] else [Edge a aa 0, Edge u aa 0, Edge u aa 1, Edge a aa 1])"
@@ -404,427 +384,14 @@ lemma aux26:
 lemma Cover_not_in_edge_nodes:
   assumes "Cover i \<in> set (construct_cycle_add_edge_nodes E' a C')"
   shows False
-  using assms apply(induction E') apply(auto simp add: aux26 split: if_split_asm) 
-  using aux26 by (metis (mono_tags, lifting)) 
+  using assms apply(induction E') apply(auto simp add: Cover_not_in_sublists split: if_split_asm) 
+  using Cover_not_in_sublists by (metis (mono_tags, lifting)) 
 
 lemma constraints_for_Cover_nodes: 
   assumes "Cover i \<in> set (construct_cycle_1 E C n C')"
   shows "(i<length C +n \<and> i\<ge> n)  \<or> i = 0"
   using assms apply(induction C arbitrary: n) apply(auto simp add: Cover_not_in_edge_nodes) using Cover_not_in_edge_nodes 
   by fastforce+
-
-lemma in_cycle:
-  assumes "v \<in> set (construct_cycle_1 E (CS) n C)" "ugraph (set E)"
-  shows "(\<exists>i. v = Cover i \<and>  ((i<length CS + n \<and> i \<ge> n)  \<or> i = 0)) 
-        \<or> (\<exists> e u. v = Edge u e 0 \<and> u \<in> e \<and> e \<in> set E) \<or> (\<exists> e u. v = Edge u e 1 \<and> u \<in> e \<and> e \<in> set E)"
-  using assms apply(induction CS arbitrary: n) apply(auto) 
-  apply (metis One_nat_def assms(2) no_Cover_in_edge_function)
-  by fastforce
-
-(*lemma aux_3: 
-  assumes "i+1<length Cy" "Cy = (construct_cycle_1 E (CS) n C)" "Cy!i = v1" "Cy!(i+1) = v2"
-    "v1 = Cover x1"
-  shows "((x1<length CS +n \<and>( x1 \<ge> n \<or> x1 = 0)) \<and> 
-      ((\<exists>i. v2 = Cover i \<and>  i<length CS +n \<and> (i \<ge> n \<or> i = 0)) \<or> 
-        (\<exists>u e. v2 = Edge u e 0 \<and> (\<exists>i<length E. e = E ! i \<and> u \<in> e \<and> (\<forall>j. u \<in> E ! j \<longrightarrow> j < length E \<longrightarrow> \<not> j < i)))))"
-  sorry
-
-lemma aux_2: 
-  assumes "i+1<length Cy" "Cy = (construct_cycle_1 E (CS) n C)" "Cy!i = v1" "Cy!(i+1) = v2"
-  shows "v1 = Cover i \<longrightarrow> (((i<length CS +n \<and> i \<ge> n) \<or> i = 0) \<and> 
-      ((\<exists>i. v2 = Cover i \<and>  (i<length CS +n \<and> i \<ge> n) \<or> i = 0) \<or> (\<exists> e u. v = Edge u e 0 \<and> u \<in> e \<and> e \<in> set E)))"
-      "v1 = Edge u1 e1 0 \<longrightarrow> ( u1 \<in> e1 \<and> e1 \<in> set E) \<and> ((\<exists>u2. v2 = Edge u2 e1 0 \<and> u2 \<in> e1) \<or>
-          v2 = Edge u1 e1 1)"
-      "v1 = Edge u1 e1 1 \<longrightarrow> ( u1 \<in> e1 \<and> e1 \<in> set E) \<and> ((\<exists>u2. v2 = Edge u2 e1 1 \<and> u2 \<in> e1) \<or>
-          (\<exists>e2. v2 = Edge u1 e2 0 \<and> u1 \<in> e2))"
-  sorry*)
-
-lemma aux_4: 
-  assumes "Suc i<length C" "C!i = x"
-  shows "x \<in> set C"
-  using assms Suc_lessD nth_mem by blast  
-
-lemma aux_5:
-  assumes "(\<exists>i. v2 = Cover i \<and> (i < k \<or> i = 0)) \<or> (\<exists>u e. v2 = Edge u e 0 \<and> (\<exists>i<length E. e = E ! i \<and> u \<in> e \<and> (\<forall>j. u \<in> E ! j \<longrightarrow> j < length E \<longrightarrow> \<not> j < i)))"
-     "0 < k"
-  shows "(\<exists>i. v2 = Cover i \<and> i < k) \<or> (\<exists>u e. v2 = Edge u e 0 \<and> (\<exists>i<length E. e = E ! i \<and> u \<in> e \<and> (\<forall>j. u \<in> E ! j \<longrightarrow> j < length E \<longrightarrow> \<not> j < i)))" 
-using assms proof (cases "(\<exists>i. v2 = Cover i \<and> (i < k \<or> i = 0))")
-  case True
-  then obtain i where "(v2 = Cover i \<and> (i < k \<or> i = 0))" by blast
-  then have 1: "v2 = Cover i \<and>( i < k \<or> i = 0)" by auto
-  then have 2: "i<k" using assms by(auto)
-      from 1 have "v2 = Cover i" by auto
-  then have 1: "v2 = Cover i \<and> i< k" using \<open>k>0\<close> 
-    by (simp add: "2")
-  then show ?thesis by auto
-next
-  case False
-  with assms have "(\<exists>u e. v2 = Edge u e 0 \<and> (\<exists>i<length E. e = E ! i \<and> u \<in> e \<and> (\<forall>j. u \<in> E ! j \<longrightarrow> j < length E \<longrightarrow> \<not> j < i)))"
-    by auto
-  then show ?thesis by auto
-qed
-(*
-lemma aux_1:
-  assumes "i+1<length Cycle"  "v1 = Cycle!i" "v2 = Cycle ! (i+1)" "k>0"
-  shows "(v1, v2) \<in> arcs G" 
- (*using Cycle_def assms G_def_2 Cov_def aux_2 apply(simp)*)
-proof (cases v1)
-  case (Cover x1)
-  then have "Cover x1 \<in> set Cycle" using assms aux_4 by(auto)
-  then have "x1 < k" using aux_3 in_cycle assms apply(auto simp add: in_cycle nodes_of_cycle) 
-    using Cycle_def function_of_cover_nodes not_le_imp_less by metis
-  then have  "((x1<length Cov +0 \<and>( x1 \<ge> 0 \<or> x1 = 0)) \<and> 
-      ((\<exists>i. v2 = Cover i \<and>  i<length Cov +0 \<and> (i \<ge> 0 \<or> i = 0)) \<or> 
-        (\<exists>u e. v2 = Edge u e 0 \<and> (\<exists>i<length E. e = E ! i \<and> u \<in> e \<and> (\<forall>j. u \<in> E ! j \<longrightarrow> j < length E \<longrightarrow> \<not> j < i)))))"
-    using aux_3 assms  Cov_def apply(auto simp add:) 
-    by (smt Cover Cycle_def add_cancel_right_right) sorry
-  then have "((\<exists>i. v2 = Cover i \<and> i < k) \<or>
-             (\<exists>u e. v2 = Edge u e 0 \<and> (\<exists>i<length E. e = E ! i \<and> u \<in> e \<and> (\<forall>j. u \<in> E ! j \<longrightarrow> j < length E \<longrightarrow> \<not> j < i))))"
-    using \<open>0<k\<close> Cov_def by(simp add: aux_5) 
-  then show ?thesis using Cover Cov_def assms \<open>x1< _ \<close> aux_5 apply(simp add: assms Cycle_def G_def_2) by blast
-next
-  case (Edge x21 x22 x23)
-  then show ?thesis sorry
-qed*)
-
-subsubsection\<open>Edges of Cycle are Edges of Graph\<close>
-
-lemma aux40:
-  assumes "Edge v e 0 \<in>  set (construct_cycle_1 E C n C')" 
-  shows "v \<in> e" "e \<in> set E"
-  using assms in_cycle in_vc vertex_cover_list_def by(blast)+
-
-lemma aux41:
-  assumes "\<exists>p1 p2. p1@ [v1, v2] @ p2 = C"
-  shows "v1 \<in> set C" "v2 \<in> set C"
-  using assms 
-  by auto
-
-(*lemma aux43: 
-  shows "hd (construct_cycle_1 E C n C') = Cover n \<or> hd ((construct_cycle_1 E C n C')) = Cover 0"
-  sorry
-
-lemma aux45:
-  assumes "x \<in> e" "\<exists>p1 p2. p1@ [v1, v2] @ p2 = (
-  let u = get_sceond (e - {x}) in (if u \<in> C then [Edge x e 0, Edge x e 1] else [Edge x e 0, Edge u e 0, Edge u e 1, Edge x e 1]) @
-        construct_cycle_add_edge_nodes E' x C)" "v1 = Edge u1 e1 0" "v2 = Edge u2 e2 0"
-  shows "e1 = e2"
-  sorry
-
-lemma aux44: 
-  assumes "\<exists>p1 p2. p1@ [v1, v2] @ p2 = construct_cycle_add_edge_nodes E' a C" "v1 = Edge u1 e1 0" "v2 = Edge u2 e2 0"
-  shows "e1 = e2"
-  using assms aux45 apply(induction E') apply(auto split: if_split_asm) 
-  sorry
-
-
-lemma aux42:
-  assumes "(construct_cycle_1 E C n C') ! i = Edge u1 e1 0" "(construct_cycle_1 E C n C') ! (i+1) = Edge u2 e2 0" "i< length (construct_cycle_1 E C n C')"
-  shows "e2 = e1"
-using assms aux44 apply(induction C arbitrary: n) apply( auto)  
-using assms proof(induction C arbitrary: n)
-  case Nil
-  then show ?case using assms by(auto)
-next
-  case (Cons a C)
-  then have "construct_cycle_1 E (a # C) n C' = 
-        Cover n # construct_cycle_add_edge_nodes E a C' @ construct_cycle_1 E C (Suc n) C'" by auto
-  then show ?case proof (cases "i< length (Cover n # construct_cycle_add_edge_nodes E a C')")
-    case True
-    then have "(Cover n # construct_cycle_add_edge_nodes E a C') !i = Edge u1 e1 0" using Cons apply(auto) sorry
-    then show ?thesis sorry
-  next
-    case False
-    then show ?thesis sorry
-  qed
-qed 
-
-lemma aux5: 
-  assumes "\<exists>p1 p2. p1@ [v1, v2] @ p2 = construct_cycle_1 E C n C'" "v1 = Edge u1 e1 0" "v2 = Edge u2 e2 0"
-  shows "e1 = e2" "u1\<in> e1" "u2 \<in> e2" "e1 \<in> set E"
-proof -
-  have v1_in_set: "v1 \<in> set (construct_cycle_1 E C n C')" 
-    using assms aux41 by fastforce
-  have "v2 \<in> set (construct_cycle_1 E C n C')" 
-    using assms aux41 by fastforce
-  then show "e1 \<in> set E" "u1 \<in> e1" "u2 \<in> e2" using assms v1_in_set in_cycle aux40 by(auto)
-next
-  show "e1 = e2" using assms aux42 apply(induction C arbitrary: n) apply(auto) sorry
-qed
-
-lemma aux6:
-  assumes "\<exists>p1 p2. p1@ [v1, v2] @ p2 = construct_cycle_1 E C 0 (set C)" "v1 = Edge u1 e1 0" "v2 = Edge u2 e2 1"
-  shows "e1 = e2" "u1\<in> e1" "u2 = u1" "e1 \<in> set E"
-  sorry
-
-lemma aux7:
-  assumes "\<exists>p1 p2. p1@ [v1, v2] @ p2 = construct_cycle_1 E C 0 (set C)" "v1 = Edge u1 e1 1" "v2 = Edge u2 e2 1"
-  shows "e1 = e2" "u1 \<in> e1" "u2 \<in> e1" "e1 \<in> set E"
-  sorry
-
-lemma aux8:
-  assumes "\<exists>p1 p2. p1@ [v1, v2] @ p2 = construct_cycle_1 E C 0 (set C)" "v1 = Edge u1 e1 1" "v2 = Edge u2 e2 0"
-  shows "u1 = u2" "u1 \<in> e1" "u1 \<in> e2" "e1 \<in> set E" "e2 \<in> set E" 
-    "(\<exists>i<length E. \<exists>j<length E. e1 = E ! i \<and> e2 = E ! i \<and> (\<forall>i'>i. u1 \<in> E ! i' \<longrightarrow> i' < length E \<longrightarrow> \<not> i' < j))"
-  sorry
-
-lemma aux9:
-  assumes "\<exists>p1 p2. p1@ [v1, v2] @ p2 = construct_cycle_1 E C 0 (set C)" "v1 = Cover i" "v2 = Edge u2 e2 j" "j> 0"
-  shows "False"
-  sorry
-
-lemma aux10:
-  assumes "\<exists>p1 p2. p1@ [v1, v2] @ p2 = construct_cycle_1 E C 0 (set C)" "v1 = Cover n" "v2 = Edge u2 e2 0"
-  shows "(\<exists>i<length E. e = E ! i \<and> u2 \<in> e2 \<and> (\<forall>j. u2 \<in> E ! j \<longrightarrow> j < length E \<longrightarrow> \<not> j < i) \<and> n < length C)"
-  sorry
-
-lemma aux11:
-  assumes "\<exists>p1 p2. p1@ [v1, v2] @ p2 = construct_cycle_1 E C 0 (set C)" "v1 = Edge u1 e1 1" "v2 = Cover n"
-  shows "(\<exists>i<length E. e1 = E ! i \<and> u1 \<in> e1 \<and> (\<forall>j. u1 \<in> E ! j \<longrightarrow> j < length E \<longrightarrow> \<not> i < j) \<and> n < length C)"
-  sorry
-
-lemma aux12:
-  assumes "\<exists>p1 p2. p1@ [v1, v2] @ p2 = construct_cycle_1 E C n C'" "v1 = Edge u1 e1 i" "v2 = Cover j" "i\<noteq>1"
-  shows "False"
-  using assms apply(induction C arbitrary: n) apply(auto)
-  sorry
-
-lemma aux13:
-  assumes "\<exists>p1 p2. p1@ [v1, v2] @ p2 = construct_cycle_1 E C n C'" "v1 = Cover i" "v2 = Cover j" "length C + n > 0"
-  shows "i<length C + n" "j<length C + n"
-proof -
-  have "v1 \<in> set (construct_cycle_1 E C n C')" "v2 \<in> set (construct_cycle_1 E C n C')" 
-    using assms apply(auto) 
-       apply(metis in_set_conv_decomp)
-      apply(metis in_set_conv_decomp)
-    by (metis append_assoc append_eq_Cons_conv assms(2) assms(3) in_set_conv_decomp self_append_conv2)+
-  then  have "i<length C +n" "j<length C + n"
-    using constraints_for_Cover_nodes assms by(auto)
-  then show "i<length C + n" "j<length C + n" by auto
-qed 
-
-
-lemma aux23:
-  assumes "v2 = Edge v e i" "v1 = Cover x1" 
-    "\<exists>p1 p2. p1 @ Cover x1 # Edge v e i # p2 = construct_cycle_1 E C 0 (set C)" "length C \<le> k"
-  shows  "i = 0 \<and> (\<exists>i<length E. e = E ! i \<and> v \<in> e \<and> (\<forall>j. v \<in> E ! j \<longrightarrow> j < length E \<longrightarrow> \<not> j < i) \<and> x1 < k)"
-using assms proof (cases "i = 0")
-  case True
-  then show ?thesis using aux10 assms apply(auto)
-    by (smt le_antisym le_neq_implies_less le_trans less_imp_le_nat) 
-next
-  case False
-  then show ?thesis using assms aux9 apply(auto) by blast 
-qed*)
- 
-
-lemma aux14:
-  assumes "\<exists>p1 p2. p1@ [v1, v2] @ p2 = construct_cycle_1 E C 0 (set C)" "v1 = Edge u1 e1 i" "v2 = Edge u2 e2 j" "j > 1 \<or> i > 1"
-  shows "False"
-proof -
-  from \<open>\<exists>p1 p2. p1@ [v1, v2] @ p2 = construct_cycle_1 E C 0 (set C)\<close> have v1_in:  "v1 \<in> set (construct_cycle_1 E C 0 (set C))" 
-    by (metis Cons_eq_appendI in_set_conv_decomp self_append_conv2)
-  from \<open>\<exists>p1 p2. p1@ [v1, v2] @ p2 = construct_cycle_1 E C 0 (set C)\<close> have v2_in: "v2 \<in> set (construct_cycle_1 E C 0 (set C))" 
-    by (metis (no_types, hide_lams) append_eq_Cons_conv append_eq_append_conv2 in_set_conv_decomp self_append_conv2) 
-  then show False using assms v1_in v2_in aux20 \<open>j> 1 \<or> i > 1\<close> by meson +
-qed
-
-(*lemma aux16:
-  assumes "v1 = Edge u1 e1 0" "v2 = Edge u2 e2 i2""\<exists>p1 p2. p1@ [v1, v2] @ p2 = construct_cycle_1 E C 0 (set C)" "is_vertex_cover_list E C"
-  shows " (\<exists>v e. v1 = Edge v e 0 \<and> v2 = Edge v e (Suc 0) \<and> e \<in> set E \<and> v \<in> e) \<or>
-    (\<exists>u v e. v1 = Edge v e 0 \<and> v2 = Edge u e 0 \<and> e \<in> set E \<and> v \<in> e \<and> u \<in> e)"
-proof (cases)
-  assume "i2 = 0 \<or> i2 = 1"
-  then show ?thesis 
-  proof 
-    assume "i2=0"
-    then show ?thesis using aux5 assms apply(simp) by metis
-  next
-    assume "i2 = 1" 
-    then show ?thesis using aux6 assms apply(simp) by metis
-  qed
-next
-  assume "\<not> (i2 = 0 \<or> i2 = 1)"
-  then have "i2 > 1" by auto
-  then show ?thesis 
-    using aux14 assms apply(simp) 
-    by blast
-qed
-
-lemma aux17:
-  assumes "v1 = Edge u1 e1 1" "v2 = Edge u2 e2 i2""\<exists>p1 p2. p1@ [v1, v2] @ p2 = construct_cycle_1 E C 0 (set C)" "is_vertex_cover_list E C"
-  shows "(\<exists>u v e. v1 = Edge v e (Suc 0) \<and> v2 = Edge u e (Suc 0) \<and> e \<in> set E \<and> v \<in> e \<and> u \<in> e) \<or>
-    (\<exists>v e1. v1 = Edge v e1 (Suc 0) \<and> (\<exists>e2. v2 = Edge v e2 0 \<and> (\<exists>i<length E. \<exists>j<length E. e1 = E ! i \<and> e2 = E ! i \<and> v \<in> e1 \<and> v \<in> e2 \<and> (\<forall>i'>i. v \<in> E ! i' \<longrightarrow> i' < length E \<longrightarrow> \<not> i' < j))))"
-proof (cases)
-  assume "i2 = 0 \<or> i2 = 1"
-  then show ?thesis 
-  proof 
-    assume "i2=0"
-    then show ?thesis using assms aux8 apply(simp) by blast
-  next
-    assume "i2 = 1" 
-    then show ?thesis using assms aux7 apply(simp) by blast
-  qed
-next
-  assume "\<not> (i2 = 0 \<or> i2 = 1)"
-  then have "i2 > 1" by auto
-  then show ?thesis 
-    using aux14 assms apply(simp) 
-    by blast
-qed
-
-lemma aux15:
-  assumes "v1 = Edge u1 e1 i1" "v2 = Edge u2 e2 i2""\<exists>p1 p2. p1@ [v1, v2] @ p2 = construct_cycle_1 E C 0 (set C)" "is_vertex_cover_list E C"
-  shows " (\<exists>v e. v1 = Edge v e 0 \<and> v2 = Edge v e (Suc 0) \<and> e \<in> set E \<and> v \<in> e) \<or>
-    (\<exists>u v e. v1 = Edge v e 0 \<and> v2 = Edge u e 0 \<and> e \<in> set E \<and> v \<in> e \<and> u \<in> e) \<or>
-    (\<exists>u v e. v1 = Edge v e (Suc 0) \<and> v2 = Edge u e (Suc 0) \<and> e \<in> set E \<and> v \<in> e \<and> u \<in> e) \<or>
-    (\<exists>v e1. v1 = Edge v e1 (Suc 0) \<and> (\<exists>e2. v2 = Edge v e2 0 \<and> (\<exists>i<length E. \<exists>j<length E. e1 = E ! i \<and> e2 = E ! i \<and> v \<in> e1 \<and> v \<in> e2 \<and> (\<forall>i'>i. v \<in> E ! i' \<longrightarrow> i' < length E \<longrightarrow> \<not> i' < j))))"
-proof (cases)
-  assume "i1 = 0 \<or> i1 = 1"
-  then show ?thesis 
-  proof 
-    assume "i1=0"
-    then show ?thesis 
-      using assms aux16 by(simp)
-  next
-    assume "i1 = 1" 
-    then show ?thesis 
-      using assms aux17 by simp
-  qed
-next
-  assume "\<not> (i1 = 0 \<or> i1 = 1)"
-  then have "i1 > 1" by auto
-  then show ?thesis 
-    using aux14 assms apply(simp) 
-    by blast
-qed
-
-lemma aux4:
-  assumes "\<exists>p1 p2. p1@ [v1, v2] @ p2 = construct_cycle_1 E C 0 (set C)" "is_vertex_cover_list E C" (*"distinct C"*) "length  C = k" "k>0"
-  shows "(\<exists>v e. v1 = Edge v e 0 \<and> v2 = Edge v e (Suc 0) \<and> e \<in> set E \<and> v \<in> e) \<or>
-         (\<exists>u v e. v1 = Edge v e 0 \<and> v2 = Edge u e 0 \<and> e \<in> set E \<and> v \<in> e \<and> u \<in> e) \<or>
-         (\<exists>u v e. v1 = Edge v e (Suc 0) \<and> v2 = Edge u e (Suc 0) \<and> e \<in> set E \<and> v \<in> e \<and> u \<in> e) \<or>
-         (\<exists>v e1. v1 = Edge v e1 (Suc 0) \<and> (\<exists>e2. v2 = Edge v e2 0 \<and> (\<exists>i<length E. \<exists>j<length E. e1 = E ! i \<and> e2 = E ! i \<and> v \<in> e1 \<and> v \<in> e2 \<and> (\<forall>i'>i. v \<in> E ! i' \<longrightarrow> i' < length E \<longrightarrow> \<not> i' < j)))) \<or>
-         (\<exists>v e. v1 = Edge v e (Suc 0) \<and> (\<exists>n. v2 = Cover n \<and> (\<exists>i<length E. e = E ! i \<and> v \<in> e \<and> (\<forall>j. v \<in> E ! j \<longrightarrow> j < length E \<longrightarrow> \<not> i < j) \<and> n < k))) \<or>
-         (\<exists>v e n. v1 = Cover n \<and> v2 = Edge v e 0 \<and> (\<exists>i<length E. e = E ! i \<and> v \<in> e \<and> (\<forall>j. v \<in> E ! j \<longrightarrow> j < length E \<longrightarrow> \<not> j < i) \<and> n < k))\<or>
-        (\<exists>i. v1 = Cover i \<and> (\<exists>j. v2 = Cover j \<and> i < k \<and> j < k))"
-proof (cases)
-  assume v1: "\<exists>x1. v1 = Cover x1"
-  then obtain x1 where v1_2: "v1 = Cover x1" by blast
-  then show ?thesis
-  proof (cases)
-    assume "\<exists> x2. v2 = Cover x2"
-    then show ?thesis 
-      using aux13 v1 assms apply simp 
-      by fastforce 
-  next
-    assume  "\<not> (\<exists> x2. v2 = Cover x2)"
-    then have "\<exists>v e i. v2 = Edge v e i" 
-      by (meson hc_node.exhaust)
-    then obtain v e i where "v2 = Edge v e i" by blast
-    then show ?thesis
-      using aux9 aux10 v1_2 assms by(simp add: aux23)
-  qed
-next
-  assume "\<not> (\<exists>x1. v1 = Cover x1)"
-  then have "\<exists>u1 e1 i1. v1 = Edge u1 e1 i1" 
-    by (meson hc_node.exhaust) 
-  then obtain u1 e1 i1 where "v1 = Edge u1 e1 i1" by blast
-  then show ?thesis 
-  proof(cases)
-    assume "\<exists> x2. v2 = Cover x2"
-    then obtain x2 where "v2 = Cover x2" by blast
-    then show ?thesis 
-      using aux11 aux12 \<open>v1 = _\<close> assms 
-    proof(cases "i1 = 1")
-      case True
-      then show ?thesis using aux11 assms  \<open>v1 = _\<close>  \<open>v2 = _\<close> apply(simp) 
-        by fastforce   
-    next
-      case False
-      then show ?thesis 
-        using aux12 assms \<open>v1 = _\<close>  \<open>v2 = _\<close>  apply(simp) 
-        by blast 
-    qed
-  next
-    assume  "\<not> (\<exists> x2. v2 = Cover x2)"
-    then have "\<exists>v e i. v2 = Edge v e i" 
-      by (meson hc_node.exhaust)
-    then obtain u2 e2 i2 where "v2 = Edge u2 e2 i2" by blast
-    then show ?thesis
-      using aux15 assms \<open>v1 = _\<close>  \<open>v2 = _\<close> by(auto)  
-  qed
-qed*)
-
-
-lemma aux1:
-  assumes "\<exists>p1 p2. p1@ [v1, v2] @ p2 = Cycle" "k>0"
-  shows "(v1, v2) \<in> arcs G"
-  sorry
-  (*using Cycle_def assms G_def_2 Cov_def aux4 by(simp)*)
-
-lemma aux3:
-  assumes "(u, v) \<in> set (vwalk_arcs C)" 
-  shows "length C \<ge> 2"
-proof(rule ccontr)
-  assume "\<not> 2 \<le> length C"
-  then have length_C: "length C = 1 \<or> length C = 0" 
-    by linarith
-  then show False proof(cases "length C = 1")
-    case True
-    then have "vwalk_arcs C = []" 
-      by (metis One_nat_def Suc_length_conv length_0_conv vwalk_arcs.simps(2))
-    then show ?thesis using assms by auto
-  next
-    case False
-    then have "length C = 0" using length_C by auto
-    then have "vwalk_arcs C = []" by auto
-    then show ?thesis using assms by auto
-  qed
-qed
-
-lemma sublist_for_edges: 
-  assumes "(u, v) \<in> set (vwalk_arcs C)"
-  shows "\<exists>p1 p2. p1 @ [u, v] @ p2 = C"
-  using assms proof(induction C)
-  case Nil
-  then show ?case by auto
-next
-  case (Cons a C)
-  then have length_C: "length C \<ge> 1" 
-    using aux3 by fastforce
-  then show ?case proof(cases "u = a \<and> v = hd C")
-    case True
-    then have "[]@[u,v] @ (tl C) = (a#C)" 
-      by (metis Cons.prems append_Cons append_self_conv2 list.collapse list.distinct(1) list.set_cases vwalk_arcs.simps(2))
-    then show ?thesis by blast
-  next
-    case False
-    then have "(u,v) \<in> set (vwalk_arcs C)" 
-      using Cons 
-      by (metis prod.inject set_ConsD vwalk_arcs.simps(1) vwalk_arcs.simps(2) vwalk_arcs_Cons) 
-    then have "\<exists>p1 p2. p1 @ [u, v] @ p2 = C" using Cons by auto
-    then obtain p1 p2 where p_def: "p1 @ [u, v] @ p2 = C" by blast
-    then obtain p1' where "p1' = a # p1" by auto
-    then have "p1' @ [u, v] @ p2 = (a#C)" using p_def by auto
-    then show ?thesis using Cons by blast
-  qed
-qed
-
-
-lemma edges_of_cycle_are_in_Graph:
-  assumes "card (verts G) > 1" 
-  shows "set (vwalk_arcs Cycle) \<subseteq> arcs G"
-proof 
-  have k0: "k > 0" 
-    using many_verts_impl_k_greater_0 assms
-    by auto
-  fix x assume x_assm: "x \<in> set (vwalk_arcs Cycle)"
-  then have "\<exists>u v. x = (u, v)" by simp
-  then obtain u v where uv_def: "x = (u, v)" by blast
-  then have "\<exists>p1 p2. p1 @ [u, v] @ p2 = Cycle" using x_assm sublist_for_edges by fast
-  then show "x \<in> arcs G" using uv_def aux1 k0 by(auto)
-qed
 
 subsection\<open>Cycle is distince\<close>
 lemma distinct_edges:
@@ -1095,6 +662,581 @@ qed
 
 lemma distinct_arcs: "distinct (tl (pre_digraph.awalk_verts G v (vwalk_arcs Cycle)))"
   using cycle_distinct distinct_nodes_implie_distinct_edges by(auto)
+
+subsection\<open>Test\<close>
+lemma aux22:
+  assumes " u = get_second (aa - {a})" "1<i" "Edge u1 e1 i
+        \<in> set (if u \<in> C' then [Edge a aa 0, Edge a aa 1] else [Edge a aa 0, Edge u aa 0, Edge u aa 1, Edge a aa 1])"
+  shows "False"
+  using assms by(auto split: if_split_asm)
+
+lemma aux21: 
+  assumes "Suc 0 < i" "Edge u1 e1 i \<in> set (construct_cycle_add_edge_nodes E' a C')"
+  shows "False"
+  using assms apply(induction E')
+   apply(auto split: if_split_asm) 
+  using aux22
+  by (smt One_nat_def)
+
+lemma aux20:
+  assumes "v1 = Edge u1 e1 i" "v1 \<in> set (construct_cycle_1 E C n C')" "i>1"
+  shows "False"
+  using assms apply(induction C arbitrary: n) apply(auto simp add: aux21) using aux21 by metis
+
+
+lemma in_cycle:
+  assumes "v \<in> set (construct_cycle_1 E (CS) n C)" "ugraph (set E)"
+  shows "(\<exists>i. v = Cover i \<and>  ((i<length CS + n \<and> i \<ge> n)  \<or> i = 0)) 
+        \<or> (\<exists> e u. v = Edge u e 0 \<and> u \<in> e \<and> e \<in> set E) \<or> (\<exists> e u. v = Edge u e 1 \<and> u \<in> e \<and> e \<in> set E)"
+  using assms apply(induction CS arbitrary: n) apply(auto) 
+  apply (metis One_nat_def assms(2) no_Cover_in_edge_function)
+  by fastforce
+
+(*lemma aux_3: 
+  assumes "i+1<length Cy" "Cy = (construct_cycle_1 E (CS) n C)" "Cy!i = v1" "Cy!(i+1) = v2"
+    "v1 = Cover x1"
+  shows "((x1<length CS +n \<and>( x1 \<ge> n \<or> x1 = 0)) \<and> 
+      ((\<exists>i. v2 = Cover i \<and>  i<length CS +n \<and> (i \<ge> n \<or> i = 0)) \<or> 
+        (\<exists>u e. v2 = Edge u e 0 \<and> (\<exists>i<length E. e = E ! i \<and> u \<in> e \<and> (\<forall>j. u \<in> E ! j \<longrightarrow> j < length E \<longrightarrow> \<not> j < i)))))"
+  sorry
+
+lemma aux_2: 
+  assumes "i+1<length Cy" "Cy = (construct_cycle_1 E (CS) n C)" "Cy!i = v1" "Cy!(i+1) = v2"
+  shows "v1 = Cover i \<longrightarrow> (((i<length CS +n \<and> i \<ge> n) \<or> i = 0) \<and> 
+      ((\<exists>i. v2 = Cover i \<and>  (i<length CS +n \<and> i \<ge> n) \<or> i = 0) \<or> (\<exists> e u. v = Edge u e 0 \<and> u \<in> e \<and> e \<in> set E)))"
+      "v1 = Edge u1 e1 0 \<longrightarrow> ( u1 \<in> e1 \<and> e1 \<in> set E) \<and> ((\<exists>u2. v2 = Edge u2 e1 0 \<and> u2 \<in> e1) \<or>
+          v2 = Edge u1 e1 1)"
+      "v1 = Edge u1 e1 1 \<longrightarrow> ( u1 \<in> e1 \<and> e1 \<in> set E) \<and> ((\<exists>u2. v2 = Edge u2 e1 1 \<and> u2 \<in> e1) \<or>
+          (\<exists>e2. v2 = Edge u1 e2 0 \<and> u1 \<in> e2))"
+  sorry*)
+
+lemma aux_4: 
+  assumes "Suc i<length C" "C!i = x"
+  shows "x \<in> set C"
+  using assms Suc_lessD nth_mem by blast  
+
+lemma aux_5:
+  assumes "(\<exists>i. v2 = Cover i \<and> (i < k \<or> i = 0)) \<or> (\<exists>u e. v2 = Edge u e 0 \<and> (\<exists>i<length E. e = E ! i \<and> u \<in> e \<and> (\<forall>j. u \<in> E ! j \<longrightarrow> j < length E \<longrightarrow> \<not> j < i)))"
+     "0 < k"
+  shows "(\<exists>i. v2 = Cover i \<and> i < k) \<or> (\<exists>u e. v2 = Edge u e 0 \<and> (\<exists>i<length E. e = E ! i \<and> u \<in> e \<and> (\<forall>j. u \<in> E ! j \<longrightarrow> j < length E \<longrightarrow> \<not> j < i)))" 
+using assms proof (cases "(\<exists>i. v2 = Cover i \<and> (i < k \<or> i = 0))")
+  case True
+  then obtain i where "(v2 = Cover i \<and> (i < k \<or> i = 0))" by blast
+  then have 1: "v2 = Cover i \<and>( i < k \<or> i = 0)" by auto
+  then have 2: "i<k" using assms by(auto)
+      from 1 have "v2 = Cover i" by auto
+  then have 1: "v2 = Cover i \<and> i< k" using \<open>k>0\<close> 
+    by (simp add: "2")
+  then show ?thesis by auto
+next
+  case False
+  with assms have "(\<exists>u e. v2 = Edge u e 0 \<and> (\<exists>i<length E. e = E ! i \<and> u \<in> e \<and> (\<forall>j. u \<in> E ! j \<longrightarrow> j < length E \<longrightarrow> \<not> j < i)))"
+    by auto
+  then show ?thesis by auto
+qed
+(*
+lemma aux_1:
+  assumes "i+1<length Cycle"  "v1 = Cycle!i" "v2 = Cycle ! (i+1)" "k>0"
+  shows "(v1, v2) \<in> arcs G" 
+ (*using Cycle_def assms G_def_2 Cov_def aux_2 apply(simp)*)
+proof (cases v1)
+  case (Cover x1)
+  then have "Cover x1 \<in> set Cycle" using assms aux_4 by(auto)
+  then have "x1 < k" using aux_3 in_cycle assms apply(auto simp add: in_cycle nodes_of_cycle) 
+    using Cycle_def function_of_cover_nodes not_le_imp_less by metis
+  then have  "((x1<length Cov +0 \<and>( x1 \<ge> 0 \<or> x1 = 0)) \<and> 
+      ((\<exists>i. v2 = Cover i \<and>  i<length Cov +0 \<and> (i \<ge> 0 \<or> i = 0)) \<or> 
+        (\<exists>u e. v2 = Edge u e 0 \<and> (\<exists>i<length E. e = E ! i \<and> u \<in> e \<and> (\<forall>j. u \<in> E ! j \<longrightarrow> j < length E \<longrightarrow> \<not> j < i)))))"
+    using aux_3 assms  Cov_def apply(auto simp add:) 
+    by (smt Cover Cycle_def add_cancel_right_right) sorry
+  then have "((\<exists>i. v2 = Cover i \<and> i < k) \<or>
+             (\<exists>u e. v2 = Edge u e 0 \<and> (\<exists>i<length E. e = E ! i \<and> u \<in> e \<and> (\<forall>j. u \<in> E ! j \<longrightarrow> j < length E \<longrightarrow> \<not> j < i))))"
+    using \<open>0<k\<close> Cov_def by(simp add: aux_5) 
+  then show ?thesis using Cover Cov_def assms \<open>x1< _ \<close> aux_5 apply(simp add: assms Cycle_def G_def_2) by blast
+next
+  case (Edge x21 x22 x23)
+  then show ?thesis sorry
+qed*)
+
+subsubsection\<open>Edges of Cycle are Edges of Graph\<close>
+
+lemma aux40:
+  assumes "Edge v e 0 \<in>  set (construct_cycle_1 E C n C')" 
+  shows "v \<in> e" "e \<in> set E"
+  using assms in_cycle in_vc vertex_cover_list_def by(blast)+
+
+lemma aux41:
+  assumes "\<exists>p1 p2. p1@ [v1, v2] @ p2 = C"
+  shows "v1 \<in> set C" "v2 \<in> set C"
+  using assms 
+  by auto
+
+lemma aux43: 
+  shows "hd (construct_cycle_1 E C n C') = Cover n \<or> hd ((construct_cycle_1 E C n C')) = Cover 0"
+  apply(induction C) by(auto) 
+
+lemma aux100: 
+  shows "last (construct_cycle_1 E C n C') = Cover 0"
+  apply(induction C arbitrary: n) apply(auto) 
+  using construct_cycle_1.elims apply blast
+  by (metis construct_cycle_1.elims last_append neq_Nil_conv)
+
+
+lemma aux101:
+  assumes "distinct L" "L = l1#ls1 @ ls2" "\<exists>p1 p2. p1@ [v1, v2] @ p2 = L" "v1 = l1"
+  shows "v2 = hd (ls1 @ ls2)"
+  using assms apply(induction L) apply(auto) 
+  by (metis assms(1) assms(2) distinct_append hd_append hd_in_set list.sel(1) list.sel(3) not_distinct_conv_prefix self_append_conv2)
+
+(*lemma aux102:
+  assumes "distinct L" "L = l1#ls1 @ ls2" "\<exists>p1 p2. p1@ [v1, v2] @ p2 = L" "v1 \<in> set ls2"
+  shows "v2 \<in> set ls2"
+proof(rule ccontr)
+  assume not_in: "v2 \<notin> set ls2"
+  have "v2 \<in> set L" using assms 
+    using aux41 by fastforce
+  then have cases: "v2 = l1 \<or> v2 \<in> set ls1" using not_in assms by simp
+  then show False proof (cases "v2 = l1")
+    case True
+    then show ?thesis using assms 
+      by (metis append_self_conv2 aux41(2) distinct.simps(2) hd_append2 list.sel(1) list.sel(3) not_in tl_append2)
+  next
+    case False
+    then have "v2 \<in> set ls1" using cases by auto
+    then show ?thesis using assms sorry
+    qed
+    oops*)
+
+lemma aux102_1:
+  assumes "distinct L" "L = ls1 @ ls2" "\<exists>p1 p2. p1@ [v1, v2] @ p2 = L" "v1 \<in> set ls2"
+  shows "v2 \<in> set ls2"
+  using assms proof(induction L arbitrary: ls2 ls1 l1)
+  case Nil
+  then show ?case by auto
+next
+  case (Cons a L)
+  then show ?case proof(cases "v1 = a")
+    case True
+    then have "ls1 = []" using assms Cons 
+      by (metis (no_types, hide_lams) Nil_is_append_conv append.assoc append_Cons_eq_iff append_self_conv2 distinct.simps(2) in_set_conv_decomp in_set_conv_decomp_first list.distinct(1) split_list)
+    then have "a#L = ls2" using Cons by auto
+    then have "v2 \<in> set ls2"
+      using Cons.prems(3) aux41(2) by force 
+    then show ?thesis .
+  next
+    case False
+    have "\<exists>p1 p2. p1@ [v1, v2] @ p2 = (a#L)" using Cons by auto
+    then obtain p1 p2 where p_def: "p1@ [v1, v2] @ p2 =a#L" by fast
+    then have L_def_2: "L = tl( p1@ [v1, v2] @ p2)" by auto
+    have "p1 \<noteq> []" using False Cons p_def
+      by (metis append_self_conv2 hd_append2 list.sel(1) list.sel(2) list.sel(3) not_Cons_self2)
+    then have "L = (tl p1) @[v1, v2] @ p2" 
+      using L_def_2 by simp
+    then show ?thesis using Cons 
+      by (metis L_def_2 append_self_conv2 aux41(2) distinct_tl p_def tl_append2)
+  qed
+qed 
+
+lemma aux102:
+  assumes "distinct L" "L = l1 # ls1 @ ls2" "\<exists>p1 p2. p1@ [v1, v2] @ p2 = L" "v1 \<in> set ls2"
+  shows "v2 \<in> set ls2"
+  using assms aux102_1 
+  by (metis Cons_eq_appendI)
+
+lemma aux103:
+  assumes "distinct L" "L = l1#ls1 @ ls2" "\<exists>p1 p2. p1@ [v1, v2] @ p2 = L" "v1 \<in> set ls1" "v1 \<noteq> last ls1"
+  shows "v2 \<in> set ls1"
+  using assms apply(induction L) apply(auto) 
+  sorry
+
+lemma aux104_2: 
+  assumes "x = hd L" "x = last ls1" "L = ls1 @ ls2" "x \<in> set ls1" "distinct L"
+  shows "ls1 = [x]"
+  using assms proof(induction L)
+  case Nil
+  then show ?case by(auto)
+next
+  case (Cons a L)
+  then have "x = a" 
+    by (meson list.sel(1))
+  then show ?case using Cons 
+    by (metis append.assoc append_Cons append_Cons_eq_iff append_Nil append_butlast_last_id distinct.simps(2) distinct_singleton)
+qed
+
+lemma aux104_1:
+  assumes "distinct L" "L = ls1 @ ls2" "\<exists>p1 p2. p1@ [v1, v2] @ p2 = L" "v1 = last ls1" "v1 \<in> set ls1"
+  shows "v2 = hd ls2"
+using assms proof(induction L arbitrary: ls1 ls2)
+  case Nil
+  then show ?case by auto
+next
+  case (Cons a L)
+  then show ?case proof(cases "v1 = a")
+    case True
+    then have "v1 = hd (a#L)" 
+      by simp  
+    then have "ls1 = [a]" using assms Cons aux104_2 True 
+      by fast 
+    then have "L = ls2" using Cons by auto
+    then have "v2 = hd ls2"
+      using Cons by (metis (mono_tags, lifting) Cons_eq_appendI True \<open>ls1 = [a]\<close> aux101 list.sel(3)) 
+    then show ?thesis .
+  next
+    case False
+    have "\<exists>p1 p2. p1@ [v1, v2] @ p2 = (a#L)" using Cons by auto
+    then obtain p1 p2 where p_def: "p1@ [v1, v2] @ p2 =a#L" by fast
+    then have L_def_2: "L = tl( p1@ [v1, v2] @ p2)" by auto
+    have "p1 \<noteq> []" using False Cons p_def 
+      by (metis append_self_conv2 hd_append2 list.sel(1) list.sel(2) list.sel(3) not_Cons_self2) 
+    then have L_exists: "L = (tl p1) @[v1, v2] @ p2" 
+      using L_def_2 by simp
+    have "ls1 \<noteq> []" using False Cons 
+      by (metis Cons_eq_appendI L_def_2 L_exists Nil_is_append_conv append_self_conv append_self_conv2 aux41(2) distinct.simps(2) distinct_length_2_or_more distinct_tl hd_Cons_tl last_snoc list.discI p_def rotate1.simps(2) tl_append2)
+    then have "L = tl ls1 @ ls2" using Cons 
+      by (metis list.sel(3) tl_append2)
+    then show ?thesis using Cons L_exists 
+      by (metis False distinct.simps(2) distinct_singleton hd_append2 last_tl list.collapse list.sel(1) set_ConsD)
+  qed
+qed
+
+lemma aux104_3:
+  assumes "distinct L" "L = l1#ls1 @ ls2" "\<exists>p1 p2. p1@ [v1, v2] @ p2 = L" "v1 = last ls1" "v1 \<in> set ls1" "ls3 = l1 # ls1"
+  shows "v2 = hd ls2"
+proof -
+  have L_def_2: "L = ls3 @ ls2" using assms by auto
+  then have last: "v1 = last ls3" using assms by auto
+  then have "v1 \<in> set ls3" using assms by auto
+  then have "v2 = hd ls2" 
+    using assms(1) assms(3) last aux104_1 L_def_2 by fast
+  then show ?thesis .
+qed
+
+lemma aux104:
+  assumes "distinct L" "L = l1#ls1 @ ls2" "\<exists>p1 p2. p1@ [v1, v2] @ p2 = L" "v1 = last ls1" "v1 \<in> set ls1"
+  shows "v2 = hd ls2"
+  using assms aux104_3 by fast
+
+lemma aux45:
+  assumes "x \<in> e" "\<exists>p1 p2. p1@ [v1, v2] @ p2 = (
+  let u = get_sceond (e - {x}) in (if u \<in> C then [Edge x e 0, Edge x e 1] else [Edge x e 0, Edge u e 0, Edge u e 1, Edge x e 1]) @
+        construct_cycle_add_edge_nodes E' x C)" "v1 = Edge u1 e1 0" "v2 = Edge u2 e2 0"
+  shows "e1 = e2"
+  sorry
+
+lemma aux44: 
+  assumes "\<exists>p1 p2. p1@ [v1, v2] @ p2 = construct_cycle_add_edge_nodes E' a C" "v1 = Edge u1 e1 0" "v2 = Edge u2 e2 0"
+  shows "e1 = e2"
+  using assms aux45 apply(induction E') apply(auto split: if_split_asm) 
+  sorry
+
+
+lemma aux42:
+  assumes "(construct_cycle_1 E C n C') ! i = Edge u1 e1 0" "(construct_cycle_1 E C n C') ! (i+1) = Edge u2 e2 0" "i< length (construct_cycle_1 E C n C')"
+  shows "e2 = e1"
+using assms aux44 apply(induction C arbitrary: n) apply( auto)  
+using assms proof(induction C arbitrary: n)
+  case Nil
+  then show ?case using assms by(auto)
+next
+  case (Cons a C)
+  then have "construct_cycle_1 E (a # C) n C' = 
+        Cover n # construct_cycle_add_edge_nodes E a C' @ construct_cycle_1 E C (Suc n) C'" by auto
+  then show ?case proof (cases "i< length (Cover n # construct_cycle_add_edge_nodes E a C')")
+    case True
+    then have "(Cover n # construct_cycle_add_edge_nodes E a C') !i = Edge u1 e1 0" using Cons apply(auto) sorry
+    then show ?thesis sorry
+  next
+    case False
+    then show ?thesis sorry
+  qed
+qed 
+
+lemma aux5: 
+  assumes "\<exists>p1 p2. p1@ [v1, v2] @ p2 = construct_cycle_1 E C n C'" "v1 = Edge u1 e1 0" "v2 = Edge u2 e2 0"
+  shows "e1 = e2" "u1\<in> e1" "u2 \<in> e2" "e1 \<in> set E"
+proof -
+  have v1_in_set: "v1 \<in> set (construct_cycle_1 E C n C')" 
+    using assms aux41 by fastforce
+  have "v2 \<in> set (construct_cycle_1 E C n C')" 
+    using assms aux41 by fastforce
+  then show "e1 \<in> set E" "u1 \<in> e1" "u2 \<in> e2" using assms v1_in_set in_cycle aux40 by(auto)
+next
+  show "e1 = e2" using assms aux42 apply(induction C arbitrary: n) apply(auto) sorry
+qed
+
+lemma aux6:
+  assumes "\<exists>p1 p2. p1@ [v1, v2] @ p2 = construct_cycle_1 E C 0 (set C)" "v1 = Edge u1 e1 0" "v2 = Edge u2 e2 1"
+  shows "e1 = e2" "u1\<in> e1" "u2 = u1" "e1 \<in> set E"
+  sorry
+
+lemma aux7:
+  assumes "\<exists>p1 p2. p1@ [v1, v2] @ p2 = construct_cycle_1 E C 0 (set C)" "v1 = Edge u1 e1 1" "v2 = Edge u2 e2 1"
+  shows "e1 = e2" "u1 \<in> e1" "u2 \<in> e1" "e1 \<in> set E"
+  sorry
+
+lemma aux8:
+  assumes "\<exists>p1 p2. p1@ [v1, v2] @ p2 = construct_cycle_1 E C 0 (set C)" "v1 = Edge u1 e1 1" "v2 = Edge u2 e2 0"
+  shows "u1 = u2" "u1 \<in> e1" "u1 \<in> e2" "e1 \<in> set E" "e2 \<in> set E" 
+    "(\<exists>i<length E. \<exists>j<length E. e1 = E ! i \<and> e2 = E ! i \<and> (\<forall>i'>i. u1 \<in> E ! i' \<longrightarrow> i' < length E \<longrightarrow> \<not> i' < j))"
+  sorry
+
+lemma aux9:
+  assumes "\<exists>p1 p2. p1@ [v1, v2] @ p2 = construct_cycle_1 E C 0 (set C)" "v1 = Cover i" "v2 = Edge u2 e2 j" "j> 0"
+  shows "False"
+  sorry
+
+lemma aux10:
+  assumes "\<exists>p1 p2. p1@ [v1, v2] @ p2 = construct_cycle_1 E C 0 (set C)" "v1 = Cover n" "v2 = Edge u2 e2 0"
+  shows "(\<exists>i<length E. e = E ! i \<and> u2 \<in> e2 \<and> (\<forall>j. u2 \<in> E ! j \<longrightarrow> j < length E \<longrightarrow> \<not> j < i) \<and> n < length C)"
+  sorry
+
+lemma aux11:
+  assumes "\<exists>p1 p2. p1@ [v1, v2] @ p2 = construct_cycle_1 E C 0 (set C)" "v1 = Edge u1 e1 1" "v2 = Cover n"
+  shows "(\<exists>i<length E. e1 = E ! i \<and> u1 \<in> e1 \<and> (\<forall>j. u1 \<in> E ! j \<longrightarrow> j < length E \<longrightarrow> \<not> i < j) \<and> n < length C)"
+  sorry
+
+lemma aux12:
+  assumes "\<exists>p1 p2. p1@ [v1, v2] @ p2 = construct_cycle_1 E C n C'" "v1 = Edge u1 e1 i" "v2 = Cover j" "i\<noteq>1"
+  shows "False"
+  using assms apply(induction C arbitrary: n) apply(auto)
+  sorry
+
+lemma aux13:
+  assumes "\<exists>p1 p2. p1@ [v1, v2] @ p2 = construct_cycle_1 E C n C'" "v1 = Cover i" "v2 = Cover j" "length C + n > 0"
+  shows "i<length C + n" "j<length C + n"
+proof -
+  have "v1 \<in> set (construct_cycle_1 E C n C')" "v2 \<in> set (construct_cycle_1 E C n C')" 
+    using assms apply(auto) 
+       apply(metis in_set_conv_decomp)
+      apply(metis in_set_conv_decomp)
+    by (metis append_assoc append_eq_Cons_conv assms(2) assms(3) in_set_conv_decomp self_append_conv2)+
+  then  have "i<length C +n" "j<length C + n"
+    using constraints_for_Cover_nodes assms by(auto)
+  then show "i<length C + n" "j<length C + n" by auto
+qed 
+
+
+lemma aux23:
+  assumes "v2 = Edge v e i" "v1 = Cover x1" 
+    "\<exists>p1 p2. p1 @ Cover x1 # Edge v e i # p2 = construct_cycle_1 E C 0 (set C)" "length C \<le> k"
+  shows  "i = 0 \<and> (\<exists>i<length E. e = E ! i \<and> v \<in> e \<and> (\<forall>j. v \<in> E ! j \<longrightarrow> j < length E \<longrightarrow> \<not> j < i) \<and> x1 < k)"
+using assms proof (cases "i = 0")
+  case True
+  then show ?thesis using aux10 assms apply(auto)
+    by (smt le_antisym le_neq_implies_less le_trans less_imp_le_nat) 
+next
+  case False
+  then show ?thesis using assms aux9 apply(auto) by blast 
+qed
+ 
+
+lemma aux14:
+  assumes "\<exists>p1 p2. p1@ [v1, v2] @ p2 = construct_cycle_1 E C 0 (set C)" "v1 = Edge u1 e1 i" "v2 = Edge u2 e2 j" "j > 1 \<or> i > 1"
+  shows "False"
+proof -
+  from \<open>\<exists>p1 p2. p1@ [v1, v2] @ p2 = construct_cycle_1 E C 0 (set C)\<close> have v1_in:  "v1 \<in> set (construct_cycle_1 E C 0 (set C))" 
+    by (metis Cons_eq_appendI in_set_conv_decomp self_append_conv2)
+  from \<open>\<exists>p1 p2. p1@ [v1, v2] @ p2 = construct_cycle_1 E C 0 (set C)\<close> have v2_in: "v2 \<in> set (construct_cycle_1 E C 0 (set C))" 
+    by (metis (no_types, hide_lams) append_eq_Cons_conv append_eq_append_conv2 in_set_conv_decomp self_append_conv2) 
+  then show False using assms v1_in v2_in aux20 \<open>j> 1 \<or> i > 1\<close> by meson +
+qed
+
+lemma aux16:
+  assumes "v1 = Edge u1 e1 0" "v2 = Edge u2 e2 i2""\<exists>p1 p2. p1@ [v1, v2] @ p2 = construct_cycle_1 E C 0 (set C)" "is_vertex_cover_list E C"
+  shows " (\<exists>v e. v1 = Edge v e 0 \<and> v2 = Edge v e (Suc 0) \<and> e \<in> set E \<and> v \<in> e) \<or>
+    (\<exists>u v e. v1 = Edge v e 0 \<and> v2 = Edge u e 0 \<and> e \<in> set E \<and> v \<in> e \<and> u \<in> e)"
+proof (cases)
+  assume "i2 = 0 \<or> i2 = 1"
+  then show ?thesis 
+  proof 
+    assume "i2=0"
+    then show ?thesis using aux5 assms apply(simp) by metis
+  next
+    assume "i2 = 1" 
+    then show ?thesis using aux6 assms apply(simp) by metis
+  qed
+next
+  assume "\<not> (i2 = 0 \<or> i2 = 1)"
+  then have "i2 > 1" by auto
+  then show ?thesis 
+    using aux14 assms apply(simp) 
+    by blast
+qed
+
+lemma aux17:
+  assumes "v1 = Edge u1 e1 1" "v2 = Edge u2 e2 i2""\<exists>p1 p2. p1@ [v1, v2] @ p2 = construct_cycle_1 E C 0 (set C)" "is_vertex_cover_list E C"
+  shows "(\<exists>u v e. v1 = Edge v e (Suc 0) \<and> v2 = Edge u e (Suc 0) \<and> e \<in> set E \<and> v \<in> e \<and> u \<in> e) \<or>
+    (\<exists>v e1. v1 = Edge v e1 (Suc 0) \<and> (\<exists>e2. v2 = Edge v e2 0 \<and> (\<exists>i<length E. \<exists>j<length E. e1 = E ! i \<and> e2 = E ! i \<and> v \<in> e1 \<and> v \<in> e2 \<and> (\<forall>i'>i. v \<in> E ! i' \<longrightarrow> i' < length E \<longrightarrow> \<not> i' < j))))"
+proof (cases)
+  assume "i2 = 0 \<or> i2 = 1"
+  then show ?thesis 
+  proof 
+    assume "i2=0"
+    then show ?thesis using assms aux8 apply(simp) by blast
+  next
+    assume "i2 = 1" 
+    then show ?thesis using assms aux7 apply(simp) by blast
+  qed
+next
+  assume "\<not> (i2 = 0 \<or> i2 = 1)"
+  then have "i2 > 1" by auto
+  then show ?thesis 
+    using aux14 assms apply(simp) 
+    by blast
+qed
+
+lemma aux15:
+  assumes "v1 = Edge u1 e1 i1" "v2 = Edge u2 e2 i2""\<exists>p1 p2. p1@ [v1, v2] @ p2 = construct_cycle_1 E C 0 (set C)" "is_vertex_cover_list E C"
+  shows " (\<exists>v e. v1 = Edge v e 0 \<and> v2 = Edge v e (Suc 0) \<and> e \<in> set E \<and> v \<in> e) \<or>
+    (\<exists>u v e. v1 = Edge v e 0 \<and> v2 = Edge u e 0 \<and> e \<in> set E \<and> v \<in> e \<and> u \<in> e) \<or>
+    (\<exists>u v e. v1 = Edge v e (Suc 0) \<and> v2 = Edge u e (Suc 0) \<and> e \<in> set E \<and> v \<in> e \<and> u \<in> e) \<or>
+    (\<exists>v e1. v1 = Edge v e1 (Suc 0) \<and> (\<exists>e2. v2 = Edge v e2 0 \<and> (\<exists>i<length E. \<exists>j<length E. e1 = E ! i \<and> e2 = E ! i \<and> v \<in> e1 \<and> v \<in> e2 \<and> (\<forall>i'>i. v \<in> E ! i' \<longrightarrow> i' < length E \<longrightarrow> \<not> i' < j))))"
+proof (cases)
+  assume "i1 = 0 \<or> i1 = 1"
+  then show ?thesis 
+  proof 
+    assume "i1=0"
+    then show ?thesis 
+      using assms aux16 by(simp)
+  next
+    assume "i1 = 1" 
+    then show ?thesis 
+      using assms aux17 by simp
+  qed
+next
+  assume "\<not> (i1 = 0 \<or> i1 = 1)"
+  then have "i1 > 1" by auto
+  then show ?thesis 
+    using aux14 assms apply(simp) 
+    by blast
+qed
+
+lemma aux4:
+  assumes "\<exists>p1 p2. p1@ [v1, v2] @ p2 = construct_cycle_1 E C 0 (set C)" "is_vertex_cover_list E C" (*"distinct C"*) "length  C = k" "k>0"
+  shows "(\<exists>v e. v1 = Edge v e 0 \<and> v2 = Edge v e (Suc 0) \<and> e \<in> set E \<and> v \<in> e) \<or>
+         (\<exists>u v e. v1 = Edge v e 0 \<and> v2 = Edge u e 0 \<and> e \<in> set E \<and> v \<in> e \<and> u \<in> e) \<or>
+         (\<exists>u v e. v1 = Edge v e (Suc 0) \<and> v2 = Edge u e (Suc 0) \<and> e \<in> set E \<and> v \<in> e \<and> u \<in> e) \<or>
+         (\<exists>v e1. v1 = Edge v e1 (Suc 0) \<and> (\<exists>e2. v2 = Edge v e2 0 \<and> (\<exists>i<length E. \<exists>j<length E. e1 = E ! i \<and> e2 = E ! i \<and> v \<in> e1 \<and> v \<in> e2 \<and> (\<forall>i'>i. v \<in> E ! i' \<longrightarrow> i' < length E \<longrightarrow> \<not> i' < j)))) \<or>
+         (\<exists>v e. v1 = Edge v e (Suc 0) \<and> (\<exists>n. v2 = Cover n \<and> (\<exists>i<length E. e = E ! i \<and> v \<in> e \<and> (\<forall>j. v \<in> E ! j \<longrightarrow> j < length E \<longrightarrow> \<not> i < j) \<and> n < k))) \<or>
+         (\<exists>v e n. v1 = Cover n \<and> v2 = Edge v e 0 \<and> (\<exists>i<length E. e = E ! i \<and> v \<in> e \<and> (\<forall>j. v \<in> E ! j \<longrightarrow> j < length E \<longrightarrow> \<not> j < i) \<and> n < k))\<or>
+        (\<exists>i. v1 = Cover i \<and> (\<exists>j. v2 = Cover j \<and> i < k \<and> j < k))"
+proof (cases)
+  assume v1: "\<exists>x1. v1 = Cover x1"
+  then obtain x1 where v1_2: "v1 = Cover x1" by blast
+  then show ?thesis
+  proof (cases)
+    assume "\<exists> x2. v2 = Cover x2"
+    then show ?thesis 
+      using aux13 v1 assms apply simp 
+      by fastforce 
+  next
+    assume  "\<not> (\<exists> x2. v2 = Cover x2)"
+    then have "\<exists>v e i. v2 = Edge v e i" 
+      by (meson hc_node.exhaust)
+    then obtain v e i where "v2 = Edge v e i" by blast
+    then show ?thesis
+      using aux9 aux10 v1_2 assms by(simp add: aux23)
+  qed
+next
+  assume "\<not> (\<exists>x1. v1 = Cover x1)"
+  then have "\<exists>u1 e1 i1. v1 = Edge u1 e1 i1" 
+    by (meson hc_node.exhaust) 
+  then obtain u1 e1 i1 where "v1 = Edge u1 e1 i1" by blast
+  then show ?thesis 
+  proof(cases)
+    assume "\<exists> x2. v2 = Cover x2"
+    then obtain x2 where "v2 = Cover x2" by blast
+    then show ?thesis 
+      using aux11 aux12 \<open>v1 = _\<close> assms 
+    proof(cases "i1 = 1")
+      case True
+      then show ?thesis using aux11 assms  \<open>v1 = _\<close>  \<open>v2 = _\<close> apply(simp) 
+        by fastforce   
+    next
+      case False
+      then show ?thesis 
+        using aux12 assms \<open>v1 = _\<close>  \<open>v2 = _\<close>  apply(simp) 
+        by blast 
+    qed
+  next
+    assume  "\<not> (\<exists> x2. v2 = Cover x2)"
+    then have "\<exists>v e i. v2 = Edge v e i" 
+      by (meson hc_node.exhaust)
+    then obtain u2 e2 i2 where "v2 = Edge u2 e2 i2" by blast
+    then show ?thesis
+      using aux15 assms \<open>v1 = _\<close>  \<open>v2 = _\<close> by(auto)  
+  qed
+qed
+
+
+lemma aux1:
+  assumes "\<exists>p1 p2. p1@ [v1, v2] @ p2 = Cycle" "k>0"
+  shows "(v1, v2) \<in> arcs G"
+  sorry
+  (*using Cycle_def assms G_def_2 Cov_def aux4 by(simp)*)
+
+lemma aux3:
+  assumes "(u, v) \<in> set (vwalk_arcs C)" 
+  shows "length C \<ge> 2"
+proof(rule ccontr)
+  assume "\<not> 2 \<le> length C"
+  then have length_C: "length C = 1 \<or> length C = 0" 
+    by linarith
+  then show False proof(cases "length C = 1")
+    case True
+    then have "vwalk_arcs C = []" 
+      by (metis One_nat_def Suc_length_conv length_0_conv vwalk_arcs.simps(2))
+    then show ?thesis using assms by auto
+  next
+    case False
+    then have "length C = 0" using length_C by auto
+    then have "vwalk_arcs C = []" by auto
+    then show ?thesis using assms by auto
+  qed
+qed
+
+lemma sublist_for_edges: 
+  assumes "(u, v) \<in> set (vwalk_arcs C)"
+  shows "\<exists>p1 p2. p1 @ [u, v] @ p2 = C"
+  using assms proof(induction C)
+  case Nil
+  then show ?case by auto
+next
+  case (Cons a C)
+  then have length_C: "length C \<ge> 1" 
+    using aux3 by fastforce
+  then show ?case proof(cases "u = a \<and> v = hd C")
+    case True
+    then have "[]@[u,v] @ (tl C) = (a#C)" 
+      by (metis Cons.prems append_Cons append_self_conv2 list.collapse list.distinct(1) list.set_cases vwalk_arcs.simps(2))
+    then show ?thesis by blast
+  next
+    case False
+    then have "(u,v) \<in> set (vwalk_arcs C)" 
+      using Cons 
+      by (metis prod.inject set_ConsD vwalk_arcs.simps(1) vwalk_arcs.simps(2) vwalk_arcs_Cons) 
+    then have "\<exists>p1 p2. p1 @ [u, v] @ p2 = C" using Cons by auto
+    then obtain p1 p2 where p_def: "p1 @ [u, v] @ p2 = C" by blast
+    then obtain p1' where "p1' = a # p1" by auto
+    then have "p1' @ [u, v] @ p2 = (a#C)" using p_def by auto
+    then show ?thesis using Cons by blast
+  qed
+qed
+
+
+lemma edges_of_cycle_are_in_Graph:
+  assumes "card (verts G) > 1" 
+  shows "set (vwalk_arcs Cycle) \<subseteq> arcs G"
+proof 
+  have k0: "k > 0" 
+    using many_verts_impl_k_greater_0 assms
+    by auto
+  fix x assume x_assm: "x \<in> set (vwalk_arcs Cycle)"
+  then have "\<exists>u v. x = (u, v)" by simp
+  then obtain u v where uv_def: "x = (u, v)" by blast
+  then have "\<exists>p1 p2. p1 @ [u, v] @ p2 = Cycle" using x_assm sublist_for_edges by fast
+  then show "x \<in> arcs G" using uv_def aux1 k0 by(auto)
+qed
 
 subsection\<open>Cycle is awalk\<close>
 
