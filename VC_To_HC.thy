@@ -788,29 +788,10 @@ lemma aux101:
   using assms apply(induction L) apply(auto) 
   by (metis assms(1) assms(2) distinct_append hd_append hd_in_set list.sel(1) list.sel(3) not_distinct_conv_prefix self_append_conv2)
 
-(*lemma aux102:
-  assumes "distinct L" "L = l1#ls1 @ ls2" "\<exists>p1 p2. p1@ [v1, v2] @ p2 = L" "v1 \<in> set ls2"
-  shows "v2 \<in> set ls2"
-proof(rule ccontr)
-  assume not_in: "v2 \<notin> set ls2"
-  have "v2 \<in> set L" using assms 
-    using aux41 by fastforce
-  then have cases: "v2 = l1 \<or> v2 \<in> set ls1" using not_in assms by simp
-  then show False proof (cases "v2 = l1")
-    case True
-    then show ?thesis using assms 
-      by (metis append_self_conv2 aux41(2) distinct.simps(2) hd_append2 list.sel(1) list.sel(3) not_in tl_append2)
-  next
-    case False
-    then have "v2 \<in> set ls1" using cases by auto
-    then show ?thesis using assms sorry
-    qed
-    oops*)
-
 lemma aux102_1:
   assumes "distinct L" "L = ls1 @ ls2" "\<exists>p1 p2. p1@ [v1, v2] @ p2 = L" "v1 \<in> set ls2"
   shows "v2 \<in> set ls2"
-  using assms proof(induction L arbitrary: ls2 ls1 l1)
+  using assms proof(induction L arbitrary: ls2 ls1)
   case Nil
   then show ?case by auto
 next
@@ -837,17 +818,222 @@ next
   qed
 qed 
 
-lemma aux102:
+lemma aux102_2:
   assumes "distinct L" "L = l1 # ls1 @ ls2" "\<exists>p1 p2. p1@ [v1, v2] @ p2 = L" "v1 \<in> set ls2"
   shows "v2 \<in> set ls2"
   using assms aux102_1 
   by (metis Cons_eq_appendI)
 
-lemma aux103:
+lemma aux102_3:
+  assumes "distinct L" "L = ls1 @ ls2" "\<exists>p1 p2. p1@ [v1, v2] @ p2 = L" "v1 \<in> set ls2"
+  shows "\<exists>p1 p2. p1@ [v1, v2] @ p2 = ls2"
+  using assms proof(induction L arbitrary: ls2 ls1)
+  case Nil
+  then show ?case by auto
+next
+  case (Cons a L)
+  then show ?case proof(cases "v1 = a")
+    case True
+    then have "ls1 = []" using assms Cons 
+      by (metis (no_types, hide_lams) Nil_is_append_conv append.assoc append_Cons_eq_iff append_self_conv2 distinct.simps(2) in_set_conv_decomp in_set_conv_decomp_first list.distinct(1) split_list)
+    then have "a#L = ls2" using Cons by auto
+    then show ?thesis 
+      using Cons by blast
+  next
+    case False
+    have "\<exists>p1 p2. p1@ [v1, v2] @ p2 = (a#L)" using Cons by auto
+    then obtain p1 p2 where p_def: "p1@ [v1, v2] @ p2 =a#L" by fast
+    then have L_def_2: "L = tl( p1@ [v1, v2] @ p2)" by auto
+    have "p1 \<noteq> []" using False Cons p_def
+      by (metis append_self_conv2 hd_append2 list.sel(1) list.sel(2) list.sel(3) not_Cons_self2)
+    then have "L = (tl p1) @[v1, v2] @ p2" 
+      using L_def_2 by simp
+    then show ?thesis using Cons 
+      by (metis L_def_2 append_self_conv2 distinct_tl p_def tl_append2)
+  qed
+qed 
+
+lemma aux102_4:
+  assumes "distinct L" "L = l1 # ls1 @ ls2" "\<exists>p1 p2. p1@ [v1, v2] @ p2 = L" "v1 \<in> set ls2" "ls3 = l1#ls1"
+  shows "\<exists>p1 p2. p1@ [v1, v2] @ p2 = ls2"
+proof -
+  have 1: "L = ls3 @ ls2" 
+    using assms by simp
+  then have 1: "\<exists>p1 p2. p1@ [v1, v2] @ p2 = ls2" 
+    using aux102_3 assms 1  by fast 
+  then obtain p1 p2 where p_def: "p1@ [v1, v2] @ p2 = ls2" by blast
+  then show ?thesis by auto
+qed
+
+lemma aux102:
+  assumes "distinct L" "L = l1 # ls1 @ ls2" "\<exists>p1 p2. p1@ [v1, v2] @ p2 = L" "v1 \<in> set ls2"
+  shows  "\<exists>p1 p2. p1@ [v1, v2] @ p2 = ls2"
+  using assms aux102_4 
+  by fast 
+
+lemma aux103_1:
+  assumes "distinct L" "L = ls1 @ ls2" "\<exists>p1 p2. p1@ [v1, v2] @ p2 = L" "v1 \<in> set ls1" "v1 \<noteq> last ls1"
+  shows "v2 \<in> set ls1"
+  using assms proof(induction L arbitrary: ls1 ls2 )
+  case Nil
+  then show ?case by auto
+next
+  case (Cons a L)
+  then show ?case proof(cases "v1 = a")
+    case True
+    then have "v1 = hd ls1" 
+      using Cons by (metis distinct.simps(2) distinct_singleton hd_append2 list.sel(1))
+    with Cons have "v1 \<noteq> last ls1" 
+      by auto
+    then have "tl ls1 \<noteq> []" 
+      by (metis Cons.prems(4) \<open>v1 = hd ls1\<close> distinct.simps(2) distinct_singleton last_ConsL list.collapse)
+    have "\<exists>p1 p2. p1@ [v1, v2] @ p2 = (a#L)" 
+      using Cons assms by  argo
+    then obtain p1 p2 where "p1@ [v1, v2] @ p2 = (a#L)" by auto
+    then have "p1 = []" 
+      using Cons \<open>v1 = a\<close> by (metis aux41(1) distinct.simps(2) list.sel(3) tl_append2)
+    then have "v2 = hd L" 
+      using Cons by (metis Cons_eq_appendI True \<open>p1 @ [v1, v2] @ p2 = a # L\<close> eq_Nil_appendI list.sel(1) list.sel(3))
+    then have "v2 = hd (tl ls1)" 
+      using Cons \<open>tl ls1 \<noteq> []\<close> by (metis Nil_tl \<open>p1 = []\<close> hd_append2 list.sel(3) tl_append2) 
+    then show ?thesis 
+      by (simp add: \<open>tl ls1 \<noteq> []\<close> list_set_tl)
+  next
+    case False
+    have "\<exists>p1 p2. p1@ [v1, v2] @ p2 = (a#L)" using Cons by auto
+    then obtain p1 p2 where p_def: "p1@ [v1, v2] @ p2 =a#L" by fast
+    then have L_def_2: "L = tl( p1@ [v1, v2] @ p2)" by auto
+    have "p1 \<noteq> []" 
+      using False Cons p_def 
+      by (metis hd_append2 list.sel(1) list.sel(2) list.sel(3) not_Cons_self2 self_append_conv2)
+    then have "L = (tl p1) @[v1, v2] @ p2" 
+      using L_def_2 by simp
+    then have 1: "\<exists>p1 p2. p1@ [v1, v2] @ p2 = L" 
+      by auto
+    have 2: "distinct L" 
+      using Cons by (meson distinct.simps(2))
+    have 3: "L = tl ls1 @ ls2" 
+      using Cons 
+      by (metis distinct.simps(2) distinct_singleton list.sel(3) tl_append2) 
+    have 4: "v1 \<in> set (tl ls1)" 
+      using Cons False by (metis hd_Cons_tl hd_append2 list.sel(1) set_ConsD tl_Nil)
+    have 5: "v1 \<noteq> last (tl ls1)" 
+      using Cons 
+      by (metis "4" last_tl list.set_cases neq_Nil_conv) 
+    then show ?thesis
+      using Cons 1 2 3 4 5 list_set_tl 
+      by metis   
+  qed
+qed  
+
+lemma aux103_2:
+  assumes "distinct L" "L = l1#ls1 @ ls2" "\<exists>p1 p2. p1@ [v1, v2] @ p2 = L" "v1 \<in> set ls1" "v1 \<noteq> last ls1" "ls3 = l1#ls1"
+  shows "v2 \<in> set ls1"
+proof -
+  have "L = ls3 @ ls2" 
+    using assms by simp
+  have "v1 \<in> set ls3" using assms by simp
+  then have 1: "v2 \<in> set ls3" using aux103_1 assms 
+    by (metis \<open>L = ls3 @ ls2\<close> last.simps list.distinct(1) list.set_cases)
+  have "v2 \<noteq> l1" using assms 
+    by (metis append_self_conv2 aux41(2) distinct.simps(2) hd_append2 list.sel(1) list.sel(2) list.sel(3) list.set_sel(1) tl_append2)
+  then have "v2 \<in> (set ls1)" 
+    using 1 assms by simp
+  then show ?thesis  .
+qed
+
+lemma aux103_3:
   assumes "distinct L" "L = l1#ls1 @ ls2" "\<exists>p1 p2. p1@ [v1, v2] @ p2 = L" "v1 \<in> set ls1" "v1 \<noteq> last ls1"
   shows "v2 \<in> set ls1"
-  using assms apply(induction L) apply(auto) 
-  sorry
+  using assms aux103_2 
+  by fast
+
+lemma aux103_4:
+  assumes "distinct L" "L = ls1 @ ls2" "\<exists>p1 p2. p1@ [v1, v2] @ p2 = L" "v1 \<in> set ls1" "v1 \<noteq> last ls1"
+  shows "\<exists>p1 p2. p1@ [v1, v2] @ p2 = ls1"
+  using assms proof(induction L arbitrary: ls1 ls2 )
+  case Nil
+  then show ?case by auto
+next
+  case (Cons a L)
+  then show ?case proof(cases "v1 = a")
+    case True
+    then have "v1 = hd ls1" 
+      using Cons by (metis distinct.simps(2) distinct_singleton hd_append2 list.sel(1))
+    with Cons have "v1 \<noteq> last ls1" 
+      by auto
+    then have "tl ls1 \<noteq> []" 
+      by (metis Cons.prems(4) \<open>v1 = hd ls1\<close> distinct.simps(2) distinct_singleton last_ConsL list.collapse)
+    have "\<exists>p1 p2. p1@ [v1, v2] @ p2 = (a#L)" 
+      using Cons assms by  argo
+    then obtain p1 p2 where "p1@ [v1, v2] @ p2 = (a#L)" by auto
+    then have "p1 = []" 
+      using Cons \<open>v1 = a\<close> by (metis aux41(1) distinct.simps(2) list.sel(3) tl_append2)
+    then have "v2 = hd L" 
+      using Cons by (metis Cons_eq_appendI True \<open>p1 @ [v1, v2] @ p2 = a # L\<close> eq_Nil_appendI list.sel(1) list.sel(3))
+    then have "v2 = hd (tl ls1)" 
+      using Cons \<open>tl ls1 \<noteq> []\<close> by (metis Nil_tl \<open>p1 = []\<close> hd_append2 list.sel(3) tl_append2) 
+    then show ?thesis 
+      by (metis Cons.prems(4) \<open>p1 = []\<close> \<open>tl ls1 \<noteq> []\<close> \<open>v1 = hd ls1\<close> append_Cons eq_Nil_appendI in_set_replicate list.exhaust_sel replicate_empty)
+  next
+    case False
+    have "\<exists>p1 p2. p1@ [v1, v2] @ p2 = (a#L)" using Cons by auto
+    then obtain p1 p2 where p_def: "p1@ [v1, v2] @ p2 =a#L" by fast
+    then have L_def_2: "L = tl( p1@ [v1, v2] @ p2)" by auto
+    have "p1 \<noteq> []" 
+      using False Cons p_def 
+      by (metis hd_append2 list.sel(1) list.sel(2) list.sel(3) not_Cons_self2 self_append_conv2)
+    then have "L = (tl p1) @[v1, v2] @ p2" 
+      using L_def_2 by simp
+    then have 1: "\<exists>p1 p2. p1@ [v1, v2] @ p2 = L" 
+      by auto
+    have 2: "distinct L" 
+      using Cons by (meson distinct.simps(2))
+    have 3: "L = tl ls1 @ ls2" 
+      using Cons 
+      by (metis distinct.simps(2) distinct_singleton list.sel(3) tl_append2) 
+    have 4: "v1 \<in> set (tl ls1)" 
+      using Cons False by (metis hd_Cons_tl hd_append2 list.sel(1) set_ConsD tl_Nil)
+    have 5: "v1 \<noteq> last (tl ls1)" 
+      using Cons 
+      by (metis "4" last_tl list.set_cases neq_Nil_conv) 
+    then have "\<exists>p1 p2. p1@[v1, v2]@p2 = tl(ls1)" 
+      using Cons 1 2 3 4 5 by blast
+    then obtain p1' p2' where "p1'@[v1, v2]@p2' = tl(ls1)" by auto
+    then have "(a#p1')@[v1, v2]@p2' = ls1" 
+      using Cons by (simp add: "3")
+    then show ?thesis
+      by blast 
+  qed
+qed  
+
+lemma aux103_5:
+  assumes "distinct L" "L = l1#ls1 @ ls2" "\<exists>p1 p2. p1@ [v1, v2] @ p2 = L" "v1 \<in> set ls1" "v1 \<noteq> last ls1" "ls3 = l1#ls1"
+  shows "\<exists>p1 p2. p1@ [v1, v2] @ p2 = ls1"
+proof -
+  have 1: "L = ls3 @ ls2" 
+    using assms by simp
+  have 2: "v1 \<in> set ls3" using assms by simp
+  have 3: "v1 \<noteq> last ls3" using assms by auto
+  then have 1: "\<exists>p1 p2. p1@ [v1, v2] @ p2 = ls3" 
+    using aux103_4 assms 1 2 by fast 
+  then obtain p1 p2 where p_def: "p1@ [v1, v2] @ p2 = ls3" by blast
+  have "v2 \<noteq> l1" using assms 
+    by (metis append_self_conv2 aux41(2) distinct.simps(2) hd_append2 list.sel(1) list.sel(2) list.sel(3) list.set_sel(1) tl_append2)
+  have 1: "v1 \<noteq> l1" 
+    using assms by force
+  then have 2: "p1@ [v1, v2] @ p2 = (l1 # ls1)" using assms p_def by auto
+  then have "hd p1 = l1" using 1 p_def  
+    by (metis append_self_conv2 hd_append2 list.sel(1) list.sel(2) list.sel(3) not_Cons_self2)
+  then have "(tl p1)@[v1, v2] @ p2 = ls1" 
+    using 2 1 by (metis hd_append list.sel(1) list.sel(3) tl_append2) 
+  then show ?thesis by auto
+qed
+
+lemma aux103:
+  assumes "distinct L" "L = l1#ls1 @ ls2" "\<exists>p1 p2. p1@ [v1, v2] @ p2 = L" "v1 \<in> set ls1" "v1 \<noteq> last ls1"
+  shows "\<exists>p1 p2. p1@ [v1, v2] @ p2 = ls1"
+  using assms aux103_5 by fast
 
 lemma aux104_2: 
   assumes "x = hd L" "x = last ls1" "L = ls1 @ ls2" "x \<in> set ls1" "distinct L"
@@ -916,6 +1102,119 @@ lemma aux104:
   shows "v2 = hd ls2"
   using assms aux104_3 by fast
 
+
+lemma aux110_1:
+  assumes "\<exists>p1 p2. p1 @ [v1, v2] @ p2 = construct_cycle_add_edge_nodes E' a C' \<Longrightarrow>
+        (\<exists>v e. v1 = Edge v e 0 \<and> v2 = Edge v e (Suc 0) \<and> e \<in> set E' \<and> v \<in> e) \<or>
+        (\<exists>u v e. v1 = Edge v e 0 \<and> v2 = Edge u e 0 \<and> e \<in> set E' \<and> v \<in> e \<and> u \<in> e) \<or>
+        (\<exists>u v e. v1 = Edge v e (Suc 0) \<and> v2 = Edge u e (Suc 0) \<and> e \<in> set E' \<and> v \<in> e \<and> u \<in> e) \<or>
+        (\<exists>v e1.
+            v1 = Edge v e1 (Suc 0) \<and>
+            (\<exists>e2. v2 = Edge v e2 0 \<and>
+                  (\<exists>i<length E'. \<exists>j<length E'. e1 = E' ! i \<and> e2 = E' ! i \<and> v \<in> e1 \<and> v \<in> e2 \<and> (\<forall>i'>i. v \<in> E' ! i' \<longrightarrow> i' < length E' \<longrightarrow> \<not> i' < j))))"
+    "p1 @ v1 # v2 # p2 =
+        (if a \<in> aa
+         then (let u = get_second (aa - {a}) in if u \<in> C' then [Edge a aa 0, Edge a aa 1] else [Edge a aa 0, Edge u aa 0, Edge u aa 1, Edge a aa 1]) @
+              construct_cycle_add_edge_nodes E' a C'
+         else construct_cycle_add_edge_nodes E' a C')"
+  shows "(\<exists>v e. v1 = Edge v e 0 \<and> v2 = Edge v e (Suc 0) \<and> e \<in> set E' \<and> v \<in> e) \<or>
+         (\<exists>u v e. v1 = Edge v e 0 \<and> v2 = Edge u e 0 \<and> e \<in> set E' \<and> v \<in> e \<and> u \<in> e) \<or>
+         (\<exists>u v e. v1 = Edge v e (Suc 0) \<and> v2 = Edge u e (Suc 0) \<and> e \<in> set E' \<and> v \<in> e \<and> u \<in> e) \<or>
+         (\<exists>v e1. v1 = Edge v e1 (Suc 0) \<and> (\<exists>e2. v2 = Edge v e2 0 \<and> (\<exists>i<length E'. \<exists>j<length E'. e1 = E' ! i \<and> e2 = E' ! i \<and> v \<in> e1 \<and> v \<in> e2 \<and> (\<forall>i'>i. v \<in> E' ! i' \<longrightarrow> i' < length E' \<longrightarrow> \<not> i' < j))))"
+  sorry
+
+lemma aux110_2:
+  assumes "(\<exists>v e. v1 = Edge v e 0 \<and> v2 = Edge v e (Suc 0) \<and> e \<in> set E' \<and> v \<in> e) \<or>
+    (\<exists>u v e. v1 = Edge v e 0 \<and> v2 = Edge u e 0 \<and> e \<in> set E' \<and> v \<in> e \<and> u \<in> e) \<or>
+    (\<exists>u v e. v1 = Edge v e (Suc 0) \<and> v2 = Edge u e (Suc 0) \<and> e \<in> set E' \<and> v \<in> e \<and> u \<in> e) \<or>
+    (\<exists>v e1.
+        v1 = Edge v e1 (Suc 0) \<and>
+        (\<exists>e2. v2 = Edge v e2 0 \<and>
+              (\<exists>i<length E'. \<exists>j<length E'. e1 = E' ! i \<and> e2 = E' ! j \<and> v \<in> e1 \<and> v \<in> e2 \<and> (\<forall>i'>i. v \<in> E' ! i' \<longrightarrow> i' < length E' \<longrightarrow> \<not> i' < j))))" 
+  shows "(\<exists>v e. v1 = Edge v e 0 \<and> v2 = Edge v e (Suc 0) \<and> e \<in> set (aa # E') \<and> v \<in> e) \<or>
+    (\<exists>u v e. v1 = Edge v e 0 \<and> v2 = Edge u e 0 \<and> e \<in> set (aa # E') \<and> v \<in> e \<and> u \<in> e) \<or>
+    (\<exists>u v e. v1 = Edge v e (Suc 0) \<and> v2 = Edge u e (Suc 0) \<and> e \<in> set (aa # E') \<and> v \<in> e \<and> u \<in> e) \<or>
+    (\<exists>v e1.
+        v1 = Edge v e1 (Suc 0) \<and>
+        (\<exists>e2. v2 = Edge v e2 0 \<and>
+              (\<exists>i<length (aa # E').
+                  \<exists>j<length (aa # E').
+                     e1 = (aa # E') ! i \<and> e2 = (aa # E') ! j \<and> v \<in> e1 \<and> v \<in> e2 \<and> (\<forall>i'>i. v \<in> (aa # E') ! i' \<longrightarrow> i' < length (aa # E') \<longrightarrow> \<not> i' < j))))"
+  using assms proof(cases "(\<exists>v e. v1 = Edge v e 0 \<and> v2 = Edge v e (Suc 0) \<and> e \<in> set E' \<and> v \<in> e)")
+  case True
+  then show ?thesis using assms by auto
+next
+  case False
+  then have 1: "\<nexists>v e. v1 = Edge v e 0 \<and> v2 = Edge v e (Suc 0) \<and> e \<in> set E' \<and> v \<in> e" by auto
+  then show ?thesis proof(cases "(\<exists>u v e. v1 = Edge v e 0 \<and> v2 = Edge u e 0 \<and> e \<in> set E' \<and> v \<in> e \<and> u \<in> e)")
+    case True
+    then show ?thesis using assms by auto
+  next
+    case False
+    then have 2:  "\<nexists>u v e. v1 = Edge v e 0 \<and> v2 = Edge u e 0 \<and> e \<in> set E' \<and> v \<in> e \<and> u \<in> e" by auto
+    then show ?thesis proof(cases "(\<exists>u v e. v1 = Edge v e (Suc 0) \<and> v2 = Edge u e (Suc 0) \<and> e \<in> set E' \<and> v \<in> e \<and> u \<in> e)")
+      case True
+      then show ?thesis by auto
+    next
+      case False
+      then have 3: "\<nexists>u v e. v1 = Edge v e (Suc 0) \<and> v2 = Edge u e (Suc 0) \<and> e \<in> set E' \<and> v \<in> e \<and> u \<in> e" by auto
+      then have 4: "(\<exists>v e1.
+        v1 = Edge v e1 (Suc 0) \<and>
+        (\<exists>e2. v2 = Edge v e2 0 \<and>
+              (\<exists>i<length E'. \<exists>j<length E'. e1 = E' ! i \<and> e2 = E' ! j \<and> v \<in> e1 \<and> v \<in> e2 \<and> (\<forall>i'>i. v \<in> E' ! i' \<longrightarrow> i' < length E' \<longrightarrow> \<not> i' < j))))" 
+        using assms 1 2 3 by blast
+      then obtain v e1 where " v1 = Edge v e1 (Suc 0)" by blast
+      then have 5: "(\<exists>e2. v2 = Edge v e2 0 \<and>
+              (\<exists>i<length E'. \<exists>j<length E'. e1 = E' ! i \<and> e2 = E' ! j \<and> v \<in> e1 \<and> v \<in> e2 \<and> (\<forall>i'>i. v \<in> E' ! i' \<longrightarrow> i' < length E' \<longrightarrow> \<not> i' < j)))" 
+        using 4 by simp
+      then obtain e2 where "v2 = Edge v e2 0" by blast
+      then have 6: "\<exists>i<length E'. \<exists>j<length E'. e1 = E' ! i \<and> e2 = E' ! j \<and> v \<in> e1 \<and> v \<in> e2 \<and> (\<forall>i'>i. v \<in> E' ! i' \<longrightarrow> i' < length E' \<longrightarrow> \<not> i' < j)"
+        using 5 by simp 
+      then obtain i j where ij_def: "e1 = E' ! i" "e2 = E' ! j" "v \<in> e1" "v \<in> e2" "(\<forall>i'>i. v \<in> E' ! i' \<longrightarrow> i' < length E' \<longrightarrow> \<not> i' < j)"  by auto
+      then have "e1 = (aa#E') ! (i+1)" "e2 = (aa#E') ! (j+1)" "v \<in> e1" "v \<in> e2"  by auto
+      have "(\<forall>i'>(i+1). v \<in> (aa # E') ! i' \<longrightarrow> i' < length (aa#E') \<longrightarrow> \<not> i' < (j+1))" using ij_def sorry
+      then show ?thesis sorry 
+    qed
+  qed
+qed
+
+
+lemma aux110:
+  assumes "\<exists>p1 p2. p1@ [v1, v2] @ p2 = construct_cycle_add_edge_nodes E' a C'" 
+  shows "(\<exists>v e. v1 = Edge v e 0 \<and> v2 = Edge v e (Suc 0) \<and> e \<in> set E' \<and> v \<in> e) \<or>
+         (\<exists>u v e. v1 = Edge v e 0 \<and> v2 = Edge u e 0 \<and> e \<in> set E' \<and> v \<in> e \<and> u \<in> e) \<or>
+         (\<exists>u v e. v1 = Edge v e (Suc 0) \<and> v2 = Edge u e (Suc 0) \<and> e \<in> set E' \<and> v \<in> e \<and> u \<in> e) \<or>
+         (\<exists>v e1. v1 = Edge v e1 (Suc 0) \<and> (\<exists>e2. v2 = Edge v e2 0 \<and> (\<exists>i<length E'. \<exists>j<length E'. e1 = E' ! i \<and> e2 = E' ! j \<and> v \<in> e1 \<and> v \<in> e2 \<and> (\<forall>i'>i. v \<in> E' ! i' \<longrightarrow> i' < length E' \<longrightarrow> \<not> i' < j))))"
+using assms proof(induction E')
+  case Nil
+  then show ?case by auto
+next
+  case (Cons aa E')
+  then have 1: "\<exists>p1 p2. p1 @ [v1, v2] @ p2 = (if a \<in> aa
+         then (let u = get_second (aa - {a}) in if u \<in> C' then [Edge a aa 0, Edge a aa 1] else [Edge a aa 0, Edge u aa 0, Edge u aa 1, Edge a aa 1]) @
+              construct_cycle_add_edge_nodes E' a C'
+         else construct_cycle_add_edge_nodes E' a C')" by simp
+  then show ?case proof(cases "a \<in> aa")
+    case True
+    then show ?thesis sorry
+  next
+    case False
+    then have "\<exists>p1 p2. p1 @ [v1, v2] @ p2 = construct_cycle_add_edge_nodes E' a C'" 
+      using 1 by simp
+    then have "(\<exists>v e. v1 = Edge v e 0 \<and> v2 = Edge v e (Suc 0) \<and> e \<in> set E' \<and> v \<in> e) \<or>
+    (\<exists>u v e. v1 = Edge v e 0 \<and> v2 = Edge u e 0 \<and> e \<in> set E' \<and> v \<in> e \<and> u \<in> e) \<or>
+    (\<exists>u v e. v1 = Edge v e (Suc 0) \<and> v2 = Edge u e (Suc 0) \<and> e \<in> set E' \<and> v \<in> e \<and> u \<in> e) \<or>
+    (\<exists>v e1.
+        v1 = Edge v e1 (Suc 0) \<and>
+        (\<exists>e2. v2 = Edge v e2 0 \<and>
+              (\<exists>i<length E'. \<exists>j<length E'. e1 = E' ! i \<and> e2 = E' ! j \<and> v \<in> e1 \<and> v \<in> e2 \<and> (\<forall>i'>i. v \<in> E' ! i' \<longrightarrow> i' < length E' \<longrightarrow> \<not> i' < j))))" 
+      using Cons by auto
+    then show ?thesis using Cons aux110_2  sorry
+  qed
+qed
+  
+
+
 lemma aux45:
   assumes "x \<in> e" "\<exists>p1 p2. p1@ [v1, v2] @ p2 = (
   let u = get_sceond (e - {x}) in (if u \<in> C then [Edge x e 0, Edge x e 1] else [Edge x e 0, Edge u e 0, Edge u e 1, Edge x e 1]) @
@@ -933,7 +1232,7 @@ lemma aux44:
 lemma aux42:
   assumes "(construct_cycle_1 E C n C') ! i = Edge u1 e1 0" "(construct_cycle_1 E C n C') ! (i+1) = Edge u2 e2 0" "i< length (construct_cycle_1 E C n C')"
   shows "e2 = e1"
-using assms aux44 apply(induction C arbitrary: n) apply( auto)  
+(*using assms aux44 apply(induction C arbitrary: n) apply( auto)*)  
 using assms proof(induction C arbitrary: n)
   case Nil
   then show ?case using assms by(auto)
@@ -1110,6 +1409,7 @@ next
     using aux14 assms apply(simp) 
     by blast
 qed
+
 
 lemma aux4:
   assumes "\<exists>p1 p2. p1@ [v1, v2] @ p2 = construct_cycle_1 E C 0 (set C)" "is_vertex_cover_list E C" (*"distinct C"*) "length  C = k" "k>0"
