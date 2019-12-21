@@ -1609,20 +1609,13 @@ lemma aux44_c_2_1:
 
 lemma aux44_c_2:
   assumes "construct_cycle_add_edge_nodes (e # E') a C =  [(Edge a e 0), (Edge a e 1)] 
-           @ construct_cycle_add_edge_nodes E' a C" 
-    "v1 = Edge a e 1" "v2 = hd (construct_cycle_add_edge_nodes E' a C)" "v2 = Edge u2 e2 0" 
-    "construct_cycle_add_edge_nodes E' a C \<noteq> []"
-  shows "a = u2" "(\<exists>i<length E. \<exists>j<length E. e1 = E ! i \<and> e2 = E ! j \<and> (\<forall>i'>i. u1 \<in> E ! i' \<longrightarrow> i' < length E \<longrightarrow> \<not> i' < j))"
-  using assms aux44_c_2_1 apply(fastforce)
+           @ construct_cycle_add_edge_nodes E' a C"  "v1 = (Edge a e 1)"
+      "v1 = Edge a e 1"  "distinct (construct_cycle_add_edge_nodes (e # E') a C)"
+    "\<exists>p1 p2. p1@ [v1, v2] @ p2 = construct_cycle_add_edge_nodes (e#E') a C"
+  shows 
+    "(\<exists>i<length (e # E'). \<exists>j<length (e # E'). e1 = (e # E') ! i \<and> e2 = (e # E') ! j 
+    \<and> (\<forall>i'>i. u1 \<in> (e # E') ! i' \<longrightarrow> i' < length (e # E') \<longrightarrow> \<not> i' < j))"
   sorry
-
-lemma aux44_c_3:
-  assumes "construct_cycle_add_edge_nodes (e # E') a C =  [(Edge a e 0), (Edge u e 0), (Edge u e 1), (Edge a e 1)]
-           @ construct_cycle_add_edge_nodes E' a C" 
-    "v1 = Edge a e 1" "v2 = hd (construct_cycle_add_edge_nodes E' a C)" "v2 = Edge u2 e2 0"
-  shows "a = u2 \<and> (\<exists>i<length E. \<exists>j<length E. e1 = E ! i \<and> e2 = E ! j \<and> (\<forall>i'>i. u1 \<in> E ! i' \<longrightarrow> i' < length E \<longrightarrow> \<not> i' < j))"
-  sorry
-
 
 lemma aux44_c: 
   assumes "\<exists>p1 p2. p1@ [v1, v2] @ p2 = construct_cycle_add_edge_nodes E' a C" "v1 = Edge u1 e1 1" "v2 = Edge u2 e2 0"
@@ -1660,7 +1653,11 @@ next
         have "v2 \<in> set (construct_cycle_add_edge_nodes E' a C)" 
           using 4 5 3 Cons aux104_1_1 True by fast
         then have 7: "construct_cycle_add_edge_nodes E' a C \<noteq> []" by auto
-        then show ?thesis using Cons 3 4 aux44_c_2 6 by auto
+        then have 8: "(\<exists>i<length (e # E'). \<exists>j<length (e # E'). e1 = (e # E') ! i \<and> e2 = (e # E') ! j 
+          \<and> (\<forall>i'>i. u1 \<in> (e # E') ! i' \<longrightarrow> i' < length (e # E') \<longrightarrow> \<not> i' < j))" using Cons 3 4 6 aux44_c_2 by metis
+        have 9: "u1 = u2" using aux44_c_2_1 7 4 6 Cons 
+          by fastforce   
+        then show ?thesis using 8 9  by auto
       next
         case False
         then have "v1 \<in> set (construct_cycle_add_edge_nodes E' a C)" 
@@ -1668,7 +1665,7 @@ next
         then have "\<exists>p1 p2. p1 @ [v1, v2] @ p2 = construct_cycle_add_edge_nodes E' a C" 
           using 3 Cons aux102_3 by fast  
         then show ?thesis 
-          using Cons 3 by auto 
+          using Cons 3 sorry
       qed
     next
       case False
@@ -1693,7 +1690,7 @@ next
     case False
     then have "construct_cycle_add_edge_nodes (e # E') a C = construct_cycle_add_edge_nodes E' a C" 
       using 1 by simp
-    then show ?thesis using Cons by auto
+    then show ?thesis using Cons sorry
   qed
 qed
 
