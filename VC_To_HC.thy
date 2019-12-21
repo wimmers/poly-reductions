@@ -1331,6 +1331,102 @@ next
   qed
 qed
 
+lemma aux44_a: 
+  assumes "\<exists>p1 p2. p1@ [v1, v2] @ p2 = construct_cycle_add_edge_nodes E' a C" "v1 = Edge u1 e1 0" "v2 = Edge u2 e2 1"
+    "distinct (construct_cycle_add_edge_nodes E' a C)" 
+  shows "e1 = e2 \<and> u1 = u2"
+  using assms proof(induction E')
+  case Nil
+then show ?case by simp
+next
+  case (Cons e E')
+  have 1: "construct_cycle_add_edge_nodes (e # E') a C = (if a \<in> e then 
+    (let u = (get_second (e-{a})) in 
+      (if u\<in> C then [(Edge a e 0), (Edge a e 1)] 
+      else [(Edge a e 0), (Edge u e 0), (Edge u e 1), (Edge a e 1)])) @ construct_cycle_add_edge_nodes E' a C 
+    else construct_cycle_add_edge_nodes E' a C)" by simp 
+  then show ?case proof (cases "a\<in>e")
+    case True
+    then have 2: "construct_cycle_add_edge_nodes (e # E') a C = (let u = (get_second (e-{a})) in 
+      (if u\<in> C then [(Edge a e 0), (Edge a e 1)] 
+      else [(Edge a e 0), (Edge u e 0), (Edge u e 1), (Edge a e 1)])) @ construct_cycle_add_edge_nodes E' a C" 
+      using 1 by simp
+    then obtain u where u_def: "u = get_second (e-{a})" by auto
+    then show ?thesis proof(cases "u\<in>C")
+      case True
+      then have 3: "construct_cycle_add_edge_nodes (e # E') a C =  [(Edge a e 0), (Edge a e 1)] 
+           @ construct_cycle_add_edge_nodes E' a C" using 2 u_def by simp
+      then show ?thesis proof(cases "v1 \<in> set [(Edge a e 0), (Edge a e 1)]")
+        case True
+        then have 4: "v1 = (Edge a e 0)" using assms by simp
+        have "\<exists>p1 p2.  p1@ [v1, v2] @ p2 = construct_cycle_add_edge_nodes (e#E') a C"  
+          using Cons by blast
+        then obtain p1 p2 where p1p2_def:  "p1@ [v1, v2] @ p2 = construct_cycle_add_edge_nodes (e#E') a C" 
+          by blast
+        have "v1 = hd (construct_cycle_add_edge_nodes (e#E') a C)" 
+          using True 4 3 Cons by simp
+        then have "v2 = hd (tl (construct_cycle_add_edge_nodes (e#E') a C))" using 3 Cons True 4
+          by (metis (mono_tags, lifting) append_Cons aux101 list.sel(3))
+        then have "v2 = Edge a e 1" 
+          using 3 Cons True by simp
+        then show ?thesis using assms 3 4 by simp
+       next
+         case False
+         then have "v1 \<in> set (construct_cycle_add_edge_nodes E' a C)" 
+           using 3 Cons aux44_1 by fast
+         then have "\<exists>p1 p2. p1 @ [v1, v2] @ p2 = construct_cycle_add_edge_nodes E' a C" 
+           using 3 Cons aux102_3 by fast  
+         then show ?thesis 
+           using Cons 3 by auto 
+      qed
+    next
+      case False
+      then have 3: "construct_cycle_add_edge_nodes (e # E') a C = [(Edge a e 0), (Edge u e 0), (Edge u e 1), (Edge a e 1)]
+         @ construct_cycle_add_edge_nodes E' a C" 
+        using 2 u_def \<open>a\<in> e\<close> by smt
+     then show ?thesis proof(cases "v1 \<in> set [(Edge a e 0), (Edge u e 0), (Edge u e 1), (Edge a e 1)]")
+       case True
+       then have 4: "v1 = (Edge a e 0) \<or> v1 = Edge u e 0" using assms by simp
+       then have 6: "v1 \<noteq> last ([(Edge a e 0), (Edge u e 0), (Edge u e 1), (Edge a e 1)])" by auto
+       have 7: "v1 = hd (construct_cycle_add_edge_nodes (e#E') a C) \<or> v1 = hd (tl(construct_cycle_add_edge_nodes (e#E') a C))"
+         using True 4 3 Cons by simp
+        then show ?thesis using assms 3 4 proof(cases "v1 = hd (construct_cycle_add_edge_nodes (e#E') a C)")
+         case True
+         then have "v2 = hd (tl (construct_cycle_add_edge_nodes (e#E') a C))" 
+           using 3 Cons True 4 aux44_2 by fast
+         then have "v2 = Edge u e 0" 
+           using 3 by simp 
+         then show ?thesis 
+           using Cons by auto
+       next
+         case False
+         then have 5: "v1 = hd (tl(construct_cycle_add_edge_nodes (e#E') a C))" using 7 by simp
+         then have 6: "v1 = Edge u e 0" using 3 by simp
+         then have "v2 = hd (tl (tl(construct_cycle_add_edge_nodes (e#E') a C)))" 
+           using 3 Cons True 4 aux44_2 5
+           by (metis (no_types, lifting) False distinct_tl hd_append list.discI list.sel(1) tl_append2)  
+         then have "v2 = Edge u e 1" using 3 by simp
+         then show ?thesis 
+           using 6 Cons by fast
+       qed 
+       next
+         case False
+         then have "v1 \<in> set (construct_cycle_add_edge_nodes E' a C)" 
+           using 3 Cons aux44_1 by fast
+         then have "\<exists>p1 p2. p1 @ [v1, v2] @ p2 = construct_cycle_add_edge_nodes E' a C" 
+           using 3 Cons aux102_3 by fast  
+         then show ?thesis 
+           using Cons 3 by auto 
+      qed
+    qed
+  next
+    case False
+    then have "construct_cycle_add_edge_nodes (e # E') a C = construct_cycle_add_edge_nodes E' a C" 
+      using 1 by simp
+    then show ?thesis using Cons by simp
+  qed
+qed
+
 
 lemma 
   assumes "(construct_cycle_1 E C n C') ! i = Edge u1 e1 0" "(construct_cycle_1 E C n C') ! (i+1) = Edge u2 e2 0" "i< length (construct_cycle_1 E C n C')"
@@ -1439,10 +1535,79 @@ next
     using assms aux5_1 by(auto)  
 qed
 
+lemma aux6_1:
+  assumes "\<exists>p1 p2. p1@ [v1, v2] @ p2 = construct_cycle_1 E C n C'" "v1 = Edge u1 e1 0" "v2 = Edge u2 e2 1" 
+      "distinct (tl (construct_cycle_1 E C n C'))"
+  shows "e1 = e2 \<and> u1 = u2"
+using assms proof(induction C arbitrary: n)
+  case Nil
+  then show ?case by auto
+next
+  case (Cons a C)
+  have 1: "construct_cycle_1 E (a#C) n C' 
+    = Cover n # construct_cycle_add_edge_nodes E a C' @ construct_cycle_1 E C (Suc n) C'" 
+    by simp
+  have 11: "tl (construct_cycle_1 E (a#C) n C') 
+    = construct_cycle_add_edge_nodes E a C' @ construct_cycle_1 E C (Suc n) C'" 
+    by simp
+  have "v1 \<in> set (construct_cycle_1 E (a#C) n C')" 
+    using Cons aux41 by fast 
+  then have "v1 \<in> set (Cover n # construct_cycle_add_edge_nodes E a C' @ construct_cycle_1 E C (Suc n) C')" 
+    using 1 by simp
+  then have "v1 = Cover n \<or> v1 \<in> set (construct_cycle_add_edge_nodes E a C') \<or> v1 \<in> set (construct_cycle_1 E C (Suc n) C')"
+    by simp
+  then have 2: "v1 \<in> set (construct_cycle_add_edge_nodes E a C') \<or> v1 \<in> set (construct_cycle_1 E C (Suc n) C')" 
+    using assms by simp
+  then show ?case proof(cases "v1 \<in> set (construct_cycle_add_edge_nodes E a C')")
+    case True
+    then have 3: "v1 \<in> set (construct_cycle_add_edge_nodes E a C')" by simp
+    then have 4: "(construct_cycle_add_edge_nodes E a C') \<noteq> []" by auto
+    then show ?thesis proof (cases "v1 = last (construct_cycle_add_edge_nodes E a C')")
+      case True
+      then show ?thesis 
+        using aux120 Cons 4 by blast
+    next
+      case False
+      have "\<exists>p1 p2. p1@ [v1, v2] @ p2 = tl (construct_cycle_1 E (a#C) n C')" 
+        using aux122 Cons
+        by (metis "1" Cover_not_in_edge_nodes True list.sel(3))
+      then have 4: "\<exists>p1 p2. p1@ [v1, v2] @ p2 = construct_cycle_add_edge_nodes E a C'" 
+        using Cons aux103_4 1 3 11 False by metis
+      have "distinct (construct_cycle_add_edge_nodes E a C')" using Cons by simp
+      then show ?thesis 
+        using Cons aux44_a 4 by metis 
+    qed
+  next
+    case False
+     have 5: "\<exists>p1 p2. p1@ [v1, v2] @ p2 = tl (construct_cycle_1 E (a#C) n C')" 
+        using aux122 Cons
+        by (metis "1" hc_node.distinct(1) list.sel(3)) 
+    then have "v1 \<in> set (construct_cycle_1 E C (Suc n) C')" 
+      using 2 False by simp
+    then have 6: "\<exists>p1 p2. p1@ [v1, v2] @ p2 = construct_cycle_1 E C (Suc n) C'" 
+      using Cons aux102_3 11 5 by fast  
+    have "distinct (construct_cycle_1 E C (Suc n) C')" 
+      using Cons 11 by simp
+    then have "distinct (tl (construct_cycle_1 E C (Suc n) C'))" 
+      by (simp add: distinct_tl)
+    then show ?thesis 
+      using Cons 6  by simp
+  qed
+qed
+
 lemma aux6:
-  assumes "\<exists>p1 p2. p1@ [v1, v2] @ p2 = construct_cycle_1 E C 0 (set C)" "v1 = Edge u1 e1 0" "v2 = Edge u2 e2 1"
+  assumes "\<exists>p1 p2. p1@ [v1, v2] @ p2 = construct_cycle_1 E C n C'" "v1 = Edge u1 e1 0" "v2 = Edge u2 e2 1"
+    "distinct (tl (construct_cycle_1 E C n C'))"
   shows "e1 = e2" "u1\<in> e1" "u2 = u1" "e1 \<in> set E"
-  sorry
+ proof -
+  have v1_in_set: "v1 \<in> set (construct_cycle_1 E C n C')" 
+    using assms aux41 by fast
+  have "v2 \<in> set (construct_cycle_1 E C n C')" 
+    using assms aux41 by fast 
+  then show "e1 \<in> set E" "u1 \<in> e1" using assms v1_in_set in_cycle aux40 by(auto)
+next
+  show "e1 = e2" "u2 = u1" using aux6_1 assms by blast+
+qed
 
 lemma aux7:
   assumes "\<exists>p1 p2. p1@ [v1, v2] @ p2 = construct_cycle_1 E C 0 (set C)" "v1 = Edge u1 e1 1" "v2 = Edge u2 e2 1"
