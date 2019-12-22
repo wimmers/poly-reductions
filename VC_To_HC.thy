@@ -1607,21 +1607,67 @@ lemma aux44_c_2_1:
   apply (smt list.sel(1)) 
   by (smt hd_append2 list.discI list.sel(1))  
 
-lemma aux44_c_2:
-  assumes "construct_cycle_add_edge_nodes (e # E') a C =  [(Edge a e 0), (Edge a e 1)] 
-           @ construct_cycle_add_edge_nodes E' a C"  "v1 = (Edge a e 1)"
-      "v1 = Edge a e 1"  "distinct (construct_cycle_add_edge_nodes (e # E') a C)"
-    "\<exists>p1 p2. p1@ [v1, v2] @ p2 = construct_cycle_add_edge_nodes (e#E') a C"
+(*lemma aux44_c_2:
+  assumes "L =  [(Edge a e 0), (Edge a e 1)] 
+           @ construct_cycle_add_edge_nodes E' a C"  
+      "v1 = Edge a e 1"  "distinct L" "v1 = Edge u1 e1 1" "v2 = Edge u2 e2 0"
+    "\<exists>p1 p2. p1@ [v1, v2] @ p2 = L"
   shows 
     "(\<exists>i<length (e # E'). \<exists>j<length (e # E'). e1 = (e # E') ! i \<and> e2 = (e # E') ! j 
     \<and> (\<forall>i'>i. u1 \<in> (e # E') ! i' \<longrightarrow> i' < length (e # E') \<longrightarrow> \<not> i' < j))"
+proof -
+  obtain i where "i=(1::nat)" using assms by simp
+  then have "L!i = v1" using assms by simp
+  then have last: "v1 = last [(Edge a e 0), (Edge a e 1)]" using assms by simp
+  then have "v1 \<in> set [(Edge a e 0), (Edge a e 1)]" using assms 
+    by (simp add: distinct_insert) 
+  then have "v2 = hd (construct_cycle_add_edge_nodes E' a C)" 
+    using assms aux104_1 last  
+    by fast
+  show ?thesis sorry
+qed*)
+
+lemma aux44_c_3_1:
+  assumes "v1 = Edge u1 (E' ! i) 1" "v2 = Edge u2 (E' ! j) 0" "distinct (construct_cycle_add_edge_nodes E' a C)" "j < length E'"
+        "p1 @ Edge a (E' ! i) (Suc 0) # Edge a (E' ! j) 0 # p2 = construct_cycle_add_edge_nodes E' a C" 
+        "i < i'" "u1 \<in> E' ! i'"
+        "i' < j"
+  shows False
+  sorry
+
+lemma aux44_c_3:
+  assumes "\<exists>p1 p2. p1@ [v1, v2] @ p2 = construct_cycle_add_edge_nodes E' a C" "v1 = Edge a e1 1" "v2 = Edge a e2 0"
+    "distinct (construct_cycle_add_edge_nodes E' a C)" "E'!i = e1" "E' ! j = e2" "i<length E'" "j<length E'"
+  shows "(\<forall>i'>i. a \<in> E' ! i' \<longrightarrow> i' < length E' \<longrightarrow> \<not> i' < j)"
+  using assms apply(auto) using aux44_c_3_1 by fast 
+  
+lemma aux44_c_a: 
+  assumes "\<exists>p1 p2. p1@ [v1, v2] @ p2 = construct_cycle_add_edge_nodes E' a C" "v1 = Edge u1 e1 1" "v2 = Edge u2 e2 0"
+    "distinct (construct_cycle_add_edge_nodes E' a C)" 
+  shows "u1 = u2" "u1 =a"
   sorry
 
 lemma aux44_c: 
   assumes "\<exists>p1 p2. p1@ [v1, v2] @ p2 = construct_cycle_add_edge_nodes E' a C" "v1 = Edge u1 e1 1" "v2 = Edge u2 e2 0"
     "distinct (construct_cycle_add_edge_nodes E' a C)" 
   shows "u1 = u2 \<and> (\<exists>i<length E'. \<exists>j<length E'. e1 = E' ! i \<and> e2 = E' ! j \<and> (\<forall>i'>i. u1 \<in> E' ! i' \<longrightarrow> i' < length E' \<longrightarrow> \<not> i' < j))"
-  using assms proof(induction E')
+proof -
+  have 1: "u1 = u2" using assms aux44_c_a by fastforce
+  have 2: "u1 = a" using assms aux44_c_a by fastforce
+  then have 3: "u2 = a" using 1 by simp
+  have i_def: "\<exists>i<length (E'). (E')!i = e1" using assms 
+    by (metis "2" aux41(1) in_set_conv_nth only_previous_edges_in_new_edges) 
+  have "v2 \<in> set (construct_cycle_add_edge_nodes (E') a C)" using assms 
+    by (simp add: aux41(2)) 
+  then have j_def: "\<exists>j<length (E'). (E')!j = e2" using assms 
+    by (meson in_set_conv_nth only_previous_edges_in_new_edges)
+  then have "(\<exists>i<length E'. \<exists>j<length E'. e1 = E' ! i \<and> e2 = E' ! j \<and> (\<forall>i'>i. u1 \<in> E' ! i' \<longrightarrow> i' < length E' \<longrightarrow> \<not> i' < j))" 
+    using i_def assms aux44_c_3 1 3 
+    by (metis)
+  then show ?thesis using 1 by simp
+qed
+
+  (*using assms proof(induction E')
   case Nil
   then show ?case by simp
 next
@@ -1650,22 +1696,39 @@ next
         then have 6: "v2 = hd (construct_cycle_add_edge_nodes E' a C)" 
           using 4 5 3 aux104_1 Cons  
           by fast 
-        have "v2 \<in> set (construct_cycle_add_edge_nodes E' a C)" 
+        have a6: "v2 \<in> set (construct_cycle_add_edge_nodes E' a C)" 
           using 4 5 3 Cons aux104_1_1 True by fast
         then have 7: "construct_cycle_add_edge_nodes E' a C \<noteq> []" by auto
-        then have 8: "(\<exists>i<length (e # E'). \<exists>j<length (e # E'). e1 = (e # E') ! i \<and> e2 = (e # E') ! j 
-          \<and> (\<forall>i'>i. u1 \<in> (e # E') ! i' \<longrightarrow> i' < length (e # E') \<longrightarrow> \<not> i' < j))" using Cons 3 4 6 aux44_c_2 by metis
         have 9: "u1 = u2" using aux44_c_2_1 7 4 6 Cons 
-          by fastforce   
+          by fastforce 
+        then have 8: "(\<exists>i<length (e # E'). \<exists>j<length (e # E'). e1 = (e # E') ! i \<and> e2 = (e # E') ! j 
+          \<and> (\<forall>i'>i. u1 \<in> (e # E') ! i' \<longrightarrow> i' < length (e # E') \<longrightarrow> \<not> i' < j))" 
+          using Cons 3 4 6 proof -
+          obtain i where i_def: "i = (0::nat)" by simp
+          then have "(e # E')!i = e1" 
+            using 4 Cons by simp
+          then have i_def: "\<exists>i<length (e#E'). (e # E')!i = e1" using i_def by auto
+          have "v2 \<in> set (construct_cycle_add_edge_nodes (e#E') a C)" using a6 by simp
+          then have j_def: "\<exists>j<length (e#E'). (e#E')!j = e2" using Cons 
+            by (meson in_set_conv_nth only_previous_edges_in_new_edges) 
+          then show ?thesis using aux44_c_3 i_def j_def  Cons 9 4 
+            by (metis (no_types, lifting) hc_node.inject(2))  
+        qed  
         then show ?thesis using 8 9  by auto
       next
         case False
-        then have "v1 \<in> set (construct_cycle_add_edge_nodes E' a C)" 
-          using 3 Cons aux44_1 by fast
+        have distinct: "distinct (construct_cycle_add_edge_nodes E' a C)" using Cons 3 by simp
+        then have v1_def: "v1 \<in> set (construct_cycle_add_edge_nodes E' a C)" 
+          using 3 Cons aux44_1 False by fast
         then have "\<exists>p1 p2. p1 @ [v1, v2] @ p2 = construct_cycle_add_edge_nodes E' a C" 
           using 3 Cons aux102_3 by fast  
+        then have 6: "u1 = u2 \<and> (\<exists>i<length E'. \<exists>j<length E'. e1 = E' ! i \<and> e2 = E' ! j \<and> (\<forall>i'>i. u1 \<in> E' ! i' \<longrightarrow> i' < length E' \<longrightarrow> \<not> i' < j))" 
+          using Cons False v1_def 3 distinct by blast  
+        then have u1u2: "u1 = u2" by auto
+        have "(\<exists>i<length E'. \<exists>j<length E'. e1 = E' ! i \<and> e2 = E' ! j \<and> (\<forall>i'>i. u1 \<in> E' ! i' \<longrightarrow> i' < length E' \<longrightarrow> \<not> i' < j))" using 6 by auto
+        then obtain i where "(\<exists>j<length E'. e1 = E' ! i \<and> e2 = E' ! j \<and> (\<forall>i'>i. u1 \<in> E' ! i' \<longrightarrow> i' < length E' \<longrightarrow> \<not> i' < j))"
         then show ?thesis 
-          using Cons 3 sorry
+          using Cons 3 sorry 
       qed
     next
       case False
@@ -1713,7 +1776,7 @@ next
     case False
     then show ?thesis sorry
   qed
-qed 
+qed *)
 
 lemma aux122:
   assumes "\<exists>p1 p2. p1@ [v1, v2] @ p2 = (a#L)" "v1 \<noteq> a"
