@@ -2672,10 +2672,87 @@ next
   qed
 qed
 
-lemma aux10:
-  assumes "\<exists>p1 p2. p1@ [v1, v2] @ p2 = construct_cycle_1 E C 0 (set C)" "v1 = Cover n" "v2 = Edge u2 e2 0"
-  shows "(\<exists>i<length E. e = E ! i \<and> u2 \<in> e2 \<and> (\<forall>j. u2 \<in> E ! j \<longrightarrow> j < length E \<longrightarrow> \<not> j < i) \<and> n < length C)"
+lemma aux10_1:
+  assumes "Edge v e 0 = hd (construct_cycle_add_edge_nodes E' a C)"
+  shows "\<exists>i<length E'. e = E' ! i \<and> v \<in> e \<and> (\<forall>j. v \<in> E' ! j \<longrightarrow> j < length E' \<longrightarrow> \<not> j < i)"
   sorry
+
+lemma aux10:
+  assumes "\<exists>p1 p2. p1@ [v1, v2] @ p2 = construct_cycle_1 E C n C'" "v1 = Cover c" "v2 = Edge u2 e2 0"
+    "distinct (tl (construct_cycle_1 E C n C'))"
+  shows "(\<exists>i<length E. e2 = E ! i \<and> u2 \<in> e2 \<and> (\<forall>j. u2 \<in> E ! j \<longrightarrow> j < length E \<longrightarrow> \<not> j < i) \<and> c < length C+n)"
+  using assms proof(induction C arbitrary: n)
+  case Nil
+  then show ?case by auto
+next
+  case (Cons a C)
+  have 1: "construct_cycle_1 E (a#C) n C' 
+    = Cover n # construct_cycle_add_edge_nodes E a C' @ construct_cycle_1 E C (Suc n) C'" 
+    by simp
+  then show ?case proof(cases "v1 = Cover n")
+    case True
+    then show ?thesis proof(cases "v2 = hd (construct_cycle_add_edge_nodes E a C'@ construct_cycle_1 E C (Suc n) C')")
+      case True
+      then have 2: "v2 = hd (construct_cycle_add_edge_nodes E a C' @ construct_cycle_1 E C (Suc n) C')" .
+      then show ?thesis proof (cases "(construct_cycle_add_edge_nodes E a C') = []")
+        case True
+        have "v2 \<in> set ( construct_cycle_add_edge_nodes E a C' @ construct_cycle_1 E C (Suc n) C')" 
+          using 1 Cons 
+          using aux41(2) by fastforce 
+        then have "v2 \<in> set (construct_cycle_1 E C (Suc n) C')" 
+          using True by simp
+        have "v2 = Cover (n+1) \<or> v2 = Cover 0" using 2 True  aux43
+          by auto
+          then show ?thesis using Cons by auto
+      next
+        case False
+        then have "v2 = hd (construct_cycle_add_edge_nodes E a C')" using 2 False by simp
+        then show ?thesis 
+          using Cons False aux10_1
+          by (metis aux41(1) constraints_for_Cover_nodes length_greater_0_conv list.discI trans_less_add1) 
+      qed
+    next
+      case False
+      then have "v1 \<in> set (construct_cycle_add_edge_nodes E a C' @ construct_cycle_1 E C (Suc n) C')" 
+        using Cons 
+        by (metis (mono_tags, lifting) "1" \<open>v1 = Cover n\<close> aux101 distinct.simps(2) list.sel(3)) 
+      then have "distinct (construct_cycle_add_edge_nodes E a C' @ construct_cycle_1 E C (Suc n) C')" using Cons 1 by auto
+      then have 3: "\<exists>p1 p2. p1@ [v1, v2] @ p2 = construct_cycle_add_edge_nodes E a C' @ construct_cycle_1 E C (Suc n) C'" 
+        using Cons 1 aux106 False 
+        by (metis (no_types, lifting))  
+      then have "v1 \<in> set (construct_cycle_add_edge_nodes E a C' @ construct_cycle_1 E C (Suc n) C')" 
+        using Cons 1 
+        using append_Cons aux41(1) list.inject by fastforce 
+      then have 4: "v1 \<in> set (construct_cycle_1 E C (Suc n) C')" 
+        using Cover_not_in_edge_nodes assms by fastforce  
+      have 5: "distinct (construct_cycle_add_edge_nodes E a C' @ construct_cycle_1 E C (Suc n) C')" 
+        using Cons by simp
+      then have 6: "distinct (construct_cycle_1 E C (Suc n) C')" by simp
+      have "\<exists>p1 p2. p1@ [v1, v2] @ p2 = construct_cycle_1 E C (Suc n) C'" 
+        using 4 3 5 aux102_3 by fast
+      then show ?thesis using Cons 3 6 
+        by (metis "4" Nat.add_0_right Suc_n_not_le_n True constraints_for_Cover_nodes distinct_tl gr0I hc_node.inject(1) length_0_conv list.discI)  
+    qed
+  next
+    case False
+    then have 3: "\<exists>p1 p2. p1@ [v1, v2] @ p2 = construct_cycle_add_edge_nodes E a C' @ construct_cycle_1 E C (Suc n) C'" 
+      using Cons 1 aux105 
+      by fast  
+    then have "v1 \<in> set (construct_cycle_add_edge_nodes E a C' @ construct_cycle_1 E C (Suc n) C')" 
+      using Cons 1 
+      using append_Cons aux41(1) list.inject by fastforce 
+    then have 4: "v1 \<in> set (construct_cycle_1 E C (Suc n) C')" 
+      using Cover_not_in_edge_nodes assms by fastforce  
+    have 5: "distinct (construct_cycle_add_edge_nodes E a C' @ construct_cycle_1 E C (Suc n) C')" 
+      using Cons by simp
+    then have 6: "distinct (construct_cycle_1 E C (Suc n) C')" by simp
+    have "\<exists>p1 p2. p1@ [v1, v2] @ p2 = construct_cycle_1 E C (Suc n) C'" 
+      using 4 3 5 aux102_3 by fast
+    then show ?thesis  using Cons 3 6  
+      by (metis False add_is_0 aux41(1) constraints_for_Cover_nodes distinct_tl gr0I)  
+   qed
+qed
+  
 
 lemma aux11:
   assumes "\<exists>p1 p2. p1@ [v1, v2] @ p2 = construct_cycle_1 E C 0 (set C)" "v1 = Edge u1 e1 1" "v2 = Cover n"
@@ -2705,13 +2782,15 @@ qed
 
 lemma aux23:
   assumes "v2 = Edge v e i" "v1 = Cover x1" 
-    "\<exists>p1 p2. p1 @ Cover x1 # Edge v e i # p2 = construct_cycle_1 E C 0 (set C)" "length C \<le> k"
+    "\<exists>p1 p2. p1 @ [v1, v2]@ p2 = construct_cycle_1 E C 0 (set C)" "length C \<le> k"
     "distinct (tl (construct_cycle_1 E C 0 (set C)))"
   shows  "i = 0 \<and> (\<exists>i<length E. e = E ! i \<and> v \<in> e \<and> (\<forall>j. v \<in> E ! j \<longrightarrow> j < length E \<longrightarrow> \<not> j < i) \<and> x1 < k)"
   using assms proof (cases "i = 0")
   case True
-  then show ?thesis using aux10 assms apply(auto)
-    by (smt le_antisym le_neq_implies_less le_trans less_imp_le_nat) 
+  then have "(\<exists>i<length E. e = E ! i \<and> v \<in> e \<and> (\<forall>j. v \<in> E ! j \<longrightarrow> j < length E \<longrightarrow> \<not> j < i) \<and> x1 < k)" 
+    using aux10 assms 
+    by fastforce 
+  then show ?thesis using True by(auto) 
 next
   case False
   then show ?thesis using assms aux9 apply(auto) by blast 
