@@ -1654,6 +1654,12 @@ lemma aux44_c_2_1:
    apply (smt list.sel(1)) 
   by (smt hd_append2 list.discI list.sel(1))  
 
+lemma aux44_c_2_1b:
+  assumes "(construct_cycle_add_edge_nodes E' a C) \<noteq> []"
+  shows "\<exists>e. last (construct_cycle_add_edge_nodes E' a C) = Edge a e 1"
+  using assms apply(induction E')apply(auto)
+  by (smt One_nat_def append.right_neutral last_ConsL last_ConsR last_appendR list.discI)  
+
 lemma distinct_same_indices:
   assumes "distinct L" "L!i = L!j" "i<length L" "j<length L"
   shows "i = j"
@@ -2623,7 +2629,7 @@ next
         then have "v2 \<in> set (construct_cycle_1 E C (Suc n) C')" 
           using True by simp
         have "v2 = Cover (n+1) \<or> v2 = Cover 0" using 2 aux43  
-          by (metis (no_types, lifting) "1" Cons.IH Cons.prems(1) Cons.prems(5) True add.commute append_self_conv2 assms(2) assms(3) assms(4) distinct_tl hd_append2 list.collapse list.discI list.inject plus_1_eq_Suc tl_append2) try0 
+          by (metis (no_types, lifting) "1" Cons.IH Cons.prems(1) Cons.prems(5) True add.commute append_self_conv2 assms(2) assms(3) assms(4) distinct_tl hd_append2 list.collapse list.discI list.inject plus_1_eq_Suc tl_append2)  
         then show ?thesis using Cons by auto
       next
         case False
@@ -2672,10 +2678,48 @@ next
   qed
 qed
 
+
 lemma aux10_1:
-  assumes "Edge v e 0 = hd (construct_cycle_add_edge_nodes E' a C)"
+  assumes "Edge v e 0 = hd (construct_cycle_add_edge_nodes E' a C)" "distinct (construct_cycle_add_edge_nodes E' a C)"
+    "ugraph (set E')" "construct_cycle_add_edge_nodes E' a C \<noteq> []" "distinct E'"
   shows "\<exists>i<length E'. e = E' ! i \<and> v \<in> e \<and> (\<forall>j. v \<in> E' ! j \<longrightarrow> j < length E' \<longrightarrow> \<not> j < i)"
-  sorry
+proof -
+  have 1: "Edge v e 0 \<in> set (construct_cycle_add_edge_nodes E' a C)" 
+    using assms by simp
+  then have 2: "v \<in> e" using assms
+    by (meson vertex_in_edge_of_node) 
+  have "\<exists>i<length E'. e = E' ! i" using assms 1  
+    by (metis in_set_conv_nth only_previous_edges_in_new_edges)
+  then obtain i where i_def: "i<length E' \<and> e = E' ! i" by auto
+  have va: "v = a" using assms  
+    using aux44_c_2_1 by fastforce 
+  have " (\<forall>j. v \<in> E' ! j \<longrightarrow> j < length E' \<longrightarrow> \<not> j < i)" proof (rule ccontr)
+    assume "\<not>(\<forall>j. v \<in> E' ! j \<longrightarrow> j < length E' \<longrightarrow> \<not> j < i)" 
+    then have "\<exists>j. v \<in> E' ! j \<and>  j < length E' \<and> j < i" 
+      by simp 
+    then obtain j where j_def: "v \<in> E' ! j \<and>  j < length E' \<and> j < i" by auto
+    then obtain e1 where e1_def: "e1 = E'!j" by simp
+    then obtain e2 where e2_def: "e2 = E'!i" by simp
+    have ji: "j<i" "i<length E'" "j<length E'" using i_def j_def by auto
+    have a_edges: "a \<in>e1" "a \<in> e2" using i_def j_def va 2 e1_def e2_def  by simp+
+    then have "\<exists>i1 j1.
+       construct_cycle_add_edge_nodes E' a C ! i1 = Edge a e1 1 \<and>
+       construct_cycle_add_edge_nodes E' a C ! j1 = Edge a e2 0 \<and> i1 < j1 \<and> j1 < length (construct_cycle_add_edge_nodes E' a C)" 
+      using aux44_c_3_4 i_def j_def e1_def e2_def ji  a_edges 
+      by metis
+    then obtain i1 j1 where i1j1_def: "construct_cycle_add_edge_nodes E' a C ! i1 = Edge a e1 1 \<and>
+       construct_cycle_add_edge_nodes E' a C ! j1 = Edge a e2 0 \<and> i1 < j1 \<and> j1 < length (construct_cycle_add_edge_nodes E' a C)" by blast
+    then have "construct_cycle_add_edge_nodes E' a C ! j1 = Edge v e 0" 
+      using 1 assms e2_def va i_def by fast    
+    then have "j1 = 0" using assms 
+      using i1j1_def  hd_conv_nth nth_eq_iff_index_eq by fastforce 
+    then show False using i1j1_def by simp
+  qed
+  then show ?thesis 
+    using "2" i_def by blast 
+qed
+
+thm aux44_c_3_3
 
 lemma aux10:
   assumes "\<exists>p1 p2. p1@ [v1, v2] @ p2 = construct_cycle_1 E C n C'" "v1 = Cover c" "v2 = Edge u2 e2 0"
@@ -2706,9 +2750,14 @@ next
           then show ?thesis using Cons by auto
       next
         case False
+        have distinct: "distinct E" using in_vc vertex_cover_list_def by auto
+        have ugraph: "ugraph (set E)" using in_vc vertex_cover_list_def by auto 
         then have "v2 = hd (construct_cycle_add_edge_nodes E a C')" using 2 False by simp
+        then have "\<exists>i<length E. e2 = E! i \<and> u2 \<in> e2 \<and> (\<forall>j. u2 \<in> E ! j \<longrightarrow> j < length E \<longrightarrow> \<not> j < i)" 
+          using Cons False aux10_1 ugraph distinct
+          by (simp add: Cons.IH \<open>v2 = Edge u2 e2 0\<close> aux10_1) 
         then show ?thesis 
-          using Cons False aux10_1
+          using Cons False 
           by (metis aux41(1) constraints_for_Cover_nodes length_greater_0_conv list.discI trans_less_add1) 
       qed
     next
@@ -2761,9 +2810,56 @@ lemma aux11:
 
 lemma aux12:
   assumes "\<exists>p1 p2. p1@ [v1, v2] @ p2 = construct_cycle_1 E C n C'" "v1 = Edge u1 e1 i" "v2 = Cover j" "i\<noteq>1"
+     "distinct (tl (construct_cycle_1 E C n C'))"
   shows "False"
-  using assms apply(induction C arbitrary: n) apply(auto)
-  sorry
+ using assms proof(induction C arbitrary: n)
+  case Nil
+  then show ?case by(auto)
+next
+  case (Cons a C)
+  have 1: "construct_cycle_1 E (a#C) n C' 
+    = Cover n # construct_cycle_add_edge_nodes E a C' @ construct_cycle_1 E C (Suc n) C'" 
+    by simp
+  then show ?case proof(cases)
+    assume a1: "v1 \<in> set (construct_cycle_add_edge_nodes E a C')"
+    then have not_empty: "construct_cycle_add_edge_nodes E a C' \<noteq> []" by auto
+    have distinct: "distinct (construct_cycle_add_edge_nodes E a C' @ construct_cycle_1 E C (Suc n) C')" 
+      using Cons 1 by auto  
+    show False proof(cases "v1 = last (construct_cycle_add_edge_nodes E a C')")
+      case True
+      then have "v2 = hd (construct_cycle_1 E C (Suc n) C')" using assms distinct Cons a1 not_empty 
+        by (metis (full_types) One_nat_def aux120 aux21 less_one linorder_neqE_nat)
+      show ?thesis 
+        using aux44_c_2_1b True not_empty assms 
+        by fastforce 
+    next
+      case False
+      then have "v2 \<in> set (construct_cycle_add_edge_nodes E a C')" using Cons a1 
+        by (metis "1" Cover_not_in_edge_nodes append_Cons aux103_1 list.inject list.sel(3) self_append_conv2 tl_append2)
+      then show ?thesis 
+        using assms Cover_not_in_edge_nodes 
+        by fast 
+    qed
+  next
+    assume 2: "v1 \<notin> set (construct_cycle_add_edge_nodes E a C')"
+    then have 3: "\<exists>p1 p2. p1@ [v1, v2] @ p2 = construct_cycle_add_edge_nodes E a C' @ construct_cycle_1 E C (Suc n) C'" 
+      using Cons 1 aux105 
+      by fast  
+    then have "v1 \<in> set (construct_cycle_add_edge_nodes E a C' @ construct_cycle_1 E C (Suc n) C')" 
+      using Cons 1 
+      using append_Cons aux41(1) list.inject by fastforce 
+    then have 4: "v1 \<in> set (construct_cycle_1 E C (Suc n) C')" 
+      using assms 2 by fastforce  
+    have 5: "distinct (construct_cycle_add_edge_nodes E a C' @ construct_cycle_1 E C (Suc n) C')" 
+      using Cons by simp
+    then have 6: "distinct (construct_cycle_1 E C (Suc n) C')" by simp
+    have "\<exists>p1 p2. p1@ [v1, v2] @ p2 = construct_cycle_1 E C (Suc n) C'" 
+      using 4 3 5 aux102_3 by fast
+    then show False using Cons 3 6  
+      using distinct_tl by blast 
+  qed
+qed
+  
 
 lemma aux13:
   assumes "\<exists>p1 p2. p1@ [v1, v2] @ p2 = construct_cycle_1 E C n C'" "v1 = Cover i" "v2 = Cover j" "length C + n > 0"
@@ -2915,6 +3011,8 @@ next
   then have "\<exists>u1 e1 i1. v1 = Edge u1 e1 i1" 
     by (meson hc_node.exhaust) 
   then obtain u1 e1 i1 where "v1 = Edge u1 e1 i1" by blast
+  have distinct_tl: "distinct (tl (construct_cycle_1 E C 0 (set C)))"
+      using assms distinct_edges distinct_nodes by blast
   then show ?thesis 
   proof(cases)
     assume "\<exists> x2. v2 = Cover x2"
@@ -2928,7 +3026,7 @@ next
     next
       case False
       then show ?thesis 
-        using aux12 assms \<open>v1 = _\<close>  \<open>v2 = _\<close>  apply(simp) 
+        using aux12 assms \<open>v1 = _\<close>  \<open>v2 = _\<close> distinct_tl apply(simp) 
         by blast 
     qed
   next
