@@ -1397,7 +1397,7 @@ lemma helper2_for_helper_arcs_explicit_Cover_Edge0_Edge0:
   using assms apply(auto) using helper3_for_helper_arcs_explicit_Cover_Edge0_Edge0 assms  
   by metis
 
-lemma aux44_c_a: 
+lemma helper8_for_helper_arcs_explicit_Cover_Edge0_Edge0: 
   assumes "\<exists>p1 p2. p1@ [v1, v2] @ p2 = construct_cycle_add_edge_nodes E' a C" "v1 = Edge u1 e1 1" "v2 = Edge u2 e2 0"
     "distinct (construct_cycle_add_edge_nodes E' a C)" 
   shows "u1 = u2 \<and> u1 =a"
@@ -1504,8 +1504,8 @@ lemma helper_for_helper_arcs_explicit_Cover_Edge1_Edge0:
     "distinct (construct_cycle_add_edge_nodes E' a C)" 
   shows "u1 = u2 \<and> (\<exists>i<length E'. \<exists>j<length E'. e1 = E' ! i \<and> e2 = E' ! j \<and> (\<forall>i'>i. u1 \<in> E' ! i' \<longrightarrow> i' < length E' \<longrightarrow> \<not> i' < j))"
 proof -
-  have 1: "u1 = u2" using assms aux44_c_a by fastforce
-  have 2: "u1 = a" using assms aux44_c_a by fastforce
+  have 1: "u1 = u2" using assms helper8_for_helper_arcs_explicit_Cover_Edge0_Edge0 by fastforce
+  have 2: "u1 = a" using assms helper8_for_helper_arcs_explicit_Cover_Edge0_Edge0 by fastforce
   then have 3: "u2 = a" using 1 by simp
   have i_def: "\<exists>i<length (E'). (E')!i = e1" using assms 
     by (metis "2" sublist_implies_in_set(1) in_set_conv_nth only_previous_edges_in_new_edges) 
