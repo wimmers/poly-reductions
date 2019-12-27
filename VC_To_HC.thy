@@ -2556,17 +2556,6 @@ theorem is_reduction_vc_to_hc:
   unfolding is_reduction_def using vc_impl_hc hc_impl_vc by(auto)
 
 
-subsection\<open>Need to prove equivalence of Vertex-Cover\<close>
-
-lemma is_vc_list_equal: 
-  assumes "distinct E" "distinct V" 
-  shows "is_vertex_cover (set E) (set V)\<longleftrightarrow> is_vertex_cover_list E V"
-  apply(auto) 
-  sorry
-
-lemma "(set E, k) \<in> vertex_cover \<longleftrightarrow> (E, k) \<in> vertex_cover_list"
-  using vertex_cover_def vertex_cover_list_def is_vc_list_equal apply(auto)
-  sorry
 
 
 
