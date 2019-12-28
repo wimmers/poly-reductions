@@ -1,5 +1,5 @@
 theory Test
-  imports VC_To_HC
+  imports "VC_To_HC/VC_To_HC"
 begin
 
 context 

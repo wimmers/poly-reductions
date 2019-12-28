@@ -1,5 +1,5 @@
 theory VC_To_FNS
-  imports Main "Three_Sat_To_Set_Cover" Graph_Theory.Graph_Theory
+  imports Main "Three_Sat_To_Set_Cover" Graph_Theory.Digraph Graph_Theory.Arc_Walk
 begin
 
 fun del_verts:: "('a, 'b) pre_digraph \<Rightarrow> 'a list \<Rightarrow>('a,'b) pre_digraph" where
