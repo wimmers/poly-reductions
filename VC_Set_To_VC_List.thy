@@ -1,21 +1,8 @@
 theory VC_Set_To_VC_List
-  imports Main "VC_To_HC"
+  imports Main "VC_To_HC/Definitions"
 begin
 
 subsection\<open>Preliminaries\<close>
-
-(*definition
-  "is_vertex_cover_list E V \<equiv> \<forall> e \<in> set E. \<exists> v \<in> set V. v \<in> e"
-
-(*If size of V is smaller than k, then there is a problem concerning the cover nodes in the Graph*)
-definition
-  "vertex_cover_list \<equiv>
-  {(E, k). \<exists>V. ugraph (set E) \<and> (set V) \<subseteq> \<Union> (set E) \<and> k \<le> card (\<Union> (set E)) \<and> size V = k \<and> 
-    is_vertex_cover_list E V \<and> distinct E \<and> distinct V}"*)
-
-(*definition
-  "vertex_cover \<equiv>
-  {(E, k). \<exists>V. ugraph E \<and> V \<subseteq> \<Union> E \<and> k \<le> card (\<Union> E) \<and> card V \<le> k \<and> is_vertex_cover E V}" *)
 
 definition set_to_list::"'a set \<Rightarrow> 'a list" where
 "set_to_list S = (SOME L. (set L = S  \<and> distinct L))" 

@@ -1,5 +1,5 @@
 theory List_Auxiliaries
-  imports Main Graph_Theory.Graph_Theory
+  imports Main Graph_Theory.Stuff
 begin
 
 lemma sublist_implies_in_set:
