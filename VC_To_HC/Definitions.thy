@@ -21,7 +21,7 @@ datatype ('a, 'b) hc_node = Cover nat | Edge 'a 'b nat
 (*Case for empty c is already in cycle*)
 definition
   "is_hc (G::('a,('a \<times> 'a)) pre_digraph) (c:: 'a list)  \<equiv> 
-    (pre_digraph.cycle G (vwalk_arcs c) \<and> (\<forall>x\<in> verts G. x \<in> set c))\<or> card (verts G) \<le> 1"
+    ((pre_digraph.cycle G (vwalk_arcs c) \<and> (\<forall>x\<in> verts G. x \<in> set c))\<or> card (verts G) \<le> 1)\<and> set c \<subseteq> verts G"
 
 definition
   "hc \<equiv> {G. \<exists>c. wf_digraph G \<and> is_hc G c}"
@@ -53,7 +53,7 @@ lemma else_not_in_hc:
   shows "G \<notin> hc"
 proof 
   assume "G \<in> hc"
-  then have "\<exists> c. pre_digraph.cycle G (vwalk_arcs c) \<and> (\<forall>x\<in> verts G. x \<in> set c)" 
+  then have "\<exists> c. pre_digraph.cycle G (vwalk_arcs c) \<and> (\<forall>x\<in> verts G. x \<in> set c) \<and> set c \<subseteq> verts G" 
     using assms hc_def 
     by (simp add: hc_def doubleton_eq_iff is_hc_def)
   then obtain c where c_def: "pre_digraph.cycle G (vwalk_arcs c)" "(\<forall>x\<in> verts G. x \<in> set c)" by blast
@@ -71,8 +71,9 @@ lemma else_wf_digraph:
 
 lemma if_else_in_hc: 
   assumes "G = \<lparr>verts = {Cover 0}, arcs = {}, tail = fst, head = snd\<rparr>"
-  shows "G \<in> hc"
-  by(auto simp add: hc_def wf_digraph_def is_hc_def assms)
+  shows "G \<in> hc" 
+  apply(auto simp add: hc_def wf_digraph_def is_hc_def assms) 
+  using set_replicate_conv_if by fastforce 
 
 lemma if_else_wf_digraph: 
   assumes "G = \<lparr>verts = {Cover 0}, arcs = {}, tail = fst, head = snd\<rparr>"

@@ -59,9 +59,17 @@ lemma G_def_2:
             {(Cover n, Edge v e 0)| v e n i. i<length E \<and> e = E!i\<and> v \<in> e \<and> 
               \<not> (\<exists>j < size E. v \<in> E!j \<and> j < i) \<and> n < k} \<union>
             {(Cover i, Cover j) |i j.  i < k \<and> j < k},
-          tail = fst, head = snd \<rparr>" 
-  using in_vc vertex_cover_list_def G_def apply(auto simp add: vc_hc_def) 
-  using in_vc_k_smaller by blast+ 
+          tail = fst, head = snd \<rparr>" (is "G = ?L")
+proof -
+  have 1: "ugraph (set E)" "k \<le> card (\<Union> (set E))" "distinct E" 
+    using in_vc vertex_cover_list_def apply auto by force
+  have "G = (if ugraph (set E) \<and>  k \<le> card (\<Union> (set E)) \<and> distinct E
+        then  ?L
+        else \<lparr>verts = {Cover 0, Cover 1}, arcs = {}, tail = fst, head = snd\<rparr>)"
+    by(auto simp add: vc_hc_def G_def) 
+  then show "G = ?L" 
+    using 1 by argo 
+qed 
 
 lemma is_wf_digraph:
   shows "wf_digraph G"
@@ -2380,6 +2388,13 @@ lemma is_awalk:
   using Cycle_def apply(auto simp add: hd_construct_cycle_Cover_0 general_cas_construct_cycle) 
   using general_cas_construct_cycle Cov_def(3) edges_of_cycle_are_in_Graph many_verts_impl_k_greater_0 by auto 
 
+subsubsection\<open>All vertices are vertices of Graph\<close>
+
+lemma verts_of_graph:
+  assumes "k>0"
+  shows "set Cycle \<subseteq> verts G" 
+  using assms 
+  by (simp add: in_cycle_in_verts subsetI) 
 
 subsection\<open>Is in HC\<close>
 
@@ -2400,14 +2415,32 @@ proof -
 qed
 
 lemma is_hc_cycle_graph: 
+  assumes "k> 0"
   shows "is_hc G Cycle"
-  using cycle_contains_all_verts is_cylce is_hc_def head_cycle_in_verts 
+  using cycle_contains_all_verts is_cylce is_hc_def head_cycle_in_verts verts_of_graph assms
   by fastforce
 
 
-lemma vc_impl_hc_context: "vc_hc (E,k) \<in> hc"
-  using is_wf_digraph is_hc_cycle_graph G_def hc_def
+lemma vc_impl_hc_context: 
+  shows "vc_hc (E,k) \<in> hc"
+proof(cases "k=0")
+  case True
+  then have "Cov = []" 
+    using Cov_def by simp
+  then have empty_E: "E = []" using Cov_def 
+    by (simp add: is_vertex_cover_list_def) 
+  then have no_verts: "verts G = {}" 
+    using True G_def_2 by simp
+  then have is_hc: "is_hc G []" 
+    using is_hc_def G_def by fastforce
+  then have "arcs G = {}" using empty_E G_def_2 True by simp
+  then show ?thesis 
+    using hc_def is_hc wf_digraph_def G_def by auto
+next
+  case False
+  then show ?thesis using is_wf_digraph is_hc_cycle_graph G_def hc_def
   by auto
+qed
 
 end
 

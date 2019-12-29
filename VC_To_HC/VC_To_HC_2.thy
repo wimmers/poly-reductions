@@ -77,7 +77,7 @@ qed
 
 lemma verts_of_Cycle_in_G:
   shows "set Cycle \<subseteq> verts G" 
-  sorry
+  using Cycle_def is_hc_def by metis
 
 lemma Edges_in_Cycle: 
   assumes "Edge u e i \<in> set Cycle" 
@@ -114,9 +114,24 @@ lemma finite_C:
   using C_subset_Nodes ugraph ugraph_vertex_set_finite finite_subset 
   by metis
 
+lemma 
+  assumes "Ci = {v|v e i. (Edge v e i, Cover j) \<in> set (vwalk_arcs Cycle)}" 
+  shows "card Ci \<le> 1" 
+  sorry
+
+
 lemma card_C:
   shows "card C \<le> k"
-  sorry
+proof -
+  have card_Cover_G: "card {i |i. Cover i \<in> verts G} \<le> k" "finite {i |i. Cover i \<in> verts G}" 
+    using G_def_2 by auto  
+  have "{i |i. Cover i \<in> set Cycle} \<subseteq> {i |i. Cover i \<in> verts G}"  
+    using Cycle_def is_hc_def G_def_2 
+    by fast 
+  then have "card {i |i. Cover i \<in> set Cycle} \<le> k" using card_Cover_G  
+    by (meson card_mono order_trans)
+  show ?thesis sorry
+qed
 
 lemma is_vc_C:
   shows "is_vertex_cover (set E) C" 
