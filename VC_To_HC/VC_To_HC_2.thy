@@ -1,13 +1,14 @@
 theory VC_To_HC_2
 imports 
-    Definitions
+    Definitions "../VC_Set_To_VC_List"
 begin
 
 subsection\<open>vc_hc (E, k) f \<in> hc  \<Longrightarrow> (E,k) \<in> VC\<close>
 context 
   fixes E k  assumes in_hc: "vc_hc (E, k) \<in> hc"
   fixes G assumes G_def: "G = vc_hc (E, k)" 
-  fixes Cycle assumes "is_hc G Cycle"
+  fixes Cycle assumes Cycle_def: "is_hc G Cycle"
+  fixes C assumes C_def: "C = {v|v e i j. (Edge v e i, Cover j) \<in> set (vwalk_arcs Cycle)}"
 begin
 
 subsubsection\<open>Preliminaries\<close>
@@ -35,13 +36,6 @@ proof -
   then show "G = ?L" using else_not_in_hc in_hc G_def 
     by fast 
 qed
-
-subsubsection\<open>Lemmas for V\<close>
-
-lemma Cover_exists:
-  shows "(\<exists>V. set V \<subseteq> \<Union> (set E) \<and> length V = k \<and> is_vertex_cover_list E V \<and> distinct V)"
-  sorry
-
 
 subsubsection\<open>Lemmas for E\<close>
 
@@ -80,6 +74,108 @@ proof (rule ccontr)
   then show False 
     by (auto simp add: in_hc G_def)
 qed
+
+lemma verts_of_Cycle_in_G:
+  shows "set Cycle \<subseteq> verts G" 
+  sorry
+
+lemma Edges_in_Cycle: 
+  assumes "Edge u e i \<in> set Cycle" 
+  shows "u \<in> e" "e \<in> set E" "i\<le>1" 
+  using assms verts_of_Cycle_in_G G_def_2 by auto  
+
+lemma covers_in_Cycle:
+  assumes "Cover i \<in> set Cycle"
+  shows "i < k" 
+  using assms verts_of_Cycle_in_G G_def_2 by auto 
+
+
+subsubsection\<open>Lemmas for V\<close>
+
+lemma C_subset_Nodes:
+  shows "C \<subseteq>  \<Union> (set E)"
+proof 
+  fix x assume "x \<in> C" 
+  then have "\<exists>e i j. (Edge x e i, Cover j) \<in> set ( vwalk_arcs Cycle)" 
+    using C_def by auto 
+  then have "\<exists>e i. Edge x e i \<in> set Cycle" 
+    using in_set_vwalk_arcsE by metis
+  then obtain e i where "Edge x e i \<in> set Cycle"
+    by auto
+  then have "e \<in> set E" "x\<in> e" 
+    using Edges_in_Cycle
+    by simp+
+  then show "x\<in> \<Union> (set E)" 
+    by blast
+qed
+
+lemma finite_C:
+  shows "finite C" 
+  using C_subset_Nodes ugraph ugraph_vertex_set_finite finite_subset 
+  by metis
+
+lemma card_C:
+  shows "card C \<le> k"
+  sorry
+
+lemma is_vc_C:
+  shows "is_vertex_cover (set E) C" 
+  sorry
+
+lemma C_properties: 
+  shows "C \<subseteq> \<Union> (set E) \<and> card C \<le> k \<and> is_vertex_cover (set E) C \<and> finite C"
+  using is_vc_C card_C finite_C C_subset_Nodes by simp
+
+
+
+
+lemma Cover_exists:
+  shows "(\<exists>V. set V \<subseteq> \<Union> (set E) \<and> length V = k \<and> is_vertex_cover_list E V \<and> distinct V)"
+proof -
+  have "finite C" using C_properties 
+    by auto
+  obtain k' where k'_def: "k' = k - (card C)" by simp
+  then obtain leftNodes where leftNodes_def: "leftNodes = ((\<Union> (set E)) - C)"  by simp
+  then have "leftNodes \<subseteq> \<Union> (set E)" by simp
+  then obtain setV where setV_def: "setV= C \<union> get_elements k' leftNodes" by simp
+  have 1: "k' \<le> card leftNodes"  
+      using C_properties leftNodes_def k'_def k_smaller_number_vertices card_Diff_subset 
+      by fastforce 
+  then have 2: "setV \<subseteq> \<Union> (set E)"  
+    using \<open>leftNodes \<subseteq> \<Union> (set E)\<close> get_elements_subset setV_def C_properties by blast
+  then have 4: "finite setV" 
+    using 2 C_properties ugraph_def 
+    by (meson finite_subset ugraph ugraph_vertex_set_finite) 
+  have 3: "card setV = k" proof -
+    have "card (get_elements k' leftNodes) = k'" 
+      by (simp add: "1" card_get_elements) 
+    have a: "(get_elements k' leftNodes) \<subseteq> leftNodes" 
+      by (simp add: "1" get_elements_subset)  
+    have "leftNodes \<inter> C = {}" using leftNodes_def by auto
+    then have "C \<inter> (get_elements k' leftNodes) = {}" using a by auto
+    then have "card setV = card C + card (get_elements k' leftNodes)" 
+      using setV_def 4 
+      by (simp add: card_Un_disjoint)   
+    then show ?thesis using k'_def setV_def C_properties 
+      using \<open>card (get_elements k' leftNodes) = k'\<close> distinct_size by force 
+  qed
+  have "\<exists>L. set L = setV \<and> distinct L" 
+    using 4
+    by (simp add: finite_distinct_list)  
+  then obtain L where L_def: "set L = setV" "distinct L" 
+    by auto
+  then have "is_vertex_cover (set E) (set L)" 
+    using C_properties setV_def is_vertex_cover_super_set 
+    by fastforce 
+  then have vc_list: "is_vertex_cover_list E L" 
+    using is_vertex_cover_def
+    is_vertex_cover_list_def by metis
+  have length_L: "length L = k" using L_def 3 distinct_card 
+    by fastforce   
+  then show ?thesis 
+    using L_def vc_list 2 by auto
+qed
+
 
 subsubsection\<open>Conclusion\<close>
 
