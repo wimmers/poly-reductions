@@ -255,6 +255,119 @@ hat das set für diesen Knoten maximal ein Element. Dann zeigen, dass G maximal
 k Coverknoten hat und damit auch maximal k Cover-knoten im Cycle sind. Dann C als 
 Union von diesem set schreiben und hoffentlich fertig*)
 
+lemma card_dep_on_other_set:
+  assumes "finite T" 
+  shows "card {{u. f u j}|j. j \<in> T} \<le> card T" 
+using assms proof (induction "card T" arbitrary: T)
+  case 0
+  then have "T = {}" 
+    using assms 
+    by simp
+  then have "{{u. f u j}|j. j \<in> T} = {}" 
+    using assms 0 
+    by auto
+  then show ?case 
+    by auto
+next
+  case (Suc x)
+  then have "\<exists>x. x \<in> T" 
+    by (metis card_eq_SucD insertI1) 
+  then obtain t where t_def: "t \<in> T" by auto
+  then obtain T' where T'_def: "T' = T - {t}" by auto
+  then have card: "x = card T'" 
+    using Suc t_def by simp
+  have "finite T'" using Suc 
+    by (simp add: T'_def) 
+  then have 1: "card {{u. f u j}|j. j \<in> T'} \<le> card T'" 
+    using Suc card   
+    by blast 
+  have 2: "T = T' \<union> {t}" using T'_def t_def 
+    by auto 
+  then have "{{u. f u j}|j. j \<in> T} = {{u. f u j}|j. j \<in> T'} \<union> {{u. f u t}}"
+    using T'_def 
+    by blast
+  then have "card {{u. f u j}|j. j \<in> T} = card ({{u. f u j}|j. j \<in> T'} \<union> {{u. f u t}})"
+    by simp
+  then have "card {{u. f u j}|j. j \<in> T}  \<le> card {{u. f u j}|j. j \<in> T'} + card {{u. f u t}}"
+    by (metis (no_types, lifting) card_Un_le) 
+  then have 3: "card {{u. f u j}|j. j \<in> T}  \<le> card T' + 1" 
+    using 1 by simp
+  have "card T = card T' +1 " 
+    using 2 t_def T'_def Suc.hyps(2) card 
+    by linarith  
+  then have "card {{u. f u j}|j. j \<in> T}  \<le> card T" 
+    using 2 3 
+    by linarith
+  then show ?case 
+    using Suc 
+    by argo
+qed
+
+lemma card_union_if_all_subsets_card_1:
+  assumes "\<forall>S' \<in> S. card S' \<le> 1" "finite S"  
+  shows "card (\<Union> S) \<le> card S"
+proof (cases "finite (\<Union> S)")
+  case True
+  then show ?thesis using assms proof(induction "card S" arbitrary: S)
+    case 0
+    then have "S = {}" 
+      using assms 0 by simp
+    then show ?case 
+      by simp
+  next
+    case (Suc x)
+   then have "\<exists>x. x \<in> S" 
+    by (metis card_eq_SucD insertI1) 
+  then obtain S' where S'_def: "S' \<in> S" by auto
+  then obtain T where T_def: "T = S - {S'}" by auto
+  then have card_T: "card T = x" 
+    using Suc S'_def by auto
+  then have "\<forall>S' \<in> T. card S' \<le> 1" "finite T" 
+    using Suc T_def by(blast)+
+  then have 1: "card (\<Union> T) \<le> card T" 
+    using Suc card_T 
+    by fastforce
+  have card_S': "card S' \<le> 1" 
+    using Suc S'_def by fast 
+  have fin: "finite S'" using True S'_def 
+    using Suc.prems(1) rev_finite_subset by blast  
+  then have 2: "card ((\<Union> T) \<union> S') \<le> card T+1" using 1 Suc S'_def card_S' fin proof - 
+    have "card ((\<Union> T) \<union> S') \<le> card (\<Union> T) + card S'" 
+      by (simp add: card_Un_le) 
+    then have "card ((\<Union> T) \<union> S') \<le> card (\<Union> T) + 1" 
+      using card_S' 
+      by force
+    then have "card ((\<Union> T) \<union> S') \<le> card T + 1" 
+      using 1 by auto
+    then show ?thesis .
+  qed
+  have 3: "card T +1 = card S" 
+    using S'_def T_def 
+    using Suc.hyps(2) card_T by linarith 
+  have "(\<Union> T) \<union> S' = \<Union>S" 
+    using S'_def T_def by auto 
+  then show ?case using 2 3 Suc S'_def 
+    by argo   
+qed
+next
+  case False
+  then have "card (\<Union> S) = 0" by simp
+  then show ?thesis by simp
+qed
+
+
+
+lemma card_forall_for_elements: 
+  assumes "\<forall>j \<in> T. card {u. f u j} \<le> 1" "S = {{u. f u j}| j. j \<in> T}"
+  shows "\<forall>S' \<in> S. card S' \<le> 1"
+proof 
+  fix S' assume "S' \<in> S" 
+  then have "\<exists>j \<in> T. S' = {u. f u j}" 
+    using assms by blast
+  then show "card S' \<le> 1" 
+    using assms by blast 
+qed
+
 
 lemma card_C:
   shows "card C \<le> k"
@@ -263,10 +376,10 @@ proof -
     using G_def_2 by simp 
 
   obtain Cover_is where Cover_is_def: "Cover_is = {i. Cover i \<in> verts G}" by auto
-  obtain S where S_def: "S =  \<Union>{{v|v e i . (Edge v e i, Cover j) \<in> set (vwalk_arcs Cycle)}|j. j \<in> Cover_is}" by auto
-  have eq: "C = S"
+  obtain S where S_def: "S = {{v|v e i . (Edge v e i, Cover j) \<in> set (vwalk_arcs Cycle)}|j. j \<in> Cover_is}" by auto
+  have eq: "C =  \<Union>S"
   proof
-    show "C \<subseteq> S" proof 
+    show "C \<subseteq>  \<Union> S" proof 
       fix x assume "x \<in> C"
       then have "\<exists>e i j. (Edge x e i, Cover j) \<in> set (vwalk_arcs Cycle)" 
         using C_def by fast
@@ -277,12 +390,12 @@ proof -
         by (meson inCycle_inVerts in_set_vwalk_arcsE) 
       then have "j \<in> Cover_is" 
         using Cover_is_def by simp
-      then show "x \<in> S" 
+      then show "x \<in>  \<Union>S" 
         using S_def j_def by blast 
     qed   
   next
-    show "S \<subseteq> C"  proof 
-      fix x assume "x \<in> S" 
+    show " \<Union>S \<subseteq> C"  proof 
+      fix x assume "x \<in>  \<Union>S" 
       then have "\<exists>j. \<exists>e i.(Edge x e i, Cover j) \<in> set (vwalk_arcs Cycle)" 
         using S_def by blast 
       then have "\<exists>e i j. (Edge x e i, Cover j) \<in> set (vwalk_arcs Cycle)" 
@@ -304,12 +417,23 @@ proof -
       using Cover_is_def 1 
       by (meson card_infinite) 
   qed  
-  (*have finS: "finite S" sorry*) 
-  have 2: "card S \<le> card Cover_is" using S_def 3 sorry 
-  (*have "\<forall>j \<in> Cover_is. card {v|v e i . (Edge v e i, Cover j) \<in> set (vwalk_arcs Cycle)} \<le> 1"  sorry*)
-  have "card C = card S" using eq by simp  
+  have fin_S: "finite S"
+    using finite_C eq 
+    using finite_UnionD by auto  
+  have 2: "card S \<le> card Cover_is" 
+    using S_def 3 card_dep_on_other_set by fastforce 
+  have "\<forall>j \<in> Cover_is. card {v|v e i . (Edge v e i, Cover j) \<in> set (vwalk_arcs Cycle)} \<le> 1"  sorry
+  then have "\<forall>S'\<in> S. card S' \<le> 1" 
+    using S_def card_forall_for_elements 
+    by blast   
+  then have  "card (\<Union>S) \<le> card S" 
+    using S_def card_union_if_all_subsets_card_1 fin_S by blast
+  then have 3: "card (\<Union>S) \<le> card Cover_is" 
+    using 2 by linarith
+  have "card C = card (\<Union>S)" 
+    using eq by simp  
   then show "card C \<le> k" 
-    using 1 2 Cover_is_def by simp 
+    using 1 3 Cover_is_def by simp 
 qed
 
 
