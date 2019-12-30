@@ -21,7 +21,7 @@ datatype ('a, 'b) hc_node = Cover nat | Edge 'a 'b nat
 (*Case for empty c is already in cycle*)
 definition
   "is_hc (G::('a,('a \<times> 'a)) pre_digraph) (c:: 'a list)  \<equiv> 
-    ((pre_digraph.cycle G (vwalk_arcs c) \<and> (\<forall>x\<in> verts G. x \<in> set c))\<or> card (verts G) \<le> 1)\<and> set c \<subseteq> verts G"
+    ((pre_digraph.cycle G (vwalk_arcs c) \<and> (\<forall>x\<in> verts G. x \<in> set c))\<or> card (verts G) \<le> 1)\<and> set c \<subseteq> verts G \<and> distinct (tl c)"
 
 definition
   "hc \<equiv> {G. \<exists>c. wf_digraph G \<and> is_hc G c}"
@@ -53,7 +53,7 @@ lemma else_not_in_hc:
   shows "G \<notin> hc"
 proof 
   assume "G \<in> hc"
-  then have "\<exists> c. pre_digraph.cycle G (vwalk_arcs c) \<and> (\<forall>x\<in> verts G. x \<in> set c) \<and> set c \<subseteq> verts G" 
+  then have "\<exists> c. pre_digraph.cycle G (vwalk_arcs c) \<and> (\<forall>x\<in> verts G. x \<in> set c) \<and> set c \<subseteq> verts G \<and> distinct (tl c)" 
     using assms hc_def 
     by (simp add: hc_def doubleton_eq_iff is_hc_def)
   then obtain c where c_def: "pre_digraph.cycle G (vwalk_arcs c)" "(\<forall>x\<in> verts G. x \<in> set c)" by blast
@@ -124,5 +124,53 @@ lemma edge_contains_minus_one_not_empty:
   assumes "e \<in> set E'" "ugraph (set E')" "u \<in> e"
   shows "e-{u} \<noteq> {}"
   using subset_singletonD assms ugraph_def by fastforce
+
+lemma if_edge_then_cycle_length_geq_2:
+  assumes "(u, v) \<in> set (vwalk_arcs C)" 
+  shows "length C \<ge> 2"
+proof(rule ccontr)
+  assume "\<not> 2 \<le> length C"
+  then have length_C: "length C = 1 \<or> length C = 0" 
+    by linarith
+  then show False proof(cases "length C = 1")
+    case True
+    then have "vwalk_arcs C = []" 
+      by (metis One_nat_def Suc_length_conv length_0_conv vwalk_arcs.simps(2))
+    then show ?thesis using assms by auto
+  next
+    case False
+    then have "length C = 0" using length_C by auto
+    then have "vwalk_arcs C = []" by auto
+    then show ?thesis using assms by auto
+  qed
+qed
+
+lemma sublist_for_edges: 
+  assumes "(u, v) \<in> set (vwalk_arcs C)"
+  shows "\<exists>p1 p2. p1 @ [u, v] @ p2 = C"
+  using assms proof(induction C)
+  case Nil
+  then show ?case by auto
+next
+  case (Cons a C)
+  then have length_C: "length C \<ge> 1" 
+    using if_edge_then_cycle_length_geq_2 by fastforce
+  then show ?case proof(cases "u = a \<and> v = hd C")
+    case True
+    then have "[]@[u,v] @ (tl C) = (a#C)" 
+      by (metis Cons.prems append_Cons append_self_conv2 list.collapse list.distinct(1) list.set_cases vwalk_arcs.simps(2))
+    then show ?thesis by blast
+  next
+    case False
+    then have "(u,v) \<in> set (vwalk_arcs C)" 
+      using Cons 
+      by (metis prod.inject set_ConsD vwalk_arcs.simps(1) vwalk_arcs.simps(2) vwalk_arcs_Cons) 
+    then have "\<exists>p1 p2. p1 @ [u, v] @ p2 = C" using Cons by auto
+    then obtain p1 p2 where p_def: "p1 @ [u, v] @ p2 = C" by blast
+    then obtain p1' where "p1' = a # p1" by auto
+    then have "p1' @ [u, v] @ p2 = (a#C)" using p_def by auto
+    then show ?thesis using Cons by blast
+  qed
+qed
 
 end
