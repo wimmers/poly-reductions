@@ -173,4 +173,9 @@ next
   qed
 qed
 
+lemma if_sublist_then_edge: 
+  assumes "\<exists>p1 p2. p1 @ [u, v] @ p2 = C"
+  shows "(u, v) \<in> set (vwalk_arcs C)"
+  using assms in_set_vwalk_arcs_append1 by force 
+
 end

@@ -114,140 +114,15 @@ lemma finite_C:
   using C_subset_Nodes ugraph ugraph_vertex_set_finite finite_subset 
   by metis
 
-lemma 
-  assumes "Ci = {v|v e i. (Edge v e i, Cover j) \<in> set (vwalk_arcs Cycle)}" 
-  shows "card Ci \<le> 1" 
-  sorry
- 
-
-lemma 
-  assumes "S = {v|v e i. (Edge v e i, Cover j) \<in> set (vwalk_arcs Cycle)}"
-  shows "card S \<le> 1"
-proof (cases "card S \<le> 1")
-  case True
-  then show ?thesis using assms by auto
-next
-  case False
-  have distinct: "distinct (tl Cycle)" 
-    using Cycle_def is_hc_def 
-    by blast
-  have "card S > 1" 
-    using False by auto
-  then have "\<exists>v1 v2. v1 \<in> S \<and> v2 \<in> S \<and> v1 \<noteq> v2" 
-    using card_greater_1_contains_two_elements by fast 
-  then obtain v1 v2 where "v1 \<in> S \<and> v2 \<in> S \<and> v1 \<noteq> v2"  
-    by auto
-  then have "\<exists>e1 i1 e2 i2. (Edge v1 e1 i1, Cover j) \<in> set (vwalk_arcs Cycle) \<and>
-    (Edge v2 e2 i2, Cover j) \<in> set (vwalk_arcs Cycle) \<and> Edge v1 e1 i1 \<noteq> Edge v2 e2 i2"
-    using assms by fast
-  then obtain e1 i1 e2 i2 where edges_def: "(Edge v1 e1 i1, Cover j) \<in> set (vwalk_arcs Cycle) \<and>
-    (Edge v2 e2 i2, Cover j) \<in> set (vwalk_arcs Cycle) \<and> Edge v1 e1 i1 \<noteq> Edge v2 e2 i2" 
-    by auto
-  then have "\<exists>p1 p2. p1@ [Edge v1 e1 i1, Cover j]@p2 = Cycle" 
-    using sublist_for_edges 
-    by fast   
-  then obtain p11 p21 where p1_def: "p11@ [Edge v1 e1 i1, Cover j]@p21 = Cycle" 
-    by auto
-  then have "\<exists>p1 p2. p1@ [Edge v2 e2 i2, Cover j]@p2 = Cycle" 
-    using sublist_for_edges edges_def
-    by fast   
-  then obtain p12 p22 where p2_def: "p12@ [Edge v2 e2 i2, Cover j]@p22 = Cycle" 
-    by auto
-  then have "p11 \<noteq> p12" using edges_def 
-    using p1_def by auto 
-
-  then have "Edge v2 e2 i2 \<in> set Cycle" 
-    using p2_def by auto 
-  then have "Edge v2 e2 i2 \<in> set (p11 @ [Edge v1 e1 i1, Cover j] @ p21)" 
-    using p1_def by simp
-  then have "Edge v2 e2 i2 \<in> set (p11) \<or>
-    Edge v2 e2 i2 \<in> set ([Edge v1 e1 i1, Cover j]) \<or>
-    Edge v2 e2 i2 \<in> set (p21)" by auto
-  then have edge2: "Edge v2 e2 i2 \<in> set p11 \<or> Edge v2 e2 i2 \<in> set p21" 
-    using edges_def p1_def 
-    by auto 
-
-  have "Edge v2 e2 i2 \<noteq> last p11" using distinct p1_def sorry
-  then have "Cover j \<in> set p11 \<or> Cover j \<in> set p21" using p2_def edge2 sorry
-  
-
-  then have "Cover j \<in> (set p11 \<union> set p21)" by auto
-  then have "\<not> distinct (tl Cycle)" sorry
-    
-  then have "False" using distinct by auto
-  then show ?thesis by auto
-qed
-
-
-(*lemma
-  shows "card {Cover i|i. i<i'} \<le> i'"
-proof (induction i')
-  case 0
-  then show ?case by auto
-next
-  case (Suc i')
-  have fin1: "finite  {Cover i |i. i < i'}" by simp
-  have fin2: "finite {Cover i'}" by simp
-  have union: "{Cover i |i. i < Suc i'} = {Cover i |i. i < i'} \<union> {Cover i'}" 
-    by auto
-  then have "{Cover i |i. i < i'} \<union> {Cover i'} = insert (Cover i') {Cover i |i. i < i'}" 
-    by simp
-  then have fin3: "finite {Cover i |i. i < Suc i'}" by simp
-  have "card ({Cover i |i. i < i'} \<union> {Cover i'}) \<le> card {Cover i |i. i < i'} + card {Cover i'}"
-    using fin1 fin2 try0 sledgehammer 
-  then have "card {Cover i |i. i < Suc i'} \<le> card {Cover i |i. i < i'} + card {Cover i'}"
-    using union fin1 fin2 fin3 sorry 
-  then show ?case sorry
-qed *)
 
 lemma Cover_equal:
 "Cover i = Cover j \<longleftrightarrow> i = j" 
   by simp
 
-
-lemma 
-  shows "card {x|x j. (x, Cover j) \<in> set (vwalk_arcs Cycle)} \<le> k" "finite {x|x j. (x, Cover j) \<in> set (vwalk_arcs Cycle)}"
-  sorry
-
-
-
 lemma inCycle_inVerts: 
   assumes "x \<in> set Cycle"
   shows "x\<in> verts G"
   using Cycle_def is_hc_def assms by fast  
-
-lemma 
-  shows "card C \<le> k"
-proof (rule ccontr)
-  have 1: "card {i |i. Cover i \<in> verts G} \<le> k" "finite {i |i. Cover i \<in> verts G}" 
-    using G_def_2 by auto
-  assume "\<not> card C \<le> k"
-  then have "card C > k" 
-    by linarith
-  then have "\<exists>j. \<exists>v1 v2 e1 e2 i1 i2. (Edge v1 e1 i1, Cover j) \<in> set (vwalk_arcs Cycle) \<and>
-  (Edge v2 e2 i2, Cover j) \<in> set (vwalk_arcs Cycle) \<and> v1 \<noteq> v2" using 1 inCycle_inVerts
-    sorry
-
-  then show False 
-    sorry
-qed
-
-
-(*fun i_to_Cover:: "nat \<Rightarrow> ('a, 'b) hc_node" where
-"i_to_Cover i = Cover i"
-
-fun Cover_to_i::"('a, 'b) hc_node \<Rightarrow> nat" where
-"Cover_to_i (Cover i) = i" 
-
-lemma iCover: "i_to_Cover (Cover_to_i (Cover i)) = Cover i" 
-  by simp 
-
-lemma inj: "inj i_to_Cover" 
-  by (simp add: linorder_injI) 
-
-lemma "card {i_to_Cover i|i. i \<in> S} \<le> card S"
-  using inj inj_def *) 
-
 
 
 (*Evtl zeigen, dass es für jeden Cover-Knoten in G maximal eine Kante im Cycle gibt. Damit
@@ -368,6 +243,99 @@ proof
     using assms by blast 
 qed
 
+lemma two_edges_same_hd_not_distinct: 
+  assumes "(v1, x) \<in> set (vwalk_arcs c)" "(v2, x) \<in> set (vwalk_arcs c)" "v1 \<noteq> v2"
+  shows "\<not> distinct (tl c)"
+  using assms proof(induction c)
+  case Nil
+  then show ?case by auto
+next
+  case (Cons a c)
+  then have "\<exists>p1 p2. p1@ [v1, x]@p2 = (a#c)" 
+    by (meson sublist_for_edges) 
+  then obtain p1 p2 where p_def: "p1@ [v1, x]@p2 = (a#c)"
+    by auto
+  then have "\<exists>p1 p2. p1@ [v2, x]@p2 = (a#c)" 
+    using Cons
+    by (meson sublist_for_edges) 
+  then obtain q1 q2 where q_def: "q1@ [v2, x]@q2 = (a#c)"
+    by auto
+  then have "p1 \<noteq> q1" 
+    using p_def Cons 
+    by (metis hd_append2 list.sel(1) list.sel(2) list.sel(3) not_Cons_self2 same_append_eq) 
+  then show ?case 
+  proof(cases "p1 = []")
+    case True
+    then have 1: "a#c = v1#x#p2" using p_def by simp
+    then have "\<exists>q11 q21. q11 @ [v2, x] @ q21 = x#p2" 
+      using Cons q_def 
+      by (metis Cons_eq_append_conv True \<open>p1 \<noteq> q1\<close> append_self_conv2 list.sel(3) tl_append2) 
+    then have "x\<in> set p2" 
+      by (metis True \<open>a # c = v1 # x # p2\<close> append_Cons eq_Nil_appendI list.sel(1) list.sel(3) list.set_intros(1) sublist_implies_in_set(2) tl_append2)
+    then have "\<not> distinct c" using 1 by simp 
+    then show ?thesis by simp
+  next
+    case False
+    then have p1: "\<exists>p1 p2. p1@ [v1, x]@p2 = c" 
+      using p_def 
+      by (metis list.sel(3) tl_append2) 
+    then have v1_in: "(v1, x) \<in> set (vwalk_arcs c)" 
+      using if_sublist_then_edge by fast 
+    show ?thesis 
+    proof (cases "q1 = []")
+      case True
+      then have 1: "a#c = v2#x#q2" using q_def by simp
+      then have "\<exists>q11 q21. q11 @ [v1, x] @ q21 = x#q2" 
+        using Cons q_def 
+        by (metis False list.sel(3) p_def tl_append2) 
+      then have "x\<in> set q2" 
+        by (metis True 1 append_Cons eq_Nil_appendI list.sel(1) list.sel(3) list.set_intros(1) sublist_implies_in_set(2) tl_append2)
+      then have "\<not> distinct c" using 1 by simp 
+      then show ?thesis by simp
+    next
+      case False
+      then have q1: "\<exists>p1 p2. p1@ [v2, x]@p2 = c" 
+        using q_def 
+        by (metis list.sel(3) tl_append2)  
+      then have v2_in: "(v2, x) \<in> set (vwalk_arcs c)" 
+        using if_sublist_then_edge by fast 
+      then have "\<not> distinct (tl c)" 
+        using Cons v1_in v2_in 
+        by blast 
+      then show ?thesis 
+        using distinct_tl by auto 
+    qed
+  qed
+qed 
+
+lemma card_Ci:
+  assumes "S = {v|v e i. (Edge v e i, Cover j) \<in> set (vwalk_arcs Cycle)}" 
+  shows "card S \<le> 1"
+proof (cases "card S \<le> 1")
+  case True
+  then show ?thesis using assms by auto
+next
+  case False
+  have distinct: "distinct (tl Cycle)" 
+    using Cycle_def is_hc_def 
+    by blast
+  have "card S > 1" 
+    using False by auto
+  then have "\<exists>v1 v2. v1 \<in> S \<and> v2 \<in> S \<and> v1 \<noteq> v2" 
+    using card_greater_1_contains_two_elements by fast 
+  then obtain v1 v2 where "v1 \<in> S \<and> v2 \<in> S \<and> v1 \<noteq> v2"  
+    by auto
+  then have "\<exists>e1 i1 e2 i2. (Edge v1 e1 i1, Cover j) \<in> set (vwalk_arcs Cycle) \<and>
+    (Edge v2 e2 i2, Cover j) \<in> set (vwalk_arcs Cycle) \<and> Edge v1 e1 i1 \<noteq> Edge v2 e2 i2"
+    using assms by fast
+  then obtain e1 i1 e2 i2 where edges_def: "(Edge v1 e1 i1, Cover j) \<in> set (vwalk_arcs Cycle) \<and>
+    (Edge v2 e2 i2, Cover j) \<in> set (vwalk_arcs Cycle) \<and> Edge v1 e1 i1 \<noteq> Edge v2 e2 i2" 
+    by auto
+  then have "\<not>distinct (tl Cycle)" 
+    using two_edges_same_hd_not_distinct by metis
+  then show ?thesis using distinct by simp
+qed
+
 
 lemma card_C:
   shows "card C \<le> k"
@@ -422,7 +390,8 @@ proof -
     using finite_UnionD by auto  
   have 2: "card S \<le> card Cover_is" 
     using S_def 3 card_dep_on_other_set by fastforce 
-  have "\<forall>j \<in> Cover_is. card {v|v e i . (Edge v e i, Cover j) \<in> set (vwalk_arcs Cycle)} \<le> 1"  sorry
+  have "\<forall>j \<in> Cover_is. card {v|v e i . (Edge v e i, Cover j) \<in> set (vwalk_arcs Cycle)} \<le> 1"  
+    using card_Ci by blast 
   then have "\<forall>S'\<in> S. card S' \<le> 1" 
     using S_def card_forall_for_elements 
     by blast   
@@ -436,45 +405,6 @@ proof -
     using 1 3 Cover_is_def by simp 
 qed
 
-
-
-  (*fix x assume "x \<in> {x|x j. (x, Cover j) \<in> set (vwalk_arcs Cycle)}" 
-  then have "(\<exists>v e i. x = Edge v e i) \<or> (\<exists>i. x = Cover i)" 
-    by (meson hc_node.exhaust) 
-
-  fix v assume v_def: "v \<in> C"
-  then have "\<exists>e i j. (Edge v e i, Cover j) \<in> set (vwalk_arcs Cycle)" 
-    using C_def by simp
-  then obtain e i where "\<exists>j. (Edge v e i, Cover j) \<in> set (vwalk_arcs Cycle)" 
-    by auto
-  then have "Edge v e i \<in> {x|x j. (x, Cover j) \<in> set (vwalk_arcs Cycle)}" 
-    by auto
-  then have "card C \<le> card {x|x j. (x, Cover j) \<in> set (vwalk_arcs Cycle)}" 
-    using v_def C_def apply(auto) sorry 
-
-  have card_Cover_G: "card {i |i. Cover i \<in> verts G} \<le> k" "finite {i |i. Cover i \<in> verts G}" 
-    using G_def_2 by auto  
-  have subset: "{i |i. Cover i \<in> set Cycle} \<subseteq> {i |i. Cover i \<in> verts G}"  
-    using Cycle_def is_hc_def G_def_2 
-    by fast 
-  then have "card {i |i. Cover i \<in> set Cycle} \<le> k" "finite {i |i. Cover i \<in> set Cycle}" using card_Cover_G  
-    apply (meson card_mono order_trans) 
-    using subset rev_finite_subset card_Cover_G by auto 
-
-  have 1: "{x |i x. x \<in> set Cycle \<and> x = Cover i} \<subseteq> set Cycle" 
-    by auto
-  (*then have "card {x |i x. x \<in> set Cycle \<and> x = Cover i} \<le> k" proof -
-    have "{Cover i|i. Cover i \<in> set Cycle} \<subseteq> {Cover i |i. i<k}" 
-      using covers_in_Cycle by fast
-    have "card {Cover i |i. i<k} \<le> k" oops
-      oops*)
-
-  have "C = \<Union>{{v|v e i. (Edge v e i, Cover j) \<in> set (vwalk_arcs Cycle)}|j. j \<in> \<nat>}" 
-    using C_def  sorry  
-   
-     
-  show "card C \<le> k" sorry
-qed *)
 
 lemma is_vc_C:
   shows "is_vertex_cover (set E) C" 
