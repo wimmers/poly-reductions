@@ -89,6 +89,185 @@ lemma covers_in_Cycle:
   shows "i < k" 
   using assms verts_of_Cycle_in_G G_def_2 by auto 
 
+subsubsection\<open>Structural Lemmas for Cycle\<close>
+
+lemma inCycle_inVerts: 
+  assumes "x \<in> set Cycle"
+  shows "x\<in> verts G"
+  using Cycle_def is_hc_def assms by fast 
+
+
+lemma inVerts_inCycle:
+  assumes "x \<in> verts G" "card (verts G) > 1"
+  shows "x \<in> set Cycle"
+  using assms Cycle_def is_hc_def by force 
+
+
+lemma card_verts_set_Edge_i:
+  assumes "\<forall>e \<in> set E. card e = 2"
+  shows "finite {Edge v e i|v e. e\<in> set E \<and> v \<in> e}"
+  using assms proof(induction E)
+  case Nil
+  then show ?case by simp
+next
+  case (Cons a E)
+  then have union: "{Edge v e i|v e. e\<in> set (a#E) \<and> v \<in> e} = 
+    {Edge v e i|v e. e\<in> set E \<and> v \<in> e} \<union> {Edge v a i|v. v \<in> a}" 
+    by auto
+  then have 1: "finite {Edge v e i|v e. e\<in> set E \<and> v \<in> e}" 
+    using Cons
+    by auto
+  have card_a: "card a = 2" using Cons by auto
+  then have "finite a" 
+    using card_infinite 
+    by fastforce 
+  then have "finite {Edge v a i|v. v \<in> a}" 
+    using Cons proof-
+    have "\<exists>u v. a = {u, v}" 
+      using card_a 
+      by (metis card_eq_SucD numeral_2_eq_2) 
+    then obtain u v where " a = {u, v}" 
+      by auto
+    then have "{Edge v a i|v. v \<in> a} = {Edge v a i, Edge u a i}"
+      by auto
+    then show ?thesis 
+      by simp
+  qed
+  then show ?case 
+    using 1 union 
+    by auto  
+qed 
+
+
+lemma finite_verts:  
+"finite (verts G)"
+proof -
+  have fin1: "finite {Cover i|i. i< k}" 
+    by simp
+  have 1: "finite (set E)"
+    by simp
+  have 2: "\<forall>e \<in> set E. card e = 2" 
+    using ugraph ugraph_def by blast
+  then have fin2: "finite {Edge v e 0|v e. e\<in> set E \<and> v \<in> e}"
+    "finite {Edge v e 1|v e. e\<in> set E \<and> v \<in> e}"
+    using 1 2 card_verts_set_Edge_i 
+    by blast+
+  then show "finite (verts G)" 
+    using G_def_2 fin1 fin2 
+    by fastforce
+qed
+
+lemma length_cycle_number_verts: 
+  assumes "length Cycle > 2"
+  shows "card (verts G) > 1"
+proof -
+  have 0: "set (tl Cycle) \<subseteq> verts G" 
+    using Cycle_def is_hc_def
+    by (simp add: inCycle_inVerts list_set_tl subsetI) 
+  have 1: "distinct (tl Cycle)" 
+    using Cycle_def is_hc_def by blast
+  then have "length (tl Cycle) \<ge> 2"
+    using assms by simp
+  then have "card (set (tl Cycle)) \<ge> 2"
+    using 1 by (simp add: distinct_card) 
+  then show ?thesis 
+    using Cycle_def is_hc_def 0 finite_verts 
+    by (smt card_seteq leI le_neq_implies_less not_numeral_less_one one_less_numeral_iff order.trans semiring_norm(76)) 
+qed
+
+lemma last_pre_digraph_cas: 
+  assumes "pre_digraph.cas G u (vwalk_arcs p) u" "p\<noteq> []"
+  shows "last p = u"
+  using assms proof(induction p)
+  case Nil
+  then show ?case by simp 
+next
+  case (Cons a p)
+  then show ?case sorry
+qed 
+
+lemma hd_pre_digraph_cas: 
+  assumes "pre_digraph.cas G u (vwalk_arcs p) u" "p \<noteq> []"
+  shows "hd p = u"
+  using assms G_def_2  
+  sorry
+
+lemma hd_last_Cycle:
+  assumes "Cycle \<noteq> []" "card (verts G) > 1" 
+  shows "hd Cycle = last Cycle" 
+proof -
+  have "\<exists>u. pre_digraph.awalk G u (vwalk_arcs Cycle) u" 
+    using Cycle_def is_hc_def pre_digraph.cycle_def assms 
+    by (metis antisym less_imp_le_nat nat_neq_iff)
+  then obtain u where "pre_digraph.awalk G u (vwalk_arcs Cycle) u" 
+    by auto
+  then have 1: "pre_digraph.cas G u (vwalk_arcs Cycle) u" 
+    using pre_digraph.awalk_def by force
+  then have 2: "last Cycle = u" 
+    using last_pre_digraph_cas assms  by simp
+  then have 3: "hd Cycle = u" 
+    using hd_pre_digraph_cas 1 assms by simp
+  then show ?thesis using 2 3 
+    by simp
+qed
+
+lemma sublist_length_g_2:
+  assumes "sublist [a, b] Cycle" "a\<noteq>b"
+  shows "length Cycle > 2"
+proof (rule ccontr)
+  assume "\<not>length Cycle >2"
+  then have length_Cycle: "length Cycle \<le> 2"
+    by auto
+  then have "\<exists>p1 p2. p1@ [a, b] @p2 = Cycle" 
+    using sublist_def assms by blast
+  then obtain p1 p2 where p_def: "p1@ [a, b] @p2 = Cycle"
+    by auto
+  then have "p1 = []" "p2 = []" 
+    using length_Cycle by auto
+  then have c: "Cycle = [a, b]" 
+    using p_def by simp
+  then have "Cycle \<noteq> []"
+    by auto
+  then have 1: "hd Cycle = last Cycle" 
+    using hd_last_Cycle c length_cycle_number_verts 
+    by (metis assms(2) contains_two_card_greater_1 finite_verts inCycle_inVerts list.set_intros(1) p_def sublist_implies_in_set(2))
+  have "hd Cycle = a" "last Cycle = b"
+    using c by simp+
+  then show False 
+    using 1 assms by simp
+qed
+
+lemma elem2_sublist_in_edges:
+  assumes "sublist [a, b] Cycle" "a \<noteq> b"
+  shows "(a, b) \<in> arcs G"
+proof - 
+  have "length Cycle > 2" 
+    using assms sublist_length_g_2 
+    by simp 
+  then have card_G: "card (verts G) > 1" 
+    using length_cycle_number_verts 
+    by blast
+  have "\<exists>p1 p2. p1 @ [a, b] @ p2 = Cycle" 
+    using assms sublist_def by blast
+  then have 1: "(a,b) \<in> set (vwalk_arcs Cycle)" 
+    by (simp add: if_sublist_then_edge) 
+  then have "pre_digraph.cycle G (vwalk_arcs Cycle)" 
+    using Cycle_def is_hc_def card_G 
+    by fastforce 
+  then have "\<exists>u. pre_digraph.awalk G u (vwalk_arcs Cycle) u" 
+    using pre_digraph.cycle_def by metis
+  then obtain u  where "pre_digraph.awalk G u (vwalk_arcs Cycle) u" 
+    by auto
+  then have "set (vwalk_arcs Cycle) \<subseteq> arcs G" 
+    using pre_digraph.awalk_def by metis
+  then show "(a, b) \<in> arcs G" 
+    using 1 by blast 
+qed
+
+lemma pre_1_edges:
+  assumes "sublist [x, Edge v e 1] Cycle" 
+  shows "v \<in> e" "(x = Edge u e 1 \<and> u \<in> e \<and> u \<noteq> v) \<or> (x = Edge v e 0)"
+  sorry
 
 subsubsection\<open>Lemmas for V\<close>
 
@@ -119,11 +298,7 @@ lemma Cover_equal:
 "Cover i = Cover j \<longleftrightarrow> i = j" 
   by simp
 
-lemma inCycle_inVerts: 
-  assumes "x \<in> set Cycle"
-  shows "x\<in> verts G"
-  using Cycle_def is_hc_def assms by fast  
-
+paragraph\<open>Cardinality of Cover\<close>
 
 (*Evtl zeigen, dass es für jeden Cover-Knoten in G maximal eine Kante im Cycle gibt. Damit
 hat das set für diesen Knoten maximal ein Element. Dann zeigen, dass G maximal
@@ -404,6 +579,8 @@ proof -
   then show "card C \<le> k" 
     using 1 3 Cover_is_def by simp 
 qed
+
+paragraph\<open>The Cover fulfills is_verte_cover\<close>
 
 
 lemma is_vc_C:

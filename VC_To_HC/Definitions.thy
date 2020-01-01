@@ -87,6 +87,16 @@ lemma get_second_in_edge:
   using some_in_eq by auto
 
 
+subsubsection\<open>Definitions for VC_HC_2\<close>
+
+definition "sublist l ls \<equiv> \<exists>p1 p2. p1@l@p2 = ls"
+
+lemma sublist_transitiv:
+  assumes "sublist l1 l2" "sublist l2 l3" 
+  shows "sublist l1 l3" 
+  using assms sublist_def 
+  by (metis append.assoc) 
+
 subsection\<open>Auxiliary lemmas\<close>
 
 lemma card_greater_1_contains_two_elements:
@@ -177,5 +187,6 @@ lemma if_sublist_then_edge:
   assumes "\<exists>p1 p2. p1 @ [u, v] @ p2 = C"
   shows "(u, v) \<in> set (vwalk_arcs C)"
   using assms in_set_vwalk_arcs_append1 by force 
+
 
 end
