@@ -580,6 +580,29 @@ next
     using post_0_edges_G by auto
 qed
 
+lemma post_1_edges:
+  assumes "sublist [Edge v e 1, x] Cycle" "card (verts G) > 1"
+  shows "v \<in> e" "(\<exists>u. (x = Edge u e 1 \<and> u \<in> e \<and> u \<noteq> v)) \<or> (\<exists>i. x = Cover i \<and> last_edge v e E) 
+    \<or> (\<exists>e1. x = Edge v e1 0 \<and> next_edge v E e e1)"
+  sorry
+
+lemma pre_0_edges:
+  assumes "sublist [x, Edge v e 0] Cycle" "card (verts G) > 1"
+  shows "v \<in> e" "(\<exists>u. (x = Edge u e 0 \<and> u \<in> e \<and> u \<noteq> v)) \<or> (\<exists>i. x = Cover i \<and> first_edge v e E) 
+    \<or> (\<exists>e1. x = Edge v e1 1 \<and> next_edge v E e1 e)"
+  sorry
+
+lemma pre_Cover:
+  assumes "sublist [x, Cover i] Cycle" "card (verts G) > 1" 
+  shows "(\<exists>j. x = Cover j) \<or> (\<exists>u e. x = Edge u e 0 \<and> first_edge u e E)"
+  sorry
+
+lemma post_Cover:
+  assumes "sublist [Cover i, x] Cycle" "card (verts G) > 1" 
+  shows "(\<exists>j. x = Cover j) \<or> (\<exists>u e. x = Edge u e 1 \<and> last_edge u e E)"
+  sorry
+
+
 subsubsection\<open>Lemmas for V\<close>
 
 lemma C_subset_Nodes:
