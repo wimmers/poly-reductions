@@ -50,8 +50,8 @@ lemma in_vc_k_smaller:
 lemma G_def_2:
   shows "G =  \<lparr>verts = {Cover i|i. i< k} \<union> {Edge v e 0|v e. e\<in> set E \<and> v \<in> e}\<union> {Edge v e 1|v e. e\<in> set E \<and> v \<in> e},
           arcs = {(Edge v e 0, Edge v e 1)|v e. e\<in> set E \<and> v \<in> e} \<union> 
-            {(Edge v e 0, Edge u e 0)|u v e. e\<in>set E \<and> v \<in> e \<and> u \<in> e} \<union>
-            {(Edge v e 1, Edge u e 1)|u v e. e\<in> set E \<and> v \<in> e \<and> u \<in> e} \<union>
+            {(Edge v e 0, Edge u e 0)|u v e. e\<in>set E \<and> v \<in> e \<and> u \<in> e \<and> u \<noteq> v} \<union>
+            {(Edge v e 1, Edge u e 1)|u v e. e\<in> set E \<and> v \<in> e \<and> u \<in> e  \<and> u \<noteq> v} \<union>
             {(Edge v e1 1, Edge v e2 0)| v e1 e2 i j. i<length E \<and> j<length E \<and>  e1 = E!i\<and> e2 = E!j \<and> v \<in> e1 \<and> v \<in> e2 \<and> 
               \<not> (\<exists>i'< size E. v \<in> E!i' \<and> i < i' \<and> i' < j)} \<union>
             {(Edge v e 1, Cover n)| v e n i. i<length E \<and> e = E!i\<and> v \<in> e \<and> 
@@ -626,7 +626,7 @@ lemma last_construct_cycle:
 lemma helper_for_helper_arcs_explicit_Cover_Edge0_Edge0: 
   assumes "\<exists>p1 p2. p1@ [v1, v2] @ p2 = construct_cycle_add_edge_nodes E' a C" "v1 = Edge u1 e1 0" "v2 = Edge u2 e2 0"
     "distinct (construct_cycle_add_edge_nodes E' a C)" 
-  shows "e1 = e2"
+  shows "e1 = e2 \<and> u1 \<noteq> u2"
   using assms proof(induction E')
   case Nil
   then show ?case by simp
@@ -696,9 +696,37 @@ next
             by (metis (no_types, lifting) False distinct_tl hd_append list.discI list.sel(1) tl_append2)  
           then show ?thesis ..
         qed
-        then have "v2 = Edge u e 0 \<or> v2 = Edge u e 1" 
+        then have 8: "v2 = Edge u e 0 \<or> v2 = Edge u e 1" 
           using 3 Cons True by simp
-        then show ?thesis using assms 3 4 by auto
+        have 9: "v1 = Edge a e 0" proof (cases "v1 = Edge a e 0")
+          case True
+          then show ?thesis by auto
+        next
+          case False
+          then have 9: "v1 = Edge u e 0" 
+            using 4 by auto
+          then have "v2 = Edge u e 1" proof -
+            have "v1 = hd (tl(construct_cycle_add_edge_nodes (e#E') a C))" 
+              using 9 3 by simp 
+            then have "v2 = hd (tl (tl(construct_cycle_add_edge_nodes (e#E') a C)))" 
+              using 3 Cons True 4 sublist_v1_hd_v2_hd_tl 
+              by (metis (no_types, lifting) False distinct_tl hd_append list.discI list.sel(1) tl_append2)  
+            then show ?thesis 
+              using 9 Cons.prems(1) Cons.prems(4) 8 sublist_implies_in_set_a by fastforce 
+          qed
+          then show ?thesis using Cons by auto
+        qed
+        then have "v2 = Edge u e 0" proof -
+            have "v1 = hd (construct_cycle_add_edge_nodes (e#E') a C)" 
+              using 9 3 by simp
+            then have "v2 = hd (tl ((construct_cycle_add_edge_nodes (e#E') a C)))" 
+              using 3 Cons True 4 sublist_v1_hd_v2_hd_tl 
+              by metis  
+            then show ?thesis 
+              using 8 assms(3) by auto 
+          qed
+        then show ?thesis using 9 
+          using assms sublist_implies_in_set_a by fastforce 
       next
         case False
         then have "v1 \<in> set (construct_cycle_add_edge_nodes E' a C)" 
@@ -816,7 +844,7 @@ qed
 lemma helper_for_helper_arcs_explicit_Cover_Edge1_Edge1: 
   assumes "\<exists>p1 p2. p1@ [v1, v2] @ p2 = construct_cycle_add_edge_nodes E' a C" "v1 = Edge u1 e1 1" "v2 = Edge u2 e2 1"
     "distinct (construct_cycle_add_edge_nodes E' a C)" 
-  shows "e1 = e2"
+  shows "e1 = e2 \<and> u1 \<noteq> u2"
   using assms proof(induction E')
   case Nil
   then show ?case by simp
@@ -880,9 +908,17 @@ next
           then have "\<exists>p1 p2. p1@ [v1, v2] @ p2 = [(Edge a e 0), (Edge u e 0), (Edge u e 1), (Edge a e 1)]"  
             using 3 Cons sublist_set_ls1_4 
             by (metis (no_types, hide_lams) True hc_node.inject(2) v1_def) 
-          then have "v2 \<in> set [(Edge a e 0), (Edge u e 0), (Edge u e 1), (Edge a e 1)]" 
-            using sublist_implies_in_set(2) by force
-          then show "e1 = e2" using v1_def Cons by auto
+          then have 5: "v2 \<in> set [(Edge a e 0), (Edge u e 0), (Edge u e 1), (Edge a e 1)]" 
+            using sublist_implies_in_set(2) by force          
+          then have v2_def: "v2 = Edge a e 1" "a \<noteq> u" proof -
+            have "v2 = Edge u e 1 \<or> v2 = Edge a e 1" 
+              using 5 Cons by simp
+            then show "v2 = Edge a e 1" "a \<noteq> u"
+              using Cons v1_def sublist_implies_in_set_a
+              by metis+
+          qed
+          then show "e1 = e2 \<and> u1 \<noteq> u2" 
+            using v1_def Cons by fastforce 
         next
           assume "v1 = Edge a e 1"
           then have 7: "v1 = last [(Edge a e 0), (Edge u e 0), (Edge u e 1), (Edge a e 1)]" 
@@ -1416,7 +1452,7 @@ qed
 
 lemma helper_arcs_explicit_Cover_Edge0_Edge0_1:
   assumes "\<exists>p1 p2. p1@ [v1, v2] @ p2 = construct_cycle_1 E C n C'" "v1 = Edge u1 e1 0" "v2 = Edge u2 e2 0" "distinct (tl (construct_cycle_1 E C n C'))"
-  shows "e1 = e2"
+  shows "e1 = e2 \<and> u1 \<noteq> u2"
   using assms proof(induction C arbitrary: n)
   case Nil
   then show ?case by auto
@@ -1453,7 +1489,7 @@ next
         using Cons sublist_set_ls1_4 1 3 11 False by metis
       have "distinct (construct_cycle_add_edge_nodes E a C')" using Cons by simp
       then show ?thesis 
-        using Cons helper_for_helper_arcs_explicit_Cover_Edge0_Edge0 4  by fastforce 
+        using Cons helper_for_helper_arcs_explicit_Cover_Edge0_Edge0 4  by metis
     qed
   next
     case False
@@ -1476,7 +1512,7 @@ qed
 lemma helper_arcs_explicit_Cover_Edge0_Edge0: 
   assumes "\<exists>p1 p2. p1@ [v1, v2] @ p2 = construct_cycle_1 E C n C'" "v1 = Edge u1 e1 0" "v2 = Edge u2 e2 0"
     "distinct (tl (construct_cycle_1 E C n C'))"
-  shows "e1 = e2" "u1\<in> e1" "u2 \<in> e2" "e1 \<in> set E"
+  shows "e1 = e2" "u1\<in> e1" "u2 \<in> e2" "e1 \<in> set E" "u1 \<noteq> u2"
 proof -
   have v1_in_set: "v1 \<in> set (construct_cycle_1 E C n C')" 
     using assms sublist_implies_in_set by fastforce
@@ -1484,7 +1520,7 @@ proof -
     using assms sublist_implies_in_set by fastforce
   then show "e1 \<in> set E" "u1 \<in> e1" "u2 \<in> e2" using assms v1_in_set in_cycle edge0_in_construct_cycle by(auto)
 next
-  show "e1 = e2" 
+  show "e1 = e2" "u1 \<noteq> u2"
     using assms helper_arcs_explicit_Cover_Edge0_Edge0_1 by(auto)  
 qed
 
@@ -1565,7 +1601,7 @@ qed
 lemma helper_arcs_explicit_Cover_Edge1_Edge1_1:
   assumes "\<exists>p1 p2. p1@ [v1, v2] @ p2 = construct_cycle_1 E C n C'" "v1 = Edge u1 e1 1" "v2 = Edge u2 e2 1" 
     "distinct (tl (construct_cycle_1 E C n C'))"
-  shows "e1 = e2"
+  shows "e1 = e2 \<and> u1 \<noteq> u2"
   using assms proof(induction C arbitrary: n)
   case Nil
   then show ?case by auto
@@ -1630,7 +1666,7 @@ qed
 lemma helper_arcs_explicit_Cover_Edge1_Edge1:
   assumes "\<exists>p1 p2. p1@ [v1, v2] @ p2 = construct_cycle_1 E C n C'" "v1 = Edge u1 e1 1" "v2 = Edge u2 e2 1"
     "distinct (tl (construct_cycle_1 E C n C'))"
-  shows "e1 = e2" "u1 \<in> e1" "u2 \<in> e1" "e1 \<in> set E"
+  shows "e1 = e2" "u1 \<in> e1" "u2 \<in> e1" "e1 \<in> set E" "u1 \<noteq> u2"
 proof -
   have v1_in_set: "v1 \<in> set (construct_cycle_1 E C n C')" 
     using assms sublist_implies_in_set by fast
@@ -1642,9 +1678,9 @@ next
     using assms sublist_implies_in_set by fast
   then have u2_in_e2: "u2 \<in> e2"  
     using assms in_cycle edge1_in_construct_cycle by(auto)
-  then have "e1 = e2" 
-    using helper_arcs_explicit_Cover_Edge1_Edge1_1 assms by simp 
-  then show "e1 = e2" "u2 \<in> e1" 
+  then have "e1 = e2 \<and> u1 \<noteq> u2"
+    using helper_arcs_explicit_Cover_Edge1_Edge1_1 assms by simp
+  then show "e1 = e2" "u2 \<in> e1" "u1 \<noteq> u2"
     using u2_in_e2 by auto
 qed
 
@@ -2133,7 +2169,7 @@ lemma helper_arcs_explicit_Edge_Nodes_0:
   assumes "v1 = Edge u1 e1 0" "v2 = Edge u2 e2 i2""\<exists>p1 p2. p1@ [v1, v2] @ p2 = construct_cycle_1 E C 0 (set C)" "is_vertex_cover_list E C"
     "distinct (tl (construct_cycle_1 E C 0 (set C)))"
   shows " (\<exists>v e. v1 = Edge v e 0 \<and> v2 = Edge v e (Suc 0) \<and> e \<in> set E \<and> v \<in> e) \<or>
-    (\<exists>u v e. v1 = Edge v e 0 \<and> v2 = Edge u e 0 \<and> e \<in> set E \<and> v \<in> e \<and> u \<in> e)"
+    (\<exists>u v e. v1 = Edge v e 0 \<and> v2 = Edge u e 0 \<and> e \<in> set E \<and> v \<in> e \<and> u \<in> e \<and> u \<noteq> v)"
 proof (cases)
   assume "i2 = 0 \<or> i2 = 1"
   then show ?thesis 
@@ -2155,7 +2191,7 @@ qed
 lemma helper_arcs_explicit_Edge_Nodes_1:
   assumes "v1 = Edge u1 e1 1" "v2 = Edge u2 e2 i2""\<exists>p1 p2. p1@ [v1, v2] @ p2 = construct_cycle_1 E C 0 (set C)" "is_vertex_cover_list E C"
     "distinct (tl (construct_cycle_1 E C 0 (set C)))"
-  shows "(\<exists>u v e. v1 = Edge v e (Suc 0) \<and> v2 = Edge u e (Suc 0) \<and> e \<in> set E \<and> v \<in> e \<and> u \<in> e) \<or>
+  shows "(\<exists>u v e. v1 = Edge v e (Suc 0) \<and> v2 = Edge u e (Suc 0) \<and> e \<in> set E \<and> v \<in> e \<and> u \<in> e \<and> u \<noteq> v) \<or>
     (\<exists>v e1. v1 = Edge v e1 (Suc 0) \<and> (\<exists>e2. v2 = Edge v e2 0 \<and> (\<exists>i<length E. \<exists>j<length E. e1 = E ! i \<and> e2 = E ! j \<and> v \<in> e1 \<and> v \<in> e2 \<and> (\<forall>i'>i. v \<in> E ! i' \<longrightarrow> i' < length E \<longrightarrow> \<not> i' < j))))"
 proof (cases)
   assume "i2 = 0 \<or> i2 = 1"
@@ -2165,7 +2201,8 @@ proof (cases)
     then show ?thesis using assms helper_arcs_explicit_Cover_Edge1_Edge0 apply(simp) by blast
   next
     assume "i2 = 1" 
-    then show ?thesis using assms helper_arcs_explicit_Cover_Edge1_Edge1 apply(simp) by blast
+    then show ?thesis using assms helper_arcs_explicit_Cover_Edge1_Edge1 
+      by (metis One_nat_def) 
   qed
 next
   assume "\<not> (i2 = 0 \<or> i2 = 1)"
@@ -2178,9 +2215,9 @@ qed
 lemma helper_arcs_explicit_Edge_Nodes:
   assumes "v1 = Edge u1 e1 i1" "v2 = Edge u2 e2 i2" "\<exists>p1 p2. p1@ [v1, v2] @ p2 = construct_cycle_1 E C 0 (set C)" "is_vertex_cover_list E C"
     "distinct (tl (construct_cycle_1 E C 0 (set C)))"
-  shows " (\<exists>v e. v1 = Edge v e 0 \<and> v2 = Edge v e (Suc 0) \<and> e \<in> set E \<and> v \<in> e) \<or>
-    (\<exists>u v e. v1 = Edge v e 0 \<and> v2 = Edge u e 0 \<and> e \<in> set E \<and> v \<in> e \<and> u \<in> e) \<or>
-    (\<exists>u v e. v1 = Edge v e (Suc 0) \<and> v2 = Edge u e (Suc 0) \<and> e \<in> set E \<and> v \<in> e \<and> u \<in> e) \<or>
+  shows " (\<exists>v e. v1 = Edge v e 0 \<and> v2 = Edge v e (Suc 0) \<and> e \<in> set E \<and> v \<in> e ) \<or>
+    (\<exists>u v e. v1 = Edge v e 0 \<and> v2 = Edge u e 0 \<and> e \<in> set E \<and> v \<in> e \<and> u \<in> e  \<and> u \<noteq> v) \<or>
+    (\<exists>u v e. v1 = Edge v e (Suc 0) \<and> v2 = Edge u e (Suc 0) \<and> e \<in> set E \<and> v \<in> e \<and> u \<in> e \<and> u \<noteq> v) \<or>
     (\<exists>v e1. v1 = Edge v e1 (Suc 0) \<and> (\<exists>e2. v2 = Edge v e2 0 \<and> (\<exists>i<length E. \<exists>j<length E. e1 = E ! i \<and> e2 = E ! j \<and> v \<in> e1 \<and> v \<in> e2 \<and> (\<forall>i'>i. v \<in> E ! i' \<longrightarrow> i' < length E \<longrightarrow> \<not> i' < j))))"
 proof (cases)
   assume "i1 = 0 \<or> i1 = 1"
@@ -2206,8 +2243,8 @@ qed
 lemma helper_arcs_explicit:
   assumes "\<exists>p1 p2. p1@ [v1, v2] @ p2 = construct_cycle_1 E C 0 (set C)" "is_vertex_cover_list E C" "distinct C" "length  C = k" "k>0"
   shows "(\<exists>v e. v1 = Edge v e 0 \<and> v2 = Edge v e (Suc 0) \<and> e \<in> set E \<and> v \<in> e) \<or>
-         (\<exists>u v e. v1 = Edge v e 0 \<and> v2 = Edge u e 0 \<and> e \<in> set E \<and> v \<in> e \<and> u \<in> e) \<or>
-         (\<exists>u v e. v1 = Edge v e (Suc 0) \<and> v2 = Edge u e (Suc 0) \<and> e \<in> set E \<and> v \<in> e \<and> u \<in> e) \<or>
+         (\<exists>u v e. v1 = Edge v e 0 \<and> v2 = Edge u e 0 \<and> e \<in> set E \<and> v \<in> e \<and> u \<in> e  \<and> u \<noteq> v) \<or>
+         (\<exists>u v e. v1 = Edge v e (Suc 0) \<and> v2 = Edge u e (Suc 0) \<and> e \<in> set E \<and> v \<in> e \<and> u \<in> e  \<and> u \<noteq> v) \<or>
          (\<exists>v e1. v1 = Edge v e1 (Suc 0) \<and> (\<exists>e2. v2 = Edge v e2 0 \<and> (\<exists>i<length E. \<exists>j<length E. e1 = E ! i \<and> e2 = E ! j \<and> v \<in> e1 \<and> v \<in> e2 \<and> (\<forall>i'>i. v \<in> E ! i' \<longrightarrow> i' < length E \<longrightarrow> \<not> i' < j)))) \<or>
          (\<exists>v e. v1 = Edge v e (Suc 0) \<and> (\<exists>n. v2 = Cover n \<and> (\<exists>i<length E. e = E ! i \<and> v \<in> e \<and> (\<forall>j. v \<in> E ! j \<longrightarrow> j < length E \<longrightarrow> \<not> i < j) \<and> n < k))) \<or>
          (\<exists>v e n. v1 = Cover n \<and> v2 = Edge v e 0 \<and> (\<exists>i<length E. e = E ! i \<and> v \<in> e \<and> (\<forall>j. v \<in> E ! j \<longrightarrow> j < length E \<longrightarrow> \<not> j < i) \<and> n < k))\<or>

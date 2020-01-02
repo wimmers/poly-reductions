@@ -16,8 +16,8 @@ subsubsection\<open>Preliminaries\<close>
 lemma G_def_2:
   shows "G =  \<lparr>verts = {Cover i|i. i< k} \<union> {Edge v e 0|v e. e\<in> set E \<and> v \<in> e}\<union> {Edge v e 1|v e. e\<in> set E \<and> v \<in> e},
           arcs = {(Edge v e 0, Edge v e 1)|v e. e\<in> set E \<and> v \<in> e} \<union> 
-            {(Edge v e 0, Edge u e 0)|u v e. e\<in>set E \<and> v \<in> e \<and> u \<in> e} \<union>
-            {(Edge v e 1, Edge u e 1)|u v e. e\<in> set E \<and> v \<in> e \<and> u \<in> e} \<union>
+            {(Edge v e 0, Edge u e 0)|u v e. e\<in>set E \<and> v \<in> e \<and> u \<in> e \<and> u \<noteq> v} \<union>
+            {(Edge v e 1, Edge u e 1)|u v e. e\<in> set E \<and> v \<in> e \<and> u \<in> e \<and> u \<noteq> v} \<union>
             {(Edge v e1 1, Edge v e2 0)| v e1 e2 i j. i<length E \<and> j<length E \<and>  e1 = E!i\<and> e2 = E!j \<and> v \<in> e1 \<and> v \<in> e2 \<and> 
               \<not> (\<exists>i'< size E. v \<in> E!i' \<and> i < i' \<and> i' < j)} \<union>
             {(Edge v e 1, Cover n)| v e n i. i<length E \<and> e = E!i\<and> v \<in> e \<and> 
@@ -36,6 +36,38 @@ proof -
   then show "G = ?L" using else_not_in_hc in_hc G_def 
     by fast 
 qed
+
+lemma verts_of_Cycle_in_G:
+  shows "set Cycle \<subseteq> verts G" 
+  using Cycle_def is_hc_def by metis
+
+lemma Edges_in_Cycle: 
+  assumes "Edge u e i \<in> set Cycle" 
+  shows "u \<in> e" "e \<in> set E" "i\<le>1" 
+  using assms verts_of_Cycle_in_G G_def_2 by auto  
+
+lemma covers_in_Cycle:
+  assumes "Cover i \<in> set Cycle"
+  shows "i < k" 
+  using assms verts_of_Cycle_in_G G_def_2 by auto 
+
+lemma vwalk_arcs_Cycle_subseteq_arcs_G:
+  assumes "card (verts G) > 1"
+  shows "set (vwalk_arcs Cycle) \<subseteq> arcs G" 
+proof -
+  have "pre_digraph.cycle G (vwalk_arcs Cycle)" 
+    using Cycle_def is_hc_def assms 
+    by force
+  then have "\<exists>u. pre_digraph.awalk G u (vwalk_arcs Cycle) u" 
+    using pre_digraph.cycle_def 
+    by metis
+  then obtain u where "pre_digraph.awalk G u (vwalk_arcs Cycle) u" 
+    by auto
+  then show ?thesis 
+    using  pre_digraph.awalk_def 
+    by fast
+qed
+
 
 subsubsection\<open>Lemmas for E\<close>
 
@@ -74,20 +106,6 @@ proof (rule ccontr)
   then show False 
     by (auto simp add: in_hc G_def)
 qed
-
-lemma verts_of_Cycle_in_G:
-  shows "set Cycle \<subseteq> verts G" 
-  using Cycle_def is_hc_def by metis
-
-lemma Edges_in_Cycle: 
-  assumes "Edge u e i \<in> set Cycle" 
-  shows "u \<in> e" "e \<in> set E" "i\<le>1" 
-  using assms verts_of_Cycle_in_G G_def_2 by auto  
-
-lemma covers_in_Cycle:
-  assumes "Cover i \<in> set Cycle"
-  shows "i < k" 
-  using assms verts_of_Cycle_in_G G_def_2 by auto 
 
 subsubsection\<open>Structural Lemmas for Cycle\<close>
 
@@ -176,37 +194,174 @@ proof -
 qed
 
 lemma last_pre_digraph_cas: 
-  assumes "pre_digraph.cas G u (vwalk_arcs p) u" "p\<noteq> []"
-  shows "last p = u"
-  using assms proof(induction p)
+  assumes "pre_digraph.cas G u (p) v" "p\<noteq> []"
+  shows "snd (last p) = v"
+  using assms proof(induction p arbitrary: u)
   case Nil
   then show ?case by simp 
 next
   case (Cons a p)
-  then show ?case sorry
+  then show ?case proof(cases "p = []")
+    case True
+    then have 0: "last (a#p) = a" 
+      by simp
+    then have "pre_digraph.cas G u (a#p)  v = 
+      (tail G a = u \<and> pre_digraph.cas G (head G a) [] v)"
+      using True 
+      by (simp add: pre_digraph.cas.simps(2)) 
+    then have 1: "pre_digraph.cas G (head G a) [] v"
+      using Cons by auto
+    then have 2: "pre_digraph.cas G (head G a) [] v = 
+      ((head G a) = v)" 
+      using pre_digraph.cas.simps  by fast 
+    then have "head G a = snd a" 
+      by (auto simp add: G_def_2)
+    then show ?thesis 
+      using 0 1 2 by simp
+  next
+    case False
+    then have 0: "last (a#p) = last p" 
+      by simp
+    have "pre_digraph.cas G u (a#p)  v = 
+      (tail G a = u \<and> pre_digraph.cas G (head G a) p v)"
+      by (simp add: pre_digraph.cas.simps(2)) 
+    then have "pre_digraph.cas G (head G a) p v"
+      using Cons by auto
+    then have " snd (last p) = v" 
+      using Cons False by simp 
+    then show ?thesis 
+      using 0 by auto 
+  qed
 qed 
 
+
+lemma last_vwalk_arcs_last_p:
+  assumes "snd (last (vwalk_arcs p)) = v" "(vwalk_arcs p) \<noteq> []"
+  shows "last p = v"
+  using assms
+proof(induction p)
+  case Nil
+  then show ?case by simp
+next
+  case (Cons a p)
+  then show ?case proof(cases "p = []")
+    case True
+    then have "vwalk_arcs (a#p) = []" by simp
+    then show ?thesis 
+      using Cons by auto
+  next
+    case False
+    then have 1: "p\<noteq> []" by simp
+    then have 2: "vwalk_arcs (a#p) = (a, hd p)#vwalk_arcs p"
+      using vwalk_arcs_Cons by auto
+    then have "vwalk_arcs (a#p) \<noteq> []" by auto
+    then show ?thesis proof(cases "vwalk_arcs p = []")
+      case True
+      then have 3: "(last (vwalk_arcs (a#p))) = (a, hd p)"
+        using 2 by simp 
+      have "last p = hd p" using True 1 
+        by (metis hd_rev list.distinct(1) list.exhaust rev_singleton_conv vwalk_arcs_Cons) 
+      then show ?thesis 
+        using 3 Cons False by auto 
+    next
+      case False
+      then have "snd (last (vwalk_arcs (a#p))) = snd (last (vwalk_arcs p))"
+        by (simp add: 2) 
+      then have "snd (last (vwalk_arcs p)) = v" 
+        using Cons by simp
+      then have 3: "last p = v" 
+        using Cons False by simp 
+      have "p \<noteq> []" 
+        by (simp add: 1)
+      then have "last (a#p) = last p" 
+        by auto
+      then show ?thesis using 3 by simp 
+    qed
+  qed
+qed
+
+
 lemma hd_pre_digraph_cas: 
-  assumes "pre_digraph.cas G u (vwalk_arcs p) u" "p \<noteq> []"
-  shows "hd p = u"
-  using assms G_def_2  
-  sorry
+  assumes "pre_digraph.cas G u (p) v" "p\<noteq> []"
+  shows "fst (hd p) = u"
+  using assms proof(induction p arbitrary: u)
+  case Nil
+  then show ?case by simp 
+next
+  case (Cons a p)
+  then have "pre_digraph.cas G u (a#p)  v = 
+      (tail G a = u \<and> pre_digraph.cas G (head G a) p v)"
+    by (simp add: pre_digraph.cas.simps(2))
+  then have "tail G a = u" 
+    using Cons 
+    by simp
+  then have "fst a = u" 
+    using G_def_2 
+    by force
+  then show ?case by simp
+qed 
+
+lemma hd_vwalk_arcs_last_p:
+  assumes "fst (hd (vwalk_arcs p)) = v" "(vwalk_arcs p) \<noteq> []"
+  shows "hd p = v"
+  using assms
+proof(induction p)
+  case Nil
+  then show ?case by simp
+next
+  case (Cons a p)
+  then show ?case proof(cases "p = []")
+    case True
+    then have "vwalk_arcs (a#p) = []" by simp
+    then show ?thesis 
+      using Cons by auto
+  next
+    case False
+    then have 1: "p\<noteq> []" by simp
+    then have 2: "vwalk_arcs (a#p) = (a, hd p)#vwalk_arcs p"
+      using vwalk_arcs_Cons by auto
+    then have "fst (hd (vwalk_arcs (a#p))) = a"
+      by simp
+    then show ?thesis 
+      using Cons by simp 
+  qed
+qed
+
 
 lemma hd_last_Cycle:
   assumes "Cycle \<noteq> []" "card (verts G) > 1" 
   shows "hd Cycle = last Cycle" 
-proof -
+proof (cases "length Cycle = 1")
+  case True
+  then show ?thesis 
+    by (metis List.finite_set assms(1) card_length contains_two_card_greater_1 last_in_set leD list.set_sel(1))  
+next
+  case False
+  then have "length Cycle \<noteq> 1" "length Cycle \<noteq> 0" 
+    using assms by(auto)
+  then have "length Cycle \<ge> 2" 
+    by linarith  
+  then have arcs_not_epmty: "(vwalk_arcs Cycle) \<noteq> []" 
+    using vwalk_arcs_empty_length_p by force
   have "\<exists>u. pre_digraph.awalk G u (vwalk_arcs Cycle) u" 
     using Cycle_def is_hc_def pre_digraph.cycle_def assms 
     by (metis antisym less_imp_le_nat nat_neq_iff)
-  then obtain u where "pre_digraph.awalk G u (vwalk_arcs Cycle) u" 
+  then obtain u where u_def: "pre_digraph.awalk G u (vwalk_arcs Cycle) u" 
     by auto
   then have 1: "pre_digraph.cas G u (vwalk_arcs Cycle) u" 
     using pre_digraph.awalk_def by force
+  then have "snd (last (vwalk_arcs Cycle)) = u" 
+    using arcs_not_epmty last_pre_digraph_cas 
+    by auto 
   then have 2: "last Cycle = u" 
-    using last_pre_digraph_cas assms  by simp
+    using assms last_vwalk_arcs_last_p arcs_not_epmty 
+    by simp
+   have "fst (hd (vwalk_arcs Cycle)) = u" 
+     using arcs_not_epmty hd_pre_digraph_cas 1    
+    by auto
   then have 3: "hd Cycle = u" 
-    using hd_pre_digraph_cas 1 assms by simp
+    using hd_vwalk_arcs_last_p assms arcs_not_epmty 
+    by simp
   then show ?thesis using 2 3 
     by simp
 qed
@@ -264,10 +419,166 @@ proof -
     using 1 by blast 
 qed
 
+lemma pre_1_edges_G:
+  assumes "(x, Edge v e 1) \<in> arcs G"
+  shows "(\<exists>u. (x = Edge u e 1 \<and> u \<in> e \<and> u \<noteq> v)) \<or> (x = Edge v e 0)"
+proof -
+  have "(\<forall>e. e \<in> arcs G \<longrightarrow> tail G e \<in> verts G) \<and> (\<forall>e. e \<in> arcs G \<longrightarrow> head G e \<in> verts G)"
+    using G_def in_hc hc_def wf_digraph_def 
+    by fast  
+  then have 1: "tail G (x, Edge v e 1) \<in> verts G" 
+    using assms by auto
+  have "tail G (x, Edge v e 1) = x" 
+    using G_def_2 by simp
+  then have x_in_verts: "x \<in> verts G" 
+    using 1 by auto  
+  then have 2: "(\<exists>a b. x = Edge a b 0) \<or> (\<exists>a b. x = Edge a b 1) \<or> (\<exists>i. x = Cover i)"
+    using G_def_2  
+    by auto 
+  then show ?thesis proof (cases "(\<exists>a b. x = Edge a b 0) \<or> (\<exists>a b. x = Edge a b 1)")
+    case True
+    then have 3: "(\<exists>a b. x = Edge a b 0) \<or> (\<exists>a b. x = Edge a b 1)"
+      by auto
+    show ?thesis proof(cases "\<exists>a b. x = Edge a b 0")
+      case True
+      then obtain a b where ab_def: "x = Edge a b 0" 
+        by auto
+      then have 4: "(Edge a b 0, Edge v e 1) \<in> arcs G" 
+        using assms by simp
+      then have "b = e" "a = v" 
+        using G_def_2 by auto
+      then show ?thesis 
+        using ab_def by simp
+    next
+      case False
+      then have "\<exists>a b. x = Edge a b 1"
+        using 3 by simp
+      then obtain a b where ab_def: "x = Edge a b 1"
+        by auto
+      then have 4: "(Edge a b 1, Edge v e 1) \<in> arcs G" 
+        using assms by simp
+      then have 1: "b = e" 
+        using G_def_2 by simp
+      have 2: "a \<noteq> v" 
+        using 4 G_def_2 by force 
+      have "a \<in> e" 
+        using 1 x_in_verts ab_def G_def_2 
+        by simp
+      then show ?thesis using 1 2 ab_def by(auto)   
+    qed
+  next
+    case False
+    then have "\<exists>i. x = Cover i"
+      using 2 by simp
+    then obtain i where "x = Cover i"
+      by auto
+    then have "(Cover i, Edge v e 1) \<in> arcs G" 
+      using assms by simp
+    then show ?thesis 
+      using G_def_2 by auto
+  qed
+qed
+
 lemma pre_1_edges:
-  assumes "sublist [x, Edge v e 1] Cycle" 
-  shows "v \<in> e" "(x = Edge u e 1 \<and> u \<in> e \<and> u \<noteq> v) \<or> (x = Edge v e 0)"
-  sorry
+  assumes "sublist [x, Edge v e 1] Cycle" "card (verts G) > 1"
+  shows "v \<in> e" "(\<exists>u. (x = Edge u e 1 \<and> u \<in> e \<and> u \<noteq> v)) \<or> (x = Edge v e 0)"
+proof -
+  have "Edge v e 1 \<in> set Cycle" 
+    using assms in_sublist_impl_in_list 
+    by fastforce 
+  then show "v \<in> e" 
+    using Edges_in_Cycle by auto 
+next
+  have "(x, Edge v e 1) \<in> set (vwalk_arcs Cycle)"
+    using assms 
+    by (simp add: sublist_def if_sublist_then_edge)
+  then have "(x, Edge v e 1) \<in> arcs G" 
+    using vwalk_arcs_Cycle_subseteq_arcs_G assms 
+    by blast  
+  then show "(\<exists>u. (x = Edge u e 1 \<and> u \<in> e \<and> u \<noteq> v)) \<or> (x = Edge v e 0)" 
+    using pre_1_edges_G by auto
+qed
+
+lemma post_0_edges_G:
+  assumes "(Edge v e 0, x) \<in> arcs G"
+  shows "(\<exists>u. (x = Edge u e 0 \<and> u \<in> e \<and> u \<noteq> v)) \<or> (x = Edge v e 1)"
+proof -
+  have "(\<forall>e. e \<in> arcs G \<longrightarrow> tail G e \<in> verts G) \<and> (\<forall>e. e \<in> arcs G \<longrightarrow> head G e \<in> verts G)"
+    using G_def in_hc hc_def wf_digraph_def 
+    by fast  
+  then have 1: "head G (Edge v e 0, x) \<in> verts G" 
+    using assms by auto
+  have "head G (Edge v e 0, x) = x" 
+    using G_def_2 by simp
+  then have x_in_verts: "x \<in> verts G" 
+    using 1 by auto  
+  then have 2: "(\<exists>a b. x = Edge a b 0) \<or> (\<exists>a b. x = Edge a b 1) \<or> (\<exists>i. x = Cover i)"
+    using G_def_2  
+    by auto 
+  then show ?thesis proof (cases "(\<exists>a b. x = Edge a b 0) \<or> (\<exists>a b. x = Edge a b 1)")
+    case True
+    then have 3: "(\<exists>a b. x = Edge a b 0) \<or> (\<exists>a b. x = Edge a b 1)"
+      by auto
+    show ?thesis proof(cases "\<exists>a b. x = Edge a b 0")
+      case True
+      then obtain a b where ab_def: "x = Edge a b 0" 
+        by auto
+      then have 4: "(Edge v e 0, Edge a b 0) \<in> arcs G" 
+        using assms by simp
+      then have 1: "b = e"  
+        using G_def_2 by auto
+      have 2: "a \<noteq> v" 
+        using 4 G_def_2 by force 
+      have "a \<in> e" 
+        using 1 x_in_verts ab_def G_def_2 
+        by simp
+      then show ?thesis 
+        using 1 2 ab_def by simp
+    next
+      case False
+      then have "\<exists>a b. x = Edge a b 1"
+        using 3 by simp
+      then obtain a b where ab_def: "x = Edge a b 1"
+        by auto
+      then have 4: "(Edge v e 0, Edge a b 1) \<in> arcs G" 
+        using assms by simp
+      then have 1: "b = e" "a = v"
+        using G_def_2 by simp+
+      then show ?thesis 
+        using 1 ab_def by(auto)   
+    qed
+  next
+    case False
+    then have "\<exists>i. x = Cover i"
+      using 2 by simp
+    then obtain i where "x = Cover i"
+      by auto
+    then have "(Edge v e 0, Cover i) \<in> arcs G" 
+      using assms by simp
+    then show ?thesis 
+      using G_def_2 by auto
+  qed
+qed
+
+lemma post_0_edges:
+  assumes "sublist [Edge v e 0, x] Cycle" "card (verts G) > 1"
+  shows "v \<in> e" "(\<exists>u. (x = Edge u e 0 \<and> u \<in> e \<and> u \<noteq> v)) \<or> (x = Edge v e 1)"
+proof -
+  have "Edge v e 0 \<in> set Cycle" 
+    using assms in_sublist_impl_in_list 
+    by fastforce 
+  then show "v \<in> e" 
+    using Edges_in_Cycle by auto 
+next
+  have "(Edge v e 0, x) \<in> set (vwalk_arcs Cycle)"
+    using assms 
+    by (simp add: sublist_def if_sublist_then_edge)
+  then have "(Edge v e 0, x) \<in> arcs G" 
+    using vwalk_arcs_Cycle_subseteq_arcs_G assms 
+    by blast
+  then show "(\<exists>u. (x = Edge u e 0 \<and> u \<in> e \<and> u \<noteq> v)) \<or> (x = Edge v e 1)" 
+    using post_0_edges_G by auto
+qed
 
 subsubsection\<open>Lemmas for V\<close>
 

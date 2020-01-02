@@ -31,8 +31,8 @@ definition
     if ugraph (set E) \<and>  k \<le> card (\<Union> (set E)) \<and> distinct E
         then  \<lparr>verts = {Cover i|i. i< k} \<union> {Edge v e 0|v e. e\<in> set E \<and> v \<in> e}\<union> {Edge v e 1|v e. e\<in> set E \<and> v \<in> e},
           arcs = {(Edge v e 0, Edge v e 1)|v e. e\<in> set E \<and> v \<in> e} \<union> 
-            {(Edge v e 0, Edge u e 0)|u v e. e\<in>set E \<and> v \<in> e \<and> u \<in> e} \<union>
-            {(Edge v e 1, Edge u e 1)|u v e. e\<in> set E \<and> v \<in> e \<and> u \<in> e} \<union>
+            {(Edge v e 0, Edge u e 0)|u v e. e\<in>set E \<and> v \<in> e \<and> u \<in> e \<and> u \<noteq> v} \<union>
+            {(Edge v e 1, Edge u e 1)|u v e. e\<in> set E \<and> v \<in> e \<and> u \<in> e \<and> u \<noteq> v} \<union>
             {(Edge v e1 1, Edge v e2 0)| v e1 e2 i j. i<length E \<and> j<length E \<and>  e1 = E!i\<and> e2 = E!j \<and> v \<in> e1 \<and> v \<in> e2 \<and> 
               \<not> (\<exists>i'< size E. v \<in> E!i' \<and> i < i' \<and> i' < j)} \<union>
             {(Edge v e 1, Cover n)| v e n i. i<length E \<and> e = E!i\<and> v \<in> e \<and> 
@@ -187,6 +187,19 @@ lemma if_sublist_then_edge:
   assumes "\<exists>p1 p2. p1 @ [u, v] @ p2 = C"
   shows "(u, v) \<in> set (vwalk_arcs C)"
   using assms in_set_vwalk_arcs_append1 by force 
+
+
+lemma vwalk_arcs_empty_length_p: 
+  assumes "vwalk_arcs p = []"
+  shows "length p \<le> 1" 
+  using assms apply(induction p) apply(auto)
+  using vwalk_arcs_Cons by fastforce  
+
+lemma in_sublist_impl_in_list:
+  assumes "sublist a b" "x \<in> set a"
+  shows "x \<in> set b"
+  using assms 
+  by (metis append_Cons append_assoc in_set_conv_decomp sublist_def) 
 
 
 end
