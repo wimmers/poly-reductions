@@ -5,15 +5,15 @@ begin
 subsection\<open>Preliminaries\<close>
 
 definition set_to_list::"'a set \<Rightarrow> 'a list" where
-"set_to_list S = (SOME L. (set L = S  \<and> distinct L))" 
+  "set_to_list S = (SOME L. (set L = S  \<and> distinct L))" 
 
 definition " vc_set_to_vc_list \<equiv>
   \<lambda>(E, k). (if ugraph E \<and> k \<le> card (\<Union> E) then (set_to_list E, k) else ([], 1))"
 
 
 fun get_elements:: "nat \<Rightarrow> 'a set \<Rightarrow> 'a set" where 
-"get_elements 0 S = {}" |
-"get_elements n S = (let e = (SOME e. e \<in> S) in {e} \<union> (get_elements (n-1) (S-{e})))"
+  "get_elements 0 S = {}" |
+  "get_elements n S = (let e = (SOME e. e \<in> S) in {e} \<union> (get_elements (n-1) (S-{e})))"
 
 lemma get_some_simps: 
   assumes "e = (SOME e. e \<in> S)"
@@ -35,7 +35,7 @@ lemma get_some_in_set:
 lemma get_elements_subset:
   assumes  "n \<le> card S" 
   shows "get_elements n S \<subseteq> S"
-using assms proof(induction n arbitrary: S)
+  using assms proof(induction n arbitrary: S)
   case 0
   then show ?case by auto
 next
@@ -205,11 +205,11 @@ end
 lemma else_not_in_vc_list:
   shows "([], 1) \<notin> vertex_cover_list" 
 proof -
-    have "card (set []) = 0" by simp
-    then have "1 > card (set [])" by simp
-    then have "([], 1) \<notin> vertex_cover_list" using vertex_cover_list_def by force
-    then show ?thesis .
-  qed
+  have "card (set []) = 0" by simp
+  then have "1 > card (set [])" by simp
+  then have "([], 1) \<notin> vertex_cover_list" using vertex_cover_list_def by force
+  then show ?thesis .
+qed
 
 context
   fixes E k assumes in_vc_list: "vc_set_to_vc_list (E,k) \<in> vertex_cover_list"

@@ -1,7 +1,7 @@
 theory VC_To_HC
   imports  Main "../Three_Sat_To_Set_Cover" Graph_Theory.Digraph  Graph_Theory.Arc_Walk
-      Graph_Theory.Vertex_Walk
-      "../List_Auxiliaries" "VC_To_HC_1" "VC_To_HC_2"
+    Graph_Theory.Vertex_Walk
+    "../List_Auxiliaries" "VC_To_HC_1" "VC_To_HC_2"
     Definitions
 begin
 

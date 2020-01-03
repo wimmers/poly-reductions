@@ -1,7 +1,7 @@
 theory Definitions
   imports Main "../Three_Sat_To_Set_Cover"  "../List_Auxiliaries"
-   Graph_Theory.Digraph  Graph_Theory.Arc_Walk
-   Graph_Theory.Vertex_Walk
+    Graph_Theory.Digraph  Graph_Theory.Arc_Walk
+    Graph_Theory.Vertex_Walk
 begin
 
 subsection\<open>Definitions\<close>
@@ -47,15 +47,15 @@ definition get_second where
   "get_second e \<equiv> SOME v. v \<in> e"
 
 definition next_edge where
-"next_edge v E e1 e2 \<equiv> \<exists>i j. i<length E \<and> j<length E \<and>  e1 = E!i \<and> e2 = E!j \<and> v \<in> e1 \<and> v \<in> e2 \<and> 
+  "next_edge v E e1 e2 \<equiv> \<exists>i j. i<length E \<and> j<length E \<and>  e1 = E!i \<and> e2 = E!j \<and> v \<in> e1 \<and> v \<in> e2 \<and> 
               \<not> (\<exists>k < size E. v \<in> E!k \<and> i < k \<and> k < j)"
 
 definition first_edge where
-"first_edge v e E \<equiv> (\<exists>i<length E. e = E!i\<and> v \<in> e \<and> 
+  "first_edge v e E \<equiv> (\<exists>i<length E. e = E!i\<and> v \<in> e \<and> 
               \<not> (\<exists>j < size E. v \<in> E!j \<and> j < i))"
 
 definition last_edge where
-"last_edge v e E \<equiv> \<exists>i<length E. e = E!i\<and> v \<in> e \<and> 
+  "last_edge v e E \<equiv> \<exists>i<length E. e = E!i\<and> v \<in> e \<and> 
               \<not> (\<exists>j < size E. v \<in> E!j \<and> i < j)"
 
 subsection\<open>Proof for Definitions\<close>

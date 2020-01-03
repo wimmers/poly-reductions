@@ -1,5 +1,5 @@
 theory VC_To_HC_2
-imports 
+  imports 
     Definitions "../VC_Set_To_VC_List"
 begin
 
@@ -200,7 +200,7 @@ qed
 
 
 lemma finite_verts:  
-"finite (verts G)"
+  "finite (verts G)"
 proof -
   have fin1: "finite {Cover i|i. i< k}" 
     by simp
@@ -398,8 +398,8 @@ next
   then have 2: "last Cycle = u" 
     using assms last_vwalk_arcs_last_p arcs_not_epmty 
     by simp
-   have "fst (hd (vwalk_arcs Cycle)) = u" 
-     using arcs_not_epmty hd_pre_digraph_cas 1    
+  have "fst (hd (vwalk_arcs Cycle)) = u" 
+    using arcs_not_epmty hd_pre_digraph_cas 1    
     by auto
   then have 3: "hd Cycle = u" 
     using hd_vwalk_arcs_last_p assms arcs_not_epmty 
@@ -983,7 +983,7 @@ lemma finite_C:
 
 
 lemma Cover_equal:
-"Cover i = Cover j \<longleftrightarrow> i = j" 
+  "Cover i = Cover j \<longleftrightarrow> i = j" 
   by simp
 
 paragraph\<open>Cardinality of Cover\<close>
@@ -996,7 +996,7 @@ Union von diesem set schreiben und hoffentlich fertig*)
 lemma card_dep_on_other_set:
   assumes "finite T" 
   shows "card {{u. f u j}|j. j \<in> T} \<le> card T" 
-using assms proof (induction "card T" arbitrary: T)
+  using assms proof (induction "card T" arbitrary: T)
   case 0
   then have "T = {}" 
     using assms 
@@ -1054,39 +1054,39 @@ proof (cases "finite (\<Union> S)")
       by simp
   next
     case (Suc x)
-   then have "\<exists>x. x \<in> S" 
-    by (metis card_eq_SucD insertI1) 
-  then obtain S' where S'_def: "S' \<in> S" by auto
-  then obtain T where T_def: "T = S - {S'}" by auto
-  then have card_T: "card T = x" 
-    using Suc S'_def by auto
-  then have "\<forall>S' \<in> T. card S' \<le> 1" "finite T" 
-    using Suc T_def by(blast)+
-  then have 1: "card (\<Union> T) \<le> card T" 
-    using Suc card_T 
-    by fastforce
-  have card_S': "card S' \<le> 1" 
-    using Suc S'_def by fast 
-  have fin: "finite S'" using True S'_def 
-    using Suc.prems(1) rev_finite_subset by blast  
-  then have 2: "card ((\<Union> T) \<union> S') \<le> card T+1" using 1 Suc S'_def card_S' fin proof - 
-    have "card ((\<Union> T) \<union> S') \<le> card (\<Union> T) + card S'" 
-      by (simp add: card_Un_le) 
-    then have "card ((\<Union> T) \<union> S') \<le> card (\<Union> T) + 1" 
-      using card_S' 
-      by force
-    then have "card ((\<Union> T) \<union> S') \<le> card T + 1" 
-      using 1 by auto
-    then show ?thesis .
+    then have "\<exists>x. x \<in> S" 
+      by (metis card_eq_SucD insertI1) 
+    then obtain S' where S'_def: "S' \<in> S" by auto
+    then obtain T where T_def: "T = S - {S'}" by auto
+    then have card_T: "card T = x" 
+      using Suc S'_def by auto
+    then have "\<forall>S' \<in> T. card S' \<le> 1" "finite T" 
+      using Suc T_def by(blast)+
+    then have 1: "card (\<Union> T) \<le> card T" 
+      using Suc card_T 
+      by fastforce
+    have card_S': "card S' \<le> 1" 
+      using Suc S'_def by fast 
+    have fin: "finite S'" using True S'_def 
+      using Suc.prems(1) rev_finite_subset by blast  
+    then have 2: "card ((\<Union> T) \<union> S') \<le> card T+1" using 1 Suc S'_def card_S' fin proof - 
+      have "card ((\<Union> T) \<union> S') \<le> card (\<Union> T) + card S'" 
+        by (simp add: card_Un_le) 
+      then have "card ((\<Union> T) \<union> S') \<le> card (\<Union> T) + 1" 
+        using card_S' 
+        by force
+      then have "card ((\<Union> T) \<union> S') \<le> card T + 1" 
+        using 1 by auto
+      then show ?thesis .
+    qed
+    have 3: "card T +1 = card S" 
+      using S'_def T_def 
+      using Suc.hyps(2) card_T by linarith 
+    have "(\<Union> T) \<union> S' = \<Union>S" 
+      using S'_def T_def by auto 
+    then show ?case using 2 3 Suc S'_def 
+      by argo   
   qed
-  have 3: "card T +1 = card S" 
-    using S'_def T_def 
-    using Suc.hyps(2) card_T by linarith 
-  have "(\<Union> T) \<union> S' = \<Union>S" 
-    using S'_def T_def by auto 
-  then show ?case using 2 3 Suc S'_def 
-    by argo   
-qed
 next
   case False
   then have "card (\<Union> S) = 0" by simp
@@ -1235,7 +1235,7 @@ proof -
         using C_def by blast
     qed
   qed
- 
+
   have 3: "finite Cover_is" using Cover_is_def 1 proof (cases "k = 0")
     case True
     then have "{i. Cover i \<in> verts G} = {}" 
@@ -1292,8 +1292,8 @@ proof -
   then have "leftNodes \<subseteq> \<Union> (set E)" by simp
   then obtain setV where setV_def: "setV= C \<union> get_elements k' leftNodes" by simp
   have 1: "k' \<le> card leftNodes"  
-      using C_properties leftNodes_def k'_def k_smaller_number_vertices card_Diff_subset 
-      by fastforce 
+    using C_properties leftNodes_def k'_def k_smaller_number_vertices card_Diff_subset 
+    by fastforce 
   then have 2: "setV \<subseteq> \<Union> (set E)"  
     using \<open>leftNodes \<subseteq> \<Union> (set E)\<close> get_elements_subset setV_def C_properties by blast
   then have 4: "finite setV" 
@@ -1322,7 +1322,7 @@ proof -
     by fastforce 
   then have vc_list: "is_vertex_cover_list E L" 
     using is_vertex_cover_def
-    is_vertex_cover_list_def by metis
+      is_vertex_cover_list_def by metis
   have length_L: "length L = k" using L_def 3 distinct_card 
     by fastforce   
   then show ?thesis 
