@@ -69,6 +69,48 @@ proof -
 qed
 
 
+lemma in_arcs_next_edge_1_0: 
+  assumes "(Edge v e1 1, Edge v e2 0) \<in> arcs G"
+  shows "next_edge v E e1 e2" 
+proof -
+  have "(Edge v e1 1, Edge v e2 0) \<in> arcs G" 
+    using assms
+    by auto
+  then have "\<exists> i j. i<length E \<and> j<length E \<and>  e1 = E!i\<and> e2 = E!j \<and> v \<in> e1 \<and> v \<in> e2 \<and> 
+              \<not> (\<exists>i'< size E. v \<in> E!i' \<and> i < i' \<and> i' < j)"
+    using G_def_2 
+    by fastforce
+  then have "next_edge v E e1 e2" 
+    using next_edge_def 
+    by metis
+  then show ?thesis .
+qed
+
+
+lemma in_arcs_last_edge: 
+  assumes "(Edge v e 1, Cover n) \<in> arcs G"
+  shows "last_edge v e E" 
+proof -
+  have "\<exists>i. i<length E \<and> e = E!i\<and> v \<in> e \<and> 
+              \<not> (\<exists>j < size E. v \<in> E!j \<and> i < j) \<and> n< k"
+    using G_def_2 assms by auto
+  then have "last_edge v e E" 
+    using last_edge_def by metis
+  then show ?thesis .
+qed
+
+lemma in_arcs_first_edge: 
+  assumes "(Cover n, Edge v e 0) \<in> arcs G"
+  shows "first_edge v e E" 
+proof -
+  have "\<exists>i. i<length E \<and> e = E!i\<and> v \<in> e \<and> 
+              \<not> (\<exists>j < size E. v \<in> E!j \<and> j < i) \<and> n < k"
+    using G_def_2 assms by auto
+  then have "first_edge v e E" 
+    using first_edge_def by metis
+  then show ?thesis .
+qed
+
 subsubsection\<open>Lemmas for E\<close>
 
 lemma ugraph:
@@ -580,27 +622,339 @@ next
     using post_0_edges_G by auto
 qed
 
+
+lemma post_1_edges_G:
+  assumes "(Edge v e 1, x) \<in> arcs G"
+  shows "(\<exists>u. (x = Edge u e 1 \<and> u \<in> e \<and> u \<noteq> v)) \<or> (\<exists>i. x = Cover i \<and> last_edge v e E) 
+    \<or> (\<exists>e1. x = Edge v e1 0 \<and> next_edge v E e e1)"
+proof -
+  have "(\<forall>e. e \<in> arcs G \<longrightarrow> tail G e \<in> verts G) \<and> (\<forall>e. e \<in> arcs G \<longrightarrow> head G e \<in> verts G)"
+    using G_def in_hc hc_def wf_digraph_def 
+    by fast  
+  then have 1: "head G (Edge v e 1, x) \<in> verts G" 
+    using assms by auto
+  have "head G (Edge v e 1, x) = x" 
+    using G_def_2 by simp
+  then have x_in_verts: "x \<in> verts G" 
+    using 1 by auto  
+  then have 2: "(\<exists>a b. x = Edge a b 0) \<or> (\<exists>a b. x = Edge a b 1) \<or> (\<exists>i. x = Cover i)"
+    using G_def_2  
+    by auto 
+  then show ?thesis proof (cases "(\<exists>a b. x = Edge a b 0) \<or> (\<exists>a b. x = Edge a b 1)")
+    case True
+    then have 3: "(\<exists>a b. x = Edge a b 0) \<or> (\<exists>a b. x = Edge a b 1)"
+      by auto
+    show ?thesis proof(cases "\<exists>a b. x = Edge a b 0")
+      case True
+      then obtain a b where ab_def: "x = Edge a b 0" 
+        by auto
+      then have 4: "(Edge v e 1, Edge a b 0) \<in> arcs G" 
+        using assms by simp
+      then have 1: "a = v"  
+        using G_def_2 by auto
+      then have 2: "next_edge v E e b" 
+        using 4 G_def_2 in_arcs_next_edge_1_0 
+        by blast 
+      then show ?thesis 
+        using 1 2 ab_def by simp
+    next
+      case False
+      then have "\<exists>a b. x = Edge a b 1"
+        using 3 by simp
+      then obtain a b where ab_def: "x = Edge a b 1"
+        by auto
+      then have 4: "(Edge v e 1, Edge a b 1) \<in> arcs G" 
+        using assms by simp
+      then have 1: "b = e" 
+        using G_def_2 by simp
+      have 2: "a \<noteq> v" 
+        using 4 G_def_2 by force 
+      have "a \<in> e" 
+        using 1 x_in_verts ab_def G_def_2 
+        by simp
+      then show ?thesis 
+        using 1 2 ab_def by(auto)   
+    qed
+  next
+    case False
+    then have 1: "\<exists>i. x = Cover i"
+      using 2 by simp
+    then obtain i where "x = Cover i"
+      by auto
+    then have "(Edge v e 1, Cover i) \<in> arcs G" 
+      using assms by simp
+    then have "last_edge v e E" 
+      using in_arcs_last_edge
+      by simp
+    then show ?thesis 
+      using G_def_2 1 
+      by blast
+  qed
+qed
+
+
 lemma post_1_edges:
   assumes "sublist [Edge v e 1, x] Cycle" "card (verts G) > 1"
   shows "v \<in> e" "(\<exists>u. (x = Edge u e 1 \<and> u \<in> e \<and> u \<noteq> v)) \<or> (\<exists>i. x = Cover i \<and> last_edge v e E) 
     \<or> (\<exists>e1. x = Edge v e1 0 \<and> next_edge v E e e1)"
-  sorry
+proof -
+  have "Edge v e 1 \<in> set Cycle" 
+    using assms in_sublist_impl_in_list 
+    by fastforce 
+  then show "v \<in> e" 
+    using Edges_in_Cycle by auto 
+next
+  have "(Edge v e 1, x) \<in> set (vwalk_arcs Cycle)"
+    using assms 
+    by (simp add: sublist_def if_sublist_then_edge)
+  then have "(Edge v e 1, x) \<in> arcs G" 
+    using vwalk_arcs_Cycle_subseteq_arcs_G assms 
+    by blast
+  then show "(\<exists>u. (x = Edge u e 1 \<and> u \<in> e \<and> u \<noteq> v)) \<or> (\<exists>i. x = Cover i \<and> last_edge v e E) 
+    \<or> (\<exists>e1. x = Edge v e1 0 \<and> next_edge v E e e1)"
+    using post_1_edges_G by auto
+qed
+
+lemma pre_0_edges_G:
+  assumes "(x, Edge v e 0) \<in> arcs G"
+  shows "(\<exists>u. (x = Edge u e 0 \<and> u \<in> e \<and> u \<noteq> v)) \<or> (\<exists>i. x = Cover i \<and> first_edge v e E) 
+    \<or> (\<exists>e1. x = Edge v e1 1 \<and> next_edge v E e1 e)"
+proof -
+  have "(\<forall>e. e \<in> arcs G \<longrightarrow> tail G e \<in> verts G) \<and> (\<forall>e. e \<in> arcs G \<longrightarrow> head G e \<in> verts G)"
+    using G_def in_hc hc_def wf_digraph_def 
+    by fast  
+  then have 1: "tail G (x, Edge v e 0) \<in> verts G" 
+    using assms by auto
+  have "tail G (x, Edge v e 0) = x" 
+    using G_def_2 by simp
+  then have x_in_verts: "x \<in> verts G" 
+    using 1 by auto  
+  then have 2: "(\<exists>a b. x = Edge a b 0) \<or> (\<exists>a b. x = Edge a b 1) \<or> (\<exists>i. x = Cover i)"
+    using G_def_2  
+    by auto 
+  then show ?thesis proof (cases "(\<exists>a b. x = Edge a b 0) \<or> (\<exists>a b. x = Edge a b 1)")
+    case True
+    then have 3: "(\<exists>a b. x = Edge a b 0) \<or> (\<exists>a b. x = Edge a b 1)"
+      by auto
+    show ?thesis proof(cases "\<exists>a b. x = Edge a b 0")
+      case True
+      then obtain a b where ab_def: "x = Edge a b 0" 
+        by auto
+      then have 4: "(Edge a b 0, Edge v e 0) \<in> arcs G" 
+        using assms by simp
+      then have 3: "b = e"  
+        using G_def_2 by auto
+      have 2: "a \<noteq> v" 
+        using 4 G_def_2 by force 
+      have "a \<in> e" 
+        using 4 x_in_verts ab_def G_def_2 
+        by simp
+      then show ?thesis 
+        using ab_def 2 3 4 by simp
+    next
+      case False
+      then have "\<exists>a b. x = Edge a b 1"
+        using 3 by simp
+      then obtain a b where ab_def: "x = Edge a b 1"
+        by auto
+      then have 4: "(Edge a b 1, Edge v e 0) \<in> arcs G" 
+        using assms by simp
+      then have 1: "a = v" 
+        using G_def_2 by simp
+      then have "next_edge v E b e"
+        using 4 in_arcs_next_edge_1_0 by auto 
+      then show ?thesis using 1 2 ab_def by(auto)   
+    qed
+  next
+    case False
+    then have 1: "\<exists>i. x = Cover i"
+      using 2 by simp
+    then obtain i where "x = Cover i"
+      by auto
+    then have "(Cover i, Edge v e 0) \<in> arcs G" 
+      using assms by simp
+    then show ?thesis 
+      using in_arcs_first_edge 1 by blast
+  qed
+qed
 
 lemma pre_0_edges:
   assumes "sublist [x, Edge v e 0] Cycle" "card (verts G) > 1"
   shows "v \<in> e" "(\<exists>u. (x = Edge u e 0 \<and> u \<in> e \<and> u \<noteq> v)) \<or> (\<exists>i. x = Cover i \<and> first_edge v e E) 
     \<or> (\<exists>e1. x = Edge v e1 1 \<and> next_edge v E e1 e)"
-  sorry
+proof -
+  have "Edge v e 0 \<in> set Cycle" 
+    using assms in_sublist_impl_in_list 
+    by fastforce 
+  then show "v \<in> e" 
+    using Edges_in_Cycle by auto 
+next
+  have "(x, Edge v e 0) \<in> set (vwalk_arcs Cycle)"
+    using assms 
+    by (simp add: sublist_def if_sublist_then_edge)
+  then have "(x, Edge v e 0) \<in> arcs G" 
+    using vwalk_arcs_Cycle_subseteq_arcs_G assms 
+    by blast  
+  then show "(\<exists>u. (x = Edge u e 0 \<and> u \<in> e \<and> u \<noteq> v)) \<or> (\<exists>i. x = Cover i \<and> first_edge v e E) 
+    \<or> (\<exists>e1. x = Edge v e1 1 \<and> next_edge v E e1 e)" 
+    using pre_0_edges_G by auto
+qed
+
+
+lemma pre_Cover_G:
+  assumes "(x, Cover i) \<in> arcs G"
+  shows "(\<exists>j. x = Cover j \<and> j < k) \<or> (\<exists>u e. x = Edge u e 1 \<and> last_edge u e E)" 
+proof -
+  have "(\<forall>e. e \<in> arcs G \<longrightarrow> tail G e \<in> verts G) \<and> (\<forall>e. e \<in> arcs G \<longrightarrow> head G e \<in> verts G)"
+    using G_def in_hc hc_def wf_digraph_def 
+    by fast  
+  then have 1: "tail G (x, Cover i) \<in> verts G" 
+    using assms by auto
+  have "tail G (x, Cover i) = x" 
+    using G_def_2 by simp
+  then have x_in_verts: "x \<in> verts G" 
+    using 1 by auto  
+  then have 2: "(\<exists>a b. x = Edge a b 0) \<or> (\<exists>a b. x = Edge a b 1) \<or> (\<exists>i. x = Cover i)"
+    using G_def_2  
+    by auto 
+  then show ?thesis proof (cases "(\<exists>a b. x = Edge a b 0) \<or> (\<exists>a b. x = Edge a b 1)")
+    case True
+    then have 3: "(\<exists>a b. x = Edge a b 0) \<or> (\<exists>a b. x = Edge a b 1)"
+      by auto
+    show ?thesis proof(cases "\<exists>a b. x = Edge a b 0")
+      case True
+      then obtain a b where ab_def: "x = Edge a b 0" 
+        by auto
+      then have 4: "(Edge a b 0, Cover i) \<in> arcs G" 
+        using assms by simp
+      then show ?thesis 
+        using ab_def post_0_edges_G by auto 
+    next
+      case False
+      then have "\<exists>a b. x = Edge a b 1"
+        using 3 by simp
+      then obtain a b where ab_def: "x = Edge a b 1"
+        by auto
+      then have 4: "(Edge a b 1, Cover i) \<in> arcs G" 
+        using assms by simp
+      then have "last_edge a b E"
+        by (simp add: in_arcs_last_edge) 
+      then show ?thesis using ab_def by simp   
+    qed
+  next
+    case False
+    then have 1: "\<exists>i. x = Cover i"
+      using 2 by simp
+    then obtain j where j_def: "x = Cover j"
+      by auto
+    then have 2: "(Cover j, Cover i) \<in> arcs G" 
+      using assms by simp
+    then have "Cover j \<in> verts G" 
+      using j_def x_in_verts by auto 
+    then have "j < k" 
+      using G_def_2       
+      by simp
+    then show ?thesis 
+      using 1 2 j_def by simp
+  qed
+qed
 
 lemma pre_Cover:
   assumes "sublist [x, Cover i] Cycle" "card (verts G) > 1" 
-  shows "(\<exists>j. x = Cover j) \<or> (\<exists>u e. x = Edge u e 0 \<and> first_edge u e E)"
-  sorry
+  shows "i<k" "(\<exists>j. x = Cover j \<and> j < k) \<or> (\<exists>u e. x = Edge u e 1 \<and> last_edge u e E)"
+proof -
+  have "Cover i \<in> set Cycle" 
+    using assms in_sublist_impl_in_list 
+    by fastforce 
+  then show "i<k" 
+    using covers_in_Cycle by auto 
+next
+  have "(x, Cover i) \<in> set (vwalk_arcs Cycle)"
+    using assms 
+    by (simp add: sublist_def if_sublist_then_edge)
+  then have "(x, Cover i) \<in> arcs G" 
+    using vwalk_arcs_Cycle_subseteq_arcs_G assms 
+    by blast  
+  then show "(\<exists>j. x = Cover j \<and> j < k) \<or> (\<exists>u e. x = Edge u e 1 \<and> last_edge u e E)"
+    using pre_Cover_G by auto
+qed
+
+lemma post_Cover_G:
+  assumes "(Cover i, x) \<in> arcs G"
+  shows "(\<exists>j. x = Cover j \<and> j < k) \<or> (\<exists>u e. x = Edge u e 0 \<and> first_edge u e E)" 
+proof -
+  have "(\<forall>e. e \<in> arcs G \<longrightarrow> tail G e \<in> verts G) \<and> (\<forall>e. e \<in> arcs G \<longrightarrow> head G e \<in> verts G)"
+    using G_def in_hc hc_def wf_digraph_def 
+    by fast  
+  then have 1: "head G (Cover i, x) \<in> verts G" 
+    using assms by auto
+  have "head G (Cover i, x) = x" 
+    using G_def_2 by simp
+  then have x_in_verts: "x \<in> verts G" 
+    using 1 by auto  
+  then have 2: "(\<exists>a b. x = Edge a b 0) \<or> (\<exists>a b. x = Edge a b 1) \<or> (\<exists>i. x = Cover i)"
+    using G_def_2  
+    by auto 
+  then show ?thesis proof (cases "(\<exists>a b. x = Edge a b 0) \<or> (\<exists>a b. x = Edge a b 1)")
+    case True
+    then have 3: "(\<exists>a b. x = Edge a b 0) \<or> (\<exists>a b. x = Edge a b 1)"
+      by auto
+    show ?thesis proof(cases "\<exists>a b. x = Edge a b 0")
+      case True
+      then obtain a b where ab_def: "x = Edge a b 0" 
+        by auto
+      then have 4: "(Cover i, Edge a b 0) \<in> arcs G" 
+        using assms by simp
+      then show ?thesis 
+        using ab_def in_arcs_first_edge by auto 
+    next
+      case False
+      then have "\<exists>a b. x = Edge a b 1"
+        using 3 by simp
+      then obtain a b where ab_def: "x = Edge a b 1"
+        by auto
+      then have 4: "(Cover i, Edge a b 1) \<in> arcs G" 
+        using assms by simp
+      then show ?thesis 
+        using pre_1_edges_G by auto   
+    qed
+  next
+    case False
+    then have 1: "\<exists>i. x = Cover i"
+      using 2 by simp
+    then obtain j where j_def: "x = Cover j"
+      by auto
+    then have 2: "(Cover i, Cover j) \<in> arcs G" 
+      using assms by simp
+    then have "Cover j \<in> verts G" 
+      using j_def x_in_verts by auto 
+    then have "j < k" 
+      using G_def_2       
+      by simp
+    then show ?thesis 
+      using 1 2 j_def by simp
+  qed
+qed
 
 lemma post_Cover:
   assumes "sublist [Cover i, x] Cycle" "card (verts G) > 1" 
-  shows "(\<exists>j. x = Cover j) \<or> (\<exists>u e. x = Edge u e 1 \<and> last_edge u e E)"
-  sorry
+  shows "i<k" "(\<exists>j. x = Cover j \<and> j<k) \<or> (\<exists>u e. x = Edge u e 0 \<and> first_edge u e E)"
+proof -
+  have "Cover i \<in> set Cycle" 
+    using assms in_sublist_impl_in_list 
+    by fastforce 
+  then show "i<k" 
+    using covers_in_Cycle by auto 
+next
+  have "(Cover i, x) \<in> set (vwalk_arcs Cycle)"
+    using assms 
+    by (simp add: sublist_def if_sublist_then_edge)
+  then have "(Cover i, x) \<in> arcs G" 
+    using vwalk_arcs_Cycle_subseteq_arcs_G assms 
+    by blast  
+  then show "(\<exists>j. x = Cover j \<and> j<k) \<or> (\<exists>u e. x = Edge u e 0 \<and> first_edge u e E)"
+    using post_Cover_G by auto
+qed
 
 
 subsubsection\<open>Lemmas for V\<close>
