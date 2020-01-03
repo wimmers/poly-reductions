@@ -464,4 +464,53 @@ lemma distinct_same_indices:
   by (simp add: nth_eq_iff_index_eq)
 
 
+lemma length_1_set_L:
+  assumes "length L = 1" "l \<in> set L"
+  shows "L = [l]" 
+  using assms 
+  by (metis append_butlast_last_id butlast.simps(2) diff_is_0_eq' in_set_conv_nth last.simps last_conv_nth le_numeral_extra(4) length_0_conv length_butlast less_one list.distinct(1) zero_neq_one)  
+
+
+lemma last_in_set_tl: 
+  assumes "l = last L" "length L \<ge> 2" 
+  shows "l \<in> set (tl L)"
+using assms proof(induction L)
+case Nil
+then show ?case by auto
+next
+  case (Cons a L)
+  then have "length L \<ge> 1" 
+    by auto
+  then have "L \<noteq> []" 
+    by auto
+  then show ?case using Cons 
+    by force 
+qed
+
+
+lemma card_subset: 
+  assumes "s \<subseteq> set L"
+  shows "card s \<le> card (set L)"
+proof -
+  have 1: "finite (set L)" by simp
+  then have 2: "finite s" 
+    using assms finite_subset by auto 
+  then show ?thesis using assms 1 2 
+    by (simp add: card_mono) 
+qed
+
+
+lemma length_2_hd_last: 
+  assumes "length L = 2" 
+  shows "L = [hd L, last L]"
+  using assms apply(induction L) apply(auto) 
+  by (metis append_butlast_last_id append_eq_append_conv append_self_conv2 length_Cons list.size(3))
+
+
+lemma length_2_exits: 
+  assumes "length L = 2" 
+  shows "\<exists>l1 l2. L = [l1, l2]" 
+  using assms apply(induction L) apply(auto) 
+  by (metis Suc_length_conv length_0_conv) 
+
 end

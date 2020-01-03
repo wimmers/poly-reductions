@@ -109,6 +109,92 @@ lemma sublist_transitiv:
   using assms sublist_def 
   by (metis append.assoc) 
 
+lemma sublist_append:
+  assumes "sublist l1 l2" 
+  shows "sublist l1 (l3@l2)" 
+proof -
+  have "\<exists>p1 p2. p1@l1@p2 = l2" 
+    using sublist_def assms by auto
+  then obtain p1 p2 where "p1@l1@p2 = l2"
+    by auto 
+  then have "(l3@p1)@l1@p2 = l3@l2" 
+    by simp
+  then show ?thesis 
+    using sublist_def by blast
+qed
+
+lemma sublist_cons:
+  assumes "sublist l1 l2" 
+  shows "sublist l1 (l#l2)"
+  using assms 
+  by (metis Cons_eq_appendI sublist_def) 
+
+
+lemma two_sublist_distinct_same_first: 
+  assumes "sublist [x, a] L" "sublist [y, a] L" "distinct (tl L)"
+  shows "x = y"
+  using assms proof(induction L)
+  case Nil
+  then show ?case 
+    by (simp add: sublist_def) 
+next
+  case (Cons l L)
+  then have distinct: "distinct L"
+    by simp
+  then have 1: "distinct (tl L)" 
+    by (simp add: distinct_tl) 
+  then show ?case proof(cases "sublist [x, a] L")
+    case True
+    then have a1: "sublist [x, a] L"
+      by simp
+    then show ?thesis proof(cases "sublist [y, a] L")
+      case True
+      then show ?thesis 
+        using a1 1 Cons by simp  
+    next
+      case False
+      then have 2: "\<exists>p1 p2. p1@[y, a] @ p2 = (l#L)" "\<not> (\<exists>p1 p2. p1@[y, a] @ p2 = (L))"
+        using sublist_def Cons by blast+
+      then have "y = l" 
+        using Cons 
+        by (meson sublist_append_not_eq)
+      then have hd: "a = hd L" 
+        by (metis 2 append_self_conv2 hd_append2 list.distinct(1) list.sel(1) list.sel(3) tl_append2)
+      have tl: "a \<in> set (tl L)" using a1 sublist_def 
+        by (smt append_Cons list.sel(3) list.set_intros(1) self_append_conv2 sublist_implies_in_set(2) tl_append2) 
+      then have False using hd tl distinct 
+        by (metis distinct.simps(2) distinct_singleton list.collapse list_set_tl)         
+      then show ?thesis by simp
+    qed
+  next
+    case False
+    then have 2: "\<exists>p1 p2. p1@[x, a] @ p2 = (l#L)" "\<not> (\<exists>p1 p2. p1@[x, a] @ p2 = (L))"
+      using sublist_def Cons by blast+
+    then have 3: "x = l" 
+      using Cons 
+      by (meson sublist_append_not_eq)
+    then show ?thesis proof(cases "sublist [y, a] L")
+      case True
+      then have hd: "a = hd L" 
+        by (metis 2 append_self_conv2 hd_append2 list.distinct(1) list.sel(1) list.sel(3) tl_append2)
+      have tl: "a \<in> set (tl L)" using 3 True sublist_def 
+        by (smt append_Cons list.sel(3) list.set_intros(1) self_append_conv2 sublist_implies_in_set(2) tl_append2) 
+      then have False using hd tl distinct 
+        by (metis distinct.simps(2) distinct_singleton list.collapse list_set_tl)
+      then show ?thesis by simp
+    next
+      case False
+      then have 2: "\<exists>p1 p2. p1@[y, a] @ p2 = (l#L)" "\<not> (\<exists>p1 p2. p1@[y, a] @ p2 = (L))"
+        using sublist_def Cons by blast+
+      then have "y = l" 
+        using Cons 
+        by (meson sublist_append_not_eq)
+      then show ?thesis using 3 by simp
+    qed
+  qed
+qed
+
+
 subsection\<open>Auxiliary lemmas\<close>
 
 lemma card_greater_1_contains_two_elements:
