@@ -33,7 +33,7 @@ definition
           arcs = {(Edge v e 0, Edge v e 1)|v e. e\<in> set E \<and> v \<in> e} \<union> 
             {(Edge v e 0, Edge u e 0)|u v e. e\<in>set E \<and> v \<in> e \<and> u \<in> e \<and> u \<noteq> v} \<union>
             {(Edge v e 1, Edge u e 1)|u v e. e\<in> set E \<and> v \<in> e \<and> u \<in> e \<and> u \<noteq> v} \<union>
-            {(Edge v e1 1, Edge v e2 0)| v e1 e2 i j. i<length E \<and> j<length E \<and>  e1 = E!i\<and> e2 = E!j \<and> v \<in> e1 \<and> v \<in> e2 \<and> 
+            {(Edge v e1 1, Edge v e2 0)| v e1 e2 i j. i<length E \<and> j<length E \<and>  e1 = E!i\<and> e2 = E!j \<and> v \<in> e1 \<and> v \<in> e2 \<and> i<j \<and>
               \<not> (\<exists>i'< size E. v \<in> E!i' \<and> i < i' \<and> i' < j)} \<union>
             {(Edge v e 1, Cover n)| v e n i. i<length E \<and> e = E!i\<and> v \<in> e \<and> 
               \<not> (\<exists>j < size E. v \<in> E!j \<and> i < j) \<and> n< k}\<union>
@@ -47,7 +47,7 @@ definition get_second where
   "get_second e \<equiv> SOME v. v \<in> e"
 
 definition next_edge where
-  "next_edge v E e1 e2 \<equiv> \<exists>i j. i<length E \<and> j<length E \<and>  e1 = E!i \<and> e2 = E!j \<and> v \<in> e1 \<and> v \<in> e2 \<and> 
+  "next_edge v E e1 e2 \<equiv> \<exists>i j. i<length E \<and> j<length E \<and>  e1 = E!i \<and> e2 = E!j \<and> v \<in> e1 \<and> v \<in> e2 \<and> i<j \<and>
               \<not> (\<exists>k < size E. v \<in> E!k \<and> i < k \<and> k < j)"
 
 definition first_edge where
@@ -98,6 +98,40 @@ lemma get_second_in_edge:
   using assms unfolding  get_second_def apply(auto) 
   using some_in_eq by auto
 
+
+lemma first_not_next: 
+  assumes "first_edge v e1 E" "next_edge v E e2 e1" "distinct E" 
+  shows False
+proof -
+  obtain i where 1: "i<length E \<and> e1 = E!i \<and> v \<in> e1 \<and> 
+              \<not> (\<exists>j < size E. v \<in> E!j \<and> j < i)"
+    using assms first_edge_def by metis
+  obtain i' j' where 2: "i'<length E \<and> j'<length E \<and>  e2 = E!i' \<and> e1 = E!j' \<and> v \<in> e2 \<and> v \<in> e1 \<and> i'<j' \<and>
+              \<not> (\<exists>k < size E. v \<in> E!k \<and> i' < k \<and> k < j')"
+    using assms next_edge_def 
+    by metis 
+  then have "i = j'" using 1 2 
+    by (simp add: "1" assms(3) nth_eq_iff_index_eq)  
+  then have "i' < i" using 2 by simp
+  then show ?thesis using 1 2 by blast 
+qed
+
+lemma last_not_next:
+  assumes "last_edge v e1 E" "next_edge v E e1 e2" "distinct E"
+  shows False
+proof -
+  obtain i where 1: "i<length E \<and> e1 = E!i\<and> v \<in> e1 \<and> 
+              \<not> (\<exists>j < size E. v \<in> E!j \<and> i < j)"
+    using assms last_edge_def by metis
+  obtain i' j' where 2: "i'<length E \<and> j'<length E \<and>  e1 = E!i' \<and> e2 = E!j' \<and> v \<in> e1 \<and> v \<in> e2 \<and> i'<j' \<and>
+              \<not> (\<exists>k < size E. v \<in> E!k \<and> i' < k \<and> k < j')"
+    using assms next_edge_def 
+    by metis
+  then have "i = i'" using 1 2 
+    by (simp add: "1" assms(3) nth_eq_iff_index_eq)  
+  then have "i < j'" using 2 by simp
+  then show ?thesis using 1 2 by blast 
+qed
 
 subsubsection\<open>Definitions for VC_HC_2\<close>
 
@@ -358,6 +392,43 @@ next
   then have "c#cs = [a, b]" 
     using 0 by simp
   then show ?case by auto
+qed
+
+
+lemma two_sublist_distinct_same_last: 
+  assumes "sublist [x, a] L" "sublist [x, b] L" "distinct (L)"
+  shows "a = b"
+  using assms proof(induction L)
+  case Nil
+  then show ?case by (simp add: sublist_def)
+next
+  case (Cons c L)
+  then show ?case proof(cases "x = c")
+    case True
+    then have "a = hd L" "b = hd L"
+      using Cons 
+      by (metis list.sel(1) list.sel(3) sublist_def sublist_v1_hd_v2_hd_tl)+
+    then show ?thesis by simp
+  next
+    case False
+    then have "sublist [x, a] L" "sublist [x, b] L"
+      using Cons 
+      by (meson sublist_cons_impl_sublist)+
+    then show ?thesis using Cons by auto
+  qed
+qed 
+
+
+lemma sublist_append_not_in_first: 
+  assumes "sublist [v1, v2] (l1 @ l2)" "v1 \<notin> set l1"
+  shows "sublist [v1, v2] l2" 
+using assms proof(induction l1)
+  case Nil
+  then show ?case by auto
+next
+  case (Cons a l1)
+  then show ?case 
+    by (simp add: Cons sublist_cons_impl_sublist) 
 qed 
 
 subsection\<open>Auxiliary lemmas\<close>
