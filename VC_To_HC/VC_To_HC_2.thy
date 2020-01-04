@@ -1204,7 +1204,7 @@ next
   then show ?thesis 
     using b_in_set_cy_exists_sublist assms by metis
 qed
- 
+
 
 lemma a_in_Cycle_exists_sublist:
   assumes "a \<in> set Cycle" "length Cycle \<ge> 2" 
@@ -1234,9 +1234,9 @@ next
     using a_in_set_cy_exists_sublist assms by metis
 qed
 
-lemma exists_edge_implies_length_cycle_at_least_2: 
+lemma exists_edge_implies_length_cycle_at_least_4: 
   assumes "e \<in> set E" 
-  shows "length Cycle > 2" 
+  shows "length Cycle \<ge> 4" 
 proof -
   obtain u v where uv_def: "e = {u, v}" "u \<noteq> v" 
     using assms in_hc e_in_E_e_explicit 
@@ -1250,39 +1250,22 @@ proof -
     "Edge u e 0 \<in> set Cycle" "Edge u e 1 \<in> set Cycle"
     by (meson contains_two_card_greater_1 finite_verts hc_node.inject(2) inVerts_inCycle zero_neq_one)+
   show ?thesis proof (rule ccontr) 
-    assume "\<not> 2 < length Cycle"
-    then have "length Cycle = 0 \<or> length Cycle = 1 \<or> length Cycle = 2" 
-      by linarith
-    then show False proof
-      assume "length Cycle = 0" 
-      then have "Cycle = []" by simp
-      then have "set Cycle = {}" by simp
-      then show False using in_Cycle by auto
-    next
-      assume "length Cycle = 1 \<or> length Cycle = 2" 
-      then show ?thesis proof
-        assume "length Cycle = 1" 
-        then have "Cycle = [Edge v e 0]" "Cycle = [Edge v e 1]"
-          using in_Cycle 
-          by (simp add: length_1_set_L)+
-        then show False by simp
-      next
-        assume 0: "length Cycle = 2" 
-        have 1: "{Edge v e 0, Edge v e 1, Edge u e 0, Edge u e 1} \<subseteq> set Cycle" 
-          using in_Cycle by fast
-        have 2: "card {Edge v e 0, Edge v e 1, Edge u e 0, Edge u e 1} > 2"
-          using uv_def 
-          by auto
-        then have "card {Edge v e 0, Edge v e 1, Edge u e 0, Edge u e 1} \<le> card (set Cycle)" 
-          using card_subset 1 by blast
-        then have "card (set Cycle) > 2" 
-          using 1 2 by linarith 
-        then show False using 0 
-          by (metis Suc_leI card_length not_less_eq_eq) 
-      qed
-    qed
+    assume "\<not> 4 \<le> length Cycle"
+    then have 0: "length Cycle \<le> 3" by simp
+    have 1: "{Edge v e 0, Edge v e 1, Edge u e 0, Edge u e 1} \<subseteq> set Cycle" 
+      using in_Cycle by fast
+    have 2: "card {Edge v e 0, Edge v e 1, Edge u e 0, Edge u e 1} > 3"
+      using uv_def 
+      by auto
+    then have "card {Edge v e 0, Edge v e 1, Edge u e 0, Edge u e 1} \<le> card (set Cycle)" 
+      using card_subset 1 by blast
+    then have "card (set Cycle) > 3" 
+      using 1 2 by linarith 
+    then show False using 0 
+      by (meson card_length leD le_trans)  
   qed
 qed
+
 
 lemma exists_edge_implies_at_least_on_vertex: 
   assumes "e \<in> set E" 
@@ -1315,14 +1298,79 @@ proof -
 qed
 
 
+lemma sublist_ab_ba_length_geq_4_False: 
+  assumes "sublist [a, b] Cycle" "sublist [b, a] Cycle" "length Cycle \<ge> 4" "a \<noteq> b"
+  shows "False"
+proof -
+  have distinct: "distinct (tl Cycle)"
+    by (simp add: distinct_tl_Cycle) 
+  have not_empty: "Cycle \<noteq> []" 
+    using assms sublist_def by auto 
+  have card_G: "1 < card (verts G)" 
+    using length_cycle_number_verts assms by simp
+  then have 1: "hd Cycle = last Cycle" 
+    using hd_last_Cycle not_empty by simp
+  show ?thesis proof (cases "a = hd Cycle")
+    case True
+    then have b_hd: "b = hd (tl Cycle)" 
+      using assms sublist_hd_tl_equal_b_hd_tl 
+      by (simp add: sublist_hd_tl_equal_b_hd_tl "1" distinct_tl_Cycle) 
+    then have "sublist [b, a] (tl Cycle)" 
+      using assms True
+      by (metis hd_Cons_tl not_empty sublist_cons_impl_sublist) 
+    have "a = last Cycle" 
+      by (simp add: "1" True) 
+    then have "tl Cycle = [b, a]"
+      using distinct sublist_hd_last_only_2_elems b_hd 
+      by (metis \<open>sublist [b, a] (tl Cycle)\<close> assms(1) assms(2) distinct_singleton hd_Cons_tl last_tl sublist_not_cyclic_for_distinct)  
+    then have "length (tl Cycle) = 2" 
+      by simp
+    then have "length Cycle = 3"
+      by auto  
+    then show ?thesis using assms by auto
+  next
+    case a: False
+    then show ?thesis proof(cases "b = hd Cycle")
+      case True
+      then have a_hd: "a = hd (tl Cycle)" 
+        using assms sublist_hd_tl_equal_b_hd_tl 
+        by (simp add: sublist_hd_tl_equal_b_hd_tl "1" distinct_tl_Cycle)  
+      then have "sublist [a, b] (tl Cycle)" 
+        using assms True
+        by (metis hd_Cons_tl not_empty sublist_cons_impl_sublist) 
+      have "b = last Cycle" 
+        by (simp add: "1" True) 
+      then have "tl Cycle = [a, b]"
+        using sublist_hd_last_only_2_elems 
+        by (metis \<open>sublist [a, b] (tl Cycle)\<close> a_hd assms(1) assms(2) distinct_singleton distinct_tl_Cycle hd_Cons_tl last_tl sublist_not_cyclic_for_distinct)
+      then have "length (tl Cycle) = 2" 
+        by simp
+      then have "length Cycle = 3"
+        by auto  
+      then show ?thesis using assms by auto
+    next
+      case b: False
+      then have "sublist [a, b] (tl Cycle)" "sublist [b, a] (tl Cycle)"
+        using a assms 
+        by (metis hd_Cons_tl not_empty sublist_cons_impl_sublist)+ 
+      then show ?thesis using distinct 
+        by (meson sublist_not_cyclic_for_distinct) 
+    qed
+  qed
+qed
+
+
+
+
+
 lemma subpath_for_edge: 
   assumes "e \<in> set E" "v \<in> e" "u \<in> e" "u \<noteq> v"
   shows "(sublist [Edge v e 0, Edge v e 1] Cycle \<and> sublist [Edge u e 0, Edge u e 1] Cycle) \<or>
     (sublist [Edge v e 0, Edge v e 1] Cycle \<and> sublist [Edge u e 0, Edge v e 0] Cycle \<and> sublist [Edge v e 1, Edge u e 1] Cycle) \<or>
     (sublist [Edge u e 0, Edge u e 1] Cycle \<and> sublist [Edge v e 0, Edge u e 0] Cycle \<and> sublist [Edge u e 1, Edge v e 1] Cycle)"
 proof -
-  have length_Cy: "length Cycle > 2" 
-    using assms exists_edge_implies_length_cycle_at_least_2 by simp
+  have length_Cy: "length Cycle \<ge> 4" 
+    using assms exists_edge_implies_length_cycle_at_least_4 by simp
   have card_G: "card (verts G) > 1" 
     using assms exists_edge_implies_at_least_on_vertex by simp
   have e_def: "e = {u, v}"  
@@ -1362,7 +1410,8 @@ proof -
         using e_def by blast
       then have "sublist [Edge v e 1, Edge u e 1] Cycle" 
         using x2_def v'_def by simp
-      then have "False" using sub1 sorry
+      then have "False" 
+        using sub1 sublist_ab_ba_length_geq_4_False length_Cy assms by blast
       then show ?thesis by simp
     next
       assume "(x2 = Edge u e 0)"

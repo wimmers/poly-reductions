@@ -195,6 +195,171 @@ next
 qed
 
 
+lemma sublist_cons_impl_sublist: 
+  assumes "sublist [a, b] (c#cs)" "a\<noteq> c"
+  shows "sublist [a, b] cs"
+proof -
+  obtain p1 p2 where p_def: "p1@[a, b] @ p2 = (c#cs)" 
+    using sublist_def assms 
+    by blast
+  then have 1: "p1 \<noteq> []" 
+    using assms 
+    by fastforce
+  then have "c = hd p1" 
+    using p_def 
+    by (metis hd_append2 list.sel(1))
+  then have "tl p1 @ [a, b] @ p2 = cs"
+    using 1 p_def 
+    by (metis list.sel(3) tl_append2) 
+  then show ?thesis using sublist_def 
+    by blast
+qed
+
+
+lemma sublist_not_cyclic_for_distinct: 
+  assumes "sublist [a, b] Cy" "sublist [b, a] Cy" "distinct Cy"
+  shows False
+  using assms proof (induction Cy)
+  case Nil
+  then show ?case 
+    using sublist_def 
+    by fast  
+next
+  case (Cons c Cy)
+  then show ?case proof(cases "a = c")
+    case a: True
+    then have b_hd: "b = hd Cy" 
+      using sublist_def Cons 
+      by (metis list.sel(1) list.sel(3) sublist_v1_hd_v2_hd_tl)  
+    then show ?thesis proof(cases "b = c")
+      case b: True
+      then have "b = a" using a by simp
+      then have "sublist [a, a] (c#Cy)" 
+        using Cons by auto
+      then have "\<not> distinct Cy" 
+        using sublist_def Cons sublist_implies_in_set_a by metis 
+      then show ?thesis 
+        using Cons by auto
+    next
+      case b: False
+      then have "b \<noteq> a" 
+        using a by simp
+      have "sublist [b, a] Cy" 
+        using b Cons sublist_cons_impl_sublist
+        by metis
+      then have "a \<in> set Cy"
+        by (simp add: sublist_def sublist_implies_in_set) 
+      then show ?thesis 
+        using a Cons by simp
+    qed
+  next
+    case a: False
+    then show ?thesis proof(cases "b = c")
+      case True
+      then have "b \<noteq> a" 
+        using a by simp
+      have "sublist [a, b] Cy" 
+        using a Cons sublist_cons_impl_sublist
+        by metis
+      then have "b \<in> set Cy"
+        by (simp add: sublist_def sublist_implies_in_set) 
+      then show ?thesis 
+        using True Cons by simp
+    next
+      case False
+      then have "sublist [a, b] Cy" "sublist [b, a] Cy"
+        using a sublist_cons_impl_sublist Cons
+        by metis+  
+      then show ?thesis 
+        using Cons by auto 
+    qed
+  qed
+qed
+
+
+lemma distinct_sublist_last_first_of_sublist_false: 
+  assumes "distinct cs" "sublist [a, b] cs" "a = last cs" 
+  shows False
+  using assms proof(induction cs)
+  case Nil
+  then  have "[] \<noteq>  []" 
+    by (simp add: sublist_def)  
+  then show ?thesis by auto
+next
+  case (Cons c cs)
+  then show ?thesis proof(cases "a = c")
+    case True
+    then have "hd (a#cs) = last (a#cs)" 
+      using Cons by auto 
+    then have "(a#cs) = [a]" 
+      using Cons 
+      by (metis True distinct.simps(2) last.simps last_in_set) 
+    then show ?thesis using Cons 
+      by (simp add: sublist_def) 
+  next
+    case False
+    then have 1: "sublist [a,b] cs" 
+      using Cons 
+      by (meson sublist_cons_impl_sublist) 
+    then have "cs \<noteq> []"
+      using Cons.prems False by auto 
+    then have 2: "last (c#cs) = last cs" by simp
+    then show ?thesis using Cons 1  2 by simp
+  qed
+qed
+
+
+lemma sublist_hd_tl_equal_b_hd_tl: 
+  assumes "sublist [a, b] cs" "a = hd cs" "distinct (tl cs)" 
+    "a = last cs"
+  shows "b = hd (tl cs)" 
+proof -
+  obtain p1 p2 where p_def: "p1 @ [a, b] @ p2 = cs"
+    using sublist_def assms by blast
+  show ?thesis proof(cases "p1 =[]")
+    case True
+    then show ?thesis 
+      using p_def by auto  
+  next
+    case False
+    then have 1: "sublist [a, b](tl cs)" 
+      using assms 
+      by (metis p_def sublist_def tl_append2) 
+    then have "tl cs \<noteq> []"
+      using sublist_def by fastforce
+    then have "last cs = last (tl cs)"
+      by (simp add: last_tl)  
+    then show ?thesis 
+      using 1 assms p_def distinct_sublist_last_first_of_sublist_false 
+      by metis 
+  qed
+qed
+
+
+lemma sublist_hd_last_only_2_elems: 
+  assumes "sublist [a,b] cs" "a = hd cs" "b = last cs" "distinct cs"
+  shows "cs = [a, b]" 
+  using assms proof(induction cs)
+  case Nil
+  then show ?case 
+    by (simp add: sublist_def) 
+next
+  case (Cons c cs)
+  then have 0: "a = c" 
+    using Cons by auto
+  then have 1: "b = hd (cs)" 
+    using Cons 
+    by (metis list.sel(3) sublist_def sublist_v1_hd_v2_hd_tl) 
+  then have "hd cs = last cs" 
+    using Cons 
+    by (metis \<open>a = c\<close> distinct_sublist_last_first_of_sublist_false last_ConsL last_ConsR) 
+  then have "cs = [b]" using 1 Cons 
+    by (metis \<open>a = c\<close> append_Nil2 distinct_tl hd_in_set last.simps list.sel(3) sublist_not_cyclic_for_distinct sublist_set_last_ls1_2)
+  then have "c#cs = [a, b]" 
+    using 0 by simp
+  then show ?case by auto
+qed 
+
 subsection\<open>Auxiliary lemmas\<close>
 
 lemma card_greater_1_contains_two_elements:
