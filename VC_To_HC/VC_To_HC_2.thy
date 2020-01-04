@@ -1928,6 +1928,33 @@ proof -
 qed
 
 
+lemma always_in_Cover_2_1: 
+  assumes "E!i = e" "i<length E"
+  shows "((sublist [Edge v e 0, Edge v e 1] Cycle \<and> sublist [Edge u e 0, Edge u e 1] Cycle) \<longrightarrow> (u \<in> C \<and> v \<in> C)) \<and> 
+    ((sublist [Edge v e 0, Edge v e 1] Cycle \<and> sublist [Edge u e 0, Edge v e 0] Cycle \<and> sublist [Edge v e 1, Edge u e 1] Cycle) \<longrightarrow> (u \<in> C)) \<and> 
+    ((sublist [Edge u e 0, Edge u e 1] Cycle \<and> sublist [Edge v e 0, Edge u e 0] Cycle \<and> sublist [Edge u e 1, Edge v e 1] Cycle) \<longrightarrow> (v \<in> C))"
+proof(induction i)
+  case 0
+  then show ?thesis sorry
+next
+  case (Suc i)
+  then show ?thesis sorry
+qed
+
+lemma always_in_Cover_2:
+  assumes "E!i = e" "i<length E"
+  shows "(sublist [Edge v e 0, Edge v e 1] Cycle \<and> sublist [Edge u e 0, Edge u e 1] Cycle) \<longrightarrow> (u \<in> C \<and> v \<in> C)"
+    and "(sublist [Edge v e 0, Edge v e 1] Cycle \<and> sublist [Edge u e 0, Edge v e 0] Cycle \<and> sublist [Edge v e 1, Edge u e 1] Cycle) \<longrightarrow> (u \<in> C)" 
+    and "(sublist [Edge u e 0, Edge u e 1] Cycle \<and> sublist [Edge v e 0, Edge u e 0] Cycle \<and> sublist [Edge u e 1, Edge v e 1] Cycle) \<longrightarrow> (v \<in> C)"
+  using assms always_in_Cover_2_1 by blast+
+
+lemma always_in_Cover: 
+  assumes "(sublist [Edge v e 0, Edge v e 1] Cycle \<and> sublist [Edge u e 0, Edge u e 1] Cycle) \<or>
+    (sublist [Edge v e 0, Edge v e 1] Cycle \<and> sublist [Edge u e 0, Edge v e 0] Cycle \<and> sublist [Edge v e 1, Edge u e 1] Cycle) \<or>
+    (sublist [Edge u e 0, Edge u e 1] Cycle \<and> sublist [Edge v e 0, Edge u e 0] Cycle \<and> sublist [Edge u e 1, Edge v e 1] Cycle)"
+  shows "u \<in> C \<or> v \<in> C"
+  sorry (*Maybe try to proof using an induction about position of e in E?*)
+
 subsubsection\<open>Lemmas for V\<close>
 
 lemma C_subset_Nodes:
@@ -2244,7 +2271,26 @@ paragraph\<open>The Cover fulfills is_verte_cover\<close>
 
 lemma is_vc_C:
   shows "is_vertex_cover (set E) C" 
-  sorry
+  unfolding is_vertex_cover_def proof
+  fix e assume ass: "e \<in> set E"
+  then have "\<exists>i. E!i = e \<and> i<length E"
+    using x_in_implies_exist_index by fastforce
+  then obtain i where i_def: "E!i = e \<and>i < length E" 
+    by auto
+  then obtain u v where e_def: "e = {u, v}" "u\<noteq>v" 
+    using ass by (meson e_in_E_e_explicit) 
+  then have "(sublist [Edge v e 0, Edge v e 1] Cycle \<and> sublist [Edge u e 0, Edge u e 1] Cycle) \<or>
+    (sublist [Edge v e 0, Edge v e 1] Cycle \<and> sublist [Edge u e 0, Edge v e 0] Cycle \<and> sublist [Edge v e 1, Edge u e 1] Cycle) \<or>
+    (sublist [Edge u e 0, Edge u e 1] Cycle \<and> sublist [Edge v e 0, Edge u e 0] Cycle \<and> sublist [Edge u e 1, Edge v e 1] Cycle)"
+    using subpath_for_edge ass by simp 
+  then have "u\<in>C \<or> v \<in> C"  using always_in_Cover_2 i_def 
+    by blast
+  then have "u\<in>C \<or> v \<in> C" 
+    by (simp add: always_in_Cover)
+  then show "\<exists>v\<in>C. v \<in> e" using e_def by blast
+qed
+
+
 
 lemma C_properties: 
   shows "C \<subseteq> \<Union> (set E) \<and> card C \<le> k \<and> is_vertex_cover (set E) C \<and> finite C"
