@@ -578,6 +578,7 @@ next
 qed 
 
 
+
 lemma sublist_append_not_in_first: 
   assumes "sublist [v1, v2] (l1 @ l2)" "v1 \<notin> set l1"
   shows "sublist [v1, v2] l2" 

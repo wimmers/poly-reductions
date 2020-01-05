@@ -8,7 +8,6 @@ context
   fixes E k  assumes in_hc: "vc_hc (E, k) \<in> hc"
   fixes G assumes G_def: "G = vc_hc (E, k)" 
   fixes Cycle assumes Cycle_def: "is_hc G Cycle"
-  fixes C assumes "C = {v|v e i j. (Edge v e i, Cover j) \<in> set (vwalk_arcs Cycle)}"
   fixes Cov assumes Cov_def: "Cov = {v|v e i j. (Cover j, Edge v e i) \<in> set (vwalk_arcs Cycle)}"
 begin
 
@@ -2225,27 +2224,43 @@ qed
 
 
 lemma always_in_Cover_2:
-  assumes "E!i = e" "i<length E"
+  assumes "E!i = e" "i<length E" "e = {u, v}" "u \<noteq> v"
   shows "(sublist [Edge v e 0, Edge v e 1] Cycle \<and> sublist [Edge u e 0, Edge u e 1] Cycle) \<longrightarrow> (u \<in> Cov \<and> v \<in> Cov)"
     and "(sublist [Edge v e 0, Edge v e 1] Cycle \<and> sublist [Edge u e 0, Edge v e 0] Cycle \<and> sublist [Edge v e 1, Edge u e 1] Cycle) \<longrightarrow> (u \<in> Cov)" 
     and "(sublist [Edge u e 0, Edge u e 1] Cycle \<and> sublist [Edge v e 0, Edge u e 0] Cycle \<and> sublist [Edge u e 1, Edge v e 1] Cycle) \<longrightarrow> (v \<in> Cov)"
-  using assms always_in_Cover_2_1 by blas
+  using assms always_in_Cover_2_1 by auto
 
 lemma always_in_Cover: 
-  assumes "(sublist [Edge v e 0, Edge v e 1] Cycle \<and> sublist [Edge u e 0, Edge u e 1] Cycle) \<or>
-    (sublist [Edge v e 0, Edge v e 1] Cycle \<and> sublist [Edge u e 0, Edge v e 0] Cycle \<and> sublist [Edge v e 1, Edge u e 1] Cycle) \<or>
-    (sublist [Edge u e 0, Edge u e 1] Cycle \<and> sublist [Edge v e 0, Edge u e 0] Cycle \<and> sublist [Edge u e 1, Edge v e 1] Cycle)"
-  shows "u \<in> C \<or> v \<in> C"
-  sorry (*Maybe try to proof using an induction about position of e in E?*)
+  assumes "e \<in> set E" "e = {u, v}" "u \<noteq> v"
+  shows "u \<in> Cov \<or> v \<in> Cov"
+proof -
+  have "\<exists>i. e = E!i \<and> i < length E"
+    using assms 
+    by (simp add: x_in_implies_exist_index) 
+  then obtain i where i_def: "e = E!i" "i<length E"
+    by auto
+  then have 1: "(sublist [Edge v e 0, Edge v e 1] Cycle \<and> sublist [Edge u e 0, Edge u e 1] Cycle) \<longrightarrow> (u \<in> Cov \<and> v \<in> Cov)"
+     "(sublist [Edge v e 0, Edge v e 1] Cycle \<and> sublist [Edge u e 0, Edge v e 0] Cycle \<and> sublist [Edge v e 1, Edge u e 1] Cycle) \<longrightarrow> (u \<in> Cov)" 
+    "(sublist [Edge u e 0, Edge u e 1] Cycle \<and> sublist [Edge v e 0, Edge u e 0] Cycle \<and> sublist [Edge u e 1, Edge v e 1] Cycle) \<longrightarrow> (v \<in> Cov)"
+    using assms always_in_Cover_2 apply blast 
+    using assms always_in_Cover_2 i_def by auto
+  have "sublist [Edge v e 0, Edge v e 1] Cycle \<and> sublist [Edge u e 0, Edge u e 1] Cycle \<or>
+        sublist [Edge v e 0, Edge v e 1] Cycle \<and> sublist [Edge u e 0, Edge v e 0] Cycle \<and> sublist [Edge v e 1, Edge u e 1] Cycle \<or>
+        sublist [Edge u e 0, Edge u e 1] Cycle \<and> sublist [Edge v e 0, Edge u e 0] Cycle \<and> sublist [Edge u e 1, Edge v e 1] Cycle"
+    using assms subpath_for_edge by simp
+  then show ?thesis using 1 
+    by blast  
+qed
+
 
 subsubsection\<open>Lemmas for V\<close>
 
-lemma C_subset_Nodes:
-  shows "C \<subseteq>  \<Union> (set E)"
+lemma Cov_subset_Nodes:
+  shows "Cov \<subseteq>  \<Union> (set E)"
 proof 
-  fix x assume "x \<in> C" 
-  then have "\<exists>e i j. (Edge x e i, Cover j) \<in> set ( vwalk_arcs Cycle)" 
-    using C_def by auto 
+  fix x assume "x \<in> Cov" 
+  then have "\<exists>e i j. (Cover j, Edge x e i) \<in> set ( vwalk_arcs Cycle)" 
+    using Cov_def by auto 
   then have "\<exists>e i. Edge x e i \<in> set Cycle" 
     using in_set_vwalk_arcsE by metis
   then obtain e i where "Edge x e i \<in> set Cycle"
@@ -2257,15 +2272,11 @@ proof
     by blast
 qed
 
-lemma finite_C:
-  shows "finite C" 
-  using C_subset_Nodes ugraph ugraph_vertex_set_finite finite_subset 
+lemma finite_Cov:
+  shows "finite Cov" 
+  using Cov_subset_Nodes ugraph ugraph_vertex_set_finite finite_subset 
   by metis
 
-
-lemma Cover_equal:
-  "Cover i = Cover j \<longleftrightarrow> i = j" 
-  by simp
 
 paragraph\<open>Cardinality of Cover\<close>
 
@@ -2452,8 +2463,33 @@ next
   qed
 qed 
 
+
+lemma two_edges_same_tail_not_distinct: 
+  assumes "(x, v1) \<in> set (vwalk_arcs Cycle)" "(x, v2) \<in> set (vwalk_arcs Cycle)" "v1 \<noteq> v2"
+  shows False
+proof -
+  have 1: "\<exists>p1 p2. p1@ [x, v1]@p2 = Cycle"
+    using sublist_for_edges assms 
+    by fast
+  then have 11: "v1 \<in> set Cycle" by auto
+  have 2: "\<exists>p1 p2. p1@ [x, v2]@p2 = Cycle"
+    using sublist_for_edges assms 
+    by fast
+  then have 21: "v2 \<in> set Cycle" 
+    by auto
+  then have "v1 \<in> (verts G)" "v2 \<in> (verts G)"
+    using 11 inCycle_inVerts by auto
+  then have card_G: "card (verts G) > 1" using assms 
+    by (meson contains_two_card_greater_1 finite_verts) 
+  then have "sublist [x, v1] Cycle" "sublist [x, v2] Cycle" 
+    using sublist_def 1 2 by blast+
+  then show False using two_sublist_Cycle_same_last assms card_G
+    by blast
+qed
+
+
 lemma card_Ci:
-  assumes "S = {v|v e i. (Edge v e i, Cover j) \<in> set (vwalk_arcs Cycle)}" 
+  assumes "S = {v|v e i. (Cover j, Edge v e i) \<in> set (vwalk_arcs Cycle)}" 
   shows "card S \<le> 1"
 proof (cases "card S \<le> 1")
   case True
@@ -2469,34 +2505,34 @@ next
     using card_greater_1_contains_two_elements by fast 
   then obtain v1 v2 where "v1 \<in> S \<and> v2 \<in> S \<and> v1 \<noteq> v2"  
     by auto
-  then have "\<exists>e1 i1 e2 i2. (Edge v1 e1 i1, Cover j) \<in> set (vwalk_arcs Cycle) \<and>
-    (Edge v2 e2 i2, Cover j) \<in> set (vwalk_arcs Cycle) \<and> Edge v1 e1 i1 \<noteq> Edge v2 e2 i2"
+  then have "\<exists>e1 i1 e2 i2. (Cover j, Edge v1 e1 i1) \<in> set (vwalk_arcs Cycle) \<and>
+    (Cover j, Edge v2 e2 i2) \<in> set (vwalk_arcs Cycle) \<and> Edge v1 e1 i1 \<noteq> Edge v2 e2 i2"
     using assms by fast
-  then obtain e1 i1 e2 i2 where edges_def: "(Edge v1 e1 i1, Cover j) \<in> set (vwalk_arcs Cycle) \<and>
-    (Edge v2 e2 i2, Cover j) \<in> set (vwalk_arcs Cycle) \<and> Edge v1 e1 i1 \<noteq> Edge v2 e2 i2" 
+  then obtain e1 i1 e2 i2 where edges_def: "(Cover j, Edge v1 e1 i1) \<in> set (vwalk_arcs Cycle) \<and>
+    (Cover j, Edge v2 e2 i2) \<in> set (vwalk_arcs Cycle) \<and> Edge v1 e1 i1 \<noteq> Edge v2 e2 i2" 
     by auto
   then have "\<not>distinct (tl Cycle)" 
-    using two_edges_same_hd_not_distinct by metis
+    using two_edges_same_tail_not_distinct by metis
   then show ?thesis using distinct by simp
 qed
 
 
-lemma card_C:
-  shows "card C \<le> k"
+lemma card_Cov:
+  shows "card Cov \<le> k"
 proof -
   have 1: "card {i|i. Cover i \<in> verts G} = k"
     using G_def_2 by simp 
 
   obtain Cover_is where Cover_is_def: "Cover_is = {i. Cover i \<in> verts G}" by auto
-  obtain S where S_def: "S = {{v|v e i . (Edge v e i, Cover j) \<in> set (vwalk_arcs Cycle)}|j. j \<in> Cover_is}" by auto
-  have eq: "C =  \<Union>S"
+  obtain S where S_def: "S = {{v|v e i . (Cover j, Edge v e i) \<in> set (vwalk_arcs Cycle)}|j. j \<in> Cover_is}" by auto
+  have eq: "Cov =  \<Union>S"
   proof
-    show "C \<subseteq>  \<Union> S" proof 
-      fix x assume "x \<in> C"
-      then have "\<exists>e i j. (Edge x e i, Cover j) \<in> set (vwalk_arcs Cycle)" 
-        using C_def by fast
-      then have "\<exists>j. \<exists>e i.(Edge x e i, Cover j) \<in> set (vwalk_arcs Cycle)" by blast
-      then obtain j where j_def: " \<exists>e i.(Edge x e i, Cover j) \<in> set (vwalk_arcs Cycle)"
+    show "Cov \<subseteq>  \<Union> S" proof 
+      fix x assume "x \<in> Cov"
+      then have "\<exists>e i j. (Cover j, Edge x e i) \<in> set (vwalk_arcs Cycle)" 
+        using Cov_def by fast
+      then have "\<exists>j. \<exists>e i.(Cover j, Edge x e i) \<in> set (vwalk_arcs Cycle)" by blast
+      then obtain j where j_def: " \<exists>e i.(Cover j, Edge x e i) \<in> set (vwalk_arcs Cycle)"
         by auto
       then have "Cover j \<in> verts G" 
         by (meson inCycle_inVerts in_set_vwalk_arcsE) 
@@ -2506,14 +2542,14 @@ proof -
         using S_def j_def by blast 
     qed   
   next
-    show " \<Union>S \<subseteq> C"  proof 
+    show " \<Union>S \<subseteq> Cov"  proof 
       fix x assume "x \<in>  \<Union>S" 
-      then have "\<exists>j. \<exists>e i.(Edge x e i, Cover j) \<in> set (vwalk_arcs Cycle)" 
+      then have "\<exists>j. \<exists>e i.(Cover j, Edge x e i) \<in> set (vwalk_arcs Cycle)" 
         using S_def by blast 
-      then have "\<exists>e i j. (Edge x e i, Cover j) \<in> set (vwalk_arcs Cycle)" 
+      then have "\<exists>e i j. (Cover j, Edge x e i) \<in> set (vwalk_arcs Cycle)" 
         by auto
-      then show "x \<in> C" 
-        using C_def by blast
+      then show "x \<in> Cov" 
+        using Cov_def by blast
     qed
   qed
 
@@ -2530,11 +2566,11 @@ proof -
       by (meson card_infinite) 
   qed  
   have fin_S: "finite S"
-    using finite_C eq 
+    using finite_Cov eq 
     using finite_UnionD by auto  
   have 2: "card S \<le> card Cover_is" 
     using S_def 3 card_dep_on_other_set by fastforce 
-  have "\<forall>j \<in> Cover_is. card {v|v e i . (Edge v e i, Cover j) \<in> set (vwalk_arcs Cycle)} \<le> 1"  
+  have "\<forall>j \<in> Cover_is. card {v|v e i . (Cover j, Edge v e i) \<in> set (vwalk_arcs Cycle)} \<le> 1"  
     using card_Ci by blast 
   then have "\<forall>S'\<in> S. card S' \<le> 1" 
     using S_def card_forall_for_elements 
@@ -2543,41 +2579,33 @@ proof -
     using S_def card_union_if_all_subsets_card_1 fin_S by blast
   then have 3: "card (\<Union>S) \<le> card Cover_is" 
     using 2 by linarith
-  have "card C = card (\<Union>S)" 
+  have "card Cov = card (\<Union>S)" 
     using eq by simp  
-  then show "card C \<le> k" 
+  then show "card Cov \<le> k" 
     using 1 3 Cover_is_def by simp 
 qed
 
-paragraph\<open>The Cover fulfills is_verte_cover\<close>
+paragraph\<open>The Cover fulfills is_vertex_cover\<close>
 
 
-lemma is_vc_C:
-  shows "is_vertex_cover (set E) C" 
-  unfolding is_vertex_cover_def proof
+lemma is_vc_Cov:
+  shows "is_vertex_cover (set E) Cov" 
+  unfolding is_vertex_cover_def 
+proof
   fix e assume ass: "e \<in> set E"
-  then have "\<exists>i. E!i = e \<and> i<length E"
-    using x_in_implies_exist_index by fastforce
-  then obtain i where i_def: "E!i = e \<and>i < length E" 
-    by auto
   then obtain u v where e_def: "e = {u, v}" "u\<noteq>v" 
-    using ass by (meson e_in_E_e_explicit) 
-  then have "(sublist [Edge v e 0, Edge v e 1] Cycle \<and> sublist [Edge u e 0, Edge u e 1] Cycle) \<or>
-    (sublist [Edge v e 0, Edge v e 1] Cycle \<and> sublist [Edge u e 0, Edge v e 0] Cycle \<and> sublist [Edge v e 1, Edge u e 1] Cycle) \<or>
-    (sublist [Edge u e 0, Edge u e 1] Cycle \<and> sublist [Edge v e 0, Edge u e 0] Cycle \<and> sublist [Edge u e 1, Edge v e 1] Cycle)"
-    using subpath_for_edge ass by simp 
-  then have "u\<in>C \<or> v \<in> C"  using always_in_Cover_2 i_def 
-    by blas
-  then have "u\<in>C \<or> v \<in> C" 
-    by (simp add: always_in_Cover)
-  then show "\<exists>v\<in>C. v \<in> e" using e_def by blast
+    using ass by (meson e_in_E_e_explicit)   
+  then have "u\<in>Cov \<or> v \<in> Cov" 
+    using always_in_Cover ass 
+    by auto
+  then show "\<exists>v\<in>Cov. v \<in> e" using e_def by blast
 qed
 
 
 
-lemma C_properties: 
-  shows "C \<subseteq> \<Union> (set E) \<and> card C \<le> k \<and> is_vertex_cover (set E) C \<and> finite C"
-  using is_vc_C card_C finite_C C_subset_Nodes by simp
+lemma Cov_properties: 
+  shows "Cov \<subseteq> \<Union> (set E) \<and> card Cov \<le> k \<and> is_vertex_cover (set E) Cov \<and> finite Cov"
+  using is_vc_Cov card_Cov finite_Cov Cov_subset_Nodes by simp
 
 
 
@@ -2585,31 +2613,31 @@ lemma C_properties:
 lemma Cover_exists:
   shows "(\<exists>V. set V \<subseteq> \<Union> (set E) \<and> length V = k \<and> is_vertex_cover_list E V \<and> distinct V)"
 proof -
-  have "finite C" using C_properties 
+  have "finite Cov" using Cov_properties 
     by auto
-  obtain k' where k'_def: "k' = k - (card C)" by simp
-  then obtain leftNodes where leftNodes_def: "leftNodes = ((\<Union> (set E)) - C)"  by simp
+  obtain k' where k'_def: "k' = k - (card Cov)" by simp
+  then obtain leftNodes where leftNodes_def: "leftNodes = ((\<Union> (set E)) - Cov)"  by simp
   then have "leftNodes \<subseteq> \<Union> (set E)" by simp
-  then obtain setV where setV_def: "setV= C \<union> get_elements k' leftNodes" by simp
+  then obtain setV where setV_def: "setV= Cov \<union> get_elements k' leftNodes" by simp
   have 1: "k' \<le> card leftNodes"  
-    using C_properties leftNodes_def k'_def k_smaller_number_vertices card_Diff_subset 
+    using Cov_properties leftNodes_def k'_def k_smaller_number_vertices card_Diff_subset 
     by fastforce 
   then have 2: "setV \<subseteq> \<Union> (set E)"  
-    using \<open>leftNodes \<subseteq> \<Union> (set E)\<close> get_elements_subset setV_def C_properties by blast
+    using \<open>leftNodes \<subseteq> \<Union> (set E)\<close> get_elements_subset setV_def Cov_properties by blast
   then have 4: "finite setV" 
-    using 2 C_properties ugraph_def 
+    using 2 Cov_properties ugraph_def 
     by (meson finite_subset ugraph ugraph_vertex_set_finite) 
   have 3: "card setV = k" proof -
     have "card (get_elements k' leftNodes) = k'" 
       by (simp add: "1" card_get_elements) 
     have a: "(get_elements k' leftNodes) \<subseteq> leftNodes" 
       by (simp add: "1" get_elements_subset)  
-    have "leftNodes \<inter> C = {}" using leftNodes_def by auto
-    then have "C \<inter> (get_elements k' leftNodes) = {}" using a by auto
-    then have "card setV = card C + card (get_elements k' leftNodes)" 
+    have "leftNodes \<inter> Cov = {}" using leftNodes_def by auto
+    then have "Cov \<inter> (get_elements k' leftNodes) = {}" using a by auto
+    then have "card setV = card Cov + card (get_elements k' leftNodes)" 
       using setV_def 4 
       by (simp add: card_Un_disjoint)   
-    then show ?thesis using k'_def setV_def C_properties 
+    then show ?thesis using k'_def setV_def Cov_properties 
       using \<open>card (get_elements k' leftNodes) = k'\<close> distinct_size by force 
   qed
   have "\<exists>L. set L = setV \<and> distinct L" 
@@ -2618,7 +2646,7 @@ proof -
   then obtain L where L_def: "set L = setV" "distinct L" 
     by auto
   then have "is_vertex_cover (set E) (set L)" 
-    using C_properties setV_def is_vertex_cover_super_set 
+    using Cov_properties setV_def is_vertex_cover_super_set 
     by fastforce 
   then have vc_list: "is_vertex_cover_list E L" 
     using is_vertex_cover_def

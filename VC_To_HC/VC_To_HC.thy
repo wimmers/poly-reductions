@@ -23,10 +23,10 @@ proof -
   assume in_hc: "vc_hc (E, k) \<in> hc"
   obtain Cycle where Cycle_def: "is_hc (vc_hc (E, k)) Cycle" 
     using hc_def in_hc  by auto
-  obtain C where C_def: "C ={v|v e i j. (Edge v e i, Cover j) \<in> set (vwalk_arcs Cycle)}"
+  obtain Cov where Cov_def: "Cov ={v|v e i j. (Cover j, Edge v e i) \<in> set (vwalk_arcs Cycle)}"
     by simp
   then show ?thesis 
-    using hc_impl_vc_context in_hc Cycle_def C_def 
+    using hc_impl_vc_context in_hc Cycle_def Cov_def 
     by fastforce 
 qed
 
