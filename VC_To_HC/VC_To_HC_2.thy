@@ -8,7 +8,8 @@ context
   fixes E k  assumes in_hc: "vc_hc (E, k) \<in> hc"
   fixes G assumes G_def: "G = vc_hc (E, k)" 
   fixes Cycle assumes Cycle_def: "is_hc G Cycle"
-  fixes C assumes C_def: "C = {v|v e i j. (Edge v e i, Cover j) \<in> set (vwalk_arcs Cycle)}"
+  fixes C assumes "C = {v|v e i j. (Edge v e i, Cover j) \<in> set (vwalk_arcs Cycle)}"
+  fixes Cov assumes Cov_def: "Cov = {v|v e i j. (Cover j, Edge v e i) \<in> set (vwalk_arcs Cycle)}"
 begin
 
 subsubsection\<open>Preliminaries\<close>
@@ -1928,24 +1929,86 @@ proof -
 qed
 
 
+lemma path_for_both_in_C_then_not_other_path: 
+  assumes "(sublist [Edge v e 0, Edge v e 1] Cycle \<and> sublist [Edge u e 0, Edge u e 1] Cycle)"
+  shows "\<not>(sublist [Edge v e 0, Edge v e 1] Cycle \<and> sublist [Edge u e 0, Edge v e 0] Cycle \<and> sublist [Edge v e 1, Edge u e 1] Cycle)"
+proof (rule ccontr)
+  have distinct: "distinct (tl Cycle)" 
+    by (simp add: distinct_tl_Cycle) 
+  assume "\<not> \<not> (sublist [Edge v e 0, Edge v e 1] Cycle \<and> sublist [Edge u e 0, Edge v e 0] Cycle \<and> sublist [Edge v e 1, Edge u e 1] Cycle)"
+  then have "sublist [Edge v e 1, Edge u e 1] Cycle" "sublist [Edge u e 0, Edge u e 1] Cycle"
+    using assms by simp+
+  then show False 
+    using two_sublist_distinct_same_first distinct by fastforce
+qed
+
+
+lemma path_for_one_in_C_then_not_other_path: 
+  assumes "(sublist [Edge v e 0, Edge v e 1] Cycle \<and> sublist [Edge u e 0, Edge v e 0] Cycle \<and> sublist [Edge v e 1, Edge u e 1] Cycle)"
+  shows "\<not>(sublist [Edge v e 0, Edge v e 1] Cycle \<and> sublist [Edge u e 0, Edge u e 1] Cycle)"
+    "\<not>(sublist [Edge u e 0, Edge u e 1] Cycle \<and> sublist [Edge v e 0, Edge u e 0] Cycle \<and> sublist [Edge u e 1, Edge v e 1] Cycle)"
+proof (rule ccontr)
+  have distinct: "distinct (tl Cycle)" 
+    by (simp add: distinct_tl_Cycle) 
+  assume "\<not> \<not> (sublist [Edge v e 0, Edge v e 1] Cycle \<and> sublist [Edge u e 0, Edge u e 1] Cycle)"
+  then have "sublist [Edge v e 1, Edge u e 1] Cycle" "sublist [Edge u e 0, Edge u e 1] Cycle"
+    using assms by simp+
+  then show False 
+    using two_sublist_distinct_same_first distinct by fastforce
+next
+  show "\<not>(sublist [Edge u e 0, Edge u e 1] Cycle \<and> sublist [Edge v e 0, Edge u e 0] Cycle \<and> sublist [Edge u e 1, Edge v e 1] Cycle)" proof(rule ccontr)
+    assume "\<not>\<not>(sublist [Edge u e 0, Edge u e 1] Cycle \<and> sublist [Edge v e 0, Edge u e 0] Cycle \<and> sublist [Edge u e 1, Edge v e 1] Cycle)"
+    then have "sublist [Edge v e 1, Edge u e 1] Cycle" "sublist [Edge u e 0, Edge u e 1] Cycle"
+      using assms by blast+
+    then show False 
+      using two_sublist_distinct_same_first distinct_tl_Cycle by fastforce
+  qed
+qed
+
+
+lemma sublist_for_edge_path:
+  assumes "sublist [Edge v e 1, Edge v e2 0] Cycle" "u \<in> e" "u \<noteq> v"
+    shows "(sublist [Edge v e 0, Edge v e 1] Cycle \<and> sublist [Edge u e 0, Edge u e 1] Cycle) \<or>
+    (sublist [Edge u e 0, Edge u e 1] Cycle \<and> sublist [Edge v e 0, Edge u e 0] Cycle \<and> sublist [Edge u e 1, Edge v e 1] Cycle)"
+proof -
+  have 1: "e \<in> set E" "v \<in> e" using assms 
+    apply (meson Edges_in_Cycle(2) in_sublist_impl_in_list list.set_intros(1))  
+    by (meson Edges_in_Cycle(1) assms in_sublist_impl_in_list list.set_intros(1)) 
+  have 2: "(sublist [Edge v e 0, Edge v e 1] Cycle \<and> sublist [Edge u e 0, Edge u e 1] Cycle) \<or>
+    (sublist [Edge v e 0, Edge v e 1] Cycle \<and> sublist [Edge u e 0, Edge v e 0] Cycle \<and> sublist [Edge v e 1, Edge u e 1] Cycle) \<or>
+    (sublist [Edge u e 0, Edge u e 1] Cycle \<and> sublist [Edge v e 0, Edge u e 0] Cycle \<and> sublist [Edge u e 1, Edge v e 1] Cycle)"
+    using subpath_for_edge assms 1 
+    by presburger 
+  have "\<not>(sublist [Edge v e 0, Edge v e 1] Cycle \<and> sublist [Edge u e 0, Edge v e 0] Cycle \<and> sublist [Edge v e 1, Edge u e 1] Cycle)"
+  proof (rule ccontr)
+    assume "\<not> \<not> (sublist [Edge v e 0, Edge v e 1] Cycle \<and> sublist [Edge u e 0, Edge v e 0] Cycle \<and> sublist [Edge v e 1, Edge u e 1] Cycle)"
+    then have "sublist [Edge v e 1, Edge v e2 0] Cycle" "sublist [Edge v e 1, Edge u e 1] Cycle"
+      using assms by simp+
+    then show False using two_sublist_Cycle_same_last 
+      using "1"(1) assms(3) exists_edge_implies_at_least_on_vertex by blast 
+  qed
+  then show "(sublist [Edge v e 0, Edge v e 1] Cycle \<and> sublist [Edge u e 0, Edge u e 1] Cycle) \<or>
+    (sublist [Edge u e 0, Edge u e 1] Cycle \<and> sublist [Edge v e 0, Edge u e 0] Cycle \<and> sublist [Edge u e 1, Edge v e 1] Cycle)"
+    using 2 by blast
+qed
+
+
 lemma always_in_Cover_2_1: 
   assumes "E!i = e" "i<length E"
-  shows "((sublist [Edge v e 0, Edge v e 1] Cycle \<and> sublist [Edge u e 0, Edge u e 1] Cycle) \<longrightarrow> (u \<in> C \<and> v \<in> C)) \<and> 
-    ((sublist [Edge v e 0, Edge v e 1] Cycle \<and> sublist [Edge u e 0, Edge v e 0] Cycle \<and> sublist [Edge v e 1, Edge u e 1] Cycle) \<longrightarrow> (u \<in> C)) \<and> 
-    ((sublist [Edge u e 0, Edge u e 1] Cycle \<and> sublist [Edge v e 0, Edge u e 0] Cycle \<and> sublist [Edge u e 1, Edge v e 1] Cycle) \<longrightarrow> (v \<in> C))"
-proof(induction i)
-  case 0
-  then show ?thesis sorry
-next
-  case (Suc i)
-  then show ?thesis sorry
+  shows "((sublist [Edge v e 0, Edge v e 1] Cycle \<and> sublist [Edge u e 0, Edge u e 1] Cycle) \<longrightarrow> (u \<in> Cov \<and> v \<in> Cov)) \<and> 
+    ((sublist [Edge v e 0, Edge v e 1] Cycle \<and> sublist [Edge u e 0, Edge v e 0] Cycle \<and> sublist [Edge v e 1, Edge u e 1] Cycle) \<longrightarrow> (u \<in> Cov)) \<and> 
+    ((sublist [Edge u e 0, Edge u e 1] Cycle \<and> sublist [Edge v e 0, Edge u e 0] Cycle \<and> sublist [Edge u e 1, Edge v e 1] Cycle) \<longrightarrow> (v \<in> Cov))"
+proof(induction i rule: less_induct)
+  case (less x)
+  then show ?case sorry
 qed
+
 
 lemma always_in_Cover_2:
   assumes "E!i = e" "i<length E"
-  shows "(sublist [Edge v e 0, Edge v e 1] Cycle \<and> sublist [Edge u e 0, Edge u e 1] Cycle) \<longrightarrow> (u \<in> C \<and> v \<in> C)"
-    and "(sublist [Edge v e 0, Edge v e 1] Cycle \<and> sublist [Edge u e 0, Edge v e 0] Cycle \<and> sublist [Edge v e 1, Edge u e 1] Cycle) \<longrightarrow> (u \<in> C)" 
-    and "(sublist [Edge u e 0, Edge u e 1] Cycle \<and> sublist [Edge v e 0, Edge u e 0] Cycle \<and> sublist [Edge u e 1, Edge v e 1] Cycle) \<longrightarrow> (v \<in> C)"
+  shows "(sublist [Edge v e 0, Edge v e 1] Cycle \<and> sublist [Edge u e 0, Edge u e 1] Cycle) \<longrightarrow> (u \<in> Cov \<and> v \<in> Cov)"
+    and "(sublist [Edge v e 0, Edge v e 1] Cycle \<and> sublist [Edge u e 0, Edge v e 0] Cycle \<and> sublist [Edge v e 1, Edge u e 1] Cycle) \<longrightarrow> (u \<in> Cov)" 
+    and "(sublist [Edge u e 0, Edge u e 1] Cycle \<and> sublist [Edge v e 0, Edge u e 0] Cycle \<and> sublist [Edge u e 1, Edge v e 1] Cycle) \<longrightarrow> (v \<in> Cov)"
   using assms always_in_Cover_2_1 by blast+
 
 lemma always_in_Cover: 

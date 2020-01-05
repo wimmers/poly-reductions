@@ -133,6 +133,165 @@ proof -
   then show ?thesis using 1 2 by blast 
 qed
 
+
+lemma hd_is_first_edge:
+  assumes "e = hd E" "v\<in> e" "E \<noteq> []"
+  shows "first_edge v e E"
+proof -
+  have 1: "e = E!0" "0 < length E" 
+    by (simp add: assms hd_conv_nth)+
+  have 2: "\<not> (\<exists>j < size E. v \<in> E!j \<and> j < 0)"
+    by simp
+  then show ?thesis using first_edge_def 1 2 assms  by fast 
+qed
+
+lemma next_edge_cons: 
+  assumes "(\<exists>e1. next_edge v E e1 e2)"
+  shows "(\<exists>e1. next_edge v (a#E) e1 e2)"
+proof -
+  obtain e1 where e1_def: "next_edge v E e1 e2"
+    using assms by auto
+  then obtain i j where ij_def: "i<length E \<and> j<length E \<and>  e1 = E!i \<and> e2 = E!j \<and> v \<in> e1 \<and> v \<in> e2 \<and> i<j \<and>
+              \<not> (\<exists>k < size E. v \<in> E!k \<and> i < k \<and> k < j)"
+    using next_edge_def by metis
+  then have 1: "i+1<length (a#E) \<and> (j+1)<length (a#E) \<and>  e1 = (a#E)!(i+1) \<and> e2 = (a#E)!(j+1) \<and> v \<in> e1 \<and> v \<in> e2 \<and> (i+1)<(j+1)"
+    by auto
+  have "\<not> (\<exists>k < size (a#E). v \<in> (a#E)!k \<and> (i+1) < k \<and> k < (j+1))"
+  proof(rule ccontr) 
+    assume "\<not> \<not> (\<exists>k<length (a # E). v \<in> (a # E) ! k \<and> i + 1 < k \<and> k < j + 1)"
+    then have "(\<exists>k<length (a # E). v \<in> (a # E) ! k \<and> i + 1 < k \<and> k < j + 1)"
+      by auto
+    then obtain k where k_def: "k<length (a # E)\<and> v \<in> (a # E) ! k \<and> i + 1 < k \<and> k < j + 1"
+      by blast
+    then have 0: "k \<noteq> 0" by simp 
+    then have 1: "k-1 < length E \<and> v \<in> E!(k-1)" 
+      using k_def by force 
+    have "i  < k-1 \<and> k-1 < j" 
+      using k_def 0 
+      by linarith
+    then have "(\<exists>k < size (E). v \<in> (E)!k \<and> i < k \<and> k < j)"
+      using 1 by blast
+    then show False using ij_def by auto
+  qed
+  then have "next_edge v (a#E) e1 e2"
+    using next_edge_def 1 
+    by metis 
+  then show ?thesis by auto
+qed
+
+
+
+lemma first_edge_cons_not_in: 
+  assumes "first_edge v e E" "v \<notin> a"
+  shows "first_edge v e (a#E)"
+proof -
+  obtain i where i_def:  "i<length E \<and> e = E!i\<and> v \<in> e \<and> 
+              \<not> (\<exists>j < size E. v \<in> E!j \<and> j < i)" 
+    using assms first_edge_def by metis
+  then have 1: "i+1 < length (a#E) \<and> e = (a#E)!(i+1) \<and> v \<in> e"
+    by auto
+  have 2: "\<not> (\<exists>j < size (a#E). v \<in> (a#E)!j \<and> j < (i+1))" proof (rule ccontr)
+    assume "\<not> \<not> (\<exists>j < size (a#E). v \<in> (a#E)!j \<and> j < (i+1))"
+    then have "(\<exists>j < size (a#E). v \<in> (a#E)!j \<and> j < (i+1))" by auto
+    then obtain j where j_def: "j < size (a#E) \<and> v \<in> (a#E)!j \<and> j < (i+1)"
+      by auto
+    then show False proof(cases "j = 0")
+      case True
+      then have "v \<in> a"
+        using j_def by auto
+      then show ?thesis using assms by simp
+    next
+      case False
+      then have "(j-1) < length E \<and> v \<in> E!(j-1) \<and> j-1 < i"
+        using j_def 
+        by fastforce  
+      then show ?thesis using i_def by blast 
+    qed
+  qed
+  then show ?thesis using 1 2 first_edge_def by metis
+qed
+
+
+lemma first_edge_cons_in: 
+  assumes "first_edge v e E" "v \<in> a"
+  shows "next_edge v (a#E) a e"
+proof -
+  obtain i where i_def:  "i<length E \<and> e = E!i\<and> v \<in> e \<and> 
+              \<not> (\<exists>j < size E. v \<in> E!j \<and> j < i)" 
+    using assms first_edge_def by metis
+  then have 1: "i+1 < length (a#E) \<and> e = (a#E)!(i+1) \<and> v \<in> e" 
+    by auto
+  then have 2: "0 < length (a#E) \<and> a = (a#E) ! 0 \<and> v \<in> a \<and> 0 < i+1"
+    using assms by simp
+  then have 3: "0 < length (a#E) \<and>
+          i+1 < length (a#E) \<and> a = (a#E) ! 0 \<and> e = (a#E) ! (i+1)  \<and> v \<in> a \<and> v \<in> e \<and> 0 < (i+1)" 
+    using 1 2 by argo
+  have "\<not> (\<exists>k < size (a#E). v \<in> (a#E)!k \<and> 0 < k \<and> k < i+1)" proof(rule ccontr)
+    assume "\<not> \<not> (\<exists>k<length (a # E). v \<in> (a # E) ! k \<and> 0 < k \<and> k < i + 1)"
+    then obtain k where k_def: "k<length (a # E)\<and> v \<in> (a # E) ! k \<and> 0 < k \<and> k < i + 1"
+      by auto
+    then have "k > 0" by simp
+    then have "k-1<length (E)\<and> v \<in> (E) ! (k-1) \<and> k-1 < i "
+      using k_def by fastforce
+    then show False using i_def by blast
+  qed
+  then have "0 < length (a#E) \<and>
+          i+1 < length (a#E) \<and> a = (a#E) ! 0 \<and> e = (a#E) ! (i+1)  \<and> v \<in> a \<and> v \<in> e \<and> 0 < (i+1)
+      \<and> \<not> (\<exists>k < size (a#E). v \<in> (a#E)!k \<and> 0 < k \<and> k < i+1)" using 3 by auto  
+  then have "\<exists>i j. i < length (a#E) \<and>
+          j < length (a#E) \<and> a = (a#E) ! i \<and> e = (a#E) ! j  \<and> v \<in> a \<and> v \<in> e \<and> i < j
+      \<and> \<not> (\<exists>k < size (a#E). v \<in> (a#E)!k \<and> i < k \<and> k < j)" by metis
+  then show ?thesis using next_edge_def by metis 
+qed
+
+
+
+
+
+lemma first_Edge_or_next_edge: 
+  assumes "e \<in> set E" "v \<in> e"
+  shows "first_edge v e E \<or> (\<exists>e1. next_edge v E e1 e)"
+  using assms proof(induction E)
+  case Nil
+  then show ?case by auto
+next
+  case (Cons a E)
+  then show ?case proof(cases "e = a")
+    case True
+    then have "e = hd (a#E)" by simp
+    then have "first_edge v e (a#E)" 
+      using assms 
+      by (simp add: hd_is_first_edge) 
+    then show ?thesis by simp
+  next
+    case False
+    then have "e \<in> set E" 
+      using Cons 
+      by simp
+    then have 1: "first_edge v e E \<or> (\<exists>e1. next_edge v E e1 e)" 
+      using Cons by auto
+    then show ?thesis proof
+      assume a1: "first_edge v e E"
+      then show ?thesis proof(cases "v \<in> a")
+        case True
+        then have "next_edge v (a#E) a e"
+          using first_edge_cons_in a1 by fast 
+        then show ?thesis by auto
+      next
+        case False
+        then have "first_edge v e (a#E)"
+          using 1 first_edge_cons_not_in a1  by metis  
+        then show ?thesis by simp
+      qed
+    next
+      assume "(\<exists>e1. next_edge v E e1 e)"
+      then have "(\<exists>e1. next_edge v (a#E) e1 e)" 
+        using next_edge_cons by fast
+      then show ?thesis by auto
+    qed
+  qed
+qed 
+
 subsubsection\<open>Definitions for VC_HC_2\<close>
 
 definition "sublist l ls \<equiv> \<exists>p1 p2. p1@l@p2 = ls"
