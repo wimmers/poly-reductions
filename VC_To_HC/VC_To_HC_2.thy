@@ -1552,7 +1552,7 @@ qed
 lemma both_in_Cover_edge_paths: 
   assumes "(sublist [Edge v e 0, Edge v e 1] Cycle \<and> sublist [Edge u e 0, Edge u e 1] Cycle)" "u \<noteq> v"
   shows "first_edge v e E \<or> (\<exists>e1. sublist [Edge v e1 1, Edge v e 0] Cycle \<and> next_edge v E e1 e)"
-        "last_edge v e E \<or> (\<exists>e1. sublist [Edge v e 1, Edge v e1 0] Cycle \<and> next_edge v E e e1)"
+    "last_edge v e E \<or> (\<exists>e1. sublist [Edge v e 1, Edge v e1 0] Cycle \<and> next_edge v E e e1)"
 proof -
   have distinct: "distinct (tl Cycle)" 
     by (simp add: distinct_tl_Cycle) 
@@ -1743,7 +1743,7 @@ lemma one_in_Cover_paths:
   assumes "(sublist [Edge u e 0, Edge u e 1] Cycle \<and> sublist [Edge v e 0, Edge u e 0] Cycle \<and> sublist [Edge u e 1, Edge v e 1] Cycle)"
     "u \<noteq> v"
   shows "first_edge v e E \<or> (\<exists>e1. sublist [Edge v e1 1, Edge v e 0] Cycle \<and> next_edge v E e1 e)"
-        "last_edge v e E \<or> (\<exists>e1. sublist [Edge v e 1, Edge v e1 0] Cycle \<and> next_edge v E e e1)"
+    "last_edge v e E \<or> (\<exists>e1. sublist [Edge v e 1, Edge v e1 0] Cycle \<and> next_edge v E e e1)"
 proof -
   have distinct: "distinct (tl Cycle)" 
     by (simp add: distinct_tl_Cycle) 
@@ -1821,7 +1821,7 @@ next
   qed
 qed
 
-lemma one_inCover_first: 
+lemma one_in_Cover_first: 
   assumes "(sublist [Edge u e 0, Edge u e 1] Cycle \<and> sublist [Edge v e 0, Edge u e 0] Cycle \<and> sublist [Edge u e 1, Edge v e 1] Cycle)"
     "first_edge v e E"  "u \<noteq> v"
   shows "\<exists>i. sublist [Cover i, Edge v e 0] Cycle"
@@ -1968,11 +1968,11 @@ qed
 
 lemma sublist_for_edge_path:
   assumes "sublist [Edge v e 1, Edge v e2 0] Cycle" "u \<in> e" "u \<noteq> v"
-    shows "(sublist [Edge v e 0, Edge v e 1] Cycle \<and> sublist [Edge u e 0, Edge u e 1] Cycle) \<or>
+  shows "(sublist [Edge v e 0, Edge v e 1] Cycle \<and> sublist [Edge u e 0, Edge u e 1] Cycle) \<or>
     (sublist [Edge u e 0, Edge u e 1] Cycle \<and> sublist [Edge v e 0, Edge u e 0] Cycle \<and> sublist [Edge u e 1, Edge v e 1] Cycle)"
 proof -
   have 1: "e \<in> set E" "v \<in> e" using assms 
-    apply (meson Edges_in_Cycle(2) in_sublist_impl_in_list list.set_intros(1))  
+     apply (meson Edges_in_Cycle(2) in_sublist_impl_in_list list.set_intros(1))  
     by (meson Edges_in_Cycle(1) assms in_sublist_impl_in_list list.set_intros(1)) 
   have 2: "(sublist [Edge v e 0, Edge v e 1] Cycle \<and> sublist [Edge u e 0, Edge u e 1] Cycle) \<or>
     (sublist [Edge v e 0, Edge v e 1] Cycle \<and> sublist [Edge u e 0, Edge v e 0] Cycle \<and> sublist [Edge v e 1, Edge u e 1] Cycle) \<or>
@@ -2022,7 +2022,7 @@ lemma always_in_Cover_2_1:
     ((sublist [Edge v e 0, Edge v e 1] Cycle \<and> sublist [Edge u e 0, Edge v e 0] Cycle \<and> sublist [Edge v e 1, Edge u e 1] Cycle) \<longrightarrow> (u \<in> Cov)) \<and> 
     ((sublist [Edge u e 0, Edge u e 1] Cycle \<and> sublist [Edge v e 0, Edge u e 0] Cycle \<and> sublist [Edge u e 1, Edge v e 1] Cycle) \<longrightarrow> (v \<in> Cov))"
     (is "(?a \<longrightarrow> ?a') \<and> (?b \<longrightarrow> ?b') \<and> (?c \<longrightarrow> ?c')")
-using assms proof(induction i arbitrary: e u v rule: less_induct )
+  using assms proof(induction i arbitrary: e u v rule: less_induct )
   case (less x)
   then have in_E: "e \<in> set E" 
     using nth_mem by blast
@@ -2126,7 +2126,7 @@ using assms proof(induction i arbitrary: e u v rule: less_induct )
     qed
 
     have "\<not> (sublist [Edge v e 0, Edge v e 1] Cycle \<and> sublist [Edge u e 0, Edge v e 0] Cycle \<and> sublist [Edge v e 1, Edge u e 1] Cycle)"
-         "\<not> (sublist [Edge u e 0, Edge u e 1] Cycle \<and> sublist [Edge v e 0, Edge u e 0] Cycle \<and> sublist [Edge u e 1, Edge v e 1] Cycle)"
+      "\<not> (sublist [Edge u e 0, Edge u e 1] Cycle \<and> sublist [Edge v e 0, Edge u e 0] Cycle \<and> sublist [Edge u e 1, Edge v e 1] Cycle)"
       using a1 
       using path_for_one_in_C_then_not_other_path by blast+ 
 
@@ -2135,7 +2135,91 @@ using assms proof(induction i arbitrary: e u v rule: less_induct )
   next
     assume "sublist [Edge v e 0, Edge v e 1] Cycle \<and> sublist [Edge u e 0, Edge v e 0] Cycle \<and> sublist [Edge v e 1, Edge u e 1] Cycle \<or>
     sublist [Edge u e 0, Edge u e 1] Cycle \<and> sublist [Edge v e 0, Edge u e 0] Cycle \<and> sublist [Edge u e 1, Edge v e 1] Cycle"
-    then show ?thesis sorry
+    then show ?thesis proof 
+      assume a1: "sublist [Edge v e 0, Edge v e 1] Cycle \<and> sublist [Edge u e 0, Edge v e 0] Cycle \<and> sublist [Edge v e 1, Edge u e 1] Cycle"
+      then have "first_edge u e E \<or> (\<exists>e1. sublist [Edge u e1 1, Edge u e 0] Cycle \<and> next_edge u E e1 e)" 
+        using less.prems one_in_Cover_paths by blast 
+      then have 1: "u \<in> Cov" 
+      proof
+        assume "first_edge u e E"
+        then have "\<exists>i. sublist [Cover i, Edge u e 0] Cycle" 
+          using a1 one_in_Cover_first less.prems  by blast 
+        then obtain i where "sublist [Cover i, Edge u e 0] Cycle"
+          by auto
+        then have "(Cover i, Edge u e 0) \<in> set (vwalk_arcs Cycle)"
+          by (simp add: sublist_imp_in_arcs) 
+        then show ?thesis using Cov_def by blast
+      next 
+        assume "(\<exists>e1. sublist [Edge u e1 1, Edge u e 0] Cycle \<and> next_edge u E e1 e)"
+        then obtain e1 where e1_def: "sublist [Edge u e1 1, Edge u e 0] Cycle \<and> next_edge u E e1 e"
+          by auto
+        then have e1_in_E: "e1 \<in> set E"
+          by (meson Edges_in_Cycle(2) in_sublist_impl_in_list list.set_intros(1)) 
+        then have "u \<in> e1" 
+          using card_G post_1_edges(1) e1_def by blast 
+        then obtain u1 where u1_def: "e1 = {u1, u}" "u1 \<noteq> u"  
+          using e_in_E_e_explicit e1_in_E 
+          by blast   
+        then have 1: "(sublist [Edge u e1 0, Edge u e1 1] Cycle \<and> sublist [Edge u1 e1 0, Edge u1 e1 1] Cycle) \<or>
+    (sublist [Edge u1 e1 0, Edge u1 e1 1] Cycle \<and> sublist [Edge u e1 0, Edge u1 e1 0] Cycle \<and> sublist [Edge u1 e1 1, Edge u e1 1] Cycle)"
+          using sublist_for_edge_path e1_def u1_def by blast 
+        obtain inde1 where inde1_def: "e1 = E!inde1" "inde1 < length E" using e1_in_E 
+          by (metis in_set_conv_nth) 
+        then have "inde1 < x" 
+          using less e1_def distinct_E index_samller_if_next_edge by metis
+        then have "u \<in> Cov" using 1 less inde1_def u1_def 
+          by meson 
+        then show ?thesis by simp
+      qed
+
+      have "\<not>(sublist [Edge v e 0, Edge v e 1] Cycle \<and> sublist [Edge u e 0, Edge u e 1] Cycle)"
+        "\<not> (sublist [Edge u e 0, Edge u e 1] Cycle \<and> sublist [Edge v e 0, Edge u e 0] Cycle \<and> sublist [Edge u e 1, Edge v e 1] Cycle)"
+        using a1 path_for_one_in_C_then_not_other_path by blast+  
+      then show ?thesis using 1
+        by blast 
+    next
+      assume a1: "sublist [Edge u e 0, Edge u e 1] Cycle \<and> sublist [Edge v e 0, Edge u e 0] Cycle \<and> sublist [Edge u e 1, Edge v e 1] Cycle"
+      then have "first_edge v e E \<or> (\<exists>e1. sublist [Edge v e1 1, Edge v e 0] Cycle \<and> next_edge v E e1 e)" 
+        using less.prems one_in_Cover_paths by blast 
+      then have 1: "v \<in> Cov" 
+      proof
+        assume "first_edge v e E"
+        then have "\<exists>i. sublist [Cover i, Edge v e 0] Cycle" 
+          using a1 one_in_Cover_first less.prems  by blast 
+        then obtain i where "sublist [Cover i, Edge v e 0] Cycle"
+          by auto
+        then have "(Cover i, Edge v e 0) \<in> set (vwalk_arcs Cycle)"
+          by (simp add: sublist_imp_in_arcs) 
+        then show ?thesis using Cov_def by blast
+      next 
+        assume "(\<exists>e1. sublist [Edge v e1 1, Edge v e 0] Cycle \<and> next_edge v E e1 e)"
+        then obtain e1 where e1_def: "sublist [Edge v e1 1, Edge v e 0] Cycle \<and> next_edge v E e1 e"
+          by auto
+        then have e1_in_E: "e1 \<in> set E"
+          by (meson Edges_in_Cycle(2) in_sublist_impl_in_list list.set_intros(1)) 
+        then have "v \<in> e1" 
+          using card_G post_1_edges(1) e1_def by blast 
+        then obtain u1 where u1_def: "e1 = {u1, v}" "u1 \<noteq> v"  
+          using e_in_E_e_explicit e1_in_E 
+          by blast   
+        then have 1: "(sublist [Edge v e1 0, Edge v e1 1] Cycle \<and> sublist [Edge u1 e1 0, Edge u1 e1 1] Cycle) \<or>
+          (sublist [Edge u1 e1 0, Edge u1 e1 1] Cycle \<and> sublist [Edge v e1 0, Edge u1 e1 0] Cycle \<and> sublist [Edge u1 e1 1, Edge v e1 1] Cycle)"
+          using sublist_for_edge_path e1_def u1_def by blast 
+        obtain inde1 where inde1_def: "e1 = E!inde1" "inde1 < length E" using e1_in_E 
+          by (metis in_set_conv_nth) 
+        then have "inde1 < x" 
+          using less e1_def distinct_E index_samller_if_next_edge by metis
+        then have "v \<in> Cov" using 1 less inde1_def u1_def 
+          by meson 
+        then show ?thesis by simp
+      qed
+
+      have "\<not>(sublist [Edge v e 0, Edge v e 1] Cycle \<and> sublist [Edge u e 0, Edge u e 1] Cycle)"
+        "\<not> (sublist [Edge v e 0, Edge v e 1] Cycle \<and> sublist [Edge u e 0, Edge v e 0] Cycle \<and> sublist [Edge v e 1, Edge u e 1] Cycle)"
+        using a1 path_for_one_in_C_then_not_other_path(1) by blast+ 
+      then show ?thesis using 1
+        by blast 
+    qed
   qed
 qed
 
