@@ -3,6 +3,166 @@ theory VC_To_HC_2
     Definitions "../VC_Set_To_VC_List"
 begin
 
+
+lemma card_dep_on_other_set:
+  assumes "finite T" 
+  shows "card {{u. f u j}|j. j \<in> T} \<le> card T" 
+  using assms proof (induction "card T" arbitrary: T)
+  case 0
+  then have "T = {}" 
+    using assms 
+    by simp
+  then have "{{u. f u j}|j. j \<in> T} = {}" 
+    using assms 0 
+    by auto
+  then show ?case 
+    by auto
+next
+  case (Suc x)
+  then have "\<exists>x. x \<in> T" 
+    by (metis card_eq_SucD insertI1) 
+  then obtain t where t_def: "t \<in> T" by auto
+  then obtain T' where T'_def: "T' = T - {t}" by auto
+  then have card: "x = card T'" 
+    using Suc t_def by simp
+  have "finite T'" using Suc 
+    by (simp add: T'_def) 
+  then have 1: "card {{u. f u j}|j. j \<in> T'} \<le> card T'" 
+    using Suc card   
+    by blast 
+  have 2: "T = T' \<union> {t}" using T'_def t_def 
+    by auto 
+  then have "{{u. f u j}|j. j \<in> T} = {{u. f u j}|j. j \<in> T'} \<union> {{u. f u t}}"
+    using T'_def 
+    by blast
+  then have "card {{u. f u j}|j. j \<in> T} = card ({{u. f u j}|j. j \<in> T'} \<union> {{u. f u t}})"
+    by simp
+  then have "card {{u. f u j}|j. j \<in> T}  \<le> card {{u. f u j}|j. j \<in> T'} + card {{u. f u t}}"
+    by (metis (no_types, lifting) card_Un_le) 
+  then have 3: "card {{u. f u j}|j. j \<in> T}  \<le> card T' + 1" 
+    using 1 by simp
+  have "card T = card T' +1 " 
+    using 2 t_def T'_def Suc.hyps(2) card 
+    by linarith  
+  then have "card {{u. f u j}|j. j \<in> T}  \<le> card T" 
+    using 2 3 
+    by linarith
+  then show ?case 
+    using Suc 
+    by argo
+qed
+
+
+lemma fin_dep_on_other_set:
+  assumes "finite T" 
+  shows "finite {{u. f u j}|j. j \<in> T}" 
+  using assms proof (induction "card T" arbitrary: T)
+  case 0
+  then have "T = {}" 
+    using assms 
+    by simp
+  then have "{{u. f u j}|j. j \<in> T} = {}" 
+    using assms 0 
+    by auto
+  then show ?case 
+    by auto
+next
+  case (Suc x)
+  then have "\<exists>x. x \<in> T" 
+    by (metis card_eq_SucD insertI1) 
+  then obtain t where t_def: "t \<in> T" by auto
+  then obtain T' where T'_def: "T' = T - {t}" by auto
+  then have card: "x = card T'" 
+    using Suc t_def by simp
+  have "finite T'" using Suc 
+    by (simp add: T'_def) 
+  then have 1: "finite {{u. f u j}|j. j \<in> T'}" 
+    using Suc card   
+    by blast
+  have 2: "T = T' \<union> {t}" using T'_def t_def 
+    by auto 
+  then have 3: "{{u. f u j}|j. j \<in> T} = {{u. f u j}|j. j \<in> T'} \<union> {{u. f u t}}"
+    using T'_def 
+    by blast
+  then have "finite ({{u. f u j}|j. j \<in> T'} \<union> {{u. f u t}})"
+    using "1" by blast 
+  then have "finite {{u. f u j}|j. j \<in> T}"
+    using 3 by simp
+  then show ?case 
+    by simp
+qed
+
+lemma finite_union_if_all_subset_fin:
+  assumes "\<forall>S' \<in> S. finite S'" "finite S"  
+  shows "finite (\<Union> S)"
+  using assms by auto 
+
+
+lemma card_union_if_all_subsets_card_1:
+  assumes "\<forall>S' \<in> S. card S' \<le> 1" "finite S"  
+  shows "card (\<Union> S) \<le> card S"
+proof (cases "finite (\<Union> S)")
+  case True
+  then show ?thesis using assms proof(induction "card S" arbitrary: S)
+    case 0
+    then have "S = {}" 
+      using assms 0 by simp
+    then show ?case 
+      by simp
+  next
+    case (Suc x)
+    then have "\<exists>x. x \<in> S" 
+      by (metis card_eq_SucD insertI1) 
+    then obtain S' where S'_def: "S' \<in> S" by auto
+    then obtain T where T_def: "T = S - {S'}" by auto
+    then have card_T: "card T = x" 
+      using Suc S'_def by auto
+    then have "\<forall>S' \<in> T. card S' \<le> 1" "finite T" 
+      using Suc T_def by(blast)+
+    then have 1: "card (\<Union> T) \<le> card T" 
+      using Suc card_T 
+      by fastforce
+    have card_S': "card S' \<le> 1" 
+      using Suc S'_def by fast 
+    have fin: "finite S'" using True S'_def 
+      using Suc.prems(1) rev_finite_subset by blast  
+    then have 2: "card ((\<Union> T) \<union> S') \<le> card T+1" using 1 Suc S'_def card_S' fin proof - 
+      have "card ((\<Union> T) \<union> S') \<le> card (\<Union> T) + card S'" 
+        by (simp add: card_Un_le) 
+      then have "card ((\<Union> T) \<union> S') \<le> card (\<Union> T) + 1" 
+        using card_S' 
+        by force
+      then have "card ((\<Union> T) \<union> S') \<le> card T + 1" 
+        using 1 by auto
+      then show ?thesis .
+    qed
+    have 3: "card T +1 = card S" 
+      using S'_def T_def 
+      using Suc.hyps(2) card_T by linarith 
+    have "(\<Union> T) \<union> S' = \<Union>S" 
+      using S'_def T_def by auto 
+    then show ?case using 2 3 Suc S'_def 
+      by argo   
+  qed
+next
+  case False
+  then have "card (\<Union> S) = 0" by simp
+  then show ?thesis by simp
+qed
+
+
+
+lemma card_forall_for_elements: 
+  assumes "\<forall>j \<in> T. card {u. f u j} \<le> 1" "S = {{u. f u j}| j. j \<in> T}"
+  shows "\<forall>S' \<in> S. card S' \<le> 1"
+proof 
+  fix S' assume "S' \<in> S" 
+  then have "\<exists>j \<in> T. S' = {u. f u j}" 
+    using assms by blast
+  then show "card S' \<le> 1" 
+    using assms by blast 
+qed
+
 subsection\<open>vc_hc (E, k) f \<in> hc  \<Longrightarrow> (E,k) \<in> VC\<close>
 context 
   fixes E k  assumes in_hc: "vc_hc (E, k) \<in> hc"
@@ -2285,118 +2445,6 @@ hat das set für diesen Knoten maximal ein Element. Dann zeigen, dass G maximal
 k Coverknoten hat und damit auch maximal k Cover-knoten im Cycle sind. Dann C als 
 Union von diesem set schreiben und hoffentlich fertig*)
 
-lemma card_dep_on_other_set:
-  assumes "finite T" 
-  shows "card {{u. f u j}|j. j \<in> T} \<le> card T" 
-  using assms proof (induction "card T" arbitrary: T)
-  case 0
-  then have "T = {}" 
-    using assms 
-    by simp
-  then have "{{u. f u j}|j. j \<in> T} = {}" 
-    using assms 0 
-    by auto
-  then show ?case 
-    by auto
-next
-  case (Suc x)
-  then have "\<exists>x. x \<in> T" 
-    by (metis card_eq_SucD insertI1) 
-  then obtain t where t_def: "t \<in> T" by auto
-  then obtain T' where T'_def: "T' = T - {t}" by auto
-  then have card: "x = card T'" 
-    using Suc t_def by simp
-  have "finite T'" using Suc 
-    by (simp add: T'_def) 
-  then have 1: "card {{u. f u j}|j. j \<in> T'} \<le> card T'" 
-    using Suc card   
-    by blast 
-  have 2: "T = T' \<union> {t}" using T'_def t_def 
-    by auto 
-  then have "{{u. f u j}|j. j \<in> T} = {{u. f u j}|j. j \<in> T'} \<union> {{u. f u t}}"
-    using T'_def 
-    by blast
-  then have "card {{u. f u j}|j. j \<in> T} = card ({{u. f u j}|j. j \<in> T'} \<union> {{u. f u t}})"
-    by simp
-  then have "card {{u. f u j}|j. j \<in> T}  \<le> card {{u. f u j}|j. j \<in> T'} + card {{u. f u t}}"
-    by (metis (no_types, lifting) card_Un_le) 
-  then have 3: "card {{u. f u j}|j. j \<in> T}  \<le> card T' + 1" 
-    using 1 by simp
-  have "card T = card T' +1 " 
-    using 2 t_def T'_def Suc.hyps(2) card 
-    by linarith  
-  then have "card {{u. f u j}|j. j \<in> T}  \<le> card T" 
-    using 2 3 
-    by linarith
-  then show ?case 
-    using Suc 
-    by argo
-qed
-
-lemma card_union_if_all_subsets_card_1:
-  assumes "\<forall>S' \<in> S. card S' \<le> 1" "finite S"  
-  shows "card (\<Union> S) \<le> card S"
-proof (cases "finite (\<Union> S)")
-  case True
-  then show ?thesis using assms proof(induction "card S" arbitrary: S)
-    case 0
-    then have "S = {}" 
-      using assms 0 by simp
-    then show ?case 
-      by simp
-  next
-    case (Suc x)
-    then have "\<exists>x. x \<in> S" 
-      by (metis card_eq_SucD insertI1) 
-    then obtain S' where S'_def: "S' \<in> S" by auto
-    then obtain T where T_def: "T = S - {S'}" by auto
-    then have card_T: "card T = x" 
-      using Suc S'_def by auto
-    then have "\<forall>S' \<in> T. card S' \<le> 1" "finite T" 
-      using Suc T_def by(blast)+
-    then have 1: "card (\<Union> T) \<le> card T" 
-      using Suc card_T 
-      by fastforce
-    have card_S': "card S' \<le> 1" 
-      using Suc S'_def by fast 
-    have fin: "finite S'" using True S'_def 
-      using Suc.prems(1) rev_finite_subset by blast  
-    then have 2: "card ((\<Union> T) \<union> S') \<le> card T+1" using 1 Suc S'_def card_S' fin proof - 
-      have "card ((\<Union> T) \<union> S') \<le> card (\<Union> T) + card S'" 
-        by (simp add: card_Un_le) 
-      then have "card ((\<Union> T) \<union> S') \<le> card (\<Union> T) + 1" 
-        using card_S' 
-        by force
-      then have "card ((\<Union> T) \<union> S') \<le> card T + 1" 
-        using 1 by auto
-      then show ?thesis .
-    qed
-    have 3: "card T +1 = card S" 
-      using S'_def T_def 
-      using Suc.hyps(2) card_T by linarith 
-    have "(\<Union> T) \<union> S' = \<Union>S" 
-      using S'_def T_def by auto 
-    then show ?case using 2 3 Suc S'_def 
-      by argo   
-  qed
-next
-  case False
-  then have "card (\<Union> S) = 0" by simp
-  then show ?thesis by simp
-qed
-
-
-
-lemma card_forall_for_elements: 
-  assumes "\<forall>j \<in> T. card {u. f u j} \<le> 1" "S = {{u. f u j}| j. j \<in> T}"
-  shows "\<forall>S' \<in> S. card S' \<le> 1"
-proof 
-  fix S' assume "S' \<in> S" 
-  then have "\<exists>j \<in> T. S' = {u. f u j}" 
-    using assms by blast
-  then show "card S' \<le> 1" 
-    using assms by blast 
-qed
 
 lemma two_edges_same_hd_not_distinct: 
   assumes "(v1, x) \<in> set (vwalk_arcs c)" "(v2, x) \<in> set (vwalk_arcs c)" "v1 \<noteq> v2"
