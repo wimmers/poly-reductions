@@ -379,16 +379,22 @@ qed
   
 
 
+lemma G_fst_snd:
+  shows "tail G = fst" "head G = snd"
+  using G_def_3 by auto
+
+
 lemma in_arcs_one_in_R:
   assumes "e \<in> arcs G" "e = (u, v)" "u \<noteq> v"
   shows "u \<in> set R \<or> v \<in> set R"
 proof -
-  have "(v, u) \<in> arcs G" 
-    using assms G_symmetric by blast
+  have 1: "(v, u) \<in> arcs G" "(u, v) \<in> arcs G"
+    using assms G_symmetric by blast+
   then have "pre_digraph.cycle G [(v, u), (u, v)]"
-    using edge_cycle assms by blast
+    using edge_cycle assms wf_digraph_G_2 G_fst_snd 
+    by fast
   then show "u \<in> set R \<or> v \<in> set R" 
-    using cycle_in_R by blast
+    using cycle_in_R 1 assms by blast
 qed
 
 
