@@ -2590,12 +2590,16 @@ proof(cases "k=0")
     using True G_def_2 by simp
   then have is_hc: "is_hc G []" 
     using is_hc_def G_def by fastforce
-  then have "arcs G = {}" using empty_E G_def_2 True by simp
+  then have arcsG: "arcs G = {}" using empty_E G_def_2 True by simp
+  have "head G = snd" "tail G = fst" 
+    using G_def_2 by simp+
   then show ?thesis 
-    using hc_def is_hc wf_digraph_def G_def by auto
+    using hc_def is_hc wf_digraph_def G_def arcsG by auto
 next
   case False
-  then show ?thesis using is_wf_digraph is_hc_cycle_graph G_def hc_def
+  have "head G = snd" "tail G = fst" 
+    using G_def_2 by simp+
+  then show ?thesis using is_wf_digraph is_hc_cycle_graph G_def hc_def False
     by auto
 qed
 
