@@ -24,7 +24,7 @@ definition
     ((pre_digraph.cycle G (vwalk_arcs c) \<and> (\<forall>x\<in> verts G. x \<in> set c))\<or> card (verts G) \<le> 1)\<and> set c \<subseteq> verts G \<and> distinct (tl c)"
 
 definition
-  "hc \<equiv> {G. \<exists>c. wf_digraph G \<and> is_hc G c \<and> head G = snd \<and> tail G = fst}"
+  "hc \<equiv> {G. \<exists>c. wf_digraph G \<and> is_hc G c \<and> ((tail G = fst \<and> head G = snd) \<or> arcs G = {}) \<and> finite (verts G)}"
 
 definition
   "vc_hc \<equiv> \<lambda>(E, k).

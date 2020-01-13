@@ -8,6 +8,223 @@ begin
 
 subsection\<open>(E,k) \<in> vc \<Longrightarrow> vc_hc (E, k) f \<in> hc\<close>
 
+lemma fin_Cov:
+  shows "finite {Cover i|i. i< k}"
+proof -
+  show ?thesis by simp
+qed
+
+
+fun f where
+  "f (Edge v e i) (v' ,e') = (v = v' \<and> e = e' \<and> i = 0)" |
+  "f _ _ = False"
+
+fun f1 where
+  "f1 (Edge v e i) (v' ,e') = (v = v' \<and> e = e' \<and> i = 1)" |
+  "f1 _ _ = False"
+
+
+
+lemma card_S_Edge: 
+  assumes "S= {(v, e)|v e. e\<in> set E \<and> v \<in> e}"  "\<forall>e\<in> set E. card e = 2"
+  shows "card S \<le> 2 * length E"
+  using assms proof(induction E arbitrary: S)
+  case Nil
+  then show ?case by auto
+next
+  case (Cons a E)
+  then have 0: "{(v, e) |v e. e \<in> set (a # E) \<and> v \<in> e} = 
+    {(v, e) |v e. e \<in> set (E) \<and> v \<in> e} \<union> {(v, e)|v e. e = a \<and> v \<in> e}"
+    by auto
+  have 1: "card {(v, e) |v e. e \<in> set (E) \<and> v \<in> e} \<le> 2 * length E" 
+    using Cons assms by simp
+  have "card a = 2" using Cons by simp
+  then obtain u v where "a = {u, v}" "u\<noteq> v" 
+    using Cons e_in_E_e_explicit by metis
+  then have "{(v, e)|v e. e = a \<and> v \<in> e} = {(v, a), (u, a)}" 
+    by blast
+  then have 2: "card {(v, e)|v e. e = a \<and> v \<in> e} = 2" 
+    using \<open>u \<noteq> v\<close> by auto 
+  then have "card {(v, e) |v e. e \<in> set (a # E) \<and> v \<in> e} \<le> 
+    card {(v, e) |v e. e \<in> set (E) \<and> v \<in> e} + card {(v, e)|v e. e = a \<and> v \<in> e}"
+    using 0 
+    by (metis (no_types, lifting) card_Un_le) 
+  then show ?case using 1 2 Cons 
+    by fastforce
+qed
+
+
+lemma fin_S_Edge: 
+  assumes "S= {(v, e)|v e. e\<in> set E \<and> v \<in> e}"  "\<forall>e\<in> set E. card e = 2"
+  shows "finite S"
+  using assms proof(induction E arbitrary: S)
+  case Nil
+  then show ?case by auto
+next
+  case (Cons a E)
+  then have 0: "{(v, e) |v e. e \<in> set (a # E) \<and> v \<in> e} = 
+    {(v, e) |v e. e \<in> set (E) \<and> v \<in> e} \<union> {(v, e)|v e. e = a \<and> v \<in> e}"
+    by auto
+  have 1: "finite {(v, e) |v e. e \<in> set (E) \<and> v \<in> e}" 
+    using Cons assms by simp
+  have "card a = 2" using Cons by simp
+  then obtain u v where "a = {u, v}" "u\<noteq> v" 
+    using Cons e_in_E_e_explicit by metis
+  then have "{(v, e)|v e. e = a \<and> v \<in> e} = {(v, a), (u, a)}" 
+    by blast
+  then have 2: "finite {(v, e)|v e. e = a \<and> v \<in> e}" 
+    using \<open>u \<noteq> v\<close> by auto 
+  then show ?case using 1 2 0 Cons 
+    by simp 
+qed
+
+
+lemma f_inv: 
+  assumes "f x (v, e)"
+  shows "x= Edge v e 0" 
+  using assms f.elims(2) by blast 
+
+
+lemma set_f: 
+  assumes "S' = {u|u. f u (v, e)}"
+  shows "S' = {Edge v e 0}"
+  using assms f_inv by fastforce 
+
+lemma f1_inv: 
+  assumes "f1 x (v, e)"
+  shows "x= Edge v e 1" 
+  using assms f1.elims(2) by blast 
+
+
+lemma set_f1: 
+  assumes "S' = {u|u. f1 u (v, e)}"
+  shows "S' = {Edge v e 1}"
+  using assms f1_inv by fastforce 
+
+
+lemma fin_Edge0:
+  assumes "\<forall>e\<in> set E. card e = 2" 
+  shows "finite {Edge v e 0|v e. e\<in> set E \<and> v \<in> e}"
+proof -
+  obtain S where S_def: "S= {(v, e)|v e. e\<in> set E \<and> v \<in> e}" 
+    by auto
+  obtain T where T_def: "T = {{u|u. f u (v, e)}|v e. (v, e)\<in> S}"
+    by auto
+  have card_S: "card S \<le> 2*length E"
+    using S_def card_S_Edge assms by blast
+  have 1: "{Edge v e 0|v e. e\<in> set E \<and> v \<in> e} = \<Union> T" 
+  proof
+    show "{Edge v e 0 |v e. e \<in> set E \<and> v \<in> e} \<subseteq> \<Union> T" proof 
+      have 0: "\<Union> T = {u|u v e. f u (v, e) \<and> (v, e) \<in> S}" using T_def by auto
+      fix x assume a1: "x \<in> {Edge v e 0 |v e. e \<in> set E \<and> v \<in> e}"
+      then obtain v e where ve_def: "x = Edge v e 0"
+        by auto
+      then have 1: "f x (v, e)"
+        by simp
+      have "e \<in> set E" "v \<in> e" using ve_def a1 by simp+
+      then have "(v, e) \<in> S" using S_def by simp
+      then have "x \<in> {u|u v e. f u (v, e) \<and> (v, e) \<in> S}"
+        using 1 by blast
+      then show "x \<in> \<Union> T" using 0 by simp
+    qed
+  next
+    show "\<Union> T \<subseteq> {Edge v e 0 |v e. e \<in> set E \<and> v \<in> e}" proof 
+      fix x assume a1: "x \<in> \<Union> T"
+      have 0: "\<Union> T = {u|u v e. f u (v, e) \<and> (v, e) \<in> S}" using T_def by auto
+      then obtain v e  where ve_def: "f x (v, e)" "(v, e) \<in> S" 
+        using a1 by auto
+      then have 1: "x = Edge v e 0" using f_inv by fastforce 
+      have 2: "v \<in> e" "e \<in> set E" 
+        using ve_def S_def by blast+
+      then show "x \<in> {Edge v e 0 |v e. e \<in> set E \<and> v \<in> e}"
+        using 1 2 by simp
+    qed
+  qed  
+  have 3: "\<forall>S' \<in> T. finite S'" 
+  proof
+    fix S' assume "S' \<in> T" 
+    then obtain v e where ve_def: "S' = {u|u. f u (v, e)}" "(v, e)\<in> S"
+      using T_def by blast
+    then have "S' = {Edge v e 0}" using set_f by metis
+    then show "finite S'" by simp
+  qed
+  have finS: "finite S" 
+    using S_def fin_S_Edge assms by auto 
+  then have fin: "finite T"
+    using fin_dep_on_other_set T_def 
+    by fastforce 
+  have finT: "finite T"
+    using finS fin_dep_on_other_set T_def 
+    by fastforce
+  have "finite (\<Union> T)"
+    using 3 fin by blast
+  then have "finite {Edge v e 0|v e. e\<in> set E \<and> v \<in> e}" 
+    using 1 by simp 
+  then show ?thesis .  
+qed
+
+
+lemma fin_Edge1:
+  assumes "\<forall>e\<in> set E. card e = 2" 
+  shows "finite {Edge v e 1|v e. e\<in> set E \<and> v \<in> e}"
+proof -
+  obtain S where S_def: "S= {(v, e)|v e. e\<in> set E \<and> v \<in> e}" 
+    by auto
+  obtain T where T_def: "T = {{u|u. f1 u (v, e)}|v e. (v, e)\<in> S}"
+    by auto
+  have card_S: "card S \<le> 2*length E"
+    using S_def card_S_Edge assms by blast
+  have 1: "{Edge v e 1|v e. e\<in> set E \<and> v \<in> e} = \<Union> T" 
+  proof
+    show "{Edge v e 1 |v e. e \<in> set E \<and> v \<in> e} \<subseteq> \<Union> T" proof 
+      have 0: "\<Union> T = {u|u v e. f1 u (v, e) \<and> (v, e) \<in> S}" using T_def by auto
+      fix x assume a1: "x \<in> {Edge v e 1 |v e. e \<in> set E \<and> v \<in> e}"
+      then obtain v e where ve_def: "x = Edge v e 1"
+        by auto
+      then have 1: "f1 x (v, e)"
+        by simp
+      have "e \<in> set E" "v \<in> e" using ve_def a1 by simp+
+      then have "(v, e) \<in> S" using S_def by simp
+      then have "x \<in> {u|u v e. f1 u (v, e) \<and> (v, e) \<in> S}"
+        using 1 by blast
+      then show "x \<in> \<Union> T" using 0 by simp
+    qed
+  next
+    show "\<Union> T \<subseteq> {Edge v e 1 |v e. e \<in> set E \<and> v \<in> e}" proof 
+      fix x assume a1: "x \<in> \<Union> T"
+      have 0: "\<Union> T = {u|u v e. f1 u (v, e) \<and> (v, e) \<in> S}" using T_def by auto
+      then obtain v e  where ve_def: "f1 x (v, e)" "(v, e) \<in> S" 
+        using a1 by auto
+      then have 1: "x = Edge v e 1" using f1_inv by fastforce 
+      have 2: "v \<in> e" "e \<in> set E" 
+        using ve_def S_def by blast+
+      then show "x \<in> {Edge v e 1 |v e. e \<in> set E \<and> v \<in> e}"
+        using 1 2 by simp
+    qed
+  qed  
+  have 3: "\<forall>S' \<in> T. finite S'" 
+  proof
+    fix S' assume "S' \<in> T" 
+    then obtain v e where ve_def: "S' = {u|u. f1 u (v, e)}" "(v, e)\<in> S"
+      using T_def by blast
+    then have "S' = {Edge v e 1}" using set_f1 by metis
+    then show "finite S'" by simp
+  qed
+  have finS: "finite S" 
+    using S_def fin_S_Edge assms by auto 
+  then have fin: "finite T"
+    using fin_dep_on_other_set T_def 
+    by fastforce 
+  have finT: "finite T"
+    using finS fin_dep_on_other_set T_def 
+    by fastforce
+  have "finite (\<Union> T)"
+    using 3 fin by blast
+  then have "finite {Edge v e 1|v e. e\<in> set E \<and> v \<in> e}" 
+    using 1 by simp 
+  then show ?thesis .  
+qed
+
 fun construct_cycle_add_edge_nodes:: "('a set list) \<Rightarrow> 'a \<Rightarrow> ('a set) \<Rightarrow>  (('a, 'a set) hc_node) list"
   where 
     "construct_cycle_add_edge_nodes [] v C = []" |
@@ -71,9 +288,22 @@ proof -
     using 1 by argo 
 qed 
 
+
+lemma ugraph_E:
+  shows "ugraph (set E)"
+  using in_vc vertex_cover_list_def by auto
+
+
 lemma is_wf_digraph:
   shows "wf_digraph G"
   by(auto simp add: G_def_2 wf_digraph_def) 
+
+
+lemma finite_verts_G:
+  shows "finite (verts G)" 
+  using G_def_2 fin_Cov fin_Edge1 fin_Edge0 ugraph_E ugraph_def 
+  by auto 
+
 
 lemma function_of_edge_nodes: 
   assumes "v \<in> set (construct_cycle_1 E (CS) n C)" "\<forall>k'. v \<noteq> Cover k'"
@@ -2591,15 +2821,17 @@ proof(cases "k=0")
   then have is_hc: "is_hc G []" 
     using is_hc_def G_def by fastforce
   then have arcsG: "arcs G = {}" using empty_E G_def_2 True by simp
-  have "head G = snd" "tail G = fst" 
+  have head_tail_G: "head G = snd" "tail G = fst" 
     using G_def_2 by simp+
+  have "finite (verts G)"
+    using finite_verts_G by auto
   then show ?thesis 
-    using hc_def is_hc wf_digraph_def G_def arcsG by auto
+    using hc_def is_hc wf_digraph_def G_def arcsG head_tail_G by auto
 next
   case False
   have "head G = snd" "tail G = fst" 
     using G_def_2 by simp+
-  then show ?thesis using is_wf_digraph is_hc_cycle_graph G_def hc_def False
+  then show ?thesis using is_wf_digraph is_hc_cycle_graph G_def hc_def finite_verts_G False
     by auto
 qed
 
