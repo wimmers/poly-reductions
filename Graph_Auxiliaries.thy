@@ -77,4 +77,19 @@ next
   qed
 qed
 
+
+lemma vwalk_arcs_empty_length_p: 
+  assumes "vwalk_arcs p = []"
+  shows "length p \<le> 1" 
+  using assms apply(induction p) apply(auto)
+  using vwalk_arcs_Cons by fastforce  
+
+
+
+lemma length_C_vwalk_arcs_not_empty: 
+  assumes "length C > 1"
+  shows "vwalk_arcs C \<noteq> []"
+  using assms 
+  using vwalk_arcs_empty_length_p by fastforce
+
 end

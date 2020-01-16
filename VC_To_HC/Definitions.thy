@@ -360,12 +360,6 @@ lemma if_sublist_then_edge:
   using assms in_set_vwalk_arcs_append1 by force 
 
 
-lemma vwalk_arcs_empty_length_p: 
-  assumes "vwalk_arcs p = []"
-  shows "length p \<le> 1" 
-  using assms apply(induction p) apply(auto)
-  using vwalk_arcs_Cons by fastforce  
-
 lemma in_sublist_impl_in_list:
   assumes "sublist a b" "x \<in> set a"
   shows "x \<in> set b"

@@ -514,6 +514,13 @@ lemma length_2_exits:
   by (metis Suc_length_conv length_0_conv) 
 
 
+lemma length_geq_2_tt_not_empty: 
+  assumes "length C \<ge> 2"
+  shows "tl C \<noteq> []"
+  using assms apply(induction C)
+  by(auto)
+
+
 subsubsection\<open>Definitions for VC_HC_2\<close>
 
 definition "sublist l ls \<equiv> \<exists>p1 p2. p1@l@p2 = ls"
