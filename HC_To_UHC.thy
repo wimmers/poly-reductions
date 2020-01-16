@@ -2,7 +2,7 @@ theory HC_To_UHC
   imports  Main "Three_Sat_To_Set_Cover" Graph_Theory.Digraph  Graph_Theory.Arc_Walk
     Graph_Theory.Vertex_Walk
     "List_Auxiliaries" "Set_Auxiliaries"
-    "VC_To_HC/Definitions" "VC_To_HC/VC_To_HC"
+    "VC_To_HC/Definitions" "VC_To_HC/VC_To_HC" "Graph_auxiliaries"
 begin
 
 subsection\<open>Preliminaries\<close>
@@ -161,6 +161,122 @@ lemma head_tail_G':
   shows "head G' = snd" "tail G' = fst"
   using G'_def_2 by auto 
 
+
+lemma Cycle_subset:
+  shows "set Cycle \<subseteq> verts G"
+  using Cycle_def is_hc_def by metis
+
+
+lemma Cycle_not_empty:
+  assumes  "card (verts G) > 1"
+  shows "Cycle \<noteq> []"
+  using Cycle_def is_hc_def 
+  by (metis assms leD vwalk_arcs.simps(1) wf_digraph.cycle_conv wf_digraph_G(1)) 
+
+
+lemma last_pre_digraph_cas: 
+  assumes "pre_digraph.cas G u (p) v" "p\<noteq> []" "arcs G \<noteq> {}"
+  shows "snd (last p) = v"
+  using assms proof(induction p arbitrary: u)
+  case Nil
+  then show ?case by simp 
+next
+  case (Cons a p)
+  then show ?case proof(cases "p = []")
+    case True
+    then have 0: "last (a#p) = a" 
+      by simp
+    then have "pre_digraph.cas G u (a#p)  v = 
+      (tail G a = u \<and> pre_digraph.cas G (head G a) [] v)"
+      using True 
+      by (simp add: pre_digraph.cas.simps(2)) 
+    then have 1: "pre_digraph.cas G (head G a) [] v"
+      using Cons by auto
+    then have 2: "pre_digraph.cas G (head G a) [] v = 
+      ((head G a) = v)" 
+      using pre_digraph.cas.simps  by fast 
+    then have "head G a = snd a" 
+      using wf_digraph_G assms 
+      by (auto)
+    then show ?thesis 
+      using 0 1 2 by simp
+  next
+    case False
+    then have 0: "last (a#p) = last p" 
+      by simp
+    have "pre_digraph.cas G u (a#p)  v = 
+      (tail G a = u \<and> pre_digraph.cas G (head G a) p v)"
+      by (simp add: pre_digraph.cas.simps(2)) 
+    then have "pre_digraph.cas G (head G a) p v"
+      using Cons by auto
+    then have " snd (last p) = v" 
+      using Cons False by simp 
+    then show ?thesis 
+      using 0 by auto 
+  qed
+qed 
+
+lemma hd_pre_digraph_cas: 
+  assumes "pre_digraph.cas G u (p) v" "p\<noteq> []" "arcs G \<noteq> {}"
+  shows "fst (hd p) = u"
+  using assms proof(induction p arbitrary: u)
+  case Nil
+  then show ?case by simp 
+next
+  case (Cons a p)
+  then have "pre_digraph.cas G u (a#p)  v = 
+      (tail G a = u \<and> pre_digraph.cas G (head G a) p v)"
+    by (simp add: pre_digraph.cas.simps(2))
+  then have "tail G a = u" 
+    using Cons 
+    by simp
+  then have "fst a = u" 
+    using wf_digraph_G assms 
+    by auto
+  then show ?case by simp
+qed 
+
+
+lemma hd_last_Cycle:
+  assumes "card (verts G) > 1" "arcs G \<noteq> {}"
+  shows "hd Cycle = last Cycle" 
+proof (cases "length Cycle = 1")
+  case True
+  then show ?thesis 
+    using True assms Cycle_not_empty
+    by (metis List.finite_set assms(1) card_length contains_two_card_greater_1 last_in_set leD list.set_sel(1))  
+next
+  case False
+  have "Cycle \<noteq> []"
+    using assms Cycle_not_empty by blast
+  then have "length Cycle \<noteq> 1" "length Cycle \<noteq> 0" 
+    using assms False by(auto)
+  then have "length Cycle \<ge> 2" 
+    by linarith  
+  then have arcs_not_epmty: "(vwalk_arcs Cycle) \<noteq> []" 
+    using vwalk_arcs_empty_length_p by force
+  have "\<exists>u. pre_digraph.awalk G u (vwalk_arcs Cycle) u" 
+    using Cycle_def is_hc_def pre_digraph.cycle_def assms 
+    by (metis antisym less_imp_le_nat nat_neq_iff)
+  then obtain u where u_def: "pre_digraph.awalk G u (vwalk_arcs Cycle) u" 
+    by auto
+  then have 1: "pre_digraph.cas G u (vwalk_arcs Cycle) u" 
+    using pre_digraph.awalk_def by force
+  then have "snd (last (vwalk_arcs Cycle)) = u" 
+    using arcs_not_epmty last_pre_digraph_cas assms
+    by auto 
+  then have 2: "last Cycle = u" 
+    using assms last_vwalk_arcs_last_p arcs_not_epmty assms 
+    by simp
+  have "fst (hd (vwalk_arcs Cycle)) = u" 
+    using arcs_not_epmty hd_pre_digraph_cas 1 assms
+    by auto
+  then have 3: "hd Cycle = u" 
+    using hd_vwalk_arcs_last_p assms arcs_not_epmty 
+    by simp
+  then show ?thesis using 2 3 
+    by simp
+qed
 
 
 lemma finite_subset_verts_G':
@@ -446,11 +562,229 @@ proof -
 qed
 
 
+lemma subset_G_to_uhc_subset_G': 
+  assumes "set C \<subseteq> verts G"
+  shows "set (to_cycle_uhc G C) \<subseteq> verts G'"
+  using assms proof(induction C)
+  case Nil
+  then show ?case by simp
+next
+  case (Cons a C)
+  then have a_in_verts: "a \<in> verts G" 
+    by simp
+  have "to_cycle_uhc G (a # C) = [(a, (0::nat)), (a, 1), (a, 2)] @ to_cycle_uhc G C"
+    by simp
+  have 1: "set [(a, (0::nat)), (a, 1), (a, 2)] \<subseteq> verts G'"
+    using G'_def_2 a_in_verts by auto
+  have 2: "set (to_cycle_uhc G C) \<subseteq> verts G'"
+    using Cons by simp
+  then show ?case using 1 by simp
+qed
+
+
+
+lemma set_Cy_subset_G': 
+  assumes  "card (verts G) > 1"
+  shows "set Cy \<subseteq> verts G'" 
+proof -
+  have 0: "Cy = (hd Cycle, 2) # to_cycle_uhc G (tl Cycle)"
+    using Cy_def by simp
+  then have 1: "set (to_cycle_uhc G (tl Cycle)) \<subseteq> verts G'"  
+    using Cycle_subset subset_G_to_uhc_subset_G'    
+    by (meson list_set_tl subset_code(1)) 
+  have "hd Cycle \<in> verts G"
+    using Cycle_subset Cycle_not_empty assms by auto 
+  then have "(hd Cycle, 2) \<in> verts G'"
+    using G'_def_2 
+    by fastforce
+  then show ?thesis 
+    using 1 0 by auto  
+qed
+
+
+lemma x_in_C_impl_x_in_to_cycle_uhc_0: 
+  assumes "x \<in> set C"
+  shows "(x, 0) \<in> set (to_cycle_uhc G C)" 
+  using assms proof(induction C)
+  case Nil
+  then show ?case by simp
+next
+  case (Cons a C)
+  then show ?case proof(cases "x = a")
+    case True
+    then show ?thesis by auto
+  next
+    case False
+    then show ?thesis using Cons by auto
+  qed
+qed
+
+lemma x_in_C_impl_x_in_to_cycle_uhc_1: 
+  assumes "x \<in> set C"
+  shows "(x, 1) \<in> set (to_cycle_uhc G C)" 
+  using assms proof(induction C)
+  case Nil
+  then show ?case by simp
+next
+  case (Cons a C)
+  then show ?case proof(cases "x = a")
+    case True
+    then show ?thesis by auto
+  next
+    case False
+    then show ?thesis using Cons by auto
+  qed
+qed
+
+lemma x_in_C_impl_x_in_to_cycle_uhc_2: 
+  assumes "x \<in> set C"
+  shows "(x, 2) \<in> set (to_cycle_uhc G C)" 
+  using assms proof(induction C)
+  case Nil
+  then show ?case by simp
+next
+  case (Cons a C)
+  then show ?case proof(cases "x = a")
+    case True
+    then show ?thesis by auto
+  next
+    case False
+    then show ?thesis using Cons by auto
+  qed
+qed
+
+
+lemma card_verts_impl_length_Cycle: 
+  assumes "card (verts G) > 1"  "arcs G \<noteq> {}"
+  shows "length Cycle \<ge> 2" 
+  using assms proof -
+  obtain u v where 1: "u \<in> verts G" "v \<in> verts G" "u \<noteq> v"
+    using assms 
+    using card_greater_1_contains_two_elements by blast 
+  then have "u \<in> set Cycle" "v \<in> set Cycle"
+    using Cycle_def assms is_hc_def by fastforce+
+  then have "card (set Cycle) > 1" 
+    using 1 
+    by (meson List.finite_set contains_two_card_greater_1) 
+  then have "length Cycle > 1" 
+    by (metis \<open>u \<in> set Cycle\<close> card_length leD length_pos_if_in_set less_numeral_extra(3) less_one linorder_neqE_nat) 
+  then show ?thesis by simp
+qed
+
+
+lemma all_verts_G'_in_Cy: 
+  assumes  "card (verts G) > 1" "arcs G \<noteq> {}"
+  shows "(\<forall>x\<in>verts G'. x \<in> set Cy)"
+proof 
+  fix x assume x_in: "x \<in> verts G'"
+  then have "(\<exists>a. x = (a, 0)) \<or> (\<exists>a. x = (a, 1)) \<or> (\<exists>a. x = (a, 2))"
+    using G'_def_2 by auto
+  then have "(\<exists>a. x = (a, 0) \<or> x = (a, 1) \<or>  x = (a, 2))"
+    by fastforce
+  then obtain a where a_def: "x = (a, 0) \<or> x = (a, 1) \<or>  x = (a, 2)"
+    by auto
+  then have "a \<in> verts G" 
+    using G'_def_2  x_in 
+    by force
+  then have a_in_Cycle: "a \<in> set Cycle"
+    using Cycle_def assms(1) is_hc_def by fastforce 
+  then have "a \<in> set (tl Cycle)"
+  proof (cases "a = hd Cycle")
+    case True
+    then have 1: "a = last Cycle"
+      using hd_last_Cycle assms by blast
+    then show ?thesis using 1 card_verts_impl_length_Cycle assms last_in_set_tl by metis
+  next
+    case False
+    then show ?thesis using a_in_Cycle 
+      by (metis Cycle_not_empty assms(1) hd_Cons_tl set_ConsD)  
+  qed 
+  then have "(a, 0) \<in> set ( to_cycle_uhc G (tl Cycle))"
+      "(a, 1) \<in> set ( to_cycle_uhc G (tl Cycle))"
+      "(a, 2) \<in> set ( to_cycle_uhc G (tl Cycle))"
+    using x_in_C_impl_x_in_to_cycle_uhc_0 x_in_C_impl_x_in_to_cycle_uhc_1 x_in_C_impl_x_in_to_cycle_uhc_2 by auto
+  then show "x\<in> set Cy"  using a_def Cy_def by force
+qed
+
+
+lemma c_not_empty_to_cycle_not_empty: 
+  assumes "C \<noteq> []"
+  shows "to_cycle_uhc G C \<noteq> []"
+  using assms apply(induction C) by(auto)
+
+
+lemma last_to_cycle_uhc: 
+  assumes "C \<noteq> []"
+  shows "last (to_cycle_uhc G C) = (last C, 2)"
+  using assms proof(induction C)
+  case Nil
+  then show ?case by simp
+next
+  case (Cons a C)
+  then show ?case proof(cases "C = []")
+    case True
+    then show ?thesis by simp
+  next
+    case False
+    then have 1: "last (to_cycle_uhc G C) = (last C, 2)"
+      using Cons by simp
+    have 2: "last (a#C) = last C"
+      using False by simp
+    have "(to_cycle_uhc G C) \<noteq> []"
+      using False c_not_empty_to_cycle_not_empty by simp 
+    then have 3: "last (to_cycle_uhc G (a#C)) = last (to_cycle_uhc G C)"
+      using False by auto 
+    then show ?thesis using Cons 1 2 3 by auto   
+  qed
+qed
+
+
+lemma hd_last_Cy: 
+  assumes "arcs G \<noteq> {}" "card (verts G) > 1"
+  shows "hd Cy = last Cy"
+proof -
+  have 1: "hd Cycle = last Cycle" 
+    using hd_last_Cycle assms by blast
+  have 2: "Cycle \<noteq> []" 
+    using assms Cycle_not_empty by blast 
+  then show ?thesis proof(cases "length Cycle = 1")
+    case True
+    then show ?thesis sorry
+  next
+    case False
+    then have "length Cycle > 1" 
+      using 1  2 
+      by (simp add: nat_neq_iff) 
+    then have 3: "tl Cycle \<noteq> []" 
+      by (metis length_tl less_numeral_extra(3) list.size(3) zero_less_diff) 
+    then have 4: "hd Cycle = last (tl Cycle)"
+      using 1 
+      by (simp add: last_tl) 
+    have 5: "last Cycle = last (tl Cycle)" 
+      using 1 
+      using "4" by auto 
+    have 6: "last (to_cycle_uhc G (tl Cycle)) = (last (tl Cycle), 2)" 
+      using 3 last_to_cycle_uhc by(auto simp add:3 last_to_cycle_uhc)  
+    have "(to_cycle_uhc G (tl Cycle)) \<noteq> []" 
+      by (simp add: "3" c_not_empty_to_cycle_not_empty) 
+    then have "last Cy =  (last (tl Cycle), 2)"
+      using 6 Cy_def by auto
+    then have "last Cy = (last Cycle, 2)"
+      using 5 by simp 
+    then have 7: "last Cy = (hd Cycle, 2)"
+      using 1 by simp
+    have "hd Cy = (hd Cycle, 2)" 
+      using Cy_def by simp 
+    then show ?thesis using 7 by simp
+  qed
+qed  
+
+
 lemma is_uhc_Cy_G':
   assumes "arcs G \<noteq> {}" "card (verts G) > 1"
   shows "is_uhc G' Cy"
   unfolding is_uhc_def 
-  using distinct_Cy
+  using assms distinct_Cy set_Cy_subset_G' all_verts_G'_in_Cy
   sorry
 
 

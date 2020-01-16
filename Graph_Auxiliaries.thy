@@ -1,0 +1,80 @@
+theory Graph_Auxiliaries
+  imports Main  "Set_Auxiliaries" "List_Auxiliaries"
+    Graph_Theory.Digraph  Graph_Theory.Arc_Walk
+    Graph_Theory.Vertex_Walk
+begin
+
+lemma last_vwalk_arcs_last_p:
+  assumes "snd (last (vwalk_arcs p)) = v" "(vwalk_arcs p) \<noteq> []"
+  shows "last p = v"
+  using assms
+proof(induction p)
+  case Nil
+  then show ?case by simp
+next
+  case (Cons a p)
+  then show ?case proof(cases "p = []")
+    case True
+    then have "vwalk_arcs (a#p) = []" by simp
+    then show ?thesis 
+      using Cons by auto
+  next
+    case False
+    then have 1: "p\<noteq> []" by simp
+    then have 2: "vwalk_arcs (a#p) = (a, hd p)#vwalk_arcs p"
+      using vwalk_arcs_Cons by auto
+    then have "vwalk_arcs (a#p) \<noteq> []" by auto
+    then show ?thesis proof(cases "vwalk_arcs p = []")
+      case True
+      then have 3: "(last (vwalk_arcs (a#p))) = (a, hd p)"
+        using 2 by simp 
+      have "last p = hd p" using True 1 
+        by (metis hd_rev list.distinct(1) list.exhaust rev_singleton_conv vwalk_arcs_Cons) 
+      then show ?thesis 
+        using 3 Cons False by auto 
+    next
+      case False
+      then have "snd (last (vwalk_arcs (a#p))) = snd (last (vwalk_arcs p))"
+        by (simp add: 2) 
+      then have "snd (last (vwalk_arcs p)) = v" 
+        using Cons by simp
+      then have 3: "last p = v" 
+        using Cons False by simp 
+      have "p \<noteq> []" 
+        by (simp add: 1)
+      then have "last (a#p) = last p" 
+        by auto
+      then show ?thesis using 3 by simp 
+    qed
+  qed
+qed
+
+
+
+lemma hd_vwalk_arcs_last_p:
+  assumes "fst (hd (vwalk_arcs p)) = v" "(vwalk_arcs p) \<noteq> []"
+  shows "hd p = v"
+  using assms
+proof(induction p)
+  case Nil
+  then show ?case by simp
+next
+  case (Cons a p)
+  then show ?case proof(cases "p = []")
+    case True
+    then have "vwalk_arcs (a#p) = []" by simp
+    then show ?thesis 
+      using Cons by auto
+  next
+    case False
+    then have 1: "p\<noteq> []" by simp
+    then have 2: "vwalk_arcs (a#p) = (a, hd p)#vwalk_arcs p"
+      using vwalk_arcs_Cons by auto
+    then have "fst (hd (vwalk_arcs (a#p))) = a"
+      by simp
+    then show ?thesis 
+      using Cons by simp 
+  qed
+qed
+
+end
