@@ -1283,10 +1283,71 @@ end
 
 subsection\<open>hc_to_uhc G \<in> uhc --> G \<in> hc\<close>
 
+fun to_cycle_hc where
+"to_cycle_hc ((a, b)#vs) = (if b = 0 then a#(to_cycle_hc vs) else to_cycle_hc vs)" |
+"to_cycle_hc [] = []"
+
+
 context
   fixes G assumes in_uhc: "hc_to_uhc G \<in> uhc"
-  fixes G' assumes G'_def: "hc_to_uhc G = G'" 
+  fixes G' assumes G'_def: "G' = hc_to_uhc G" 
+  fixes Cy1 assumes Cy1_def: "is_uhc G' Cy1"
+  fixes Cy2 assumes Cy2_def: "Cy2 = rev Cy1"
+  fixes C1 assumes C1_def: "C1 = to_cycle_hc Cy1"
+  fixes C2 assumes C2_def: "C2 = to_cycle_hc Cy2" 
 begin 
+
+
+lemma G'_properties:
+  shows "symmetric G'"
+  using G'_def in_uhc uhc_def by auto
+
+
+lemma
+  assumes "is_uhc G' C"
+  shows "is_uhc G' (rev C)" 
+  using assms proof(induction C)
+case Nil
+then show ?case by auto
+next
+  case (Cons a C)
+  then show ?case sorry
+qed
+
+
+lemma G_properties: 
+  shows "wf_digraph G" "((tail G = fst \<and> head G = snd) \<or> arcs G = {})"  
+proof -
+  show "wf_digraph G" proof(rule ccontr)
+    assume a1: "\<not> wf_digraph G" 
+    then have "G' = \<lparr>verts = {}, arcs = {((head G e, 0), (head G e, 1))|e. e \<in> arcs G}, tail = fst, head = snd\<rparr>" 
+      using G'_def
+      by (simp add: hc_to_uhc_def) 
+    then have "G' \<notin> uhc" using a1 else_not_in_uhc_1 by blast 
+    then show False using G'_def in_uhc by simp
+  qed
+next
+  show "((tail G = fst \<and> head G = snd) \<or> arcs G = {})" proof(rule ccontr)
+    assume a1: "\<not> ((tail G = fst \<and> head G = snd) \<or> arcs G = {})" 
+    then have "G' = \<lparr>verts = {}, arcs = {((head G e, 0), (head G e, 1))|e. e \<in> arcs G}, tail = fst, head = snd\<rparr>" 
+      using G'_def 
+      by (simp add: a1 hc_to_uhc_def) 
+    then have "G' \<notin> uhc" using a1 else_not_in_uhc_2 by blast   
+    then show False using G'_def in_uhc by simp
+  qed
+qed
+
+lemma G'_def_3:
+  shows "G' = \<lparr>verts = {(v, (0::nat))|v. v \<in> verts G} \<union> {(v, 1)|v. v \<in> verts G} \<union> {(v, 2)|v. v \<in> verts G}, 
+      arcs = {((v, 0), (v, 1))|v. v \<in> verts G} \<union>{((v, 1), (v, 0))|v. v \<in> verts G}\<union>
+          {((v, 1), (v, 2))|v. v \<in> verts G}\<union>{((v, 2), (v, 1))|v. v \<in> verts G}\<union>
+          {((v, 2), (u, 0))|v u e. e \<in> arcs G \<and> v = tail G e \<and> u = head G e}\<union> 
+          {((u, 0), (v, 2))|v u e. e \<in> arcs G \<and> v = tail G e \<and> u = head G e}\<union> 
+          {((u, 0), (u, 2))|u. u \<in> verts G}\<union> 
+          {((u, 2), (u, 0))|u. u \<in> verts G}, 
+      tail = fst, head = snd\<rparr>"
+  using G_properties G'_def by(auto simp add: hc_to_uhc_def) 
+
 
 
 lemma in_hc:
