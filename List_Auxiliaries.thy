@@ -821,4 +821,51 @@ next
 qed 
 
 
+lemma sublist_append_using_or: 
+  assumes "sublist [a, b] (l1@l2)" "distinct (l1@l2)" "l1 \<noteq> []"
+  shows "sublist [a, b] l1 \<or> sublist [a, b] l2 \<or> (a = last l1 \<and> b = hd l2)"
+  using assms proof(induction l1)
+  case Nil
+  then show ?case using sublist_def by simp 
+next
+  case (Cons l l1)
+  then have "a= l \<or> sublist [a, b] (l1@l2)"
+    using sublist_cons_impl_sublist 
+    by fastforce
+  then show ?case proof
+    assume a1: "a = l"
+    then have "a = hd (l#l1@l2)"
+      by simp
+    then have b1: "b = hd (tl(l#l1@l2))" 
+      using Cons sublist_def 
+      by (smt append_Cons sublist_v1_hd_v2_hd_tl) 
+    then have b2: "b = hd (l1@l2)" 
+      by auto
+    then have "sublist [a, b] (l#l1) \<or> (a = last (l#l1) \<and> b = hd l2)"
+    proof(cases "l1 = []")
+      case True
+      then have a2: "a = last (l#l1)" 
+        using a1 by simp
+      then have "b = hd l2" 
+        using b2 True by simp
+      then show ?thesis using a2 by auto
+    next
+      case False
+      then have "b = hd l1" 
+        using b2 by simp
+      then have "(l#l1) = []@[a, b] @ (tl l1)" 
+        using a1 False by simp
+      then have "sublist [a, b] (l#l1)"
+        using sublist_def by metis
+      then show ?thesis using sublist_def by simp
+    qed
+    then show ?thesis by auto
+  next
+    assume "sublist [a, b] (l1@l2)"
+    then show ?thesis using Cons 
+      by (metis append_self_conv2 distinct_tl last_ConsR list.sel(3) sublist_cons tl_append2) 
+  qed
+qed
+
+
 end

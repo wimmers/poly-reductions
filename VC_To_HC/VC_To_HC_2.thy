@@ -1936,13 +1936,6 @@ proof -
 qed
 
 
-lemma sublist_imp_in_arcs: 
-  assumes "sublist [a, b] Cy" 
-  shows "(a, b) \<in> set (vwalk_arcs Cy)"
-  using assms apply(induction Cy) apply(auto simp add: sublist_def) 
-  by (metis in_set_vwalk_arcs_append1 list.set_intros(1) vwalk_arcs.simps(3)) 
-
-
 lemma always_in_Cover_2_1: 
   assumes "E!i = e" "i<length E" "e = {u, v}" "u \<noteq> v"
   shows "((sublist [Edge v e 0, Edge v e 1] Cycle \<and> sublist [Edge u e 0, Edge u e 1] Cycle) \<longrightarrow> (u \<in> Cov \<and> v \<in> Cov)) \<and> 

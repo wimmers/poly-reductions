@@ -92,4 +92,11 @@ lemma length_C_vwalk_arcs_not_empty:
   using assms 
   using vwalk_arcs_empty_length_p by fastforce
 
+
+lemma sublist_imp_in_arcs: 
+  assumes "sublist [a, b] Cy" 
+  shows "(a, b) \<in> set (vwalk_arcs Cy)"
+  using assms apply(induction Cy) apply(auto simp add: sublist_def) 
+  by (metis in_set_vwalk_arcs_append1 list.set_intros(1) vwalk_arcs.simps(3)) 
+
 end
