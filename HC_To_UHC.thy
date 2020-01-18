@@ -20,15 +20,14 @@ definition
 (*I'm using the or arcs = {} to easily construct a graph that is not in uhc. If arcs are empty, 
 head and tail are not important*)
 definition "hc_to_uhc \<equiv>
-  \<lambda>(G::('a, ('a \<times> 'a)) pre_digraph). (if wf_digraph G \<and> ((tail G = fst \<and> head G = snd) \<or> arcs G = {}) then 
+  \<lambda>(G::('a, ('a \<times> 'a)) pre_digraph). (if wf_digraph G \<and> ((tail G = fst \<and> head G = snd) \<or> arcs G = {}) then (if card (verts G) > 1 then 
     \<lparr>verts = {(v, (0::nat))|v. v \<in> verts G} \<union> {(v, 1)|v. v \<in> verts G} \<union> {(v, 2)|v. v \<in> verts G}, 
     arcs = {((v, 0), (v, 1))|v. v \<in> verts G} \<union>{((v, 1), (v, 0))|v. v \<in> verts G}\<union>
           {((v, 1), (v, 2))|v. v \<in> verts G}\<union>{((v, 2), (v, 1))|v. v \<in> verts G}\<union>
           {((v, 2), (u, 0))|v u e. e \<in> arcs G \<and> v = tail G e \<and> u = head G e}\<union> 
-          {((u, 0), (v, 2))|v u e. e \<in> arcs G \<and> v = tail G e \<and> u = head G e}\<union> 
-          {((u, 0), (u, 2))|u. u \<in> verts G}\<union> 
-          {((u, 2), (u, 0))|u. u \<in> verts G}, 
-    tail = fst, head = snd\<rparr>
+          {((u, 0), (v, 2))|v u e. e \<in> arcs G \<and> v = tail G e \<and> u = head G e},
+    tail = fst, head = snd\<rparr> 
+    else \<lparr>verts = {}, arcs = {}, tail = fst, head = snd\<rparr>)
     else \<lparr>verts = {}, arcs = {((head G e, 0), (head G e, 1))|e. e \<in> arcs G}, tail = fst, head = snd\<rparr>)"
 
 
@@ -98,7 +97,7 @@ fun to_cycle_uhc::"('a, ('a \<times> 'a)) pre_digraph \<Rightarrow> 'a list \<Ri
 "to_cycle_uhc G (v#vs) = [(v, 0), (v, 1), (v, 2)] @ to_cycle_uhc G vs"
 
 context
-  fixes G assumes in_hc: "G \<in> hc"
+  fixes G assumes in_hc: "G \<in> hc" "card (verts G) > 1" 
   fixes Cycle assumes Cycle_def: "is_hc G Cycle"
   fixes G' assumes G'_def: "G' = hc_to_uhc G"
   fixes Cy assumes Cy_def: "Cy = (hd Cycle, 2) # to_cycle_uhc G (tl Cycle)"
@@ -109,14 +108,12 @@ lemma G'_def_2:
     arcs = {((v, 0), (v, 1))|v. v \<in> verts G} \<union>{((v, 1), (v, 0))|v. v \<in> verts G}\<union>
           {((v, 1), (v, 2))|v. v \<in> verts G}\<union>{((v, 2), (v, 1))|v. v \<in> verts G}\<union>
           {((v, 2), (u, 0))|v u e. e \<in> arcs G \<and> v = tail G e \<and> u = head G e}\<union> 
-          {((u, 0), (v, 2))|v u e. e \<in> arcs G \<and> v = tail G e \<and> u = head G e}\<union> 
-          {((u, 0), (u, 2))|u. u \<in> verts G}\<union> 
-          {((u, 2), (u, 0))|u. u \<in> verts G}, 
+          {((u, 0), (v, 2))|v u e. e \<in> arcs G \<and> v = tail G e \<and> u = head G e},
     tail = fst, head = snd\<rparr>"
 proof -
   have "wf_digraph G" "((tail G = fst \<and> head G = snd) \<or> arcs G = {})"
     using in_hc hc_def by auto
-  then show ?thesis 
+  then show ?thesis  using in_hc 
     by(auto simp add:  G'_def hc_to_uhc_def)
 qed
 
@@ -129,7 +126,6 @@ lemma wf_digraph_G:
 lemma finite_verts_G:
   shows "finite (verts G)" 
   using in_hc hc_def by auto
-
 
 lemma wf_digraph_G': 
   shows "wf_digraph G'"
@@ -380,85 +376,6 @@ lemma arcs_G'_subset_verts_verts:
   by (simp add: arcs_ends_G' subrelI wf_digraph.adj_in_verts(1) wf_digraph.adj_in_verts(2) wf_digraph_G') 
 
 
-lemma single_vertex_arcs_G': 
-  assumes "verts G = {v}" "verts G' = {(v, 0), (v, 1), (v, 2)}"
-  shows  "((v, 0), (v, 1))\<in> arcs G'" "((v, 1), (v, 2)) \<in> arcs G'"  "((v, 2), (v, 0))\<in> arcs G'"
-proof -
-  have 2: "arcs G' = {((v, 0), (v, 1))|v. v \<in> verts G} \<union>{((v, 1), (v, 0))|v. v \<in> verts G}\<union>
-          {((v, 1), (v, 2))|v. v \<in> verts G}\<union>{((v, 2), (v, 1))|v. v \<in> verts G}\<union>
-          {((v, 2), (u, 0))|v u e. e \<in> arcs G \<and> v = tail G e \<and> u = head G e}\<union> 
-          {((u, 0), (v, 2))|v u e. e \<in> arcs G \<and> v = tail G e \<and> u = head G e}\<union> 
-          {((u, 0), (u, 2))|u. u \<in> verts G}\<union> 
-          {((u, 2), (u, 0))|u. u \<in> verts G}"
-    using G'_def_2 by simp
-  then have 3: "arcs G' = {((v, 0), (v, 1))} \<union>{((v, 1), (v, 0))}\<union>
-          {((v, 1), (v, 2))}\<union>{((v, 2), (v, 1))}\<union>
-          {((v, 2), (u, 0))|v u e. e \<in> arcs G \<and> v = tail G e \<and> u = head G e}\<union> 
-          {((u, 0), (v, 2))|v u e. e \<in> arcs G \<and> v = tail G e \<and> u = head G e}\<union> 
-          {((v, 0), (v, 2))}\<union> 
-          {((v, 2), (v, 0))}"
-    using assms by auto
-  then have "arcs G' = {((v, 2), (v, 0)), ((v, 0), (v, 2)),  ((v, 2), (v, 1)), ((v, 1), (v, 2)), ((v, 1), (v, 0)), ((v, 0), (v, 1))} 
-    \<union> {((v, 2), (u, 0))|v u e. e \<in> arcs G \<and> v = tail G e \<and> u = head G e}\<union> 
-          {((u, 0), (v, 2))|v u e. e \<in> arcs G \<and> v = tail G e \<and> u = head G e}"
-    by(simp)  
-  then show "((v, 0), (v, 1))\<in> arcs G'" "((v, 1), (v, 2)) \<in> arcs G'"  "((v, 2), (v, 0))\<in> arcs G'" by blast+
-qed
-
-
-lemma cycleG'_one_vertex_G:
-  assumes "card (verts G) = 1" 
-  shows "\<exists>Cy. is_uhc G' Cy"
-proof -
-  have "(\<exists>v. verts G = {v})"
-    using assms 
-    by (meson card_1_singletonE) 
-  then obtain v where v_def: "verts G = {v}"
-    by auto 
-  then have vG': "verts G' = {(v, 0), (v, 1), (v, 2)}"
-    using G'_def_2 by auto
-  then have aG': "((v, 0), (v, 1))\<in> arcs G'" "((v, 1), (v, 2)) \<in> arcs G'"  "((v, 2), (v, 0))\<in> arcs G'" 
-    using single_vertex_arcs_G' v_def by blast+
-  obtain Cy where
-    Cy_def: "Cy = [(v, (0::nat)), (v, 1), (v,2), (v, 0)]"
-    by auto
-  then have lengthCy: "length Cy \<ge> 2" 
-    by(auto) 
-  then have "is_uhc G' Cy" proof -
-    have 1: "set Cy \<subseteq> verts G'" 
-      using Cy_def vG' by simp
-    have 2: "distinct (tl Cy)"
-      using Cy_def by simp
-    have 3: "(\<forall>x\<in>verts G'. x \<in> set Cy)"
-      using vG' Cy_def by simp
-    have "pre_digraph.cycle G' (vwalk_arcs Cy)"
-    proof-
-      have arcsCy: "vwalk_arcs Cy = [((v, 0), (v, 1)), ((v, 1), (v, 2)), ((v, 2), (v, 0))]"
-        using Cy_def by simp
-      obtain a where a_def: "a = vwalk_arcs Cy"
-        by auto
-      then have a1: "a = [((v, 0), (v, 1)), ((v, 1), (v, 2)), ((v, 2), (v, 0))]"
-        using arcsCy by auto
-      then have 1: "vwalk_arcs a \<noteq> []"
-        by auto
-      have "(pre_digraph.awalk_verts G' (v, 0) a) = [(v, 0), (v, 1), (v, 2), (v, 0)]"
-        using a1 awalk_verts_Cycle_one_node by simp
-      then have 2: "distinct (tl (pre_digraph.awalk_verts G' (v, 0) a))"
-        by fastforce
-      have 3: "pre_digraph.awalk G' (v, 0) a (v, 0)" 
-        using awalk_Cycle_one_node a1 vG' aG' 
-        by blast 
-      show ?thesis using pre_digraph.cycle_def 1 2 3 a_def  
-        by fastforce 
-    qed
-    then have "vwalk_cycle G' Cy"
-      using lengthCy cycle_implies_vwalk_cycle head_tail_G' wf_digraph_G' by auto
-    then show ?thesis  
-      using is_uhc_def 1 2 3 cycle_implies_vwalk_cycle by auto
-  qed
-  then show ?thesis by blast 
-qed
-
 
 lemma arcsG_empty_exists_cycleG':
   assumes "arcs G = {}" 
@@ -467,28 +384,7 @@ proof -
   have "card (verts G) \<le> 1"
     using no_arcs_impl_at_most_one_vertex assms 
     by simp
-  then have "card (verts G) = 1 \<or> card (verts G) = 0"
-    by auto
-  then show ?thesis proof 
-    assume "card (verts G) = 1" 
-    then show ?thesis 
-      using cycleG'_one_vertex_G by simp  
-  next
-    assume "card (verts G) = 0" 
-    then have a1: "verts G = {}"
-      using finite_verts_G by auto
-    then have cy: "Cycle = []" 
-      using Cycle_def is_hc_def 
-      by fastforce
-    have vG': "verts G' = {}" 
-      using G'_def_2 a1 by simp
-    then have 1: "card (verts G') \<le> 1" "finite (verts G')"
-      by auto
-    then have "set [] \<subseteq> verts G'" "distinct (tl [])" 
-      using vG' by auto
-    then show ?thesis 
-      using is_uhc_def 1 by blast 
-  qed
+  then show ?thesis using in_hc by auto
 qed
 
 
@@ -1256,19 +1152,10 @@ proof -
       by auto
   next
     case False
-    then have "card (verts G) \<ge> 1"
-      using non_empty_arcs_card_verts_G by auto 
-    then have "card (verts G) = 1 \<or>card (verts G) > 1"
-      by auto
-    then show ?thesis proof 
-      assume "card (verts G) = 1" 
-      then show ?thesis 
-        using cycleG'_one_vertex_G by simp
-    next
-      assume "1 < card (verts G)" 
-      then show ?thesis 
-        using arcsG_non_empty_exists_cycleG' False by blast 
-    qed
+    then have "card (verts G) > 1"
+      using in_hc by auto 
+    then show ?thesis 
+      using arcsG_non_empty_exists_cycleG' False by blast 
   qed
   show ?thesis 
     using G'_def 1 2 3 4 uhc_def 
@@ -1278,7 +1165,18 @@ qed
 end
 
 
-
+lemma G_leq_1_vertex_in_uhc: 
+  assumes "G \<in> hc" "\<not>card (verts G) >1"
+  shows "hc_to_uhc G \<in> uhc"
+proof -
+  have "hc_to_uhc G = \<lparr>verts = {}, arcs = {}, tail = fst, head = snd\<rparr>"
+    using assms hc_to_uhc_def hc_def 
+    by (simp add: hc_def hc_to_uhc_def) 
+  then have "wf_digraph (hc_to_uhc G)" "symmetric (hc_to_uhc G)" "finite (verts (hc_to_uhc G))" 
+    "arcs (hc_to_uhc G) = {}"  "is_uhc (hc_to_uhc G) []" 
+    by(auto simp add: wf_digraph_def symmetric_def arcs_ends_def sym_def is_uhc_def)   
+  then show ?thesis using uhc_def by auto
+qed
 
 
 subsection\<open> Main theorem \<close>
@@ -1292,7 +1190,7 @@ proof -
     using assms hc_def by auto
   obtain Cy where 2: "Cy = (hd Cycle, 2) # to_cycle_uhc G (tl Cycle)"
     by simp
-  then show ?thesis using 1 2 in_uhc assms by auto 
+  then show ?thesis using 1 2 in_uhc assms G_leq_1_vertex_in_uhc by blast 
 qed
 
 

@@ -1057,4 +1057,70 @@ next
     using a_in_set_cy_exists_sublist assms by metis
 qed
 
+
+lemma two_sublist_same_first_distinct_tl: 
+  assumes "distinct (tl cs)" "sublist [x, a] cs" "sublist [x, b] cs" "hd cs = last cs" 
+  shows "b = a"
+proof(cases "x = hd cs")
+case True
+  then show ?thesis using assms 
+    by (metis sublist_hd_tl_equal_b_hd_tl) 
+next
+case False
+  then show ?thesis using assms 
+    by (metis distinct.simps(1) list.collapse sublist_cons_impl_sublist two_sublist_distinct_same_last) 
+qed
+
+
+lemma distinct_tl_cyclic_sublist_cs_explisit: 
+  assumes "distinct (tl cs)" "sublist [a, b] cs" "sublist [b, a] cs" "hd cs = last cs" "b \<noteq> a"
+  shows "cs = [a, b, a] \<or> cs = [b, a, b]" 
+proof(cases "a = hd cs")
+  case True
+  then have 1: "b = hd (tl cs)" 
+    using assms sublist_hd_tl_equal_b_hd_tl by fastforce 
+  then have 2: "a = hd (tl (tl cs))" 
+    by (metis True assms distinct.simps(1) distinct_singleton hd_Cons_tl last_tl list.sel(1) list.sel(3) sublist_cons_impl_sublist sublist_hd_last_only_2_elems sublist_not_cyclic_for_distinct) 
+  then have "cs = [a, b, a]@ (tl (tl (tl cs)))" 
+    using 1 2 True 
+    by (metis append_Nil2 assms(1) assms(3) assms(4) assms(5) last_tl list.collapse list.sel(2) list.sel(3) sublist_cons_impl_sublist sublist_hd_last_only_2_elems) 
+  have "a = last cs" 
+    using assms True by simp
+  then show ?thesis using assms 
+    by (metis "1" \<open>cs = [a, b, a] @ tl (tl (tl cs))\<close> last_tl list.collapse self_append_conv sublist_cons_impl_sublist sublist_hd_last_only_2_elems tl_Nil) 
+next
+  case False
+  then have 1: "sublist [a, b] (tl cs)"
+    using assms 
+    by (metis distinct.simps(1) hd_Cons_tl sublist_cons_impl_sublist sublist_not_cyclic_for_distinct) 
+  then show ?thesis proof(cases "b = hd cs")
+    case True
+    then have 1: "a = hd (tl cs)" 
+    using assms sublist_hd_tl_equal_b_hd_tl by fastforce 
+  then have 2: "b = hd (tl (tl cs))" 
+    by (metis True assms distinct.simps(1) distinct_singleton hd_Cons_tl last_tl list.sel(1) list.sel(3) sublist_cons_impl_sublist sublist_hd_last_only_2_elems sublist_not_cyclic_for_distinct) 
+  then have "cs = [b, a, b]@ (tl (tl (tl cs)))" 
+    using 1 2 True 
+    by (metis append_Nil2 assms(1) assms(2) assms(4) assms(5) last_tl list.collapse list.sel(2) list.sel(3) sublist_cons_impl_sublist sublist_hd_last_only_2_elems) 
+  have "b = last cs" 
+    using assms True by simp
+  then show ?thesis using assms 
+    by (metis "1" \<open>cs = [b, a, b] @ tl (tl (tl cs))\<close> last_tl list.collapse self_append_conv sublist_cons_impl_sublist sublist_hd_last_only_2_elems tl_Nil) 
+  next
+    case False
+    then have 2: "sublist [b, a] (tl cs)"
+    using assms 
+    by (metis distinct.simps(1) hd_Cons_tl sublist_cons_impl_sublist sublist_not_cyclic_for_distinct) 
+    then show ?thesis using 1 2 assms 
+      by (meson sublist_not_cyclic_for_distinct) 
+  qed
+qed
+
+
+lemma sublist_rev: 
+  assumes "sublist as bs" 
+  shows "sublist (rev as) (rev bs)"
+  using assms sublist_def 
+  by (metis append.assoc rev_append) 
+
 end
