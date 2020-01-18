@@ -2,7 +2,7 @@ theory HC_To_UHC
   imports  Main "Three_Sat_To_Set_Cover" Graph_Theory.Digraph  Graph_Theory.Arc_Walk
     Graph_Theory.Vertex_Walk
     "List_Auxiliaries" "Set_Auxiliaries"
-    "VC_To_HC/Definitions" "VC_To_HC/VC_To_HC" "Graph_auxiliaries"
+    "VC_To_HC/Definitions" "VC_To_HC/VC_To_HC" "Graph_auxiliaries" "Vwalk_Cycle"
 begin
 
 subsection\<open>Preliminaries\<close>
@@ -11,10 +11,10 @@ subsection\<open>Preliminaries\<close>
 (*Case for empty c is already in cycle*)
 definition
   "is_uhc (G::('a,('a \<times> 'a)) pre_digraph) (c:: 'a list)  \<equiv> 
-    ((pre_digraph.cycle G (vwalk_arcs c) \<and> (\<forall>x\<in> verts G. x \<in> set c))\<or> card (verts G) \<le> 1)\<and> set c \<subseteq> verts G \<and> distinct (tl c)"
+    ((vwalk_cycle G c \<and> (\<forall>x\<in> verts G. x \<in> set c)\<and> distinct (tl c))\<or> card (verts G) \<le> 1)\<and> set c \<subseteq> verts G"
 
 definition
-  "uhc \<equiv> {G. \<exists>c. wf_digraph G \<and> symmetric G \<and> is_uhc G c \<and>((tail G = fst \<and> head G = snd) \<or> arcs G = {})}"
+  "uhc \<equiv> {G. \<exists>c. wf_digraph G \<and> symmetric G \<and> is_uhc G c \<and>((tail G = fst \<and> head G = snd) \<or> arcs G = {}) \<and> finite (verts G)}"
 
 (*last two edge sets are not part of the original proof, but are needed for case with only one node*)
 (*I'm using the or arcs = {} to easily construct a graph that is not in uhc. If arcs are empty, 
@@ -422,6 +422,8 @@ proof -
   obtain Cy where
     Cy_def: "Cy = [(v, (0::nat)), (v, 1), (v,2), (v, 0)]"
     by auto
+  then have lengthCy: "length Cy \<ge> 2" 
+    by(auto) 
   then have "is_uhc G' Cy" proof -
     have 1: "set Cy \<subseteq> verts G'" 
       using Cy_def vG' by simp
@@ -449,8 +451,10 @@ proof -
       show ?thesis using pre_digraph.cycle_def 1 2 3 a_def  
         by fastforce 
     qed
+    then have "vwalk_cycle G' Cy"
+      using lengthCy cycle_implies_vwalk_cycle head_tail_G' wf_digraph_G' by auto
     then show ?thesis  
-      using is_uhc_def 1 2 3 by blast
+      using is_uhc_def 1 2 3 cycle_implies_vwalk_cycle by auto
   qed
   then show ?thesis by blast 
 qed
@@ -518,6 +522,22 @@ proof -
   then show ?thesis
     using finite_verts_G' 
     by (metis One_nat_def Suc_leI card_gt_0_iff empty_iff)
+qed
+
+
+lemma card_verts_G'_2:
+  assumes "card (verts G) > 1"
+  shows "card (verts G') > 1"
+proof -
+  have "\<exists>v. v \<in> verts G" 
+    using assms not_one_le_zero by fastforce 
+  then obtain v where "v \<in> verts G"
+    by auto
+  then have "(v, 0) \<in> verts G'" "(v, 1) \<in> verts G'"
+    using G'_def_2 by auto
+  then show ?thesis
+    using finite_verts_G' 
+    by (meson contains_two_card_greater_1 prod.inject zero_neq_one) 
 qed
 
 
@@ -801,61 +821,10 @@ proof -
 qed
 
 
-lemma vwalk_arcs_from_length_1: 
-  assumes "length C = 1"
-  shows "vwalk_arcs C = []"
-  using assms 
-  by (metis length_1_set_L list.set_intros(1) vwalk_arcs.simps(1) vwalk_arcs.simps(2) vwalk_to_vpath.cases) 
-
-
 lemma at_least_to_nodes_vwalk_arcs_awalk_verts: 
   assumes "length C > 1"
   shows "(pre_digraph.awalk_verts G' u (vwalk_arcs C)) = C"
-  using assms proof(induction C arbitrary: u)
-  case Nil
-  then show ?case by auto
-next
-  case (Cons a C)
-  then have 1: "vwalk_arcs (a#C) = (a, hd C) # vwalk_arcs C"
-    by auto
-  then show ?case proof(cases "length C > 1")
-    case True
-    then have 2: "pre_digraph.awalk_verts G' (hd C) (vwalk_arcs C) = C"
-      using Cons by simp
-    have "pre_digraph.awalk_verts G' u (vwalk_arcs (a#C)) = 
-      tail G' (a, hd C) # (pre_digraph.awalk_verts G' (head G' (a, hd C)) (vwalk_arcs C))" 
-      using 1 
-      by (simp add: pre_digraph.awalk_verts.simps(2)) 
-    then have "pre_digraph.awalk_verts G' u (vwalk_arcs (a#C)) 
-      = a # (pre_digraph.awalk_verts G' (head G' (a, hd C)) (vwalk_arcs C))"
-      using G'_def_2 
-      by fastforce
-    then have "pre_digraph.awalk_verts G' u (vwalk_arcs (a#C)) 
-      = a # (pre_digraph.awalk_verts G' (hd C) (vwalk_arcs C))"
-      using G'_def_2 
-      by fastforce
-    then show ?thesis using 2 by simp
-  next
-    case False
-    then have lC: "length C = 1" 
-      using Cons linorder_neqE_nat by auto 
-    then have hd_C: "C = [hd C]" 
-      by (metis "1" list.sel(1) neq_Nil_conv vwalk_arcs.simps(2) vwalk_arcs_Cons vwalk_arcs_from_length_1) 
-    then have "vwalk_arcs (a#C) = (a, hd C) #[]"
-      using 1 lC vwalk_arcs_from_length_1 by auto 
-    then have 2: "pre_digraph.awalk_verts G' u (vwalk_arcs (a#C)) = pre_digraph.awalk_verts G' u [(a, hd C)]"
-      by argo
-    then have 3: "... = (tail G' (a, hd C)) # (pre_digraph.awalk_verts G' (head G' (a, hd C)) [])"
-      by (simp add: pre_digraph.awalk_verts.simps(2)) 
-    then have 4: "... =  (tail G' (a, hd C)) # [(head G' (a, hd C))]"      
-      by (simp add: pre_digraph.awalk_verts.simps) 
-    then have 5: "... = a #  [(head G' (a, hd C))]" 
-      using G'_def_2 by fastforce
-    then have 6: "... = a # [(hd C)]"
-      using G'_def_2 by auto
-    then show ?thesis using G'_def_2 2 3 4 5 6 hd_C by argo  
-  qed
-qed 
+  using head_tail_G'  at_least_to_nodes_vwalk_arcs_awalk_verts assms by fast
 
 
 lemma distinct_impl_distinct_awalk: 
@@ -1229,13 +1198,39 @@ lemma pre_digraph_cycle_Cy_G':
   using assms vwalk_arcs_Cy_not_empty distinct_tl_awalk_cy awalk_G'_Cy by blast
 
 
+lemma card_verts_length_Cy: 
+  assumes "card (verts G) > 1"
+  shows "length Cy \<ge> 2" 
+proof -
+  have "card (verts G') > 1"
+    using card_verts_G'_2 assms by simp 
+  then have "length Cy > 1" 
+    using Cy_def 
+    by (metis assms c_not_empty_to_cycle_not_empty card_verts_impl_length_Cycle impossible_Cons le_antisym length_geq_2_tt_not_empty length_greater_0_conv less_one less_or_eq_imp_le linorder_neqE_nat list.sel(3) nat_less_le no_arcs_impl_at_most_one_vertex not_gr0) 
+  then show ?thesis by auto
+qed
+
+
+lemma vwalk_cycle_Cy_G': 
+  assumes "arcs G \<noteq> {}" "card (verts G) > 1"
+  shows "vwalk_cycle G' Cy"
+proof -
+  have 1: "length Cy \<ge> 2" 
+    using assms 
+    by (simp add: card_verts_length_Cy) 
+  have "pre_digraph.cycle G' (vwalk_arcs Cy)"
+    using assms pre_digraph_cycle_Cy_G' by auto 
+  then show ?thesis 
+    using 1 cycle_implies_vwalk_cycle head_tail_G' wf_digraph_G' by auto
+qed
 
 
 lemma is_uhc_Cy_G':
   assumes "arcs G \<noteq> {}" "card (verts G) > 1"
   shows "is_uhc G' Cy"
   unfolding is_uhc_def 
-  using assms distinct_Cy set_Cy_subset_G' all_verts_G'_in_Cy pre_digraph_cycle_Cy_G'
+  using assms distinct_Cy set_Cy_subset_G' all_verts_G'_in_Cy vwalk_cycle_Cy_G' 
+    cycle_implies_vwalk_cycle  
   by presburger
 
 
@@ -1276,85 +1271,13 @@ proof -
     qed
   qed
   show ?thesis 
-    using G'_def 1 2 3 4 uhc_def by blast
+    using G'_def 1 2 3 4 uhc_def 
+    using finite_verts_G' by blast
 qed
   
 end
 
-subsection\<open>hc_to_uhc G \<in> uhc --> G \<in> hc\<close>
 
-fun to_cycle_hc where
-"to_cycle_hc ((a, b)#vs) = (if b = 0 then a#(to_cycle_hc vs) else to_cycle_hc vs)" |
-"to_cycle_hc [] = []"
-
-
-context
-  fixes G assumes in_uhc: "hc_to_uhc G \<in> uhc"
-  fixes G' assumes G'_def: "G' = hc_to_uhc G" 
-  fixes Cy1 assumes Cy1_def: "is_uhc G' Cy1"
-  fixes Cy2 assumes Cy2_def: "Cy2 = rev Cy1"
-  fixes C1 assumes C1_def: "C1 = to_cycle_hc Cy1"
-  fixes C2 assumes C2_def: "C2 = to_cycle_hc Cy2" 
-begin 
-
-
-lemma G'_properties:
-  shows "symmetric G'"
-  using G'_def in_uhc uhc_def by auto
-
-
-lemma
-  assumes "is_uhc G' C"
-  shows "is_uhc G' (rev C)" 
-  using assms proof(induction C)
-case Nil
-then show ?case by auto
-next
-  case (Cons a C)
-  then show ?case sorry
-qed
-
-
-lemma G_properties: 
-  shows "wf_digraph G" "((tail G = fst \<and> head G = snd) \<or> arcs G = {})"  
-proof -
-  show "wf_digraph G" proof(rule ccontr)
-    assume a1: "\<not> wf_digraph G" 
-    then have "G' = \<lparr>verts = {}, arcs = {((head G e, 0), (head G e, 1))|e. e \<in> arcs G}, tail = fst, head = snd\<rparr>" 
-      using G'_def
-      by (simp add: hc_to_uhc_def) 
-    then have "G' \<notin> uhc" using a1 else_not_in_uhc_1 by blast 
-    then show False using G'_def in_uhc by simp
-  qed
-next
-  show "((tail G = fst \<and> head G = snd) \<or> arcs G = {})" proof(rule ccontr)
-    assume a1: "\<not> ((tail G = fst \<and> head G = snd) \<or> arcs G = {})" 
-    then have "G' = \<lparr>verts = {}, arcs = {((head G e, 0), (head G e, 1))|e. e \<in> arcs G}, tail = fst, head = snd\<rparr>" 
-      using G'_def 
-      by (simp add: a1 hc_to_uhc_def) 
-    then have "G' \<notin> uhc" using a1 else_not_in_uhc_2 by blast   
-    then show False using G'_def in_uhc by simp
-  qed
-qed
-
-lemma G'_def_3:
-  shows "G' = \<lparr>verts = {(v, (0::nat))|v. v \<in> verts G} \<union> {(v, 1)|v. v \<in> verts G} \<union> {(v, 2)|v. v \<in> verts G}, 
-      arcs = {((v, 0), (v, 1))|v. v \<in> verts G} \<union>{((v, 1), (v, 0))|v. v \<in> verts G}\<union>
-          {((v, 1), (v, 2))|v. v \<in> verts G}\<union>{((v, 2), (v, 1))|v. v \<in> verts G}\<union>
-          {((v, 2), (u, 0))|v u e. e \<in> arcs G \<and> v = tail G e \<and> u = head G e}\<union> 
-          {((u, 0), (v, 2))|v u e. e \<in> arcs G \<and> v = tail G e \<and> u = head G e}\<union> 
-          {((u, 0), (u, 2))|u. u \<in> verts G}\<union> 
-          {((u, 2), (u, 0))|u. u \<in> verts G}, 
-      tail = fst, head = snd\<rparr>"
-  using G_properties G'_def by(auto simp add: hc_to_uhc_def) 
-
-
-
-lemma in_hc:
-  shows "G \<in> hc"
-  sorry
-
-end
 
 
 

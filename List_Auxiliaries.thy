@@ -868,4 +868,47 @@ next
 qed
 
 
+lemma distinct_tl_rev_C: 
+  assumes "distinct (tl C)" "hd C = last C \<or> distinct C"
+  shows "distinct (tl (rev C))"
+  using assms proof (induction C)
+  case Nil
+  then show ?case by auto
+next
+  case (Cons a C)
+  have 1: "distinct C" 
+    using Cons by simp
+  then have 2: "distinct (tl (rev C))" 
+    using Cons 
+    by (simp add: distinct_tl) 
+  have 3: "rev (a#C) = rev C @[a]"
+    by simp
+  have "a = last (a#C) \<or> a \<notin> set C" 
+    using Cons by simp
+  then show ?case proof 
+    assume "a = last (a#C)"
+    show ?thesis proof(cases "C = []")
+      case True
+      then show ?thesis by simp
+    next
+      case False
+      then have 4: "a = last C" 
+        using \<open>a = last (a # C)\<close> by auto 
+      then have "a =  hd (rev C)" 
+        by (simp add: False hd_rev) 
+      then have "a \<notin> set (tl (rev C))" 
+        by (metis "1" False distinct.simps(2) distinct_rev list.collapse rev.simps(1) rev_rev_ident)
+      then show ?thesis 
+        using 2 False by auto 
+    qed
+  next
+    assume "a \<notin> set C"
+    then have "a \<notin> set (rev C)" 
+      by auto
+    then show ?thesis 
+      by (simp add: 1 distinct_tl) 
+  qed
+qed
+
+
 end

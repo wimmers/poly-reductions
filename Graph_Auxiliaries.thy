@@ -99,4 +99,61 @@ lemma sublist_imp_in_arcs:
   by (metis in_set_vwalk_arcs_append1 list.set_intros(1) vwalk_arcs.simps(3)) 
 
 
+lemma vwalk_arcs_from_length_1: 
+  assumes "length C = 1"
+  shows "vwalk_arcs C = []"
+  using assms 
+  by (metis length_1_set_L list.set_intros(1) vwalk_arcs.simps(1) vwalk_arcs.simps(2) vwalk_to_vpath.cases) 
+
+
+lemma at_least_to_nodes_vwalk_arcs_awalk_verts: 
+  assumes "length C > 1" "head G' = snd" "tail G' = fst"
+  shows "(pre_digraph.awalk_verts G' u (vwalk_arcs C)) = C"
+  using assms proof(induction C arbitrary: u)
+  case Nil
+  then show ?case by auto
+next
+  case (Cons a C)
+  then have 1: "vwalk_arcs (a#C) = (a, hd C) # vwalk_arcs C"
+    by auto
+  then show ?case proof(cases "length C > 1")
+    case True
+    then have 2: "pre_digraph.awalk_verts G' (hd C) (vwalk_arcs C) = C"
+      using Cons by simp
+    have "pre_digraph.awalk_verts G' u (vwalk_arcs (a#C)) = 
+      tail G' (a, hd C) # (pre_digraph.awalk_verts G' (head G' (a, hd C)) (vwalk_arcs C))" 
+      using 1 
+      by (simp add: pre_digraph.awalk_verts.simps(2)) 
+    then have "pre_digraph.awalk_verts G' u (vwalk_arcs (a#C)) 
+      = a # (pre_digraph.awalk_verts G' (head G' (a, hd C)) (vwalk_arcs C))"
+      using assms
+      by fastforce
+    then have "pre_digraph.awalk_verts G' u (vwalk_arcs (a#C)) 
+      = a # (pre_digraph.awalk_verts G' (hd C) (vwalk_arcs C))"
+      using assms
+      by fastforce
+    then show ?thesis using 2 by simp
+  next
+    case False
+    then have lC: "length C = 1" 
+      using Cons linorder_neqE_nat by auto 
+    then have hd_C: "C = [hd C]" 
+      by (metis "1" list.sel(1) neq_Nil_conv vwalk_arcs.simps(2) vwalk_arcs_Cons vwalk_arcs_from_length_1) 
+    then have "vwalk_arcs (a#C) = (a, hd C) #[]"
+      using 1 lC vwalk_arcs_from_length_1 by auto 
+    then have 2: "pre_digraph.awalk_verts G' u (vwalk_arcs (a#C)) = pre_digraph.awalk_verts G' u [(a, hd C)]"
+      by argo
+    then have 3: "... = (tail G' (a, hd C)) # (pre_digraph.awalk_verts G' (head G' (a, hd C)) [])"
+      by (simp add: pre_digraph.awalk_verts.simps(2)) 
+    then have 4: "... =  (tail G' (a, hd C)) # [(head G' (a, hd C))]"      
+      by (simp add: pre_digraph.awalk_verts.simps) 
+    then have 5: "... = a #  [(head G' (a, hd C))]" 
+      using assms by fastforce
+    then have 6: "... = a # [(hd C)]"
+      using assms by auto
+    then show ?thesis using assms 2 3 4 5 6 hd_C by argo  
+  qed
+qed 
+
+
 end
