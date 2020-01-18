@@ -911,4 +911,150 @@ next
 qed
 
 
+lemma b_in_set_cy_exists_sublist: 
+  assumes "b \<in> set Cy" "b \<in> set (tl Cy)" "length Cy \<ge> 2"
+  shows "\<exists>a. sublist [a, b] Cy"
+  using assms proof(induction Cy)
+  case Nil
+  then show ?case by auto
+next
+  case (Cons c Cy)
+  then have 1: "b \<in> set Cy" 
+    by simp
+  then show ?case proof(cases "b = hd Cy")
+    case True
+    then have "(c#Cy) = c#b#tl Cy" 
+      by (metis 1 hd_Cons_tl list.distinct(1) list.set_cases) 
+    then have "[]@[c,b]@tl Cy = c#Cy" 
+      by simp
+    then have "sublist [c, b] (c#Cy)" 
+      using Cons sublist_def by blast 
+    then show ?thesis 
+      by auto 
+  next
+    case False
+    have 2: "length Cy \<ge> 2"
+    proof (rule ccontr)
+      assume "\<not> 2 \<le> length Cy"
+      then have "2 > length Cy" 
+        by auto
+      then have "length Cy = 0 \<or> length Cy = 1" 
+        by linarith
+      then show False proof 
+        assume "length Cy = 0" 
+        then have "Cy = []" by simp
+        then show False using 1 by simp
+      next 
+        assume "length Cy = 1" 
+        then have "Cy = [b]" 
+          using 1 length_1_set_L 
+          by metis 
+        then have "hd Cy = b" by simp
+        then show False using False by simp
+      qed
+    qed
+    then have 3: "b \<in> set (tl Cy)" 
+      using False 
+      by (metis "1" list.sel(1) list.sel(3) list.set_cases) 
+    then have "\<exists>a. sublist [a, b] Cy" 
+      using Cons 1 2 3 False by blast
+    then show ?thesis using 2 sublist_cons 
+      by fast
+  qed
+qed
+
+
+lemma a_in_set_cy_exists_sublist: 
+  assumes "a \<in> set Cy" "a\<noteq> last Cy" "length Cy \<ge> 2"
+  shows "\<exists>b. sublist [a, b] Cy"
+  using assms proof(induction Cy)
+  case Nil
+  then show ?case by auto
+next
+  case (Cons c Cy)
+  then have not_empty: "Cy \<noteq> []"
+    using in_set_insert by auto  
+  then show ?case proof(cases "a = c")
+    case True
+    then have "[]@ [a, hd Cy] @ (tl Cy) = (c#Cy)"
+      using not_empty by simp 
+    then show ?thesis using sublist_def 
+      by blast
+  next
+    case False
+    then have in_Cy: "a \<in> set Cy" 
+      using Cons by simp
+    have not_last: "a\<noteq> last Cy" 
+      using Cons not_empty by force  
+    then show ?thesis proof(cases "length Cy \<ge> 2")
+      case True
+      then show ?thesis 
+        using Cons not_last in_Cy sublist_cons 
+        by fast  
+    next
+      case False
+      then have "length Cy = 1 \<or> length Cy = 0" 
+        by linarith 
+      then have "length Cy = 1" 
+        using not_empty by simp
+      then have "Cy = [a]" 
+        using in_Cy 
+        by (simp add: length_1_set_L) 
+      then have "a = last Cy"
+        by simp
+      then show ?thesis using not_last by simp
+    qed
+  qed
+qed
+
+
+lemma b_in_Cycle_exists_sublist:
+  assumes "b \<in> set Cycle" "length Cycle \<ge> 2" "hd Cycle = last Cycle"
+  shows "\<exists>a. sublist [a, b] Cycle"
+  using assms proof(cases "b = hd Cycle")
+  case True
+  then have "b = last Cycle"
+    using assms by simp
+  then have "b \<in> set (tl Cycle)" 
+    using assms last_in_set_tl
+    by fast 
+  then show ?thesis 
+    using b_in_set_cy_exists_sublist assms  by metis 
+next
+  case False
+  then have "b \<in> set (tl Cycle)" 
+    using assms 
+    by (metis hd_Cons_tl list.sel(2) set_ConsD)   
+  then show ?thesis 
+    using b_in_set_cy_exists_sublist assms by metis
+qed
+
+
+lemma a_in_Cycle_exists_sublist:
+  assumes "a \<in> set Cycle" "length Cycle \<ge> 2" "hd Cycle = last Cycle"
+  shows "\<exists>b. sublist [a, b] Cycle"
+  using assms proof(cases "a = last Cycle")
+  case True
+  then have 1: "a = hd Cycle"
+    using assms by simp 
+  then obtain b where "b = hd (tl Cycle)" 
+    by simp
+  then have 2: "a # tl Cycle = Cycle" 
+    using 1 
+    by (metis assms(1) hd_Cons_tl list.discI list.set_cases) 
+  have "tl Cycle \<noteq> []"
+    using last_in_set_tl assms  by fastforce 
+  then have "[]@[a, b] @ (tl (tl Cycle)) = Cycle"
+    using 2 
+    by (simp add: \<open>b = hd (tl Cycle)\<close>) 
+  then have "sublist [a, b] Cycle" 
+    using sublist_def by blast 
+  then show ?thesis 
+    by auto 
+next
+  case False   
+  then show ?thesis 
+    using a_in_set_cy_exists_sublist assms by metis
+qed
+
 end

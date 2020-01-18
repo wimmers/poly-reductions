@@ -156,4 +156,17 @@ next
 qed 
 
 
+lemma arc_to_ends_G': 
+  assumes "head G' = snd" "tail G' = fst" 
+  shows "arc_to_ends G' e = e"
+  using arc_to_ends_def assms
+  by (simp add: arc_to_ends_def) 
+
+lemma arcs_ends_G':  
+  assumes "head G' = snd" "tail G' = fst" 
+  shows "arcs_ends G' = arcs G'"
+  using arcs_ends_def arc_to_ends_G' assms
+  by(auto simp add: arcs_ends_def arc_to_ends_G')
+
+
 end

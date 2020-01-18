@@ -4,6 +4,44 @@ begin
 
 subsection\<open>hc_to_uhc G \<in> uhc --> G \<in> hc\<close>
 
+
+lemma is_hc_impl_length_c: 
+  assumes "is_hc G c" "card (verts G) > 1"
+  shows "length c \<ge> card (verts G)" 
+proof -
+  have "\<not> card (verts G) \<le> 1" 
+    using assms by simp
+  then have "\<forall>x \<in> verts G. x \<in> set c"
+    using assms is_hc_def by metis
+  then have "verts G \<subseteq> set c" 
+    by auto
+  then show ?thesis 
+    using card_length card_subset le_trans by blast 
+qed
+
+lemma hc_G_geq_2_verts_impl_arcs: 
+  assumes "card (verts G) > 1" "(arcs G = {})"
+  shows "G \<notin> hc" 
+proof(rule ccontr)
+  assume "\<not>G \<notin> hc"
+  then have "\<exists>c. is_hc G c"
+    using assms hc_def by auto
+  then obtain c where c_def: "is_hc G c" by auto
+  then have "length c > 1" 
+    using is_hc_impl_length_c assms by fastforce
+  then have 1: "vwalk_arcs c \<noteq> []"
+    by (simp add: length_C_vwalk_arcs_not_empty) 
+  have "pre_digraph.cycle G (vwalk_arcs c)" 
+    using assms c_def is_hc_def by fastforce
+  then have "\<exists>u. pre_digraph.awalk G u (vwalk_arcs c) u"
+    using pre_digraph.cycle_def by metis
+  then have "set (vwalk_arcs c) \<subseteq> arcs G" 
+    using pre_digraph.awalk_def by metis
+  then show False using 1 assms by simp
+qed
+     
+
+
 fun to_cycle_hc where
 "to_cycle_hc ((a, b)#vs) = (if b = 0 then a#(to_cycle_hc vs) else to_cycle_hc vs)" |
 "to_cycle_hc [] = []"
@@ -152,14 +190,7 @@ proof -
 qed
 
 
-
-lemma 
-  assumes "pre_digraph.cycle G' (vwalk_arcs C)"
-  shows "pre_digraph.cycle G' (vwalk_arcs (rev C))" 
-  sorry
-
-
-lemma
+lemma is_uhc_impl_is_uhc_rev: 
   assumes "is_uhc G' C"
   shows "is_uhc G' (rev C)" 
   unfolding is_uhc_def 
@@ -186,15 +217,415 @@ proof -
     have "vwalk_cycle G' C"
       using False is_uhc_def assms by blast
     then have "vwalk_cycle G' (rev C)" 
-      by (simp add: G'_properties(1) vwalk_cycle_rev) sorry
+      by (simp add: G'_properties(1) vwalk_cycle_rev) 
     then show ?thesis using 1 2 3 by blast
   qed 
 qed
 
 
-lemma
+lemma uhc_Cy2: 
   shows "is_uhc G' Cy2" 
-  unfolding is_uhc_def sorry
+  using is_uhc_impl_is_uhc_rev Cy2_def Cy1_def by simp
+
+
+lemma verts_G_G': 
+  assumes "x \<in> verts G"
+  shows "(x, 0) \<in> verts G'"  "(x, 1) \<in> verts G'"  "(x, 2) \<in> verts G'" 
+  using G'_def_3 assms by auto 
+
+
+lemma card_verts_G_G': 
+  assumes  "card (verts G) > 1" 
+  shows "card (verts G') > 1" 
+  using G'_def 
+  by (metis (no_types, hide_lams) Cy1_def G'_properties(2) HC_To_UHC_2.verts_G_G'(1) assms card_greater_1_contains_two_elements contains_two_card_greater_1 local.in_uhc prod.inject verts_G_G'(2) zero_neq_one) 
+
+
+lemma hd_last_Cy1: 
+  assumes "card (verts G) > 1" 
+  shows "hd Cy1 = last Cy1" 
+  using assms card_verts_G_G' Cy1_def hd_last_C_G' by blast 
+
+
+lemma x_inG_x_i_in_Cy1: 
+  assumes "x \<in> verts G"  "card (verts G) > 1" 
+  shows "(x, 0) \<in> set Cy1"  "(x, 1) \<in> set Cy1"  "(x, 2) \<in> set Cy1"
+proof -
+  have 0: "card (verts G') > 1" 
+    using assms card_verts_G_G' by auto
+  then have 1: "\<forall>x \<in> verts G'. x \<in> set Cy1" 
+    using Cy1_def is_uhc_def by fastforce
+  have "(x, 0) \<in> verts G'"  "(x, 1) \<in> verts G'"  "(x, 2) \<in> verts G'" 
+    using assms verts_G_G' by auto
+  then show "(x, 0) \<in> set Cy1"  "(x, 1) \<in> set Cy1"  "(x, 2) \<in> set Cy1" using 1 
+    by auto
+qed
+
+
+lemma length_Cy1: 
+  assumes "card (verts G) > 1"
+  shows "length Cy1 \<ge> 2" "length Cy1 > 1"
+  proof -
+  have 0: "card (verts G') > 1" 
+    using assms card_verts_G_G' by auto
+  then have 1: "\<forall>x \<in> verts G'. x \<in> set Cy1" 
+    using Cy1_def is_uhc_def by fastforce
+  then have "length Cy1 > 1" 
+    using 0 
+    by (meson Cy1_def is_uhc_lenght_Cycle_approx le_trans less_le_not_le) 
+  then show "length Cy1 > 1" "length Cy1 \<ge> 2"
+    by auto
+qed
+
+
+lemma arcs_ends_G': 
+  shows "arcs_ends G' = arcs G'" 
+  by (simp add: Graph_Auxiliaries.arcs_ends_G' local.head_tail_G') 
+
+
+lemma sublist_Cy1_arcs_G': 
+  assumes "sublist [a, b] Cy1" "card (verts G) > 1"
+  shows "(a, b) \<in> arcs G'" 
+proof -
+  have 0: "card (verts G') > 1" 
+    using assms card_verts_G_G' by auto
+  have 1: "(a, b) \<in> set (vwalk_arcs Cy1)" 
+    using assms 
+    by (simp add: sublist_imp_in_arcs) 
+  have "vwalk_cycle G' Cy1"
+    using Cy1_def assms is_uhc_def 0 by force
+  then have "vwalk Cy1 G'"
+    using vwalk_cycle_def by blast
+  then have "set (vwalk_arcs Cy1) \<subseteq> arcs_ends G'"
+    by auto
+  then have "set (vwalk_arcs Cy1) \<subseteq> arcs G'"
+    using arcs_ends_G' by simp
+  then show ?thesis using 1 by auto 
+qed
+
+
+lemma pre_1_edge: 
+  assumes "sublist [y, (x, 1)] Cy1" "card (verts G) > 1"
+  shows "y = (x, 0) \<or> y = (x, 2)" 
+proof -
+  have "(y, (x, 1)) \<in> arcs G'"
+    using assms sublist_Cy1_arcs_G' by simp
+  then show ?thesis using G'_def_3 by(auto) 
+qed
+
+
+lemma pre_0_edges_helper: 
+  assumes "((x, 2), (y, 0)) \<in> arcs G'" "card (verts G) > 1"
+  shows "(x, y) \<in> arcs G \<or> x = y" 
+  using assms G_properties G'_def_3 by(auto)
+
+
+
+lemma pre_0_edge: 
+  assumes "sublist [y, (x, 0)] Cy1" "card (verts G) > 1"
+  shows "y = (x, 1) \<or> y = (x, 2) \<or> (\<exists>z. y = (z, 2) \<and> (z, x) \<in> arcs G)"
+proof -
+  have y_in: "y \<in> verts G'"
+    using assms 
+    by (metis G'_properties(3) local.arcs_ends_G' sublist_Cy1_arcs_G' wf_digraph.adj_in_verts(1)) 
+  then obtain a b where ab_def: "(a, b) = y" 
+    using G'_def_3 by auto
+  then have 1: "b = 0 \<or> b = 1 \<or> b = 2"
+    using y_in G'_def_3 
+    by force  
+  have "(y, (x, 0)) \<in> arcs G'"
+    using assms sublist_Cy1_arcs_G' by auto
+  then show ?thesis proof(cases "b = 0" )
+    case True
+    then have "((a, 0), (x, 0)) \<notin> arcs G'"
+      using G'_def_3 by simp  
+    then show ?thesis 
+      using True \<open>(y, x, 0) \<in> arcs G'\<close> ab_def by auto 
+  next
+    case False
+    then have 2: "b = 1 \<or> b = 2" 
+      using 1 by simp
+    then show ?thesis proof(cases "b = 1")
+      case True
+      then have "((a, 1), (x, 0)) \<in> arcs G'"
+        using ab_def 
+        by (simp add: \<open>(y, x, 0) \<in> arcs G'\<close>) 
+      then have "a = x"
+        using G'_def_3 by simp
+      then show ?thesis using ab_def True by simp 
+    next
+      case False
+      then have 3: "b = 2" using 2 by auto
+      then have "((a, 2), (x, 0)) \<in> arcs G'" 
+        using ab_def 
+        by (simp add: \<open>(y, x, 0) \<in> arcs G'\<close>) 
+      then have "a = x \<or> (a, x) \<in> arcs G" 
+        using pre_0_edges_helper assms by blast 
+      then show ?thesis using ab_def 3 by(auto)  
+    qed
+  qed
+qed
+
+
+lemma pre_2_edges_helper: 
+  assumes "((x, 0), (y, 2)) \<in> arcs G'" "card (verts G) > 1"
+  shows "(y, x) \<in> arcs G \<or> x = y" 
+  using assms G_properties G'_def_3 by(auto)
+
+
+
+lemma pre_2_edge: 
+  assumes "sublist [y, (x, 2)] Cy1" "card (verts G) > 1"
+  shows "y = (x, 1) \<or> y = (x, 0) \<or> (\<exists>z. y = (z, 0) \<and> (x, z) \<in> arcs G)"
+proof -
+  have y_in: "y \<in> verts G'"
+    using assms 
+    by (metis G'_properties(3) local.arcs_ends_G' sublist_Cy1_arcs_G' wf_digraph.adj_in_verts(1)) 
+  then obtain a b where ab_def: "(a, b) = y" 
+    using G'_def_3 by auto
+  then have 1: "b = 0 \<or> b = 1 \<or> b = 2"
+    using y_in G'_def_3 
+    by force  
+  have "(y, (x, 2)) \<in> arcs G'"
+    using assms sublist_Cy1_arcs_G' by auto
+  then show ?thesis proof(cases "b = 2" )
+    case True
+    then have "((a, 2), (x, 2)) \<notin> arcs G'"
+      using G'_def_3 by simp  
+    then show ?thesis 
+      using True \<open>(y, x, 2) \<in> arcs G'\<close> ab_def by auto 
+  next
+    case False
+    then have 2: "b = 0 \<or> b = 1" 
+      using 1 by simp
+    then show ?thesis proof(cases "b = 1")
+      case True
+      then have "((a, 1), (x, 2)) \<in> arcs G'"
+        using ab_def 
+        by (simp add: \<open>(y, x, 2) \<in> arcs G'\<close>) 
+      then have "a = x"
+        using G'_def_3 by simp
+      then show ?thesis using ab_def True by simp 
+    next
+      case False
+      then have 3: "b = 0" using 2 by auto
+      then have "((a, 0), (x, 2)) \<in> arcs G'" 
+        using ab_def 
+        by (simp add: \<open>(y, x, 2) \<in> arcs G'\<close>) 
+      then have "a = x \<or> (x, a) \<in> arcs G" 
+        using pre_2_edges_helper assms by blast 
+      then show ?thesis using ab_def 3 by(auto)  
+    qed
+  qed
+qed
+
+
+lemma post_0_edge: 
+  assumes "sublist [(x, 0), y] Cy1" "card (verts G) > 1"
+  shows "y = (x, 1) \<or> y = (x, 2) \<or> (\<exists>z. y = (z, 2) \<and> (z, x) \<in> arcs G)"
+proof -
+  have y_in: "y \<in> verts G'"
+    using assms 
+    by (metis G'_properties(3) local.arcs_ends_G' sublist_Cy1_arcs_G' wf_digraph.adj_in_verts(2)) 
+  then obtain a b where ab_def: "(a, b) = y" 
+    using G'_def_3 by auto
+  then have 1: "b = 0 \<or> b = 1 \<or> b = 2"
+    using y_in G'_def_3 
+    by force  
+  have in_arcs: "((x, 0), y) \<in> arcs G'"
+    using assms sublist_Cy1_arcs_G' by auto
+  then show ?thesis proof(cases "b = 0" )
+    case True
+    then have "((x, 0), (a, 0)) \<notin> arcs G'"
+      using G'_def_3 by simp  
+    then show ?thesis 
+      using True \<open>((x, 0), y) \<in> arcs G'\<close> ab_def by auto 
+  next
+    case False
+    then have 2: "b = 1 \<or> b = 2" 
+      using 1 by simp
+    then show ?thesis proof(cases "b = 1")
+      case True
+      then have "((x, 0), (a, 1)) \<in> arcs G'"
+        using ab_def 
+        by (simp add: in_arcs) 
+      then have "a = x"
+        using G'_def_3 by simp
+      then show ?thesis using ab_def True by simp 
+    next
+      case False
+      then have 3: "b = 2" using 2 by auto
+      then have "((x, 0), (a, 2)) \<in> arcs G'" 
+        using ab_def 
+        by (simp add: in_arcs) 
+      then have "a = x \<or> (a, x) \<in> arcs G" 
+        using pre_2_edges_helper assms by blast 
+      then show ?thesis using ab_def 3 by(auto)  
+    qed
+  qed
+qed
+
+
+lemma post_2_edge: 
+  assumes "sublist [(x, 2), y] Cy1" "card (verts G) > 1"
+  shows "y = (x, 1) \<or> y = (x, 0) \<or> (\<exists>z. y = (z, 0) \<and> (x, z) \<in> arcs G)"
+proof -
+  have y_in: "y \<in> verts G'"
+    using assms 
+    by (metis G'_properties(3) local.arcs_ends_G' sublist_Cy1_arcs_G' wf_digraph.adj_in_verts(2)) 
+  then obtain a b where ab_def: "(a, b) = y" 
+    using G'_def_3 by auto
+  then have 1: "b = 0 \<or> b = 1 \<or> b = 2"
+    using y_in G'_def_3 
+    by force  
+  have in_arcs: "((x, 2), y) \<in> arcs G'"
+    using assms sublist_Cy1_arcs_G' by auto
+  then show ?thesis proof(cases "b = 2" )
+    case True
+    then have "((x, 2), (a, 2)) \<notin> arcs G'"
+      using G'_def_3 by simp  
+    then show ?thesis 
+      using True in_arcs ab_def by auto 
+  next
+    case False
+    then have 2: "b = 0 \<or> b = 1" 
+      using 1 by simp
+    then show ?thesis proof(cases "b = 1")
+      case True
+      then have "((x, 2), (a, 1)) \<in> arcs G'"
+        using ab_def 
+        by (simp add: in_arcs) 
+      then have "a = x"
+        using G'_def_3 by simp
+      then show ?thesis using ab_def True by simp 
+    next
+      case False
+      then have 3: "b = 0" using 2 by auto
+      then have "((x, 2), (a, 0)) \<in> arcs G'" 
+        using ab_def 
+        by (simp add: in_arcs) 
+      then have "a = x \<or> (x, a) \<in> arcs G" 
+        using pre_0_edges_helper assms by blast 
+      then show ?thesis using ab_def 3 by(auto)  
+    qed
+  qed
+qed
+
+
+lemma post_1_edge: 
+  assumes "sublist [(x, 1), y] Cy1" "card (verts G) > 1"
+  shows "y = (x, 0) \<or> y = (x, 2)" 
+proof -
+  have "((x, 1), y) \<in> arcs G'"
+    using assms sublist_Cy1_arcs_G' by simp
+  then show ?thesis using G'_def_3 by(auto) 
+qed
+
+
+
+lemma pre_1_cycle: 
+  assumes "x \<in> verts G" "card (verts G) > 1" 
+  shows "(sublist [(x, 0), (x, 1)] Cy1) \<or> sublist [(x, 2), (x, 1)] Cy1"
+proof -
+  have 0: "length Cy1 \<ge> 2"
+    using assms length_Cy1 by auto
+  have "(x, 1) \<in> set Cy1" 
+    using assms x_inG_x_i_in_Cy1 by simp
+  then have "\<exists>y. sublist [y, (x, 1)] Cy1"  
+    using 0 hd_last_Cy1 assms 
+    by (meson List_Auxiliaries.b_in_Cycle_exists_sublist) 
+  then obtain y where y_def: "sublist [y, (x, 1)] Cy1"
+    by blast
+  then show ?thesis using pre_1_edge assms by blast
+qed
+
+
+lemma pre_2_cycle: 
+  assumes "x \<in> verts G" "card (verts G) > 1" 
+  shows "(sublist [(x, 0), (x, 2)] Cy1) \<or> sublist [(x, 1), (x, 2)] Cy1 \<or> (\<exists>z. sublist [(z, 0), (x, 2)] Cy1 \<and> (x, z) \<in> arcs G)"
+proof -
+  have 0: "length Cy1 \<ge> 2"
+    using assms length_Cy1 by auto
+  have "(x, 2) \<in> set Cy1" 
+    using assms x_inG_x_i_in_Cy1 by simp
+  then have "\<exists>y. sublist [y, (x, 2)] Cy1"  
+    using 0 hd_last_Cy1 assms 
+    by (meson List_Auxiliaries.b_in_Cycle_exists_sublist) 
+  then obtain y where y_def: "sublist [y, (x, 2)] Cy1"
+    by blast
+  then show ?thesis using pre_2_edge assms by blast 
+qed
+
+
+lemma pre_0_cycle: 
+  assumes "x \<in> verts G" "card (verts G) > 1" 
+  shows "(sublist [(x, 1), (x, 0)] Cy1) \<or> sublist [(x, 2), (x, 0)] Cy1 \<or> (\<exists>z. sublist [(z, 2), (x, 0)] Cy1 \<and> (z, x) \<in> arcs G)"
+proof -
+  have 0: "length Cy1 \<ge> 2"
+    using assms length_Cy1 by auto
+  have "(x, 0) \<in> set Cy1" 
+    using assms x_inG_x_i_in_Cy1 by simp
+  then have "\<exists>y. sublist [y, (x, 0)] Cy1"  
+    using 0 hd_last_Cy1 assms 
+    by (meson List_Auxiliaries.b_in_Cycle_exists_sublist) 
+  then obtain y where y_def: "sublist [y, (x, 0)] Cy1"
+    by blast
+  then show ?thesis using pre_0_edge assms by blast 
+qed
+
+
+lemma post_2_cycle: 
+  assumes "x \<in> verts G" "card (verts G) > 1" 
+  shows "(sublist [(x, 2), (x, 0)] Cy1) \<or> sublist [(x, 2), (x, 1)] Cy1 \<or> (\<exists>z. sublist [(x, 2), (z, 0)] Cy1 \<and> (x, z) \<in> arcs G)"
+proof -
+  have 0: "length Cy1 \<ge> 2"
+    using assms length_Cy1 by auto
+  have "(x, 2) \<in> set Cy1" 
+    using assms x_inG_x_i_in_Cy1 by simp
+  then have "\<exists>y. sublist [(x, 2), y] Cy1"  
+    using 0 hd_last_Cy1 assms 
+    by (meson List_Auxiliaries.a_in_Cycle_exists_sublist) 
+  then obtain y where y_def: "sublist [(x, 2), y] Cy1"
+    by blast
+  then show ?thesis using post_2_edge assms by blast
+qed
+
+
+lemma post_0_cycle: 
+  assumes "x \<in> verts G" "card (verts G) > 1" 
+  shows "(sublist [(x, 0), (x, 2)] Cy1) \<or> sublist [(x, 0), (x, 1)] Cy1 \<or> (\<exists>z. sublist [(x, 0), (z, 2)] Cy1 \<and> (z, x) \<in> arcs G)"
+proof -
+  have 0: "length Cy1 \<ge> 2"
+    using assms length_Cy1 by auto
+  have "(x, 0) \<in> set Cy1" 
+    using assms x_inG_x_i_in_Cy1 by simp
+  then have "\<exists>y. sublist [(x, 0), y] Cy1"  
+    using 0 hd_last_Cy1 assms 
+    by (meson List_Auxiliaries.a_in_Cycle_exists_sublist) 
+  then obtain y where y_def: "sublist [(x, 0), y] Cy1"
+    by blast
+  then show ?thesis using post_0_edge assms by blast 
+qed
+
+
+lemma post_1_cycle: 
+  assumes "x \<in> verts G" "card (verts G) > 1" 
+  shows "(sublist [(x, 1), (x, 2)] Cy1) \<or> sublist [(x, 1), (x, 0)] Cy1"
+proof -
+  have 0: "length Cy1 \<ge> 2"
+    using assms length_Cy1 by auto
+  have "(x, 1) \<in> set Cy1" 
+    using assms x_inG_x_i_in_Cy1 by simp
+  then have "\<exists>y. sublist [(x, 1), y] Cy1"  
+    using 0 hd_last_Cy1 assms 
+    by (meson List_Auxiliaries.a_in_Cycle_exists_sublist) 
+  then obtain y where y_def: "sublist [(x, 1), y] Cy1"
+    by blast
+  then show ?thesis using post_1_edge assms by blast 
+qed
+
+
+
 
 
 
