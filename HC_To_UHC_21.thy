@@ -1,4 +1,4 @@
-theory HC_To_UHC_2
+theory HC_To_UHC_21
   imports HC_To_UHC
 begin
 
@@ -43,8 +43,8 @@ qed
 
 
 fun to_cycle_hc where
-"to_cycle_hc ((a, b)#vs) = (if b = 1 then a#(to_cycle_hc vs) else to_cycle_hc vs)" |
-"to_cycle_hc [] = []"
+"to_cycle_hc ((a, b)#(c, d)#vs) = (if b = 0 \<and> d = 2 then (a, c)#(to_cycle_hc ((c, d)#vs)) else to_cycle_hc ((c, d) #vs))" |
+"to_cycle_hc _ = []"
 
 
 context
@@ -681,7 +681,7 @@ proof -
 qed
 
 
-lemma x_1_in_C_x_in_to_cycle_hc: 
+(*lemma x_1_in_C_x_in_to_cycle_hc: 
   assumes "(x, 1) \<in> set C"
   shows "x \<in> set (to_cycle_hc C)"
   using assms apply(induction C)by(auto)
@@ -760,7 +760,7 @@ lemma x_in_verts_x_in_C1:
 lemma in_to_cycle_hc_in_C: 
   assumes "x \<in> set (to_cycle_hc C)"
   shows "(x, (1::nat))\<in> set C" 
-  using assms apply(induction C) by(auto split: if_split_asm)
+  using assms apply(induction C) by(auto split: if_split_asm)*)
 
 
 lemma in_Cy1_in_verts_G': 
@@ -775,7 +775,7 @@ proof -
 qed
 
 
-lemma x_in_C1_in_verts_G: 
+(*lemma x_in_C1_in_verts_G: 
   assumes "x \<in> set C1"
   shows "x \<in> verts G" 
   using assms proof -
@@ -785,111 +785,12 @@ lemma x_in_C1_in_verts_G:
   then have "(x, 1) \<in> verts G'"
     using in_Cy1_in_verts_G' by simp
   then show ?thesis using G'_def_3 by simp
-qed
+qed*)
 
 
-lemma b_1_not_in_C_not_in_cycle_hc: 
-  assumes "(b, 1) \<notin> set C"
-  shows "b \<notin> set (to_cycle_hc C)"
-  using assms apply(induction C) by(auto split: if_split_asm)
-
-
-lemma distinct_C_distinct_to_cycle_hc_C: 
-  assumes "distinct (C)" 
-  shows "distinct (to_cycle_hc C)" 
-  using assms proof(induction C)
-  case Nil
-  then show ?case by auto
-next
-  case (Cons a C)
-  then obtain b c where bc_def: "a = (b,c)"
-    by (meson surj_pair) 
-  then have 1: "(b, c) \<notin> set C"
-    using Cons by simp
-  then show ?case proof(cases "c= 1")
-    case True
-    then have "(b, 1) \<notin> set C"
-      using "1" by auto 
-    then have "b \<notin> set (to_cycle_hc C)"
-      using b_1_not_in_C_not_in_cycle_hc Cons by fast
-    then show ?thesis using Cons 
-      by (simp add: bc_def) 
-  next
-    case False
-    then have "to_cycle_hc (a#C)= to_cycle_hc C"
-      using bc_def by simp 
-    then show ?thesis using Cons by auto
-  qed 
-qed
-
-
-lemma last_a_1_last_to_cycle_hc: 
-  assumes "last C = (a, 1)" "C \<noteq> []"
-  shows "last (to_cycle_hc C) = a" 
-  using assms proof(induction C)
-  case Nil
-  then show ?case by auto
-next
-  case (Cons c C)
-  then have "(a, 1) \<in> set (c#C)" 
-    by (metis last_in_set) 
-  then have "a \<in> set (to_cycle_hc (c#C))"
-    by (simp add: x_1_in_C_x_in_to_cycle_hc) 
-  then have "to_cycle_hc (c#C) \<noteq> []" 
-    using list.set_cases by auto 
-  then show ?case proof(cases "C = []")
-    case True
-    then have "c = (a, 1)"
-      using Cons by simp
-    then show ?thesis 
-      by (simp add: True) 
-  next
-    case False
-    then have "last (c#C) = last (C)" 
-      by simp
-    then have 1: "last (to_cycle_hc (C)) = a" 
-      using Cons False by auto
-    have "(a, 1) \<in> set C" 
-      using Cons.prems(1) False last_in_set by force
-    then have "to_cycle_hc C \<noteq> []" 
-      by (metis list.distinct(1) list.set_cases x_1_in_C_x_in_to_cycle_hc) 
-    then have "last (to_cycle_hc (c#C)) = last (to_cycle_hc C)" 
-      by (metis \<open>last (to_cycle_hc C) = a\<close> last.simps last_ConsR surj_pair to_cycle_hc.simps(1)) 
-    then show ?thesis using 1 by simp 
-  qed
-qed 
-
-
-lemma distinct_C1: 
+(*lemma distinct_C1: 
   shows "distinct (tl C1) \<and> hd C1 = last C1 \<or> distinct C1" 
-proof -
-  have 1: "distinct (to_cycle_hc (tl Cy1))" 
-    using distinct_C_distinct_to_cycle_hc_C distinct_tl_Cy1 by auto 
-  obtain a b where ab_def: "hd Cy1 = (a, b)" 
-    by (meson surj_pair) 
-  then show ?thesis proof(cases "b = 1")
-    case True
-    then have "last Cy1 = (a, 1)" 
-      using hd_last_Cy1 ab_def by auto 
-    then have 2: "last C1 = a"
-      using last_a_1_last_to_cycle_hc 
-      using C1_def length_Cy1(2) by fastforce 
-    have "Cy1 \<noteq> []" 
-      using length_C_vwalk_arcs_not_empty length_Cy1(2) vwalk_arcs.simps(1) by blast 
-    then have "to_cycle_hc Cy1 = a # (to_cycle_hc (tl Cy1))"
-      using ab_def True
-      by (simp add: hd_to_cycle_hc_if_x_1_hd_C) 
-    then have "hd C1 = last C1" "distinct (tl C1)" 
-      using 1 2 C1_def by auto
-    then show ?thesis by simp
-  next
-    case False
-    then have "to_cycle_hc Cy1 = to_cycle_hc (tl Cy1)"
-      using ab_def 
-      by (metis Pair_inject length_Cy1(2) list.sel(1) list.sel(3) list.size(3) not_one_less_zero to_cycle_hc.elims) 
-    then show ?thesis using 1 C1_def by auto
-  qed
-qed
+  sorry*)
 
 
 lemma in_cy1_in_verts_G: 
@@ -902,24 +803,19 @@ proof -
 qed
 
 
-lemma sublist_x_y_z_to_cycle_hc: 
-  assumes "sublist [x, y] (to_cycle_hc C)" "sublist [x, z] (to_cycle_hc C)" 
-"distinct (tl (to_cycle_hc C)) \<and> hd (to_cycle_hc C) = last (to_cycle_hc C) \<or> distinct (to_cycle_hc C)" 
+(*lemma
+  assumes "sublist [x, y] (to_cycle_hc C)" "sublist [x, z] (to_cycle_hc C)" "distinct (tl C) \<and> hd C = last C \<or> distinct C" 
   shows "y = z" 
-proof(cases "distinct (to_cycle_hc C)")
-  case True
-  then show ?thesis using assms 
-    by (meson distinct_C_distinct_to_cycle_hc_C two_sublist_distinct_same_last) 
+  using assms proof(induction C)
+  case Nil
+  then show ?case using sublist_def by fastforce
 next
-  case False
-  then have "distinct (tl (to_cycle_hc C)) \<and> hd (to_cycle_hc C) = last (to_cycle_hc C)" 
-    using assms by auto
-  then show ?thesis using assms 
-    by (meson two_sublist_same_first_distinct_tl) 
-qed
+  case (Cons a C)
+  then show ?case sorry
+qed*)
 
 
-lemma sublist_2_0_in_C1: 
+(*lemma
   assumes "sublist [(x, 2), (y, 0)] Cy1"
   shows "sublist [x, y] C1 \<or> x = last C1"
 proof -
@@ -935,17 +831,23 @@ proof -
     using distinct_tl_Cy1 hd_last_Cy1 
     using assms two_sublist_same_first_distinct_tl by fastforce 
   then have "(sublist [(x, 1), (x, 2)] Cy1 \<and> sublist [(x, 0), (x, 1)] Cy1)" 
-    using 1 by auto (*Ziel: von (x, 1) auf (x,2) auf (y, 0) auf (y, 1). Falls 
-dieser Pfad so nicht vorhanden ist, so ist x der letzte in C1*)
-  then show ?thesis sorry
-qed
+    using 1 by auto
+  then have "(x, 1) = last Cy1 \<or> sublist [(x, 0), (x, 1), (x, 2)] Cy1"
+  proof -
+    have ""
+    sorry*)
 
 
+lemma
+  assumes "(x, y) \<in> set (to_cycle_hc C)" 
+  shows "sublist [(x, 2), (y, 0)] C"
+  using assms apply(induction C) apply(auto) try0 sledgehammer 
 
 
 lemma sublist_predecessor: 
-  assumes "sublist [x, y] C1"
-  shows "sublist [(x, 2), (y, 0)] Cy1 \<or> sublist [(x, 0), (y, 2)] Cy1"
+  assumes "(x, y) \<in> set C1"
+  shows "sublist [(x, 2), (y, 0)] Cy1"
+  using assms C1_def sorry 
 proof(rule ccontr)
   assume a1: "\<not> (sublist [(x, 2), (y, 0)] Cy1 \<or> sublist [(x, 0), (y, 2)] Cy1)"
   have in_Cy1: "(x, 1) \<in> set Cy1" "(y, 1) \<in> set Cy1" 
@@ -954,7 +856,7 @@ proof(rule ccontr)
   then have "(sublist [(x, 1), (x, 2)] Cy1 \<and> sublist [(x, 0), (x, 1)] Cy1) \<or> 
       (sublist [(x, 1), (x, 0)] Cy1 \<and> sublist [(x, 2), (x, 1)] Cy1)"
     using List_Auxiliaries.a_in_Cycle_exists_sublist hd_last_Cy1 length_Cy1(1) post_1_edge  
-    using C1_def sublist_Cy1_for_x x_1_in_C_x_in_to_cycle_hc x_in_C1_in_verts_G by fastforce 
+    using C1_def sublist_Cy1_for_x x_1_in_C_x_in_to_cycle_hc x_in_C1_in_verts_G by fastforc
   then show False proof
     assume "sublist [(x, 1), (x, 2)] Cy1 \<and> sublist [(x, 0), (x, 1)] Cy1" 
     then have "\<not> sublist [(x, 2), (x, 1)] Cy1" 
@@ -964,55 +866,16 @@ proof(rule ccontr)
       by (metis Cy1_def G'_def HC_To_UHC_2.x_in_C1_in_verts_G in_Cy1(1) local.in_uhc post_2_cycle verts_G x_1_in_C_x_in_to_cycle_hc) 
     then obtain z where z_def: "sublist [(x, 2), (z, 0)] Cy1 \<and> (x, z) \<in> arcs G"
       by auto
-    then have zy: "z \<noteq> y" 
+    then have "z \<noteq> y" 
       using a1 by blast
-    then have sxz: "sublist [x, z] C1 \<or> x = last C1"
-      using sublist_2_0_in_C1 z_def 
-      by simp 
-    have "x \<noteq> last C1" 
-      using distinct_C1 assms sorry
-    then have "sublist [x, z] C1" using sxz by simp
-    then show ?thesis using zy 
-      using C1_def assms distinct_C1 sublist_x_y_z_to_cycle_hc by fastforce 
-    (*then have "sublist [(z, 0), (z, 1)] Cy1"
+    then have "sublist [(z, 0), (z, 1)] Cy1"
       using z_def sorry
     then have "sublist [(x, 2), (z, 0), (z, 1)] Cy1 \<or> (z, 0) = hd Cy1" 
       using distinct_tl_Cy1 hd_last_Cy1 
       by (meson sublist_ab_bc_b_not_head z_def) 
     then show ?thesis proof 
       assume "sublist [(x, 2), (z, 0), (z, 1)] Cy1"
-      then have "sublist [x, z] C1"
-        using sublist_2_0_in_C1  
-        sorry
-      then show ?thesis using assms zy C1_def distinct_C1 
-        by (meson sublist_x_y_z_to_cycle_hc) 
-    next
-      assume "(z, 0) = hd Cy1" 
-      then show ?thesis sorry
-    qed*)
-  next
-    assume "sublist [(x, 1), (x, 0)] Cy1 \<and> sublist [(x, 2), (x, 1)] Cy1" 
-    then have "\<not> sublist [(x, 0), (x, 1)] Cy1" 
-      using distinct_tl_Cy1 hd_last_Cy1 
-      by (metis Pair_inject less_numeral_extra(3) pos2 two_sublist_distinct_same_first) 
-    then have "(\<exists>z. sublist [(x, 0), (z, 2)] Cy1 \<and> (z, x) \<in> arcs G)" 
-      by (metis Cy1_def G'_def HC_To_UHC_2.x_in_C1_in_verts_G in_Cy1(1) local.in_uhc post_0_cycle verts_G x_1_in_C_x_in_to_cycle_hc) 
-    then obtain z where z_def: "sublist [(x, 0), (z, 2)] Cy1 \<and> (z, x) \<in> arcs G"
-      by auto
-    then have zy: "z \<noteq> y" 
-      using a1 by blast
-    then have sxz: "sublist [z, x] C1 \<or> x = last C1"
-      using sublist_2_0_in_C1 z_def 
-      by simp 
-    have "x \<noteq> last C1" 
-      using distinct_C1 assms sorry
-    then have "sublist [x, z] C1" using sxz by simp
-    then show ?thesis using zy 
-      using C1_def assms distinct_C1 sublist_x_y_z_to_cycle_hc by fastforce 
-  qed
-qed
-
-  
+      then have "sublist 
 
 
 
@@ -1021,7 +884,7 @@ lemma sublist_predecessor:
   shows "sublist [(x, 2), (y, 0)] Cy1 \<or> sublist [(x, 0), (y, 2)] Cy1" 
   sorry
 
-lemma sublist_forall_1: 
+lemma
   assumes "y = hd C1" "sublist [(y, 0), (y, 1)] Cy1" "sublist [(y, 1), (y, 2)] Cy1" "x = C1!i" "i < length C1" 
   shows "sublist [(x, 0), (x, 1)] Cy1 \<and>sublist [(x, 1), (x, 2)] Cy1"
   using assms proof(induction i arbitrary: x)
@@ -1059,69 +922,12 @@ next
 qed
 
 
-lemma sublist_forall_2: 
-  assumes "y = hd C1" "sublist [(y, 2), (y, 1)] Cy1" "sublist [(y, 1), (y, 0)] Cy1" "x = C1!i" "i < length C1" 
-  shows "sublist [(x, 2), (x, 1)] Cy1 \<and>sublist [(x, 1), (x, 0)] Cy1"
-  using assms proof(induction i arbitrary: x)
-  case 0
-  then have "x = hd C1"
-    by (simp add: hd_conv_nth) 
-  then show ?case using assms by simp
-next
-  case (Suc i)
-  then have 1: "sublist [(C1!i, 2), (C1!i, 1)] Cy1 \<and>sublist [(C1!i, 1), (C1!i, 0)] Cy1"
-    by (simp add: Suc.prems(5)) 
-  have in_verts: "x \<in> verts G" 
-    using x_in_C1_in_verts_G 
-    by (simp add: Suc.prems(4) Suc.prems(5)) 
-  have "sublist [C1!i, x] C1" 
-    using Suc sublist_indixes 
-    by blast  
-  then have sublists_x_y: "sublist [(C1!i, 2), (x, 0)] Cy1 \<or> sublist [(C1!i, 0), (x, 2)] Cy1" 
-    using sublist_predecessor by simp
-  then have "sublist [(C1!i, 0), (x, 2)] Cy1" proof(cases "sublist [(C1!i, 0), (x, 2)] Cy1")
-    case True
-    then show ?thesis by simp
-  next
-    case False
-    then have "sublist [(C1!i, 2), (x, 0)] Cy1"
-      using sublists_x_y by simp
-    then show ?thesis using 1 distinct_tl_Cy1 hd_last_Cy1 
-      using two_sublist_same_first_distinct_tl by fastforce 
-  qed
-  then have "\<not> sublist [(x, 1), (x, 2)] Cy1"
-    using distinct_tl_Cy1 hd_last_Cy1 
-    by (meson old.prod.inject two_sublist_distinct_same_first zero_neq_one) 
-  then show ?case using sublist_Cy1_for_x in_verts 
-    by blast 
-qed
 
 
 lemma sulbist_forall:
   shows "(\<forall>x \<in> verts G. sublist [(x, 1), (x, 2)] Cy1 \<and> sublist [(x, 0), (x, 1)] Cy1) \<or>
           (\<forall>x \<in> verts G. sublist [(x, 1), (x, 0)] Cy1 \<and> sublist [(x, 2), (x, 1)] Cy1)"
-proof -
-  have "Cy1 \<noteq> []"
-    using length_Cy1(2) by auto 
-  then have "C1 \<noteq> []" 
-    using verts_G x_in_verts_x_in_C1 by fastforce 
-  then obtain x where x_def: "(x) = hd (C1)"
-    by simp
-  then have "x \<in> verts G" 
-    by (simp add: \<open>C1 \<noteq> []\<close> x_in_C1_in_verts_G) 
-  then have "(sublist [(x, 1), (x, 2)] Cy1 \<and> sublist [(x, 0), (x, 1)] Cy1) \<or> 
-         (sublist [(x, 1), (x, 0)] Cy1 \<and> sublist [(x, 2), (x, 1)] Cy1)" 
-    using sublist_Cy1_for_x by simp
-  then show ?thesis proof
-    assume "(sublist [(x, 1), (x, 2)] Cy1 \<and> sublist [(x, 0), (x, 1)] Cy1)"
-    then show ?thesis using sublist_forall_1 
-      by (metis x_def x_in_implies_exist_index x_in_verts_x_in_C1) 
-  next
-    assume "(sublist [(x, 1), (x, 0)] Cy1 \<and> sublist [(x, 2), (x, 1)] Cy1)"
-    then show ?thesis using sublist_forall_2
-      by (metis x_def x_in_implies_exist_index x_in_verts_x_in_C1)
-  qed
-qed
+  sorry
 
 
 lemma sublist_rev_Cy1: 
@@ -1130,29 +936,10 @@ lemma sublist_rev_Cy1:
   using assms sublist_rev apply(auto) by fastforce+ 
 
 
-
-
-
-lemma
-  assumes  "(\<forall>x \<in> verts G. sublist [(x, 1), (x, 2)] Cy1 \<and> sublist [(x, 0), (x, 1)] Cy1)"
-  shows "vwalk C1 G"
-  unfolding vwalk_def apply(auto) 
-  apply (simp add: x_in_C1_in_verts_G)sorry
-
 lemma 
-  assumes "(\<forall>x \<in> verts G. sublist [(x, 1), (x, 2)] Cy1 \<and> sublist [(x, 0), (x, 1)] Cy1)"
-    "last C1 = hd C1" 
-  shows "vwalk_cycle G C1"
-  unfolding vwalk_cycle_def 
-  using distinct_C1 assms apply(auto) subgoal sorry subgoal sorry 
-  using distinct_tl apply auto[1] 
-  sorry
-
-
-lemma 
-  assumes "(\<forall>x \<in> verts G. sublist [(x, 1), (x, 2)] Cy1 \<and> sublist [(x, 0), (x, 1)] Cy1)"
-    "last C1 \<noteq> hd C1" 
-  shows "vwalk_cycle G (last C1 # C1)"
+  assumes "(\<forall>x \<in> verts G. sublist [(x, 1), (x, 2)] C \<and> sublist [(x, 0), (x, 1)] C)" "is_uhc G' C"
+    "C' = to_cycle_hc C" 
+  shows "vwalk_cycle G (last C'# C')"
   sorry
 
 

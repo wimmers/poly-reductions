@@ -1123,4 +1123,84 @@ lemma sublist_rev:
   using assms sublist_def 
   by (metis append.assoc rev_append) 
 
+
+lemma sublist_ab_bc_b_not_head: 
+  assumes "sublist [a, b] ds" "sublist [b, c] ds" "b \<noteq> hd ds""distinct (tl ds)"
+  shows "sublist [a, b, c] ds"
+  using assms proof(induction ds)
+  case Nil
+  then have "[] \<noteq> []"  
+    by (simp add: sublist_def) 
+  then show ?case by simp
+next
+  case (Cons d ds)
+  then show ?case proof(cases "b = hd ds")
+    case True
+    have "distinct ds" using Cons by auto
+    then have 1: "c = hd (tl ds)" 
+      using True Cons 
+      by (smt hd_append list.distinct(1) list.sel(1) list.sel(3) sublist_def sublist_v1_hd_v2_hd_tl tl_append2) 
+    have 2: "a = d"
+      using True Cons 
+      by (metis (no_types, lifting) Cons_eq_appendI \<open>distinct ds\<close> append_self_conv2 distinct_rev distinct_sublist_last_first_of_sublist_false last_rev rev.simps(1) rev.simps(2) sublist_cons_impl_sublist sublist_not_cyclic_for_distinct sublist_rev) 
+    then have "ds = b # c # tl(tl ds)"
+      using 1 2 True
+      by (metis Cons.prems(1) Cons.prems(2) Cons.prems(3) True distinct_length_2_or_more distinct_singleton distinct_sublist_last_first_of_sublist_false last_ConsL last_ConsR list.collapse list.sel(1))
+    then have "d#ds = a # b #c #(tl (tl ds))"
+      using 2 by simp
+    then have "d#ds = [] @ [a, b, c] @ (tl (tl ds))"
+      by simp
+    then show ?thesis using sublist_def by metis
+  next
+    case False
+    then have 1: "sublist [a, b] ds" using Cons 
+      by (metis append_self_conv2 hd_append2 list.distinct(1) list.sel(1) list.sel(3) sublist_def tl_append2) 
+    then have 2: "sublist [b, c] ds" using Cons 
+      using list.sel(1) sublist_cons_impl_sublist 
+      by metis 
+    then show ?thesis using 1 2 Cons 
+      by (simp add: False distinct_tl sublist_cons) 
+  qed
+qed
+
+
+lemma sublist_indixes: 
+  assumes "Suc i < length cs"
+  shows "sublist [cs!i, cs!Suc i] cs"
+  using assms proof(induction cs arbitrary: i)
+  case Nil
+  then show ?case 
+    by simp
+next
+  case (Cons a cs)
+  then show ?case proof(cases "Suc i = 1")
+    case True
+    then have "i = 0"
+      by simp
+    then have "(a#cs)!i = a"
+      using Cons.prems hd_conv_nth by fastforce 
+    then have "(a#cs)!Suc i = hd (cs)"
+      using Cons 
+      by (simp add: \<open>i = 0\<close> hd_conv_nth) 
+    then have "(a#cs) = [(a#cs)!i, (a#cs)!Suc i] @ tl cs" 
+      using Cons.prems \<open>i = 0\<close> by auto
+    then have "(a#cs) = [] @ [(a#cs)!i, (a#cs)!Suc i] @ tl cs" 
+      using Cons.prems \<open>i = 0\<close> by auto
+    then show ?thesis using sublist_def 
+      by metis   
+  next
+    case False
+    then have "Suc i > 1"
+      by simp
+    then have "Suc i -1 < length cs"
+      using Cons by fastforce
+    then have "sublist [cs!(i-1), cs!i] cs" 
+      using Cons 
+      using \<open>1 < Suc i\<close> gr0_conv_Suc by auto
+    then show ?thesis 
+      by (metis One_nat_def Suc_less_SucD \<open>1 < Suc i\<close> nth_Cons_Suc nth_Cons_pos sublist_cons) 
+  qed
+qed
+
+
 end
