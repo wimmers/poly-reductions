@@ -90,8 +90,8 @@ lemma G'_def_3:
   shows "G' = \<lparr>verts = {(v, (0::nat))|v. v \<in> verts G} \<union> {(v, 1)|v. v \<in> verts G} \<union> {(v, 2)|v. v \<in> verts G}, 
       arcs = {((v, 0), (v, 1))|v. v \<in> verts G} \<union>{((v, 1), (v, 0))|v. v \<in> verts G}\<union>
           {((v, 1), (v, 2))|v. v \<in> verts G}\<union>{((v, 2), (v, 1))|v. v \<in> verts G}\<union>
-          {((v, 2), (u, 0))|v u e. e \<in> arcs G \<and> v = tail G e \<and> u = head G e}\<union> 
-          {((u, 0), (v, 2))|v u e. e \<in> arcs G \<and> v = tail G e \<and> u = head G e},
+          {((v, 2), (u, 0))|v u e. e \<in> arcs G \<and> v = tail G e \<and> u = head G e \<and> u \<noteq> v}\<union> 
+          {((u, 0), (v, 2))|v u e. e \<in> arcs G \<and> v = tail G e \<and> u = head G e \<and> u \<noteq> v},
       tail = fst, head = snd\<rparr>"
   using G_properties G'_def verts_G by(auto simp add: hc_to_uhc_def) 
 
@@ -1033,9 +1033,341 @@ next
 qed 
 
 
+lemma sublist_i_j_last: 
+  assumes  "(sublist [(x, i), (y, j)] C)" "distinct C" 
+    "last C = (y, j)"
+  shows "\<exists>p1. C = p1 @ [(x, i), (y, j)]" 
+  using assms proof(induction C)
+  case Nil
+  then show ?case by (simp add: sublist_def)
+next
+  case (Cons a C)
+  then have Cne: "C \<noteq> []" 
+    using last_ConsL sublist_imp_in_arcs by fastforce  
+  then show ?case proof(cases "a = (x, i)")
+    case True
+    then have "(x, i) = hd (a#C)"
+      by simp
+    then have "(y, j) = hd C" 
+      using Cons 
+      by (metis list.inject list.sel(1) sublist_hd_last_only_2_elems) 
+    then have "hd C = last C" 
+      using Cons 
+      by (simp add: Cne) 
+    then have "C = [(y, j)]"
+      using Cons 
+      by (metis \<open>(x, i) = hd (a # C)\<close> list.sel(1) list.sel(3) sublist_hd_last_only_2_elems) 
+    then have "(a#C) = [] @ [(x, i), (y, j)]" using True by simp
+    then show ?thesis using True 
+      by simp  
+  next
+    case False
+    then have 1: "sublist [(x, i), (y, j)] C" 
+      using Cons 
+      by (metis sublist_cons_impl_sublist) 
+    have "last (a # C) = last C"
+      using Cne by simp
+    then show ?thesis using Cons 1 by auto
+  qed
+qed 
+
+
+lemma to_Cycle_noteq_eqmpty_impl_last_eq: 
+  assumes "(to_cycle_hc C) \<noteq> []"
+  shows "last(to_cycle_hc ((b,c)#C)) = last (to_cycle_hc C)"
+  using assms by(auto)  
+
+lemma no_one_to_cycle_empty: 
+  assumes "\<not> (\<exists>x. (x, 1) \<in> set C)"
+  shows "to_cycle_hc C = []"
+  using assms apply(induction C) by(auto)
+
+
+lemma last_x1_x0_last_to_cycle_hc: 
+  assumes "C = p1 @ [(x, (1::nat)), (x, 0)]" 
+  shows "last (to_cycle_hc C) = x" 
+  using assms proof(induction C arbitrary: p1)
+case Nil
+  then show ?case by auto
+next
+  case (Cons a C)
+  obtain b c where bc_def: "a = (b, c)" 
+    by fastforce
+  then show ?case proof(cases "\<exists>p1. C = p1 @[(x, 1), (x, 0)]")
+    case True
+    then obtain p2 where p2_def: "C = p2 @ [(x, 1), (x, 0)]" 
+      by auto
+    then have 1: "last (to_cycle_hc C) = x"
+      using Cons by auto
+    have "to_cycle_hc C \<noteq> []"
+      by (metis True in_set_conv_decomp list.distinct(1) list.set_cases x_1_in_C_x_in_to_cycle_hc)
+    then have "last (to_cycle_hc (a#C)) = last (to_cycle_hc C)" 
+      using to_Cycle_noteq_eqmpty_impl_last_eq bc_def by auto
+    then show ?thesis using Cons 1 by(auto) 
+  next
+    case False
+    then have "p1 = []" 
+      using Cons 
+      by (metis list.sel(3) tl_append2) 
+    then have C_def: "C = [(x, 0)]" 
+      using Cons by simp
+    then have "to_cycle_hc (a # C) = [x]" proof -
+      have 1: "to_cycle_hc (a # C) = x # (to_cycle_hc C)"
+        using Cons.prems \<open>p1 = []\<close> by auto 
+      have "\<not> (\<exists> z. (z, 1) \<in> set C)" 
+        using C_def by(auto)
+      then have "to_cycle_hc C = []"
+        using no_one_to_cycle_empty C_def by auto 
+      then show ?thesis using 1 by simp
+    qed
+    then show ?thesis by simp
+  qed
+qed  
+
+
+lemma last_x1_x2_last_to_cycle_hc: 
+  assumes "C = p1 @ [(x, (1::nat)), (x, 2)]" 
+  shows "last (to_cycle_hc C) = x" 
+  using assms proof(induction C arbitrary: p1)
+case Nil
+  then show ?case by auto
+next
+  case (Cons a C)
+  obtain b c where bc_def: "a = (b, c)" 
+    by fastforce
+  then show ?case proof(cases "\<exists>p1. C = p1 @[(x, 1), (x, 2)]")
+    case True
+    then obtain p2 where p2_def: "C = p2 @ [(x, 1), (x, 2)]" 
+      by auto
+    then have 1: "last (to_cycle_hc C) = x"
+      using Cons by auto
+    have "to_cycle_hc C \<noteq> []"
+      by (metis True in_set_conv_decomp list.distinct(1) list.set_cases x_1_in_C_x_in_to_cycle_hc)
+    then have "last (to_cycle_hc (a#C)) = last (to_cycle_hc C)" 
+      using to_Cycle_noteq_eqmpty_impl_last_eq bc_def by auto
+    then show ?thesis using Cons 1 by(auto) 
+  next
+    case False
+    then have "p1 = []" 
+      using Cons 
+      by (metis list.sel(3) tl_append2) 
+    then have C_def: "C = [(x, 2)]" 
+      using Cons by simp
+    then have "to_cycle_hc (a # C) = [x]" proof -
+      have 1: "to_cycle_hc (a # C) = x # (to_cycle_hc C)"
+        using Cons.prems \<open>p1 = []\<close> by auto 
+      have "\<not> (\<exists> z. (z, 1) \<in> set C)" 
+        using C_def by(auto)
+      then have "to_cycle_hc C = []"
+        using no_one_to_cycle_empty C_def by auto 
+      then show ?thesis using 1 by simp
+    qed
+    then show ?thesis by simp
+  qed
+qed  
+
+
+lemma last_x1_x0_y2_last_to_cycle_hc: 
+  assumes "C = p1 @ [(x, (1::nat)), (x, 0), (y, 2)]" 
+  shows "last (to_cycle_hc C) = x" 
+  using assms proof(induction C arbitrary: p1)
+case Nil
+  then show ?case by auto
+next
+  case (Cons a C)
+  obtain b c where bc_def: "a = (b, c)" 
+    by fastforce
+  then show ?case proof(cases "\<exists>p1. C = p1 @[(x, 1), (x, 0), (y, 2)]")
+    case True
+    then obtain p2 where p2_def: "C = p2 @ [(x, 1), (x, 0), (y, 2)]" 
+      by auto
+    then have 1: "last (to_cycle_hc C) = x"
+      using Cons by auto
+    have "to_cycle_hc C \<noteq> []"
+      by (metis True in_set_conv_decomp list.distinct(1) list.set_cases x_1_in_C_x_in_to_cycle_hc)
+    then have "last (to_cycle_hc (a#C)) = last (to_cycle_hc C)" 
+      using to_Cycle_noteq_eqmpty_impl_last_eq bc_def by auto
+    then show ?thesis using Cons 1 by(auto) 
+  next
+    case False
+    then have "p1 = []" 
+      using Cons 
+      by (metis list.sel(3) tl_append2) 
+    then have C_def: "C = [(x, 0), (y, 2)]" 
+      using Cons by simp
+    then have "to_cycle_hc (a # C) = [x]" proof -
+      have 1: "to_cycle_hc (a # C) = x # (to_cycle_hc C)"
+        using Cons.prems \<open>p1 = []\<close> by auto 
+      have "\<not> (\<exists> z. (z, 1) \<in> set C)" 
+        using C_def by(auto)
+      then have "to_cycle_hc C = []"
+        using no_one_to_cycle_empty C_def by auto 
+      then show ?thesis using 1 by simp
+    qed
+    then show ?thesis by simp
+  qed
+qed  
+
+
+lemma last_x1_x2_y0_last_to_cycle_hc: 
+  assumes "C = p1 @ [(x, (1::nat)), (x, 2), (y, 0)]" 
+  shows "last (to_cycle_hc C) = x" 
+  using assms proof(induction C arbitrary: p1)
+case Nil
+  then show ?case by auto
+next
+  case (Cons a C)
+  obtain b c where bc_def: "a = (b, c)" 
+    by fastforce
+  then show ?case proof(cases "\<exists>p1. C = p1 @[(x, 1), (x, 2), (y, 0)]")
+    case True
+    then obtain p2 where p2_def: "C = p2 @ [(x, 1), (x, 2), (y, 0)]" 
+      by auto
+    then have 1: "last (to_cycle_hc C) = x"
+      using Cons by auto
+    have "to_cycle_hc C \<noteq> []"
+      by (metis True in_set_conv_decomp list.distinct(1) list.set_cases x_1_in_C_x_in_to_cycle_hc)
+    then have "last (to_cycle_hc (a#C)) = last (to_cycle_hc C)" 
+      using to_Cycle_noteq_eqmpty_impl_last_eq bc_def by auto
+    then show ?thesis using Cons 1 by(auto) 
+  next
+    case False
+    then have "p1 = []" 
+      using Cons 
+      by (metis list.sel(3) tl_append2) 
+    then have C_def: "C = [(x, 2), (y, 0)]" 
+      using Cons by simp
+    then have "to_cycle_hc (a # C) = [x]" proof -
+      have 1: "to_cycle_hc (a # C) = x # (to_cycle_hc C)"
+        using Cons.prems \<open>p1 = []\<close> by auto 
+      have "\<not> (\<exists> z. (z, 1) \<in> set C)" 
+        using C_def by(auto)
+      then have "to_cycle_hc C = []"
+        using no_one_to_cycle_empty C_def by auto 
+      then show ?thesis using 1 by simp
+    qed
+    then show ?thesis by simp
+  qed
+qed  
+
+
+lemma sublist_i_j_last_distinct_tl: 
+  assumes  "(sublist [(x, i), (y, j)] C)" "distinct (tl C)" "(x, i) \<noteq> hd C" 
+    "last C = (y, j)"
+  shows "\<exists>p1. C = p1 @ [(x, i), (y, j)]" 
+  using assms proof(induction C)
+  case Nil
+  then show ?case by (simp add: sublist_def)
+next
+  case (Cons a C)
+  then have Cne: "C \<noteq> []" 
+    using last_ConsL sublist_imp_in_arcs
+    by force
+  have "a \<noteq> (x, i)"
+    using Cons by simp
+    then have 1: "sublist [(x, i), (y, j)] C" 
+      using Cons sublist_cons_impl_sublist 
+      by (metis sublist_cons_impl_sublist) 
+    have "last (a # C) = last C"
+      using Cne by simp
+    then have "\<exists>p1. C = p1 @ [(x,i), (y, j)]" 
+      using 1 Cons
+      by (simp add: sublist_i_j_last) 
+    then show ?case using Cons 1 by auto
+qed 
+
+
+lemma sublist_i_j_k_last: 
+  assumes  "(sublist [(x, i), (y, j)] C)" "distinct C" 
+    "C = p1 @ [(y, j), (z, k)]"
+  shows "\<exists>p1. C = p1 @ [(x, i), (y, j), (z, k)]" 
+  using assms proof(induction C arbitrary: p1)
+  case Nil
+  then show ?case by (simp add: sublist_def)
+next
+  case (Cons a C)
+  then have Cne: "C \<noteq> []" 
+    using last_ConsL sublist_imp_in_arcs by fastforce  
+  then show ?case proof(cases "a = (x, i)")
+    case True
+    then have "(x, i) = hd (a#C)"
+      by simp
+    then have 2: "(y, j) = hd C" 
+      using Cons 
+      by (metis append_self_conv2 list.sel(1) sublist3_hd_lists sublist_def) 
+    have 3: "p1 \<noteq> []"
+      using Cons True 
+      using sublist_not_cyclic_for_distinct by force 
+    have "C = tl (p1 @ [(y, j), (z, k)])"
+      using Cons 
+      by (metis list.sel(3))  
+    then have "C = (tl p1) @ [(y, j), (z, k)]"
+      using 3 by simp
+    then have "hd ((tl p1) @ [(y, j), (z, k)]) = (y, j)" "distinct ((tl p1) @ [(y, j), (z, k)])" 
+      using Cons 2 
+       apply presburger 
+      using Cons.prems(2) \<open>C = tl p1 @ [(y, j), (z, k)]\<close> by auto   
+    then have "tl p1 = []" 
+      by (metis \<open>C = tl p1 @ [(y, j), (z, k)]\<close> append.right_neutral append_is_Nil_conv hd_Cons_tl hd_append2 self_append_conv2 sublist_v1_hd_v2_hd_tl_lists) 
+    have "C = [(y, j), (z, k)]" 
+      using Cons 2 
+      using \<open>C = tl p1 @ [(y, j), (z, k)]\<close> \<open>tl p1 = []\<close> by fastforce 
+    then have "(a#C) = [] @ [(x, i), (y, j), (z, k)]" using True by simp
+    then show ?thesis using True 
+      by simp  
+  next
+    case False
+    then have 1: "sublist [(x, i), (y, j)] C" 
+      using Cons 
+      by (metis sublist_cons_impl_sublist) 
+    have 2: "C = tl (p1 @ [(y, j), (z, k)])"
+      using Cons 
+      by (metis list.sel(3))  
+    then have "p1 \<noteq> []" 
+      using "1" sublist_imp_in_arcs by fastforce 
+    then have 3: "C = (tl p1) @ [(y, j), (z, k)]"
+      using 2 by simp
+    then have "\<exists>p2. C = p2 @ [(x, i), (y, j), (z, k)]" 
+      using Cons 1 by auto
+    then show ?thesis using Cons 1 by force
+  qed
+qed 
+
+
+lemma sublist_i_j_k_last_distinct_tl: 
+  assumes "distinct (tl C)" "(x, i) \<noteq> hd C" "(y, j) \<noteq> hd C" "sublist [(x, i), (y, j)] C" 
+    "\<exists> p1. C = p1 @ [(y, j), (z, k)]" 
+  shows "\<exists> p2. C = p2 @ [(x, i), (y, j), (z, k)]" 
+  using assms proof(induction C)
+  case Nil
+  then show ?case by (simp add: sublist_def)
+next
+  case (Cons a C)
+  then have Cne: "C \<noteq> []" 
+    using last_ConsL sublist_imp_in_arcs
+    by force
+  have "a \<noteq> (x, i)"
+    using Cons by simp
+    then have 1: "sublist [(x, i), (y, j)] C" 
+      using Cons sublist_cons_impl_sublist 
+      by (metis sublist_cons_impl_sublist)
+    have dC: "distinct C" 
+      using Cons by simp
+    obtain p1 where "(a#C) = p1 @ [(y, j), (z, k)]"
+      using Cons by auto
+    then have "p1 \<noteq> []" 
+      using Cons by auto
+    then have "C = (tl p1) @ [(y, j), (z, k)]"
+      by (metis \<open>a # C = p1 @ [(y, j), (z, k)]\<close> list.sel(3) tl_append2) 
+    then have "\<exists>p1. C = p1 @ [(x,i), (y, j), (z, k)]" 
+      using 1 Cons dC sublist_i_j_k_last  by fast 
+    then show ?case using Cons 1 by auto
+qed 
+
+
 lemma sublist_2_0_in_C1: 
   assumes "sublist [(x, 2), (y, 0)] Cy1"
-  shows "sublist [x, y] C1 \<or> y = hd C1"
+  shows "sublist [x, y] C1 \<or> y = hd C1 \<and> x = last C1"
 proof -
   have "(x, 2) \<in> set Cy1"
     using assms 
@@ -1049,7 +1381,8 @@ proof -
     using distinct_tl_Cy1 hd_last_Cy1 
     using assms two_sublist_same_first_distinct_tl by fastforce 
   then have sx: "(sublist [(x, 1), (x, 2)] Cy1 \<and> sublist [(x, 0), (x, 1)] Cy1)" 
-    using 1 by auto
+    using 1 
+    by (metis Pair_inject assms distinct_tl_Cy1 hd_last_Cy1 two_sublist_same_first_distinct_tl) 
 
   have "(y, 0) \<in> set Cy1"
     using assms 
@@ -1059,12 +1392,14 @@ proof -
   then have 1: "(sublist [(y, 1), (y, 2)] Cy1 \<and> sublist [(y, 0), (y, 1)] Cy1) \<or> 
       (sublist [(y, 1), (y, 0)] Cy1 \<and> sublist [(y, 2), (y, 1)] Cy1)"
     using assms sublist_Cy1_for_x by simp 
-  have "\<not> (sublist [(y, 1), (y, 0)] Cy1 \<and> sublist [(y, 2), (y, 1)] Cy1)" 
+  have "\<not> (sublist [(y, 2), (y, 1)] Cy1 \<and> sublist [(y, 1), (y, 0)] Cy1)" 
     using distinct_tl_Cy1 hd_last_Cy1 
     using assms 
-    using two_sublist_distinct_same_first by fastforce 
-  then have sy: "(sublist [(y, 1), (y, 2)] Cy1 \<and> sublist [(y, 0), (y, 1)] Cy1)" 
+    using two_sublist_distinct_same_first 
+    by fastforce  
+  then have sy: "(sublist [(y, 0), (y, 1)] Cy1 \<and> sublist [(y, 1), (y, 2)] Cy1)" 
     using 1 by auto
+  
   then have s1: "sublist [(x, 2), (y, 0), (y, 1)] Cy1 \<or> hd Cy1 = (y, 0)"
     using assms 
     using distinct_tl_Cy1 sublist_ab_bc_b_not_head by fastforce 
@@ -1078,7 +1413,7 @@ proof -
     next
       have tltlCy1: "tl (tl Cy1) \<noteq> []" 
         using a1 
-        by (metis C1_def Nil_tl \<open>(y, 0) \<in> set Cy1\<close> \<open>x \<in> verts G\<close> distinct.simps(2) distinct_length_2_or_more distinct_singleton hd_Cons_tl hd_last_Cy1 last_ConsL last_tl length_0_conv length_Cy1(1) length_geq_2_tt_not_empty list.distinct(1) set_ConsD to_cycle_hc.simps(1) to_cycle_hc.simps(2) x_in_verts_x_in_C1 zero_neq_one) 
+        by (metis \<open>(x, 2) \<in> set Cy1\<close> assms distinct.simps(2) distinct_singleton hd_Cons_tl hd_last_Cy1 last_ConsL last_tl length_Cy1(1) length_geq_2_tt_not_empty old.prod.inject set_ConsD sublist_hd_tl_equal_b_hd_tl zero_neq_numeral) 
       assume a2: "hd Cy1 = (x, 2)" 
       then have "to_cycle_hc Cy1 = to_cycle_hc (tl Cy1)" 
         using a1 distinct_tl_Cy1 hd_C_not_eq_1_equal_tl 
@@ -1095,8 +1430,21 @@ proof -
       then have "hd (to_cycle_hc (tl (tl Cy1))) = y"
         using hd_to_cycle_hc_if_x_1_hd_C tltlCy1 
         by fastforce  
-      then show ?thesis 
+      then have "hd C1 = y"
         by (simp add: C1_def \<open>to_cycle_hc Cy1 = to_cycle_hc (tl (tl Cy1))\<close>) 
+
+      have x1_neq_hcCy1: "(x, 1) \<noteq> hd(Cy1)" 
+        using a2 by auto
+      have "last Cy1 = (x, 2)" 
+        using a2 hd_last_Cy1 by simp
+      then have "\<exists>p1. Cy1 = p1 @ [(x, 1), (x,2)]"
+        using sublist_i_j_last_distinct_tl sx distinct_tl_Cy1 a2 x1_neq_hcCy1 
+        by fast 
+      then have "last (to_cycle_hc Cy1) = x"
+        using last_x1_x2_last_to_cycle_hc by fast 
+  
+      then show ?thesis 
+        using C1_def \<open>hd C1 = y\<close> by auto 
     qed
   next
     assume a1: "hd Cy1 = (y, 0)"
@@ -1105,18 +1453,35 @@ proof -
       using hd_last_Cy1 sublist_hd_tl_equal_b_hd_tl by force 
     have "to_cycle_hc Cy1 = to_cycle_hc (tl Cy1)" 
       using a1 distinct_tl_Cy1 
-      by (metis hd_Cons_tl less_irrefl_nat less_one list.sel(2) to_cycle_hc.simps(1)) 
+      using hd_C_not_eq_1_equal_tl 
+      by (metis less_not_refl less_one list.sel(2)) 
     then have "hd (to_cycle_hc Cy1) = y"
       by (metis C1_def \<open>hd (tl Cy1) = (y, 1)\<close> \<open>x \<in> verts G\<close> distinct.simps(2) distinct_singleton hd_to_cycle_hc_if_x_1_hd_C list.distinct(1) list.sel(1) to_cycle_hc.elims x_in_verts_x_in_C1) 
-    then show ?thesis 
+    then have 1: "y = hd C1"
       using C1_def by simp
+
+    have x1_neq_hcCy1: "(x, 2) \<noteq> hd(Cy1)" "(x, 1) \<noteq> hd(Cy1)" 
+        using a1 by auto
+      have "last Cy1 = (y, 0)" 
+        using a1 hd_last_Cy1 by simp
+      then have "\<exists>p1. Cy1 = p1 @ [(x, 2), (y,0)]"
+        using sublist_i_j_last_distinct_tl distinct_tl_Cy1 x1_neq_hcCy1 assms 
+        by fast 
+      then have "\<exists>p1. Cy1 = p1 @ [(x, 1), (x, 2), (y, 0)]" 
+        using sublist_i_j_k_last_distinct_tl distinct_tl_Cy1 x1_neq_hcCy1 sx 
+        by fast
+      then have "last (to_cycle_hc Cy1) = x"
+        using last_x1_x2_y0_last_to_cycle_hc by fast
+    
+      then show ?thesis 
+      using C1_def 1 by simp
   qed
 qed
 
 
 lemma sublist_2_0_in_C1_2: 
   assumes "sublist [(x, 0), (y, 2)] Cy1"
-  shows "sublist [x, y] C1 \<or> y = hd C1"
+  shows "sublist [x, y] C1 \<or> y = hd C1 \<and> x = last C1"
 proof -
   have "(x, 0) \<in> set Cy1"
     using assms 
@@ -1148,6 +1513,7 @@ proof -
     by fastforce  
   then have sy: "(sublist [(y, 1), (y, 0)] Cy1 \<and> sublist [(y, 2), (y, 1)] Cy1)" 
     using 1 by auto
+  
   then have s1: "sublist [(x, 0), (y, 2), (y, 1)] Cy1 \<or> hd Cy1 = (y, 2)"
     using assms 
     using distinct_tl_Cy1 sublist_ab_bc_b_not_head by fastforce 
@@ -1178,8 +1544,21 @@ proof -
       then have "hd (to_cycle_hc (tl (tl Cy1))) = y"
         using hd_to_cycle_hc_if_x_1_hd_C tltlCy1 
         by fastforce  
-      then show ?thesis 
+      then have "hd C1 = y"
         by (simp add: C1_def \<open>to_cycle_hc Cy1 = to_cycle_hc (tl (tl Cy1))\<close>) 
+
+      have x1_neq_hcCy1: "(x, 1) \<noteq> hd(Cy1)" 
+        using a2 by auto
+      have "last Cy1 = (x, 0)" 
+        using a2 hd_last_Cy1 by simp
+      then have "\<exists>p1. Cy1 = p1 @ [(x, 1), (x,0)]"
+        using sublist_i_j_last_distinct_tl sx distinct_tl_Cy1 a2 x1_neq_hcCy1 
+        by fast 
+      then have "last (to_cycle_hc Cy1) = x"
+        using last_x1_x0_last_to_cycle_hc by fast 
+  
+      then show ?thesis 
+        using C1_def \<open>hd C1 = y\<close> by auto 
     qed
   next
     assume a1: "hd Cy1 = (y, 2)"
@@ -1191,52 +1570,48 @@ proof -
       using hd_C_not_eq_1_equal_tl by fastforce 
     then have "hd (to_cycle_hc Cy1) = y"
       by (metis C1_def \<open>hd (tl Cy1) = (y, 1)\<close> \<open>x \<in> verts G\<close> distinct.simps(2) distinct_singleton hd_to_cycle_hc_if_x_1_hd_C list.distinct(1) list.sel(1) to_cycle_hc.elims x_in_verts_x_in_C1) 
-    then show ?thesis 
+    then have 1: "y = hd C1"
       using C1_def by simp
+
+    have x1_neq_hcCy1: "(x, 0) \<noteq> hd(Cy1)" "(x, 1) \<noteq> hd(Cy1)" 
+        using a1 by auto
+      have "last Cy1 = (y, 2)" 
+        using a1 hd_last_Cy1 by simp
+      then have "\<exists>p1. Cy1 = p1 @ [(x, 0), (y,2)]"
+        using sublist_i_j_last_distinct_tl distinct_tl_Cy1 x1_neq_hcCy1 assms 
+        by fast 
+      then have "\<exists>p1. Cy1 = p1 @ [(x, 1), (x, 0), (y, 2)]" 
+        using sublist_i_j_k_last_distinct_tl distinct_tl_Cy1 x1_neq_hcCy1 sx 
+        by fast
+      then have "last (to_cycle_hc Cy1) = x"
+        using last_x1_x0_y2_last_to_cycle_hc by fast
+    
+      then show ?thesis 
+      using C1_def 1 by simp
   qed
 qed
-
-
-  (*have "\<not> hd Cy1 = (y, 0)" proof(rule ccontr)
-    assume a1: "\<not> \<not> hd Cy1 = (y, 0)"
-    then have b1: "to_cycle_hc Cy1 = to_cycle_hc (tl Cy1)" 
-      by (metis list.sel(1) list.sel(2) list.sel(3) prod.inject to_cycle_hc.elims zero_neq_one)
-    then have dCy1: "distinct (to_cycle_hc Cy1)"
-      using distinct_tl_Cy1 distinct_tl_c_to_cycle_hc by blast 
-    have "hd (tl Cy1) = (y, 1)" 
-      using a1 sy 
-      using distinct_tl_Cy1 hd_last_Cy1 sublist_hd_tl_equal_b_hd_tl by fastforce 
-    then have "hd C1 = y" 
-      using C1_def b1  apply(auto) 
-      by (metis Nitpick.size_list_simp(2) One_nat_def \<open>(y, 0) \<in> set Cy1\<close> \<open>hd (tl Cy1) = (y, 1)\<close> a1 hd_last_Cy1 length_0_conv length_Cy1(2) less_irrefl_nat list.exhaust_sel list.sel(1) list.sel(3) list.set_cases neq_Nil_conv to_cycle_hc.elims to_cycle_hc.simps(1)) 
-    then have "False" using sy  
-(*Ziel: von (x, 1) auf (x,2) auf (y, 0) auf (y, 1). Falls
-dieser Pfad so nicht vorhanden ist, so ist x der letzte in C1*)
-  then show ?thesis sorry
-qed*)
-
-
-lemma sublist_predecessor_helper: 
-  assumes "sublist [(x, 2), (z, 0)] Cy1" "z = hd C1"
-  shows "z = last C1 \<and> sublist [x, y] C1 \<or> x = last C1"
-  sorry
-
-lemma sublist_predecessor_helper_2: 
-  assumes "sublist [(x, 0), (z, 2)] Cy1" "z = hd C1"
-  shows "z = last C1 \<and> sublist [x, y] C1 \<or> x = last C1"
-  sorry
 
 
 lemma sublists_x_z_noteq: 
   assumes "sublist [(x, 1), (x, 2)] Cy1 \<and> sublist [(x, 0), (x, 1)] Cy1" "sublist [(x, 2), (z, 0)] Cy1"
   shows "x \<noteq> z" 
-  using distinct_tl_Cy1 sorry 
+proof -
+  have "((x, 2), (z, 0)) \<in> arcs G'"
+    using assms 
+    by (simp add: sublist_Cy1_arcs_G') 
+  then show ?thesis using G'_def_3 by auto 
+qed
 
 
 lemma sublists_x_z_noteq_2: 
   assumes "sublist [(x, 1), (x, 0)] Cy1 \<and> sublist [(x, 2), (x, 1)] Cy1" "sublist [(x, 0), (z, 2)] Cy1"
-  shows "x \<noteq> z" 
-  using distinct_tl_Cy1 sorry 
+  shows "x \<noteq> z"  
+proof -
+  have "((x, 0), (z, 2)) \<in> arcs G'"
+    using assms 
+    by (simp add: sublist_Cy1_arcs_G') 
+  then show ?thesis using G'_def_3 by auto 
+qed
 
 
 lemma sublist_predecessor: 
@@ -1260,7 +1635,7 @@ proof(rule ccontr)
     by auto
   then have zy: "z \<noteq> y" 
     using a1 by blast
-  then have sxz: "sublist [x, z] C1 \<or> z = hd C1"
+  then have sxz: "sublist [x, z] C1 \<or> z = hd C1 \<and> x = last C1"
     using sublist_2_0_in_C1 z_def 
     by simp 
   then have xnoteqz: "x \<noteq> z" 
@@ -1272,13 +1647,10 @@ proof(rule ccontr)
       using C1_def assms distinct_C1 sublist_x_y_z_to_cycle_hc by fastforce
   next
     case False
-    then have "z = hd C1"
+    then have "z = hd C1 \<and> x = last C1"
       using sxz by simp
-    then have "x = last C1" 
-      using sublist_predecessor_helper False 
-      using z_def by blast 
     then show ?thesis using assms distinct_C1 xnoteqz 
-      using \<open>z = hd C1\<close> distinct_sublist_last_first_of_sublist_false by force 
+      using distinct_sublist_last_first_of_sublist_false by force 
   qed
 qed
 
@@ -1304,7 +1676,7 @@ proof(rule ccontr)
     by auto
   then have zy: "z \<noteq> y" 
     using a1 by blast
-  then have sxz: "sublist [x, z] C1 \<or> z = hd C1"
+  then have sxz: "sublist [x, z] C1 \<or> z = hd C1 \<and> x = last C1"
     using sublist_2_0_in_C1_2 z_def 
     by simp 
   then have xnoteqz: "x \<noteq> z" 
@@ -1316,13 +1688,10 @@ proof(rule ccontr)
       using C1_def assms distinct_C1 sublist_x_y_z_to_cycle_hc by fastforce
   next
     case False
-    then have "z = hd C1"
+    then have "z = hd C1 \<and> x = last C1"
       using sxz by simp
-    then have "x = last C1" 
-      using False z_def 
-      using sublist_predecessor_helper_2 by blast 
     then show ?thesis using assms distinct_C1 xnoteqz 
-      using \<open>z = hd C1\<close> distinct_sublist_last_first_of_sublist_false by force 
+      using distinct_sublist_last_first_of_sublist_false by force 
   qed
 qed
 
