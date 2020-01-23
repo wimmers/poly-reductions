@@ -2,7 +2,7 @@ theory Definitions_UHC
   imports Main "../Three_Sat_To_Set_Cover" Graph_Theory.Digraph  Graph_Theory.Arc_Walk
     Graph_Theory.Vertex_Walk
     "../List_Auxiliaries" "../Set_Auxiliaries"
-    "../VC_To_HC/Definitions" "../VC_To_HC/VC_To_HC" "../Graph_auxiliaries" "../Vwalk_Cycle"
+    "../VC_To_HC/Definitions" "../Graph_auxiliaries" "../Vwalk_Cycle"
 begin
 
 subsection\<open>Preliminaries\<close>
@@ -33,7 +33,7 @@ definition "hc_to_uhc \<equiv>
           {((u, 0), (v, 2))|v u e. e \<in> arcs G \<and> v = tail G e \<and> u = head G e \<and> u \<noteq> v},
     tail = fst, head = snd\<rparr> 
     else \<lparr>verts = {}, arcs = {}, tail = fst, head = snd\<rparr>) else \<lparr>verts = {(v, 0)|v. v \<in> verts G}, arcs = {}, tail = fst, head = snd\<rparr>)
-    else \<lparr>verts = {}, arcs = {((head G e, 0), (head G e, 1))|e. e \<in> arcs G}, tail = fst, head = snd\<rparr>)"
+    else (let x = (SOME x. x \<in> arcs G) in \<lparr>verts = {}, arcs = {((head G x, 0), (head G x, 1))}, tail = fst, head = snd\<rparr>))"
 
 
 
@@ -57,32 +57,38 @@ lemma verts_empt_arcs_not_not_wf_digraph:
 
 
 lemma else_not_in_uhc_1: 
-  assumes "G' = \<lparr>verts = {}, arcs = {((head G e, 0), (head G e, 1))|e. e \<in> arcs G}, tail = fst, head = snd\<rparr>" 
+  assumes "G' = (let x = (SOME x. x \<in> arcs G) in \<lparr>verts = {}, arcs = {((head G x, 0), (head G x, 1))}, tail = fst, head = snd\<rparr>)" 
       "\<not> wf_digraph G"
     shows "G' \<notin> uhc"
 proof -
-  have vertsG': "verts G' = {}"
-    using assms by auto
+  obtain x where x_def: "x = (SOME x. x \<in> arcs G)"
+    by simp 
+  then have vertsG': "verts G' = {}"
+    using assms
+    by (meson select_convs(1))
   have "arcs G \<noteq> {}" 
     using not_wf_digraph_not_arcs_empty assms by auto
   then have "arcs G' \<noteq> {}"
-    using assms by simp
+    using assms 
+    by (metis insert_not_empty select_convs(2)) 
   then have "\<not> wf_digraph G'"
     using verts_empt_arcs_not_not_wf_digraph vertsG' by auto
   then show ?thesis using uhc_def by blast
 qed
 
 lemma else_not_in_uhc_2: 
-  assumes "G' = \<lparr>verts = {}, arcs = {((head G e, 0), (head G e, 1))|e. e \<in> arcs G}, tail = fst, head = snd\<rparr>" 
+  assumes "G' = (let x = (SOME x. x \<in> arcs G) in \<lparr>verts = {}, arcs = {((head G x, 0), (head G x, 1))}, tail = fst, head = snd\<rparr>)" 
       "\<not>((tail G = fst \<and> head G = snd) \<or> arcs G = {})"
     shows "G' \<notin> uhc"
 proof -
   have vertsG': "verts G' = {}"
-    using assms by auto
+    using assms 
+    by (meson select_convs(1)) 
   have "arcs G \<noteq> {}" 
     using assms by auto
   then have "arcs G' \<noteq> {}"
-    using assms by auto
+    using assms 
+    by (metis insert_not_empty select_convs(2)) 
   then have "\<not> wf_digraph G'"
     using verts_empt_arcs_not_not_wf_digraph vertsG' by auto
   then show ?thesis using uhc_def by blast
@@ -105,7 +111,7 @@ qed
 
 
 lemma else_not_in_uhc: 
-  assumes "G' = \<lparr>verts = {}, arcs = {((head G e, 0), (head G e, 1))|e. e \<in> arcs G}, tail = fst, head = snd\<rparr>" 
+  assumes "G' = (let x = (SOME x. x \<in> arcs G) in \<lparr>verts = {}, arcs = {((head G x, 0), (head G x, 1))}, tail = fst, head = snd\<rparr>)" 
       "\<not>(wf_digraph G \<and> ((tail G = fst \<and> head G = snd) \<or> arcs G = {}))"
     shows "G' \<notin> uhc"
   using else_not_in_uhc_1 else_not_in_uhc_2 assms by blast

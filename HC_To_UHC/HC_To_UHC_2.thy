@@ -62,7 +62,7 @@ lemma G_properties:
 proof -
   show "wf_digraph G" proof(rule ccontr)
     assume a1: "\<not> wf_digraph G" 
-    then have "G' = \<lparr>verts = {}, arcs = {((head G e, 0), (head G e, 1))|e. e \<in> arcs G}, tail = fst, head = snd\<rparr>" 
+    then have "G' = (let x = (SOME x. x \<in> arcs G) in \<lparr>verts = {}, arcs = {((head G x, 0), (head G x, 1))}, tail = fst, head = snd\<rparr>)" 
       using G'_def
       by (simp add: hc_to_uhc_def) 
     then have "G' \<notin> uhc" using a1 else_not_in_uhc_1 by blast 
@@ -71,7 +71,7 @@ proof -
 next
   show "((tail G = fst \<and> head G = snd) \<or> arcs G = {})" proof(rule ccontr)
     assume a1: "\<not> ((tail G = fst \<and> head G = snd) \<or> arcs G = {})" 
-    then have "G' = \<lparr>verts = {}, arcs = {((head G e, 0), (head G e, 1))|e. e \<in> arcs G}, tail = fst, head = snd\<rparr>" 
+    then have "G' = (let x = (SOME x. x \<in> arcs G) in \<lparr>verts = {}, arcs = {((head G x, 0), (head G x, 1))}, tail = fst, head = snd\<rparr>)" 
       using G'_def 
       by (simp add: a1 hc_to_uhc_def) 
     then have "G' \<notin> uhc" using a1 else_not_in_uhc_2 by blast   
@@ -2075,7 +2075,7 @@ proof -
         using 1 assms(1) distinct_tl_Cy1 in_cy1_in_verts_G
         by (metis sublist_def sublist_implies_in_set(2)) 
       then have "sublist [(x, 2), (y, 0), (y, 1)] Cy1" 
-        using 1 distinct_tl_Cycle hd_last_Cycle 
+        using 1  
         by (simp add: distinct_tl_Cy1 sublist_ab_bc_b_not_head y_def) 
       then have "\<exists>p2. Cy1 = [(x, 2), (y, 0), (y, 1)] @ p2"
         using 1 y_def distinct_tl_Cy1 hd_last_Cy1 hd_C_sublist_hd by fast 

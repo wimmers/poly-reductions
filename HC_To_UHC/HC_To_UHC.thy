@@ -36,7 +36,7 @@ proof -
 qed
 
 
-theorem is_reduction_vc: 
+theorem is_reduction_hc_uhc: 
   "is_reduction hc_to_uhc hc uhc"
   unfolding is_reduction_def
   using in_uhc_implies_in_hc hc_implies_uhc by auto
