@@ -1367,7 +1367,7 @@ proof -
 qed
 
 
-lemma
+lemma hd_C_sublist_hd:
   assumes "distinct (tl C) \<and> hd C = last C  \<or> distinct C" "hd C = x" "sublist (x#b) C"  
   shows "\<exists>p. C = (x#b) @ p" 
   using assms proof(induction C arbitrary: x b)

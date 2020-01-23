@@ -358,14 +358,14 @@ qed
 
 
 lemma pre_0_edges_helper: 
-  assumes "((x, 2), (y, 0)) \<in> arcs G'" "card (verts G) > 1"
+  assumes "((x, 2), (y, 0)) \<in> arcs G'" 
   shows "(x, y) \<in> arcs G" 
   using assms G_properties G'_def_3 by(auto)
 
 
 
 lemma pre_0_edge: 
-  assumes "sublist [y, (x, 0)] Cy1" "card (verts G) > 1"
+  assumes "sublist [y, (x, 0)] Cy1" 
   shows "y = (x, 1) \<or> (\<exists>z. y = (z, 2) \<and> (z, x) \<in> arcs G)"
 proof -
   have y_in: "y \<in> verts G'"
@@ -601,7 +601,7 @@ qed
 
 
 lemma pre_0_cycle: 
-  assumes "x \<in> verts G" "card (verts G) > 1" 
+  assumes "x \<in> verts G" 
   shows "(sublist [(x, 1), (x, 0)] Cy1) \<or> (\<exists>z. sublist [(z, 2), (x, 0)] Cy1 \<and> (z, x) \<in> arcs G)"
 proof -
   have 0: "length Cy1 \<ge> 2"
@@ -1705,7 +1705,8 @@ proof(rule ccontr)
   assume a1: "\<not> (sublist [(x, 0), (y, 2)] Cy1)"
   have in_Cy1: "(x, 1) \<in> set Cy1" "(y, 1) \<in> set Cy1" 
     using assms 
-    by (metis C1_def in_set_vwalk_arcsE in_to_cycle_hc_in_C sublist_imp_in_arcs)+
+     apply(metis in_set_vwalk_arcsE sublist_imp_in_arcs)
+    using assms by (metis C1_def in_set_vwalk_arcsE in_to_cycle_hc_in_C sublist_imp_in_arcs)
   then have "(sublist [(x, 1), (x, 2)] Cy1 \<and> sublist [(x, 0), (x, 1)] Cy1) \<or> 
       (sublist [(x, 1), (x, 0)] Cy1 \<and> sublist [(x, 2), (x, 1)] Cy1)"
     using List_Auxiliaries.a_in_Cycle_exists_sublist hd_last_Cy1 length_Cy1(1) post_1_edge  
@@ -1951,11 +1952,164 @@ lemma last_C1_eq_hd_C1_vwalk_cycle:
   using vwalk_C1_G distinct_C1 assms length_C1 distinct_C1 by(auto simp add: distinct_tl) 
 
 
+lemma pre_0_helper: 
+  assumes "x \<in> verts G" "sublist [(x, (1::nat)), (x, 2)] Cy1 \<and> sublist [(x, 0), (x, 1)] Cy1"
+  shows "\<exists>y. sublist [(y, 2), (x, 0)] Cy1 \<and> (y, x) \<in> arcs G"
+proof -
+  have 1: "(sublist [(x, 1), (x, 0)] Cy1) \<or> (\<exists>z. sublist [(z, 2), (x, 0)] Cy1 \<and> (z, x) \<in> arcs G)"
+    using assms pre_0_cycle by simp
+  then show ?thesis proof (cases "sublist [(x, 1), (x, 0)] Cy1")
+    case True
+    then have "(x, (2::nat)) = (x, 0)"
+      using assms distinct_tl_Cy1 hd_last_Cy1 two_sublist_same_first_distinct_tl 
+      by fastforce  
+    then show ?thesis using assms by auto
+  next
+    case False
+    then have "(\<exists>z. sublist [(z, 2), (x, 0)] Cy1 \<and> (z, x) \<in> arcs G)"
+      using 1 by auto
+    then show ?thesis by simp
+  qed
+qed
+
+
+lemma post_2_helper: 
+  assumes "x \<in> verts G" "sublist [(x, (1::nat)), (x, 2)] Cy1 \<and> sublist [(x, 0), (x, 1)] Cy1"
+  shows "\<exists>y. sublist [(x, 2), (y, 0)] Cy1 \<and> (x, y) \<in> arcs G"
+proof -
+  have 1: "(sublist [(x, 2), (x, 1)] Cy1) \<or> (\<exists>z. sublist [(x, 2), (z, 0)] Cy1 \<and> (x, z) \<in> arcs G)"
+    using assms post_2_cycle by simp
+  then show ?thesis proof (cases "sublist [(x, 2), (x, 1)] Cy1")
+    case True
+    then have "(x, (2::nat)) = (x, 0)"
+      using assms distinct_tl_Cy1 hd_last_Cy1 
+      using distinct_tl_cyclic_sublist_cs_explisit x_inG_x_i_in_Cy1(1) by fastforce  
+    then show ?thesis using assms by auto
+  next
+    case False
+    then have "(\<exists>z. sublist [(x, 2), (z, 0)] Cy1 \<and> (x, z) \<in> arcs G)"
+      using 1 by auto
+    then show ?thesis by simp
+  qed
+qed
+
+
+lemma last_C1_hd_C1_in_arcs:
+  assumes "(\<forall>x \<in> verts G. sublist [(x, 1), (x, 2)] Cy1 \<and> sublist [(x, 0), (x, 1)] Cy1)"
+    "last C1 \<noteq> hd C1" 
+  shows "(last C1, hd C1) \<in> arcs G"
+proof -
+  have distinct: "distinct C1" 
+    using distinct_C1 assms by argo
+  have ne: "C1 \<noteq> []"
+    using assms 
+    by (simp add: C1_not_eqmpty)
+  have neCy1: "Cy1 \<noteq> []" 
+    using C1_def ne to_cycle_hc.simps(2) by blast 
+  have "\<exists>i x. last Cy1 = (i, x)" 
+    by simp 
+  then obtain x i where xi_def: "last Cy1 = (x, i)" 
+    by blast
+  then have 01: "x \<in> verts G" 
+    using in_cy1_in_verts_G last_in_set neCy1 by fastforce 
+  then have 0: "sublist [(x, 1), (x, 2)] Cy1 \<and> sublist [(x, 0), (x, 1)] Cy1"
+    using assms  
+    by metis 
+  have "i = 0 \<or> i = 1 \<or> i = 2" 
+  proof -
+    have "(x, i) \<in> set Cy1" 
+      using xi_def last_in_set neCy1 by fastforce 
+    then have "(x, i) \<in> verts G'"
+      by (simp add: in_Cy1_in_verts_G') 
+    then show ?thesis using G'_def_3 by auto
+  qed
+  then show ?thesis proof
+    assume a0: "i = 0"
+    then have 1: "hd Cy1 = (x, 0)" "last Cy1 = (x, 0)"
+      using hd_last_Cy1 xi_def by auto
+    then have "sublist [(x, 0), (x, 1)] Cy1" 
+      using assms(1) in_cy1_in_verts_G list.set_sel(1) neCy1 by fastforce 
+    then have "\<exists>p1. Cy1 = [(x, 0), (x, 1)] @ p1" 
+      using hd_C_sublist_hd 
+      by (metis "1"(1) distinct_tl_Cy1 hd_last_Cy1) 
+    then have 2: "hd C1 = x" using C1_def 
+      using tl_append2 by auto
+    have "\<exists>y. sublist [(y, 2), (x, 0)] Cy1 \<and> (y, x) \<in> arcs G"
+      using assms 1 0 01 pre_0_helper by simp
+    then obtain y where y_def: "sublist [(y, 2), (x, 0)] Cy1 \<and> (y, x) \<in> arcs G"
+      by auto
+    then have "sublist [(y, 1), (y, 2)] Cy1" 
+      using 1 assms(1) distinct_tl_Cy1 in_cy1_in_verts_G sublist_i_j_last_distinct_tl by fastforce 
+    then have "\<exists>p2. Cy1 = p2 @ [(y, 1), (y, 2), (x, 0)]"
+      using 1 y_def distinct_tl_Cy1 
+      by (simp add: sublist_i_j_k_last_distinct_tl sublist_i_j_last_distinct_tl) 
+    then have "last C1 = y"
+      using C1_def last_x1_x2_y0_last_to_cycle_hc by fastforce 
+    then show ?thesis using y_def 2 by simp
+  next 
+    assume "i = 1 \<or> i = 2" 
+    then show ?thesis proof 
+      assume "i = 1"
+      then have 1: "hd Cy1 = (x, 1)" "last Cy1 = (x, 1)"
+        using hd_last_Cy1 xi_def by auto
+      then have "hd C1 = x" "last C1 = x"
+        using neCy1 x_not_hd_C1_x_not_hd_Cy1 apply force 
+        by (simp add: "1"(2) C1_def last_a_1_last_to_cycle_hc neCy1)  
+      then show ?thesis using assms by blast
+    next
+      assume "i = 2" 
+      then have 1: "hd Cy1 = (x, 2)" "last Cy1 = (x, 2)"
+        using hd_last_Cy1 xi_def by auto
+      then have "sublist [(x, 0), (x, 1)] Cy1" 
+        using assms(1) in_cy1_in_verts_G list.set_sel(1) neCy1 by fastforce 
+      then have "\<exists>p1. Cy1 = p1 @ [(x, 1), (x, 2)]" 
+          using 1 distinct_tl_Cy1 sublist_i_j_last_distinct_tl 0 
+          by (simp add: sublist_i_j_last_distinct_tl) 
+      then have 2: "last C1 = x" using C1_def 
+        by (meson last_x1_x2_last_to_cycle_hc) 
+      have "\<exists>y. sublist [(x, 2), (y, 0)] Cy1 \<and> (x, y) \<in> arcs G"
+        using assms 1 0 01 post_2_helper by simp
+      then obtain y where y_def: "sublist [(x, 2), (y, 0)] Cy1 \<and> (x, y) \<in> arcs G"
+        by auto
+      then have "sublist [(y, 0), (y, 1)] Cy1" 
+        using 1 assms(1) distinct_tl_Cy1 in_cy1_in_verts_G
+        by (metis sublist_def sublist_implies_in_set(2)) 
+      then have "sublist [(x, 2), (y, 0), (y, 1)] Cy1" 
+        using 1 distinct_tl_Cycle hd_last_Cycle 
+        by (simp add: distinct_tl_Cy1 sublist_ab_bc_b_not_head y_def) 
+      then have "\<exists>p2. Cy1 = [(x, 2), (y, 0), (y, 1)] @ p2"
+        using 1 y_def distinct_tl_Cy1 hd_last_Cy1 hd_C_sublist_hd by fast 
+      then have "hd C1 = y"
+        using C1_def by fastforce 
+      then show ?thesis using y_def 2 by simp
+    qed
+  qed
+qed
+
+
+
+lemma vwalk_last_C1_G: 
+  assumes  "(\<forall>x \<in> verts G. sublist [(x, 1), (x, 2)] Cy1 \<and> sublist [(x, 0), (x, 1)] Cy1)"
+    "last C1 \<noteq> hd C1"
+  shows "vwalk (last C1 # C1) G"
+proof 
+ have 3: "C1 \<noteq> []" 
+    by (simp add: C1_not_eqmpty) 
+  then have 1: "set (last C1 # C1) \<subseteq> verts G" 
+    by (simp add: subsetI x_in_C1_in_verts_G) 
+  have 2: "set (vwalk_arcs (last C1 # C1)) \<subseteq> arcs G"
+    using in_C1_in_arcs_2 assms last_C1_hd_C1_in_arcs 3 by simp
+  then show "set (last C1 # C1) \<subseteq> verts G" "set (vwalk_arcs (last C1 # C1)) \<subseteq> arcs_ends G" "(last C1 # C1) \<noteq> []"  using 1 2  
+    using arcs_ends_eq_arcs_G in_C1_in_arcs_2 assms by auto  
+qed
+
+
 lemma last_C1_neq_hd_C1_vwalk_cycle:
   assumes "(\<forall>x \<in> verts G. sublist [(x, 1), (x, 2)] Cy1 \<and> sublist [(x, 0), (x, 1)] Cy1)"
     "last C1 \<noteq> hd C1" 
   shows "vwalk_cycle G (last C1 # C1)"
-  sorry
+  unfolding vwalk_cycle_def 
+  using vwalk_last_C1_G last_C1_hd_C1_in_arcs distinct_C1 assms length_C1 distinct_C1 by(auto simp add: distinct_tl) 
 
 end
 
