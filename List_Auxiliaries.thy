@@ -2,26 +2,29 @@ theory List_Auxiliaries
   imports Main Graph_Theory.Stuff
 begin
 
+definition "sublist l ls \<equiv> \<exists>p1 p2. p1@l@p2 = ls"
+
 lemma sublist_implies_in_set:
-  assumes "\<exists>p1 p2. p1@ [v1, v2] @ p2 = C"
+  assumes "sublist [v1, v2] C"
   shows "v1 \<in> set C" "v2 \<in> set C"
   using assms 
-  by auto
+  by(auto simp add: sublist_def)
 
 lemma sublist_implies_in_set_a:
-  assumes "\<exists>p1 p2. p1@ [v1, v2] @ p2 = C" "distinct C"
+  assumes "sublist [v1, v2] C" "distinct C"
   shows "v1 \<noteq> v2"
   using assms 
-  by auto
+  by (auto simp add: sublist_def)
 
 lemma sublist3_hd_lists:
-  assumes "distinct L" "L = l1#ls1 @ ls2" "\<exists>p1 p2. p1@ [v1, v2] @ p2 = L" "v1 = l1"
+  assumes "distinct L" "L = l1#ls1 @ ls2" "sublist [v1, v2] L" "v1 = l1"
   shows "v2 = hd (ls1 @ ls2)"
-  using assms apply(induction L) apply(auto) 
+  using assms apply(induction L) 
+  apply (auto simp add: sublist_def)
   by (metis assms(1) assms(2) distinct_append hd_append hd_in_set list.sel(1) list.sel(3) not_distinct_conv_prefix self_append_conv2)
 
 lemma sublist_set_ls2_1:
-  assumes "distinct L" "L = ls1 @ ls2" "\<exists>p1 p2. p1@ [v1, v2] @ p2 = L" "v1 \<in> set ls2"
+  assumes "distinct L" "L = ls1 @ ls2" "sublist [v1, v2] L" "v1 \<in> set ls2"
   shows "v2 \<in> set ls2"
   using assms proof(induction L arbitrary: ls2 ls1)
   case Nil
@@ -30,35 +33,38 @@ next
   case (Cons a L)
   then show ?case proof(cases "v1 = a")
     case True
-    then have "ls1 = []" using assms Cons 
-      by (metis (no_types, hide_lams) Nil_is_append_conv append.assoc append_Cons_eq_iff append_self_conv2 distinct.simps(2) in_set_conv_decomp in_set_conv_decomp_first list.distinct(1) split_list)
-    then have "a#L = ls2" using Cons by auto
+    then have "ls1 = []" 
+      using assms Cons 
+      by (metis (no_types, hide_lams) Nil_is_append_conv append.assoc append_Cons_eq_iff append_self_conv2 distinct.simps(2) in_set_conv_decomp list.distinct(1) split_list)
+    then have "a#L = ls2" 
+      using Cons by auto
     then have "v2 \<in> set ls2"
       using Cons.prems(3) sublist_implies_in_set(2) by force 
     then show ?thesis .
   next
     case False
-    have "\<exists>p1 p2. p1@ [v1, v2] @ p2 = (a#L)" using Cons by auto
+    have "\<exists>p1 p2. p1@ [v1, v2] @ p2 = (a#L)" 
+      using Cons by (auto simp add: sublist_def)
     then obtain p1 p2 where p_def: "p1@ [v1, v2] @ p2 =a#L" by fast
     then have L_def_2: "L = tl( p1@ [v1, v2] @ p2)" by auto
     have "p1 \<noteq> []" using False Cons p_def
       by (metis append_self_conv2 hd_append2 list.sel(1) list.sel(2) list.sel(3) not_Cons_self2)
     then have "L = (tl p1) @[v1, v2] @ p2" 
       using L_def_2 by simp
-    then show ?thesis using Cons 
+    then show ?thesis using Cons sublist_def 
       by (metis L_def_2 append_self_conv2 sublist_implies_in_set(2) distinct_tl p_def tl_append2)
   qed
 qed 
 
 lemma sublist_set_ls2_2:
-  assumes "distinct L" "L = l1 # ls1 @ ls2" "\<exists>p1 p2. p1@ [v1, v2] @ p2 = L" "v1 \<in> set ls2"
+  assumes "distinct L" "L = l1 # ls1 @ ls2" "sublist [v1, v2] L" "v1 \<in> set ls2"
   shows "v2 \<in> set ls2"
   using assms sublist_set_ls2_1 
   by (metis Cons_eq_appendI)
 
 lemma sublist_set_ls2_3:
-  assumes "distinct L" "L = ls1 @ ls2" "\<exists>p1 p2. p1@ [v1, v2] @ p2 = L" "v1 \<in> set ls2"
-  shows "\<exists>p1 p2. p1@ [v1, v2] @ p2 = ls2"
+  assumes "distinct L" "L = ls1 @ ls2" "sublist [v1, v2] L" "v1 \<in> set ls2"
+  shows "sublist [v1, v2] ls2"
   using assms proof(induction L arbitrary: ls2 ls1)
   case Nil
   then show ?case by auto
@@ -66,45 +72,53 @@ next
   case (Cons a L)
   then show ?case proof(cases "v1 = a")
     case True
-    then have "ls1 = []" using assms Cons 
-      by (metis (no_types, hide_lams) Nil_is_append_conv append.assoc append_Cons_eq_iff append_self_conv2 distinct.simps(2) in_set_conv_decomp in_set_conv_decomp_first list.distinct(1) split_list)
-    then have "a#L = ls2" using Cons by auto
+    then have "ls1 = []" 
+      using assms Cons 
+      by (metis (no_types, hide_lams) Nil_is_append_conv append.assoc append_Cons_eq_iff append_self_conv2 distinct.simps(2) in_set_conv_decomp list.distinct(1) split_list)
+    then have "a#L = ls2" 
+      using Cons by auto
     then show ?thesis 
       using Cons by blast
   next
     case False
-    have "\<exists>p1 p2. p1@ [v1, v2] @ p2 = (a#L)" using Cons by auto
-    then obtain p1 p2 where p_def: "p1@ [v1, v2] @ p2 =a#L" by fast
-    then have L_def_2: "L = tl( p1@ [v1, v2] @ p2)" by auto
-    have "p1 \<noteq> []" using False Cons p_def
+    have "\<exists>p1 p2. p1@ [v1, v2] @ p2 = (a#L)" 
+      using Cons
+      by (auto simp add: sublist_def)
+    then obtain p1 p2 where p_def: "p1@ [v1, v2] @ p2 =a#L" 
+      by fast
+    then have L_def_2: "L = tl( p1@ [v1, v2] @ p2)" 
+      by auto
+    have "p1 \<noteq> []" 
+      using False Cons p_def
       by (metis append_self_conv2 hd_append2 list.sel(1) list.sel(2) list.sel(3) not_Cons_self2)
     then have "L = (tl p1) @[v1, v2] @ p2" 
       using L_def_2 by simp
-    then show ?thesis using Cons 
+    then show ?thesis 
+      using Cons sublist_def 
       by (metis L_def_2 append_self_conv2 distinct_tl p_def tl_append2)
   qed
 qed 
 
 lemma sublist_set_ls2_4:
-  assumes "distinct L" "L = l1 # ls1 @ ls2" "\<exists>p1 p2. p1@ [v1, v2] @ p2 = L" "v1 \<in> set ls2" "ls3 = l1#ls1"
-  shows "\<exists>p1 p2. p1@ [v1, v2] @ p2 = ls2"
+  assumes "distinct L" "L = l1 # ls1 @ ls2" "sublist [v1, v2] L" "v1 \<in> set ls2" "ls3 = l1#ls1"
+  shows "sublist [v1, v2] ls2"
 proof -
   have 1: "L = ls3 @ ls2" 
     using assms by simp
-  then have 1: "\<exists>p1 p2. p1@ [v1, v2] @ p2 = ls2" 
-    using sublist_set_ls2_3 assms 1  by fast 
-  then obtain p1 p2 where p_def: "p1@ [v1, v2] @ p2 = ls2" by blast
-  then show ?thesis by auto
+  then have 1: "sublist [v1, v2] ls2" 
+    using sublist_set_ls2_3 assms 1 by fast 
+  then show ?thesis 
+  by (auto simp add: sublist_def)
 qed
 
 lemma sublist_set_ls2:
-  assumes "distinct L" "L = l1 # ls1 @ ls2" "\<exists>p1 p2. p1@ [v1, v2] @ p2 = L" "v1 \<in> set ls2"
-  shows  "\<exists>p1 p2. p1@ [v1, v2] @ p2 = ls2"
+  assumes "distinct L" "L = l1 # ls1 @ ls2" "sublist [v1, v2] L" "v1 \<in> set ls2"
+  shows  "sublist [v1, v2] ls2"
   using assms sublist_set_ls2_4 
   by fast 
 
 lemma sublist_set_ls1_1:
-  assumes "distinct L" "L = ls1 @ ls2" "\<exists>p1 p2. p1@ [v1, v2] @ p2 = L" "v1 \<in> set ls1" "v1 \<noteq> last ls1"
+  assumes "distinct L" "L = ls1 @ ls2" "sublist [v1, v2] L" "v1 \<in> set ls1" "v1 \<noteq> last ls1"
   shows "v2 \<in> set ls1"
   using assms proof(induction L arbitrary: ls1 ls2 )
   case Nil
@@ -120,10 +134,12 @@ next
     then have "tl ls1 \<noteq> []" 
       by (metis Cons.prems(4) \<open>v1 = hd ls1\<close> distinct.simps(2) distinct_singleton last_ConsL list.collapse)
     have "\<exists>p1 p2. p1@ [v1, v2] @ p2 = (a#L)" 
-      using Cons assms by  argo
-    then obtain p1 p2 where "p1@ [v1, v2] @ p2 = (a#L)" by auto
+      using Cons assms sublist_def by blast
+    then obtain p1 p2 where "p1@ [v1, v2] @ p2 = (a#L)" 
+      by auto
     then have "p1 = []" 
-      using Cons \<open>v1 = a\<close> by (metis sublist_implies_in_set(1) distinct.simps(2) list.sel(3) tl_append2)
+      using Cons \<open>v1 = a\<close> sublist_def 
+      by (metis sublist_implies_in_set(1) distinct.simps(2) list.sel(3) tl_append2)
     then have "v2 = hd L" 
       using Cons by (metis Cons_eq_appendI True \<open>p1 @ [v1, v2] @ p2 = a # L\<close> eq_Nil_appendI list.sel(1) list.sel(3))
     then have "v2 = hd (tl ls1)" 
@@ -132,9 +148,13 @@ next
       by (simp add: \<open>tl ls1 \<noteq> []\<close> list_set_tl)
   next
     case False
-    have "\<exists>p1 p2. p1@ [v1, v2] @ p2 = (a#L)" using Cons by auto
-    then obtain p1 p2 where p_def: "p1@ [v1, v2] @ p2 =a#L" by fast
-    then have L_def_2: "L = tl( p1@ [v1, v2] @ p2)" by auto
+    have "\<exists>p1 p2. p1@ [v1, v2] @ p2 = (a#L)" 
+      using Cons 
+      by (auto simp add: sublist_def)
+    then obtain p1 p2 where p_def: "p1@ [v1, v2] @ p2 =a#L" 
+      by fast
+    then have L_def_2: "L = tl( p1@ [v1, v2] @ p2)" 
+      by auto
     have "p1 \<noteq> []" 
       using False Cons p_def 
       by (metis hd_append2 list.sel(1) list.sel(2) list.sel(3) not_Cons_self2 self_append_conv2)
@@ -153,36 +173,110 @@ next
       using Cons 
       by (metis "4" last_tl list.set_cases neq_Nil_conv) 
     then show ?thesis
-      using Cons 1 2 3 4 5 list_set_tl 
+      using Cons 1 2 3 4 5 list_set_tl sublist_def
       by metis   
   qed
 qed  
 
+
+lemma sublist_cons_impl_sublist_list: 
+  assumes "sublist (a#as) (c#cs)" "a\<noteq> c"
+  shows "sublist (a#as) cs"
+proof -
+  obtain p1 p2 where p_def: "p1@ (a#as) @ p2 = (c#cs)" 
+    using sublist_def assms 
+    by blast
+  then have 1: "p1 \<noteq> []" 
+    using assms 
+    by fastforce
+  then have "c = hd p1" 
+    using p_def 
+    by (metis hd_append2 list.sel(1))
+  then have "tl p1 @ (a#as) @ p2 = cs"
+    using 1 p_def 
+    by (metis list.sel(3) tl_append2) 
+  then show ?thesis using sublist_def 
+    by blast
+qed
+
+
+lemma sublist_cons_impl_sublist: 
+  assumes "sublist [a, b] (c#cs)" "a\<noteq> c"
+  shows "sublist [a, b] cs"
+proof -
+  obtain p1 p2 where p_def: "p1@[a, b] @ p2 = (c#cs)" 
+    using sublist_def assms 
+    by blast
+  then have 1: "p1 \<noteq> []" 
+    using assms 
+    by fastforce
+  then have "c = hd p1" 
+    using p_def 
+    by (metis hd_append2 list.sel(1))
+  then have "tl p1 @ [a, b] @ p2 = cs"
+    using 1 p_def 
+    by (metis list.sel(3) tl_append2) 
+  then show ?thesis using sublist_def 
+    by blast
+qed
+
+
+lemma sublist_second_not_hd: 
+  assumes "distinct L" "sublist [v1, v2] L" 
+  shows "v2 \<noteq> hd L" 
+  using assms proof(induction L)
+  case Nil
+  then show ?case 
+    by (auto simp add: sublist_def)
+next
+  case (Cons a L)
+  then have 1: "v1 \<noteq> v2" 
+    by (meson sublist_implies_in_set_a) 
+  then show ?case proof(cases "v1 = hd (a#L)")
+    case True
+    then show ?thesis 
+      using 1 by auto
+  next
+    case False
+    then have "sublist [v1, v2] L" 
+      using Cons sublist_cons_impl_sublist 
+      by fastforce 
+    then have "v2 \<in> set L" 
+      by (meson sublist_implies_in_set(2)) 
+    then show ?thesis 
+      using Cons by force
+  qed
+qed 
+
+
 lemma sublist_set_ls1_2:
-  assumes "distinct L" "L = l1#ls1 @ ls2" "\<exists>p1 p2. p1@ [v1, v2] @ p2 = L" "v1 \<in> set ls1" "v1 \<noteq> last ls1" "ls3 = l1#ls1"
+  assumes "distinct L" "L = l1#ls1 @ ls2" "sublist [v1, v2] L" "v1 \<in> set ls1" "v1 \<noteq> last ls1" "ls3 = l1#ls1"
   shows "v2 \<in> set ls1"
 proof -
   have "L = ls3 @ ls2" 
     using assms by simp
-  have "v1 \<in> set ls3" using assms by simp
-  then have 1: "v2 \<in> set ls3" using sublist_set_ls1_1 assms 
+  have "v1 \<in> set ls3" 
+    using assms by simp
+  then have 1: "v2 \<in> set ls3" 
+    using sublist_set_ls1_1 assms 
     by (metis \<open>L = ls3 @ ls2\<close> last.simps list.distinct(1) list.set_cases)
-  have "v2 \<noteq> l1" using assms 
-    by (metis append_self_conv2 sublist_implies_in_set(2) distinct.simps(2) hd_append2 list.sel(1) list.sel(2) list.sel(3) list.set_sel(1) tl_append2)
+  have "v2 \<noteq> l1" 
+    using assms 
+    by (metis list.sel(1) sublist_second_not_hd) 
   then have "v2 \<in> (set ls1)" 
     using 1 assms by simp
   then show ?thesis  .
 qed
 
 lemma sublist_set_ls1_3:
-  assumes "distinct L" "L = l1#ls1 @ ls2" "\<exists>p1 p2. p1@ [v1, v2] @ p2 = L" "v1 \<in> set ls1" "v1 \<noteq> last ls1"
+  assumes "distinct L" "L = l1#ls1 @ ls2" "sublist [v1, v2] L" "v1 \<in> set ls1" "v1 \<noteq> last ls1"
   shows "v2 \<in> set ls1"
-  using assms sublist_set_ls1_2 
+  using assms sublist_set_ls1_2 sublist_def
   by fast
 
 lemma sublist_set_ls1_4:
-  assumes "distinct L" "L = ls1 @ ls2" "\<exists>p1 p2. p1@ [v1, v2] @ p2 = L" "v1 \<in> set ls1" "v1 \<noteq> last ls1"
-  shows "\<exists>p1 p2. p1@ [v1, v2] @ p2 = ls1"
+  assumes "distinct L" "L = ls1 @ ls2" "sublist [v1, v2] L" "v1 \<in> set ls1" "v1 \<noteq> last ls1"
+  shows "sublist [v1, v2] ls1"
   using assms proof(induction L arbitrary: ls1 ls2 )
   case Nil
   then show ?case by auto
@@ -197,21 +291,30 @@ next
     then have "tl ls1 \<noteq> []" 
       by (metis Cons.prems(4) \<open>v1 = hd ls1\<close> distinct.simps(2) distinct_singleton last_ConsL list.collapse)
     have "\<exists>p1 p2. p1@ [v1, v2] @ p2 = (a#L)" 
-      using Cons assms by  argo
-    then obtain p1 p2 where "p1@ [v1, v2] @ p2 = (a#L)" by auto
+      using Cons assms 
+      by (auto simp add: sublist_def)
+    then obtain p1 p2 where "p1@ [v1, v2] @ p2 = (a#L)" 
+      by auto
     then have "p1 = []" 
-      using Cons \<open>v1 = a\<close> by (metis sublist_implies_in_set(1) distinct.simps(2) list.sel(3) tl_append2)
+      using Cons \<open>v1 = a\<close> sublist_def 
+      by (metis sublist_implies_in_set(1) distinct.simps(2) list.sel(3) tl_append2)
     then have "v2 = hd L" 
-      using Cons by (metis Cons_eq_appendI True \<open>p1 @ [v1, v2] @ p2 = a # L\<close> eq_Nil_appendI list.sel(1) list.sel(3))
+      using Cons 
+      by (metis Cons_eq_appendI True \<open>p1 @ [v1, v2] @ p2 = a # L\<close> eq_Nil_appendI list.sel(1) list.sel(3))
     then have "v2 = hd (tl ls1)" 
       using Cons \<open>tl ls1 \<noteq> []\<close> by (metis Nil_tl \<open>p1 = []\<close> hd_append2 list.sel(3) tl_append2) 
     then show ?thesis 
+      using sublist_def
       by (metis Cons.prems(4) \<open>p1 = []\<close> \<open>tl ls1 \<noteq> []\<close> \<open>v1 = hd ls1\<close> append_Cons eq_Nil_appendI in_set_replicate list.exhaust_sel replicate_empty)
   next
     case False
-    have "\<exists>p1 p2. p1@ [v1, v2] @ p2 = (a#L)" using Cons by auto
-    then obtain p1 p2 where p_def: "p1@ [v1, v2] @ p2 =a#L" by fast
-    then have L_def_2: "L = tl( p1@ [v1, v2] @ p2)" by auto
+    have "\<exists>p1 p2. p1@ [v1, v2] @ p2 = (a#L)" 
+      using Cons 
+      by (auto simp add: sublist_def)
+    then obtain p1 p2 where p_def: "p1@ [v1, v2] @ p2 =a#L" 
+      by fast
+    then have L_def_2: "L = tl( p1@ [v1, v2] @ p2)" 
+      by auto
     have "p1 \<noteq> []" 
       using False Cons p_def 
       by (metis hd_append2 list.sel(1) list.sel(2) list.sel(3) not_Cons_self2 self_append_conv2)
@@ -230,41 +333,47 @@ next
       using Cons 
       by (metis "4" last_tl list.set_cases neq_Nil_conv) 
     then have "\<exists>p1 p2. p1@[v1, v2]@p2 = tl(ls1)" 
-      using Cons 1 2 3 4 5 by blast
-    then obtain p1' p2' where "p1'@[v1, v2]@p2' = tl(ls1)" by auto
+      using Cons 1 2 3 4 5 sublist_def by blast
+    then obtain p1' p2' where "p1'@[v1, v2]@p2' = tl(ls1)" 
+      by auto
     then have "(a#p1')@[v1, v2]@p2' = ls1" 
       using Cons by (simp add: "3")
     then show ?thesis
-      by blast 
+      using sublist_def by blast 
   qed
 qed  
 
 lemma sublist_set_ls1_5:
-  assumes "distinct L" "L = l1#ls1 @ ls2" "\<exists>p1 p2. p1@ [v1, v2] @ p2 = L" "v1 \<in> set ls1" "v1 \<noteq> last ls1" "ls3 = l1#ls1"
-  shows "\<exists>p1 p2. p1@ [v1, v2] @ p2 = ls1"
+  assumes "distinct L" "L = l1#ls1 @ ls2" "sublist [v1, v2] L" "v1 \<in> set ls1" "v1 \<noteq> last ls1" "ls3 = l1#ls1"
+  shows "sublist [v1, v2] ls1"
 proof -
   have 1: "L = ls3 @ ls2" 
     using assms by simp
   have 2: "v1 \<in> set ls3" using assms by simp
   have 3: "v1 \<noteq> last ls3" using assms by auto
   then have 1: "\<exists>p1 p2. p1@ [v1, v2] @ p2 = ls3" 
-    using sublist_set_ls1_4 assms 1 2 by fast 
-  then obtain p1 p2 where p_def: "p1@ [v1, v2] @ p2 = ls3" by blast
-  have "v2 \<noteq> l1" using assms 
-    by (metis append_self_conv2 sublist_implies_in_set(2) distinct.simps(2) hd_append2 list.sel(1) list.sel(2) list.sel(3) list.set_sel(1) tl_append2)
+    using sublist_set_ls1_4 assms 1 2 sublist_def by metis  
+  then obtain p1 p2 where p_def: "p1@ [v1, v2] @ p2 = ls3" 
+    by blast
+  have "v2 \<noteq> l1" 
+    using assms 
+    by (metis list.sel(1) sublist_second_not_hd) 
   have 1: "v1 \<noteq> l1" 
     using assms by force
-  then have 2: "p1@ [v1, v2] @ p2 = (l1 # ls1)" using assms p_def by auto
-  then have "hd p1 = l1" using 1 p_def  
+  then have 2: "p1@ [v1, v2] @ p2 = (l1 # ls1)" 
+    using assms p_def by auto
+  then have "hd p1 = l1" 
+    using 1 p_def  
     by (metis append_self_conv2 hd_append2 list.sel(1) list.sel(2) list.sel(3) not_Cons_self2)
   then have "(tl p1)@[v1, v2] @ p2 = ls1" 
     using 2 1 by (metis hd_append list.sel(1) list.sel(3) tl_append2) 
-  then show ?thesis by auto
+  then show ?thesis 
+  by (auto simp add: sublist_def)
 qed
 
 lemma sublist_set_ls1:
-  assumes "distinct L" "L = l1#ls1 @ ls2" "\<exists>p1 p2. p1@ [v1, v2] @ p2 = L" "v1 \<in> set ls1" "v1 \<noteq> last ls1"
-  shows "\<exists>p1 p2. p1@ [v1, v2] @ p2 = ls1"
+  assumes "distinct L" "L = l1#ls1 @ ls2" "sublist [v1, v2] L" "v1 \<in> set ls1" "v1 \<noteq> last ls1"
+  shows "sublist [v1, v2] ls1"
   using assms sublist_set_ls1_5 by fast
 
 lemma sublist_set_last_ls1_2: 
@@ -282,7 +391,7 @@ next
 qed
 
 lemma sublist_set_last_ls1_1:
-  assumes "distinct L" "L = ls1 @ ls2" "\<exists>p1 p2. p1@ [v1, v2] @ p2 = L" "v1 = last ls1" "v1 \<in> set ls1"
+  assumes "distinct L" "L = ls1 @ ls2" "sublist [v1, v2] L" "v1 = last ls1" "v1 \<in> set ls1"
   shows "v2 = hd ls2"
   using assms proof(induction L arbitrary: ls1 ls2)
   case Nil
@@ -301,23 +410,30 @@ next
     then show ?thesis .
   next
     case False
-    have "\<exists>p1 p2. p1@ [v1, v2] @ p2 = (a#L)" using Cons by auto
-    then obtain p1 p2 where p_def: "p1@ [v1, v2] @ p2 =a#L" by fast
-    then have L_def_2: "L = tl( p1@ [v1, v2] @ p2)" by auto
+    have "\<exists>p1 p2. p1@ [v1, v2] @ p2 = (a#L)" 
+      using Cons 
+      by (auto simp add: sublist_def)
+    then obtain p1 p2 where p_def: "p1@ [v1, v2] @ p2 =a#L" 
+      by fast
+    then have L_def_2: "L = tl( p1@ [v1, v2] @ p2)" 
+      by auto
     have "p1 \<noteq> []" using False Cons p_def 
       by (metis append_self_conv2 hd_append2 list.sel(1) list.sel(2) list.sel(3) not_Cons_self2) 
     then have L_exists: "L = (tl p1) @[v1, v2] @ p2" 
       using L_def_2 by simp
-    have "ls1 \<noteq> []" using False Cons by auto
-    then have "L = tl ls1 @ ls2" using Cons 
+    have "ls1 \<noteq> []" 
+      using False Cons by auto
+    then have "L = tl ls1 @ ls2" 
+      using Cons 
       by (metis list.sel(3) tl_append2)
-    then show ?thesis using Cons L_exists 
+    then show ?thesis 
+      using Cons L_exists sublist_def  
       by (metis False distinct.simps(2) distinct_singleton hd_append2 last_tl list.collapse list.sel(1) set_ConsD)
   qed
 qed
 
 lemma sublist_set_last_ls1_1_1:
-  assumes "distinct L" "L = ls1 @ ls2" "\<exists>p1 p2. p1@ [v1, v2] @ p2 = L" "v1 = last ls1" "v1 \<in> set ls1"
+  assumes "distinct L" "L = ls1 @ ls2" "sublist [v1, v2] L" "v1 = last ls1" "v1 \<in> set ls1"
   shows "v2 \<in> set ls2"
   using assms proof(induction L arbitrary: ls1 ls2)
   case Nil
@@ -328,108 +444,138 @@ next
     case True
     then have "v1 = hd (a#L)" 
       by simp  
-    then have "ls1 = [a]" using assms Cons sublist_set_last_ls1_2 True 
+    then have "ls1 = [a]" 
+      using assms Cons sublist_set_last_ls1_2 True 
       by fast 
-    then have 1: "L = ls2" using Cons by auto
+    then have 1: "L = ls2" 
+      using Cons by auto
     have 2: "v2 \<in> set (a#L)" 
       using assms Cons.prems(3) sublist_implies_in_set(2) by force 
-    have "v2 \<noteq> a" using True assms sublist_implies_in_set_a by fastforce
-    then have "v2 \<in> set L" using 2 by simp
-    then have "v2 \<in> set ls2" using 1 by simp
+    have "v2 \<noteq> a" 
+      using True assms sublist_implies_in_set_a by fastforce
+    then have "v2 \<in> set L" 
+      using 2 by simp
+    then have "v2 \<in> set ls2" 
+      using 1 by simp
     then show ?thesis by(auto)
   next
     case False
-    have "\<exists>p1 p2. p1@ [v1, v2] @ p2 = (a#L)" using Cons by auto
-    then obtain p1 p2 where p_def: "p1@ [v1, v2] @ p2 =a#L" by fast
-    then have L_def_2: "L = tl( p1@ [v1, v2] @ p2)" by auto
-    have "p1 \<noteq> []" using False Cons p_def 
+    have "\<exists>p1 p2. p1@ [v1, v2] @ p2 = (a#L)" 
+      using Cons 
+      by (auto simp add: sublist_def)
+    then obtain p1 p2 where p_def: "p1@ [v1, v2] @ p2 =a#L" 
+      by fast
+    then have L_def_2: "L = tl( p1@ [v1, v2] @ p2)" 
+      by auto
+    have "p1 \<noteq> []" 
+      using False Cons p_def 
       by (metis append_self_conv2 hd_append2 list.sel(1) list.sel(2) list.sel(3) not_Cons_self2) 
     then have L_exists: "L = (tl p1) @[v1, v2] @ p2" 
       using L_def_2 by simp
-    have "ls1 \<noteq> []" using False Cons 
+    have "ls1 \<noteq> []" 
+      using False Cons 
       by auto 
-    then have "L = tl ls1 @ ls2" using Cons 
+    then have "L = tl ls1 @ ls2" 
+      using Cons 
       by (metis list.sel(3) tl_append2)
-    then show ?thesis using Cons L_exists 
+    then show ?thesis 
+      using Cons L_exists sublist_def 
       by (metis False distinct.simps(2) distinct_singleton hd_append2 last_tl list.collapse list.sel(1) set_ConsD)
   qed
 qed
 
 lemma sublist_set_last_ls1_3:
-  assumes "distinct L" "L = l1#ls1 @ ls2" "\<exists>p1 p2. p1@ [v1, v2] @ p2 = L" "v1 = last ls1" "v1 \<in> set ls1" "ls3 = l1 # ls1"
+  assumes "distinct L" "L = l1#ls1 @ ls2" "sublist [v1, v2] L" "v1 = last ls1" "v1 \<in> set ls1" "ls3 = l1 # ls1"
   shows "v2 = hd ls2"
 proof -
-  have L_def_2: "L = ls3 @ ls2" using assms by auto
-  then have last: "v1 = last ls3" using assms by auto
-  then have "v1 \<in> set ls3" using assms by auto
+  have L_def_2: "L = ls3 @ ls2" 
+    using assms by auto
+  then have last: "v1 = last ls3" 
+    using assms by auto
+  then have "v1 \<in> set ls3" 
+    using assms by auto
   then have "v2 = hd ls2" 
     using assms(1) assms(3) last sublist_set_last_ls1_1 L_def_2 by fast
   then show ?thesis .
 qed
 
 lemma sublist_set_last_ls1:
-  assumes "distinct L" "L = l1#ls1 @ ls2" "\<exists>p1 p2. p1@ [v1, v2] @ p2 = L" "v1 = last ls1" "v1 \<in> set ls1"
+  assumes "distinct L" "L = l1#ls1 @ ls2" "sublist [v1, v2] L" "v1 = last ls1" "v1 \<in> set ls1"
   shows "v2 = hd ls2"
   using assms sublist_set_last_ls1_3 by fast
 
 lemma sublist_set_noteq_l1:
-  assumes "distinct (tl L)" "L = l1#ls1 @ ls2" "\<exists>p1 p2. p1@ [v1, v2] @ p2 = L" "v1 \<noteq> l1"
-  shows "\<exists>p1 p2. p1@ [v1, v2] @ p2 = ls1@ls2" 
+  assumes "distinct (tl L)" "L = l1#ls1 @ ls2" "sublist [v1, v2] L" "v1 \<noteq> l1"
+  shows "sublist [v1, v2] (ls1@ls2)" 
   using assms proof(induction L)
   case Nil
   then show ?case by auto
 next
   case (Cons a L)
-  then have "l1 = a" by auto
-  then show ?case using Cons
+  then have "l1 = a" 
+    by auto
+  then show ?case
+    using Cons
+    unfolding sublist_def
     by (metis append_self_conv2 hd_append2 list.sel(1) list.sel(3) tl_append2)
 qed
 
 lemma sublist_set_v2_noteq_hd_lists:
-  assumes "distinct (tl L)" "L = l1#ls1 @ ls2" "\<exists>p1 p2. p1@ [v1, v2] @ p2 = L" "v2 \<noteq> hd (ls1@ls2)"
-  shows "\<exists>p1 p2. p1@ [v1, v2] @ p2 = ls1@ls2" 
+  assumes "distinct (tl L)" "L = l1#ls1 @ ls2" "sublist [v1, v2] L" "v2 \<noteq> hd (ls1@ls2)"
+  shows "sublist [v1, v2] (ls1@ls2)" 
   using assms proof(induction L)
   case Nil
   then show ?case by auto
 next
   case (Cons a L)
   then have 1: "l1 = a" by auto
-  obtain p1 p2 where p1p2_def: "p1@ [v1, v2] @ p2 = (a#L)" using Cons by blast 
+  obtain p1 p2 where p1p2_def: "p1@ [v1, v2] @ p2 = (a#L)" 
+    using Cons sublist_def 
+    by blast 
   then show ?case using Cons proof(cases "v1 = l1")
     case True
     then show ?thesis proof(cases "p1 = []")
       case True
-      then have "v1 = a" using p1p2_def by auto
-      then have "v1 = hd (l1#ls1@ls2)" by (simp add: "1") 
-      then have "v2 = hd (tl (l1#ls1@ls2))" using True p1p2_def 
+      then have "v1 = a" using p1p2_def 
+        by auto
+      then have "v1 = hd (l1#ls1@ls2)" 
+        by (simp add: "1") 
+      then have "v2 = hd (tl (l1#ls1@ls2))" 
+        using True p1p2_def 
         by (metis "1" Cons.prems(2) Cons_eq_append_conv \<open>v1 = a\<close> assms(2) list.sel(1) list.sel(3) self_append_conv2)
-      then have "v2 = hd (ls1@ls2)" by simp
-      then show ?thesis using Cons by auto
+      then have "v2 = hd (ls1@ls2)" 
+        by simp
+      then show ?thesis 
+        using Cons by auto
     next
       case False
-      then have "hd p1 = a" using p1p2_def 
+      then have "hd p1 = a" 
+        using p1p2_def 
         by (metis hd_append2 list.sel(1)) 
-      then have "(tl p1) @[v1, v2]@p2 = ls1 @ ls2" using p1p2_def Cons 
+      then have "(tl p1) @[v1, v2]@p2 = ls1 @ ls2" 
+        using p1p2_def Cons 
         by (metis False list.sel(3) tl_append2)  
-      then show ?thesis by auto
+      then show ?thesis 
+        by (auto simp add: sublist_def)
     qed
   next
     case False
-    then show ?thesis using Cons sublist_set_noteq_l1 
+    then show ?thesis 
+      using Cons sublist_set_noteq_l1 
       by metis  
   qed
 qed
 
 lemma sublist_v1_in_subsets: 
-  assumes "\<exists>p1 p2. p1@ [v1, v2] @ p2 = L" "L = l1@l2" 
+  assumes "sublist [v1, v2] L" "L = l1@l2" 
   shows "v1 \<in> set l1 \<or> v1 \<in> set l2"
-  using assms apply(induction L arbitrary: l1 l2) apply(auto) 
+  using assms apply(induction L arbitrary: l1 l2) apply(auto simp add: sublist_def) 
   by (metis hd_append2 in_set_conv_decomp list.sel(1) list.sel(3) list.set_sel(1) list_set_tl self_append_conv2 tl_append2)
 
 lemma sublist_v1_hd_v2_hd_tl:  
-  assumes "\<exists>p1 p2. p1@ [v1, v2] @ p2 = L" "distinct L" "v1 = hd L"
+  assumes "sublist [v1, v2] L" "distinct L" "v1 = hd L"
   shows "v2 = hd(tl L)"
-  using assms apply(induction L arbitrary: v1) apply(auto) 
+  using assms apply(induction L arbitrary: v1) apply(auto simp add: sublist_def) 
   by (metis in_set_conv_decomp list.sel(1) list.sel(3) self_append_conv2 tl_append2) 
 
 
@@ -455,9 +601,10 @@ proof -
 qed 
 
 lemma sublist_append_not_eq:
-  assumes "\<exists>p1 p2. p1@ [v1, v2] @ p2 = (a#L)" "v1 \<noteq> a"
-  shows "\<exists>p1 p2. p1@ [v1, v2] @ p2 = L"
+  assumes "sublist [v1, v2] (a#L)" "v1 \<noteq> a"
+  shows "sublist [v1, v2] L"
   using assms 
+  unfolding sublist_def
   by (metis Cons_eq_append_conv append_self_conv2 list.sel(1) list.sel(3) tl_append2) 
 
 lemma x_in_implies_exist_index:
@@ -491,7 +638,8 @@ next
     by auto
   then have "L \<noteq> []" 
     by auto
-  then show ?case using Cons 
+  then show ?case 
+    using Cons 
     by force 
 qed
 
@@ -500,10 +648,12 @@ lemma card_subset:
   assumes "s \<subseteq> set L"
   shows "card s \<le> card (set L)"
 proof -
-  have 1: "finite (set L)" by simp
+  have 1: "finite (set L)" 
+    by simp
   then have 2: "finite s" 
     using assms finite_subset by auto 
-  then show ?thesis using assms 1 2 
+  then show ?thesis 
+    using assms 1 2 
     by (simp add: card_mono) 
 qed
 
@@ -528,10 +678,6 @@ lemma length_geq_2_tt_not_empty:
   using assms apply(induction C)
   by(auto)
 
-
-subsubsection\<open>Definitions for VC_HC_2\<close>
-
-definition "sublist l ls \<equiv> \<exists>p1 p2. p1@l@p2 = ls"
 
 lemma sublist_transitiv:
   assumes "sublist l1 l2" "sublist l2 l3" 
@@ -586,13 +732,15 @@ next
       then have 2: "\<exists>p1 p2. p1@[y, a] @ p2 = (l#L)" "\<not> (\<exists>p1 p2. p1@[y, a] @ p2 = (L))"
         using sublist_def Cons by blast+
       then have "y = l" 
-        using Cons 
+        using Cons False 
         by (meson sublist_append_not_eq)
       then have hd: "a = hd L" 
         by (metis 2 append_self_conv2 hd_append2 list.distinct(1) list.sel(1) list.sel(3) tl_append2)
-      have tl: "a \<in> set (tl L)" using a1 sublist_def 
+      have tl: "a \<in> set (tl L)" 
+        using a1 sublist_def 
         by (smt append_Cons list.sel(3) list.set_intros(1) self_append_conv2 sublist_implies_in_set(2) tl_append2) 
-      then have False using hd tl distinct 
+      then have False 
+        using hd tl distinct 
         by (metis distinct.simps(2) distinct_singleton list.collapse list_set_tl)         
       then show ?thesis by simp
     qed
@@ -601,15 +749,17 @@ next
     then have 2: "\<exists>p1 p2. p1@[x, a] @ p2 = (l#L)" "\<not> (\<exists>p1 p2. p1@[x, a] @ p2 = (L))"
       using sublist_def Cons by blast+
     then have 3: "x = l" 
-      using Cons 
+      using Cons False  
       by (meson sublist_append_not_eq)
     then show ?thesis proof(cases "sublist [y, a] L")
       case True
       then have hd: "a = hd L" 
         by (metis 2 append_self_conv2 hd_append2 list.distinct(1) list.sel(1) list.sel(3) tl_append2)
-      have tl: "a \<in> set (tl L)" using 3 True sublist_def 
+      have tl: "a \<in> set (tl L)" 
+        using 3 True sublist_def False
         by (smt append_Cons list.sel(3) list.set_intros(1) self_append_conv2 sublist_implies_in_set(2) tl_append2) 
-      then have False using hd tl distinct 
+      then have False 
+        using hd tl distinct 
         by (metis distinct.simps(2) distinct_singleton list.collapse list_set_tl)
       then show ?thesis by simp
     next
@@ -617,53 +767,11 @@ next
       then have 2: "\<exists>p1 p2. p1@[y, a] @ p2 = (l#L)" "\<not> (\<exists>p1 p2. p1@[y, a] @ p2 = (L))"
         using sublist_def Cons by blast+
       then have "y = l" 
-        using Cons 
+        using Cons False
         by (meson sublist_append_not_eq)
       then show ?thesis using 3 by simp
     qed
   qed
-qed
-
-
-lemma sublist_cons_impl_sublist: 
-  assumes "sublist [a, b] (c#cs)" "a\<noteq> c"
-  shows "sublist [a, b] cs"
-proof -
-  obtain p1 p2 where p_def: "p1@[a, b] @ p2 = (c#cs)" 
-    using sublist_def assms 
-    by blast
-  then have 1: "p1 \<noteq> []" 
-    using assms 
-    by fastforce
-  then have "c = hd p1" 
-    using p_def 
-    by (metis hd_append2 list.sel(1))
-  then have "tl p1 @ [a, b] @ p2 = cs"
-    using 1 p_def 
-    by (metis list.sel(3) tl_append2) 
-  then show ?thesis using sublist_def 
-    by blast
-qed
-
-
-lemma sublist_cons_impl_sublist_list: 
-  assumes "sublist (a#as) (c#cs)" "a\<noteq> c"
-  shows "sublist (a#as) cs"
-proof -
-  obtain p1 p2 where p_def: "p1@ (a#as) @ p2 = (c#cs)" 
-    using sublist_def assms 
-    by blast
-  then have 1: "p1 \<noteq> []" 
-    using assms 
-    by fastforce
-  then have "c = hd p1" 
-    using p_def 
-    by (metis hd_append2 list.sel(1))
-  then have "tl p1 @ (a#as) @ p2 = cs"
-    using 1 p_def 
-    by (metis list.sel(3) tl_append2) 
-  then show ?thesis using sublist_def 
-    by blast
 qed
 
 
@@ -680,7 +788,7 @@ next
   then show ?case proof(cases "a = c")
     case a: True
     then have b_hd: "b = hd Cy" 
-      using sublist_def Cons 
+      using Cons 
       by (metis list.sel(1) list.sel(3) sublist_v1_hd_v2_hd_tl)  
     then show ?thesis proof(cases "b = c")
       case b: True
@@ -688,7 +796,7 @@ next
       then have "sublist [a, a] (c#Cy)" 
         using Cons by auto
       then have "\<not> distinct Cy" 
-        using sublist_def Cons sublist_implies_in_set_a by metis 
+        using Cons sublist_implies_in_set_a by metis 
       then show ?thesis 
         using Cons by auto
     next
@@ -859,11 +967,12 @@ next
     using Cons by auto
   then have 1: "b = hd (cs)" 
     using Cons 
-    by (metis list.sel(3) sublist_def sublist_v1_hd_v2_hd_tl) 
+    by (metis list.sel(3) sublist_v1_hd_v2_hd_tl) 
   then have "hd cs = last cs" 
     using Cons 
     by (metis \<open>a = c\<close> distinct_sublist_last_first_of_sublist_false last_ConsL last_ConsR) 
-  then have "cs = [b]" using 1 Cons 
+  then have "cs = [b]" 
+    using 1 Cons 
     by (metis \<open>a = c\<close> append_Nil2 distinct_tl hd_in_set last.simps list.sel(3) sublist_not_cyclic_for_distinct sublist_set_last_ls1_2)
   then have "c#cs = [a, b]" 
     using 0 by simp
@@ -883,7 +992,7 @@ next
     case True
     then have "a = hd L" "b = hd L"
       using Cons 
-      by (metis list.sel(1) list.sel(3) sublist_def sublist_v1_hd_v2_hd_tl)+
+      by (metis list.sel(1) list.sel(3) sublist_v1_hd_v2_hd_tl)+
     then show ?thesis by simp
   next
     case False
@@ -945,12 +1054,15 @@ next
         using a1 False by simp
       then have "sublist [a, b] (l#l1)"
         using sublist_def by metis
-      then show ?thesis using sublist_def by simp
+      then show ?thesis 
+        using sublist_def by simp
     qed
-    then show ?thesis by auto
+    then show ?thesis 
+      by auto
   next
     assume "sublist [a, b] (l1@l2)"
-    then show ?thesis using Cons 
+    then show ?thesis 
+      using Cons 
       by (metis append_self_conv2 distinct_tl last_ConsR list.sel(3) sublist_cons tl_append2) 
   qed
 qed
@@ -1030,15 +1142,19 @@ next
         by linarith
       then show False proof 
         assume "length Cy = 0" 
-        then have "Cy = []" by simp
-        then show False using 1 by simp
+        then have "Cy = []" 
+          by simp
+        then show False 
+          using 1 by simp
       next 
         assume "length Cy = 1" 
         then have "Cy = [b]" 
           using 1 length_1_set_L 
           by metis 
-        then have "hd Cy = b" by simp
-        then show False using False by simp
+        then have "hd Cy = b" 
+          by simp
+        then show False 
+          using False by simp
       qed
     qed
     then have 3: "b \<in> set (tl Cy)" 
@@ -1046,7 +1162,8 @@ next
       by (metis "1" list.sel(1) list.sel(3) list.set_cases) 
     then have "\<exists>a. sublist [a, b] Cy" 
       using Cons 1 2 3 False by blast
-    then show ?thesis using 2 sublist_cons 
+    then show ?thesis 
+      using 2 sublist_cons 
       by fast
   qed
 qed
@@ -1227,7 +1344,7 @@ next
     have "distinct ds" using Cons by auto
     then have 1: "c = hd (tl ds)" 
       using True Cons 
-      by (smt hd_append list.distinct(1) list.sel(1) list.sel(3) sublist_def sublist_v1_hd_v2_hd_tl tl_append2) 
+      by (metis list.sel(1) list.sel(3) sublist_cons_impl_sublist sublist_v1_hd_v2_hd_tl) 
     have 2: "a = d"
       using True Cons 
       by (metis (no_types, lifting) Cons_eq_appendI \<open>distinct ds\<close> append_self_conv2 distinct_rev distinct_sublist_last_first_of_sublist_false last_rev rev.simps(1) rev.simps(2) sublist_cons_impl_sublist sublist_not_cyclic_for_distinct sublist_rev) 
@@ -1241,12 +1358,15 @@ next
     then show ?thesis using sublist_def by metis
   next
     case False
-    then have 1: "sublist [a, b] ds" using Cons 
+    then have 1: "sublist [a, b] ds" 
+      using Cons 
       by (metis append_self_conv2 hd_append2 list.distinct(1) list.sel(1) list.sel(3) sublist_def tl_append2) 
-    then have 2: "sublist [b, c] ds" using Cons 
+    then have 2: "sublist [b, c] ds" 
+      using Cons 
       using list.sel(1) sublist_cons_impl_sublist 
       by metis 
-    then show ?thesis using 1 2 Cons 
+    then show ?thesis 
+      using 1 2 Cons 
       by (simp add: False distinct_tl sublist_cons) 
   qed
 qed
@@ -1283,12 +1403,14 @@ next
     then show ?thesis using sublist_def by metis
   next
     case False
-    then have 1: "sublist [a, b] ds" using Cons 
+    then have 1: "sublist [a, b] ds" 
+      using Cons 
       by (metis append_self_conv2 hd_append2 list.distinct(1) list.sel(1) list.sel(3) sublist_def tl_append2) 
-    then have 2: "sublist (b#cs) ds" using Cons 
-      using list.sel(1) sublist_cons_impl_sublist_list 
+    then have 2: "sublist (b#cs) ds" 
+      using Cons list.sel(1) sublist_cons_impl_sublist_list 
       by metis 
-    then show ?thesis using 1 2 Cons 
+    then show ?thesis 
+      using 1 2 Cons 
       by (simp add: False distinct_tl sublist_cons) 
   qed
 qed
@@ -1361,7 +1483,8 @@ proof -
     then have "tl p1 @ (a#b) @ p2 = C"
       using p_def 
       by (metis list.sel(3) tl_append2)  
-    then show ?thesis using sublist_def 
+    then show ?thesis 
+      using sublist_def 
       by (metis Cons_eq_appendI  self_append_conv2 sublist_append) 
   qed
 qed
@@ -1377,7 +1500,8 @@ next
   case (Cons a C)
   then show ?case proof(cases "b = []")
     case True
-    then show ?thesis using Cons by auto 
+    then show ?thesis 
+      using Cons by auto 
   next
     case False
     then have 1: "sublist b C"
@@ -1388,7 +1512,7 @@ next
         using Cons sublist_sublist_hd False by metis 
       then have "hd b = hd C" 
         using Cons 
-        by (metis list.sel(3) sublist_def sublist_hd_tl_equal_b_hd_tl sublist_v1_hd_v2_hd_tl) 
+        by (metis list.sel(3) sublist_hd_tl_equal_b_hd_tl sublist_v1_hd_v2_hd_tl) 
       then show ?thesis by auto
     qed
     then have "\<exists>p. C = b @ p"
