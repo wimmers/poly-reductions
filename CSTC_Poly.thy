@@ -1,10 +1,10 @@
 theory CSTC_Poly
   imports "NREST.NREST" CNF_SAT_to_Clique  "Landau_Symbols.Landau_More"
-  "NREST.RefineMonadicVCG" "NREST.Refine_Foreach" TSTSC_Poly
+    "NREST.RefineMonadicVCG" "NREST.Refine_Foreach" TSTSC_Poly
 begin  
 
 definition "max_size_clauses xs = card (\<Union> (set xs))"
-      
+
 definition "add_edges_cstc F S = 
   SPECT [ S \<union> {{(l1, i), (l2, j)} | l1 l2 i j.
       i < length F \<and> j < length F \<and> l1 \<in> F ! i \<and> l2 \<in> F ! j \<and> \<not> conflict l1 l2 \<and> i \<noteq> j}
@@ -14,7 +14,8 @@ definition "add_nodes_cstc F V =
   SPECT [ V \<union>  {(l1, i) | l1 i. i < length F \<and>   l1 \<in> F ! i}
        \<mapsto> max_size_clauses F * length F]"
 
-definition cnf_sat_to_clique_alg :: "'a lit set list \<Rightarrow> (('a lit \<times> nat) set set \<times> ('a lit \<times> nat) set  \<times> nat) nrest" where 
+definition cnf_sat_to_clique_alg :: 
+  "'a lit set list \<Rightarrow> (('a lit \<times> nat) set set \<times> ('a lit \<times> nat) set  \<times> nat) nrest" where 
   "cnf_sat_to_clique_alg = (\<lambda>F. do {
       b \<leftarrow> SPECT [ finite (\<Union> (set F)) \<mapsto> 1];
       if b then
@@ -29,101 +30,132 @@ definition cnf_sat_to_clique_alg :: "'a lit set list \<Rightarrow> (('a lit \<ti
       else RETURNT ( {}, {}, 1 )
     })"
 
+
 definition "number_clauses_CNF_SAT xs = length xs"
 definition "size_CNF_SAT xs = number_clauses_CNF_SAT xs * max_size_clauses xs"
-(*with number of clauses time  maximum length of the clauses n*)
-definition "cnf_sat_to_clique_time n = 4 + n * n  + n"
+definition "cnf_sat_to_clique_time n = 4 + n * n  + n" 
+  (*where n is number of clauses times maximum length of the clauses*)
 definition "size_Clique = (\<lambda>(E,V,k). card E + card V)"
 definition "cnf_sat_to_clique_space n  = n * n + n"
+
 
 lemma brr2:
   shows "{{f l1, g l2} |l1 l2.  h l1 l2 \<and> l1 \<in> X \<and> l2 \<in> Y} \<subseteq>  UNION X (\<lambda>x. UNION Y (\<lambda>y. {{f x, g y}}))" 
 proof -
   have "{{f l1, g l2} |l1 l2. h l1 l2 \<and> l1 \<in> X \<and> l2 \<in> Y } \<subseteq> 
-        {{f l1, g l2} |l1 l2. l1 \<in> X \<and> l2 \<in> Y}" by auto
+        {{f l1, g l2} |l1 l2. l1 \<in> X \<and> l2 \<in> Y}" 
+    by auto
   also have "\<dots> = 
-      UNION X (\<lambda>x. {{f x, g l2} |l2. l2 \<in> Y})
-          " by auto
-  also have "\<dots> = UNION X (\<lambda>x. UNION Y (\<lambda>y. {{f x, g y}}))" by auto
+      UNION X (\<lambda>x. {{f x, g l2} |l2. l2 \<in> Y})" 
+    by auto
+  also have "\<dots> = UNION X (\<lambda>x. UNION Y (\<lambda>y. {{f x, g y}}))" 
+    by auto
   finally show ?thesis .
 qed
 
-lemma upperbounding_card_m: "\<forall>x\<in>X. card x \<le> m \<and> finite x \<Longrightarrow> x\<in>X \<Longrightarrow> y\<in>X \<Longrightarrow> 
+lemma upperbounding_card_m: 
+  "\<forall>x\<in>X. card x \<le> m \<and> finite x \<Longrightarrow> x\<in>X \<Longrightarrow> y\<in>X \<Longrightarrow> 
         card {{f l1, g l2} |l1 l2. h l1 l2 \<and> l1 \<in> x \<and> l2 \<in> y } \<le> m*m"
-      apply(rule order.trans)
-       apply(rule card_mono) defer
-        apply(rule brr2)
-       apply(rule order.trans) apply(rule card_Un) 
-      subgoal by auto
-       apply(rule order.trans) apply(rule sum_image_le)
-      subgoal using aaa by auto
-        apply simp  apply(rule order.trans)
-      apply(rule sum_mono[where g="\<lambda>_. m"]) apply simp 
-        apply(rule order.trans) apply(rule card_Un)
-      subgoal apply (rule finite_imageI) using aaa by auto
-       apply(rule order.trans) apply(rule sum_image_le) 
-      subgoal by auto
-         apply simp apply simp apply(simp)
-      apply(rule finite_Union)
-       apply (rule finite_imageI) by auto 
-
+  apply(rule order.trans)
+   apply(rule card_mono) defer
+    apply(rule brr2)
+   apply(rule order.trans) apply(rule card_Un) 
+  subgoal by auto
+   apply(rule order.trans) apply(rule sum_image_le)
+  subgoal using aaa by auto
+    apply simp  apply(rule order.trans)
+    apply(rule sum_mono[where g="\<lambda>_. m"]) apply simp 
+    apply(rule order.trans) apply(rule card_Un)
+  subgoal apply (rule finite_imageI) using aaa by auto
+    apply(rule order.trans) apply(rule sum_image_le) 
+  subgoal by auto
+     apply simp apply simp apply(simp)
+  apply(rule finite_Union)
+   apply (rule finite_imageI) by auto 
 
 
 lemma card_x_smaller_card_union:
   assumes "x \<in> set xs" "finite (\<Union> (set xs))" 
   shows "card x \<le> card (\<Union> (set xs))"
- proof -
-   have "x \<subseteq> \<Union> (set xs)" using \<open>x\<in>set xs\<close> by(auto)
-  then show ?thesis using assms 
+proof -
+  have "x \<subseteq> \<Union> (set xs)" 
+    using \<open>x\<in>set xs\<close> 
+    by(auto)
+  then show ?thesis 
+    using assms 
     by (simp add: card_mono)  
 qed
 
 
-
 lemma upperbounding_card_union: assumes "\<forall>x\<in>X. card x \<le> card (\<Union> X) \<and> finite x" "x\<in>X" "y\<in>X"  
   shows "card {{f l1, g l2} |l1 l2. h l1 l2 \<and> l1 \<in> x \<and> l2 \<in> y } \<le> card (\<Union> X) * card (\<Union> X)"
-  using assms by(auto simp add: upperbounding_card_m )
+  using assms 
+  by(auto simp add: upperbounding_card_m )
+
 
 lemma upperbounding_card_union2: 
-assumes "finite (\<Union> X)" "x\<in>X" "y\<in>X" 
-        shows "card {{f l1, g l2} |l1 l2. \<not> h l1 l2 \<and> l1 \<in> x \<and> l2 \<in> y } \<le> card (\<Union> X) * card (\<Union> X)"
+  assumes "finite (\<Union> X)" "x\<in>X" "y\<in>X" 
+  shows "card {{f l1, g l2} |l1 l2. \<not> h l1 l2 \<and> l1 \<in> x \<and> l2 \<in> y } \<le> card (\<Union> X) * card (\<Union> X)"
 proof -
-  from assms have 1: "\<forall>x\<in>X. finite x" apply(auto) 
+  from assms have 1: "\<forall>x\<in>X. finite x" 
+    apply(auto) 
     by (simp add: Sup_upper rev_finite_subset)
-  then have 2: "\<forall>x \<in>X. card x \<le> card (\<Union> X)" using card_x_smaller_card_union assms 
+  then have 2: "\<forall>x \<in>X. card x \<le> card (\<Union> X)" 
+    using card_x_smaller_card_union assms 
     by (simp add: Sup_upper card_mono)
-  from 1 2 assms show ?thesis by(auto simp add: upperbounding_card_union) 
+  from 1 2 assms 
+  show ?thesis 
+    by(auto simp add: upperbounding_card_union) 
 qed
 
-lemma upperbounding_card_union3: 
+
+lemma upperbounding_card_union3:
   assumes "finite (\<Union> (set F))" "i < length F" "j<length F"  
-  shows "card {{(l1, i), (l2, j)} |l1 l2.  i \<noteq> j \<and> \<not> h l1 l2 \<and> l1 \<in> F!i  \<and> l2 \<in> F!j} \<le> card (\<Union> (set F)) * card (\<Union> (set F))"
+  shows "card {{(l1, i), (l2, j)} |l1 l2.  i \<noteq> j \<and> \<not> h l1 l2 \<and> l1 \<in> F!i  \<and> l2 \<in> F!j} 
+    \<le> card (\<Union> (set F)) * card (\<Union> (set F))"
 proof -
-  obtain X where "X = F!i" by auto
-  then have 1: "X \<in> set F" using assms by(auto)
-  obtain Y where "Y = F!j"by auto
-  then have 2: "Y \<in> set F" using assms by(auto)
+  obtain X where "X = F!i" 
+    by auto
+  then have 1: "X \<in> set F" 
+    using assms 
+    by(auto)
+  obtain Y where "Y = F!j"
+    by auto
+  then have 2: "Y \<in> set F" 
+    using assms 
+    by(auto)
   then have "{{(l1, i), (l2, j)} |l1 l2.  i \<noteq> j \<and> \<not> h l1 l2 \<and> l1 \<in> F!i  \<and> l2 \<in> F!j} =
-    {{(l1, i), (l2, j)} |l1 l2.  i \<noteq> j \<and> \<not> h l1 l2 \<and> l1 \<in> X  \<and> l2 \<in> Y}" using \<open>X = _\<close> \<open>Y=_\<close> by(auto) 
+    {{(l1, i), (l2, j)} |l1 l2.  i \<noteq> j \<and> \<not> h l1 l2 \<and> l1 \<in> X  \<and> l2 \<in> Y}" 
+    using \<open>X = _\<close> \<open>Y=_\<close>
+    by(auto) 
   then have 3: "card {{(l1, i), (l2, j)} |l1 l2.  i \<noteq> j \<and> \<not> h l1 l2 \<and> l1 \<in> F!i  \<and> l2 \<in> F!j} =
-    card {{(l1, i), (l2, j)} |l1 l2.  i \<noteq> j \<and> \<not> h l1 l2 \<and> l1 \<in> X  \<and> l2 \<in> Y}" by(auto)
-  have 4: "{{(l1, i), (l2, j)} |l1 l2.  i \<noteq> j \<and> \<not> h l1 l2 \<and> l1 \<in> X  \<and> l2 \<in> Y} \<subseteq> {{(l1, i), (l2, j)} |l1 l2. \<not> h l1 l2 \<and> l1 \<in> X  \<and> l2 \<in> Y}"
+    card {{(l1, i), (l2, j)} |l1 l2.  i \<noteq> j \<and> \<not> h l1 l2 \<and> l1 \<in> X  \<and> l2 \<in> Y}"
+    by(auto)
+  have 4: "{{(l1, i), (l2, j)} |l1 l2.  i \<noteq> j \<and> \<not> h l1 l2 \<and> l1 \<in> X  \<and> l2 \<in> Y} 
+    \<subseteq> {{(l1, i), (l2, j)} |l1 l2. \<not> h l1 l2 \<and> l1 \<in> X  \<and> l2 \<in> Y}"
     by blast 
   let ?S = "((\<Union> (set F)) \<times> {0..<length F})\<times> ((\<Union> (set F)) \<times> {0..<length F})"
   have "finite {{(l1, i), (l2, j)} |l1 l2. \<not> h l1 l2 \<and> l1 \<in> F!i  \<and> l2 \<in> F!j}"
     using assms
-      using assms by (fastforce intro: finite_surj[where A = "?S"])
-  then have "finite {{(l1, i), (l2, j)} |l1 l2. \<not> h l1 l2 \<and> l1 \<in> X  \<and> l2 \<in> Y}" using \<open>X = _\<close> \<open>Y=_\<close> by(auto)
-  then have 5: "card {{(l1, i), (l2, j)} |l1 l2.  i \<noteq> j \<and> \<not> h l1 l2 \<and> l1 \<in> X  \<and> l2 \<in> Y} \<le> card {{(l1, i), (l2, j)} |l1 l2. \<not> h l1 l2 \<and> l1 \<in> X  \<and> l2 \<in> Y}"
+    by (fastforce intro: finite_surj[where A = "?S"])
+  then have "finite {{(l1, i), (l2, j)} |l1 l2. \<not> h l1 l2 \<and> l1 \<in> X  \<and> l2 \<in> Y}"
+    using \<open>X = _\<close> \<open>Y=_\<close> 
+    by(auto)
+  then have 5: "card {{(l1, i), (l2, j)} |l1 l2.  i \<noteq> j \<and> \<not> h l1 l2 \<and> l1 \<in> X  \<and> l2 \<in> Y} 
+      \<le> card {{(l1, i), (l2, j)} |l1 l2. \<not> h l1 l2 \<and> l1 \<in> X  \<and> l2 \<in> Y}"
     by (simp add: "4" card_mono)
-  have "card {{(l1, i), (l2, j)} |l1 l2. \<not> h l1 l2 \<and> l1 \<in> X  \<and> l2 \<in> Y} \<le> card (\<Union> (set F)) * card (\<Union> (set F))" using 1 2 4 assms 
+  have "card {{(l1, i), (l2, j)} |l1 l2. \<not> h l1 l2 \<and> l1 \<in> X  \<and> l2 \<in> Y} 
+      \<le> card (\<Union> (set F)) * card (\<Union> (set F))" using 1 2 4 assms 
     by(auto simp add:upperbounding_card_union2)  
-  then show ?thesis using 1 2 3 4 5 by(auto) 
+  then show ?thesis 
+    using 1 2 3 4 5 
+    by(auto) 
 qed
-       
+
 
 lemma card_clauses_samller: "x \<in> set xs \<and> finite (\<Union> (set xs)) \<Longrightarrow> card x \<le> max_size_clauses xs"
   by(auto simp add: max_size_clauses_def card_x_smaller_card_union)
+
 
 lemma card_V:
   assumes "finite (\<Union> (set p))"
@@ -133,44 +165,51 @@ proof -
   let ?V = " {(l1, i). i < length p \<and> l1 \<in> p ! i}"
   have 1: "card ?S \<le> (card (\<Union> (set p))) * length p" 
     by (simp add: card_cartesian_product)
-  have "?V \<subseteq> ?S" by(auto)+ 
-  then show ?thesis using 1 
+  have "?V \<subseteq> ?S" 
+    by(auto)+ 
+  then show ?thesis 
+    using 1 
     by (metis (no_types, lifting) assms card_mono dual_order.trans finite_SigmaI finite_atLeastLessThan mult.commute) 
 qed
 
 
 lemma card_E2:
   assumes "finite (\<Union> (set F))"
-  shows "card {{(l1, i), (l2, j)} |l1 l2 i j. i < length F \<and> j < length F \<and> i \<noteq> j \<and> \<not> conflict l1 l2 \<and> l1 \<in> F ! i \<and> l2 \<in> F ! j}
+  shows "card {{(l1, i), (l2, j)} |l1 l2 i j. i < length F \<and> j < length F 
+      \<and> i \<noteq> j \<and> \<not> conflict l1 l2 \<and> l1 \<in> F ! i \<and> l2 \<in> F ! j}
             \<le> length F * card (\<Union> (set F)) * length F * card (\<Union> (set F))"
-apply(subst paf2)
-    apply(subst paf)
+  apply(subst paf2)
+  apply(subst paf)
+  apply(rule order.trans) apply(rule card_Un) apply simp
+  apply(rule order.trans)
+   apply(rule sum_image_le) apply simp apply simp
+  apply(rule order.trans)
+   apply(rule sum_mono[where g="\<lambda>_. card (\<Union> (set F))* card (\<Union> (set F))  * length F"])
+  subgoal apply simp
     apply(rule order.trans) apply(rule card_Un) apply simp
     apply(rule order.trans)
      apply(rule sum_image_le) apply simp apply simp
     apply(rule order.trans)
-     apply(rule sum_mono[where g="\<lambda>_. card (\<Union> (set F))* card (\<Union> (set F))  * length F"])
-    subgoal apply simp
-    apply(rule order.trans) apply(rule card_Un) apply simp
-    apply(rule order.trans)
-       apply(rule sum_image_le) apply simp apply simp
-      apply(rule order.trans)
-       apply(rule sum_mono[where g="\<lambda>_. card (\<Union> (set F)) * card (\<Union> (set F))"])
-      subgoal
-        apply simp using assms upperbounding_card_union3 by(auto) 
-     apply simp done  
-    subgoal apply simp done
-    done
+     apply(rule sum_mono[where g="\<lambda>_. card (\<Union> (set F)) * card (\<Union> (set F))"])
+    subgoal
+      apply simp using assms upperbounding_card_union3 by(auto) 
+    apply simp done  
+  subgoal apply simp done
+  done
+
 
 lemma card_E3: 
-assumes "finite (\<Union> (set F))"
-  shows "card {{(l1, i), (l2, j)} |l1 l2 i j. i < length F \<and> j < length F \<and> i \<noteq> j \<and> \<not> conflict l1 l2 \<and> l1 \<in> F ! i \<and> l2 \<in> F ! j}
+  assumes "finite (\<Union> (set F))"
+  shows "card {{(l1, i), (l2, j)} |l1 l2 i j. i < length F \<and> j < length F 
+    \<and> i \<noteq> j \<and> \<not> conflict l1 l2 \<and> l1 \<in> F ! i \<and> l2 \<in> F ! j}
             \<le> length F * card (\<Union> (set F)) * (length F * card (\<Union> (set F)))"
 proof -
-  have "card {{(l1, i), (l2, j)} |l1 l2 i j. i < length F \<and> j < length F \<and> i \<noteq> j \<and> \<not> conflict l1 l2 \<and> l1 \<in> F ! i \<and> l2 \<in> F ! j}
-            \<le> length F * card (\<Union> (set F)) * length F * card (\<Union> (set F))" using assms by(rule card_E2)
-  then have "card {{(l1, i), (l2, j)} |l1 l2 i j. i < length F \<and> j < length F \<and> i \<noteq> j \<and> \<not> conflict l1 l2 \<and> l1 \<in> F ! i \<and> l2 \<in> F ! j}
-            \<le> length F * card (\<Union> (set F)) * (length F * card (\<Union> (set F)))"  by(auto) 
+  have "card {{(l1, i), (l2, j)} |l1 l2 i j. i < length F \<and> j < length F 
+    \<and> i \<noteq> j \<and> \<not> conflict l1 l2 \<and> l1 \<in> F ! i \<and> l2 \<in> F ! j}
+    \<le> length F * card (\<Union> (set F)) * length F * card (\<Union> (set F))" using assms by(rule card_E2)
+  then have "card {{(l1, i), (l2, j)} |l1 l2 i j. i < length F \<and> j < length F 
+    \<and> i \<noteq> j \<and> \<not> conflict l1 l2 \<and> l1 \<in> F ! i \<and> l2 \<in> F ! j}
+    \<le> length F * card (\<Union> (set F)) * (length F * card (\<Union> (set F)))"  by(auto) 
   then show ?thesis .
 qed
 
@@ -178,20 +217,21 @@ qed
 lemma cnf_sat_to_clique_size: "size_Clique (cnf_sat_to_clique p) \<le> cnf_sat_to_clique_space (size_CNF_SAT p)" 
   apply(auto simp: size_Clique_def cnf_sat_to_clique_def cnf_sat_to_clique_space_def size_CNF_SAT_def number_clauses_CNF_SAT_def max_size_clauses_def card_clauses_samller)
   apply(rule add_mono)
-  apply(auto simp add: card_E3)
+   apply(auto simp add: card_E3)
   apply(auto simp add: card_V)
   done
 
 
 lemma cnf_sat_to_clique_refines:
-  "cnf_sat_to_clique_alg F \<le> SPEC (\<lambda>y. y = cnf_sat_to_clique F) (\<lambda>_. cnf_sat_to_clique_time (size_CNF_SAT F))"
-  unfolding SPEC_def
-  unfolding cnf_sat_to_clique_alg_def cnf_sat_to_clique_def   
-      mop_list_length_def mop_set_empty_set_def add_edges_cstc_def
-      add_nodes_cstc_def
+  "cnf_sat_to_clique_alg F \<le>
+   SPEC (\<lambda>y. y = cnf_sat_to_clique F) (\<lambda>_. cnf_sat_to_clique_time (size_CNF_SAT F))"
+  unfolding SPEC_def cnf_sat_to_clique_alg_def cnf_sat_to_clique_def   
+    mop_list_length_def mop_set_empty_set_def add_edges_cstc_def
+    add_nodes_cstc_def
   apply(rule T_specifies_I) 
   apply(vcg' \<open>-\<close> rules: T_SPEC )
   by(auto simp: cnf_sat_to_clique_time_def number_clauses_CNF_SAT_def max_size_clauses_def one_enat_def size_CNF_SAT_def)
+
 
 lemma cnf_sat_to_clique_ispolyred: "ispolyred cnf_sat_to_clique_alg cnf_sat clique size_CNF_SAT size_Clique" 
   unfolding ispolyred_def
