@@ -1,9 +1,10 @@
 theory Vwalk_Cycle
-  imports List_Auxiliaries Graph_Auxiliaries 
+  imports "../Auxiliaries/List_Auxiliaries" "../Auxiliaries/Graph_Auxiliaries" 
 begin
 
 definition vwalk_cycle where 
   "vwalk_cycle G p \<equiv> distinct (tl p) \<and> vwalk p G \<and> hd p = last p \<and> length p \<ge> 2"
+
 
 lemma vwalk_cycle_rev: 
   assumes "symmetric G" "vwalk_cycle G p" 
