@@ -1,6 +1,6 @@
 theory VCSTVCL_Poly
   imports "NREST.NREST" VC_Set_To_VC_List  "Landau_Symbols.Landau_More"
-    "NREST.RefineMonadicVCG" "NREST.Refine_Foreach" TSTSC_Poly
+    "NREST.RefineMonadicVCG" "NREST.Refine_Foreach" "../TSTSC_Poly"
 begin
 
 
@@ -41,6 +41,7 @@ lemma vcs_to_vcl_reifnes:
   apply(vcg' \<open>-\<close> rules: T_SPEC )
   by(auto simp: vcs_vcl_time_def size_VC_def set_set_to_list distinct_set_to_list
       one_enat_def)
+
 
 lemma cnf_sat_to_clique_ispolyred: "ispolyred vcs_to_vcl vertex_cover vertex_cover_list size_VC size_VC_List" 
   unfolding ispolyred_def

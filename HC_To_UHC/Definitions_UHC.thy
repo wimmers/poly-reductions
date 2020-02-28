@@ -1,12 +1,12 @@
 theory Definitions_UHC
   imports Main "../Three_Sat_To_Set_Cover" Graph_Theory.Digraph  Graph_Theory.Arc_Walk
     Graph_Theory.Vertex_Walk
-    "../List_Auxiliaries" "../Set_Auxiliaries"
-    "../VC_To_HC/Definitions" "../Graph_auxiliaries" "../Vwalk_Cycle"
+    "../Auxiliaries/List_Auxiliaries" "../Auxiliaries/Set_Auxiliaries"
+    "../VC_To_HC/Definitions" "../Auxiliaries/Graph_auxiliaries" "../Graph_Extensions/Vwalk_Cycle"
 begin
 
-subsection\<open>Preliminaries\<close>
 
+subsection\<open>Preliminaries\<close>
 
 (*pre_digraph.cycle already assumes that every node is only contained once*)
 (*Case for empty c is already in cycle*)
@@ -22,7 +22,7 @@ fun to_cycle_hc where
 "to_cycle_hc [] = []"
 
 (*last two edge sets are not part of the original proof, but are needed for case with only one node*)
-(*I'm using the or arcs = {} to easily construct a graph that is not in uhc. If arcs are empty, 
+(*I'm using the "\<or> arcs = {}" to easily construct a graph that is not in uhc. If arcs are empty, 
 head and tail are not important*)
 definition "hc_to_uhc \<equiv>
   \<lambda>(G::('a, ('a \<times> 'a)) pre_digraph). (if wf_digraph G \<and> ((tail G = fst \<and> head G = snd) \<or> arcs G = {}) then (if finite (verts G) then (if card (verts G) > 1 then 

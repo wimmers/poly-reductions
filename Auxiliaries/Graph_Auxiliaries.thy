@@ -208,4 +208,90 @@ lemma arcs_ends_G':
   by(auto simp add: arcs_ends_def arc_to_ends_G')
 
 
+lemma if_edge_then_cycle_length_geq_2:
+  assumes "(u, v) \<in> set (vwalk_arcs C)" 
+  shows "length C \<ge> 2"
+proof(rule ccontr)
+  assume "\<not> 2 \<le> length C"
+  then have length_C: "length C = 1 \<or> length C = 0" 
+    by linarith
+  then show False 
+  proof(cases "length C = 1")
+    case True
+    then have "vwalk_arcs C = []" 
+      by (metis One_nat_def Suc_length_conv length_0_conv vwalk_arcs.simps(2))
+    then show ?thesis
+      using assms 
+      by auto
+  next
+    case False
+    then have "length C = 0" 
+      using length_C 
+      by auto
+    then have "vwalk_arcs C = []" 
+      by auto
+    then show ?thesis 
+      using assms 
+      by auto
+  qed
+qed
+
+
+lemma sublist_for_edges: 
+  assumes "(u, v) \<in> set (vwalk_arcs C)"
+  shows "sublist [u, v] C"
+  using assms 
+proof(induction C)
+  case Nil
+  then show ?case 
+    by auto
+next
+  case (Cons a C)
+  then have length_C: "length C \<ge> 1" 
+    using if_edge_then_cycle_length_geq_2 
+    by fastforce
+  then show ?case proof(cases "u = a \<and> v = hd C")
+    case True
+    then have "[]@[u,v] @ (tl C) = (a#C)" 
+      by (metis Cons.prems append_Cons append_self_conv2 list.collapse list.distinct(1) list.set_cases vwalk_arcs.simps(2))
+    then show ?thesis 
+      using sublist_def
+      by blast
+  next
+    case False
+    then have "(u,v) \<in> set (vwalk_arcs C)" 
+      using Cons 
+      by (metis prod.inject set_ConsD vwalk_arcs.simps(1) vwalk_arcs.simps(2) vwalk_arcs_Cons) 
+    then have "\<exists>p1 p2. p1 @ [u, v] @ p2 = C" 
+      using Cons 
+      unfolding sublist_def 
+      by auto
+    then obtain p1 p2 where p_def: "p1 @ [u, v] @ p2 = C"
+      by blast
+    then obtain p1' where "p1' = a # p1" 
+      by auto
+    then have "p1' @ [u, v] @ p2 = (a#C)" 
+      using p_def 
+      by auto
+    then show ?thesis
+      using Cons sublist_def
+      by blast
+  qed
+qed
+
+
+lemma if_sublist_then_edge: 
+  assumes "sublist [u, v] C"
+  shows "(u, v) \<in> set (vwalk_arcs C)"
+  using assms sublist_imp_in_arcs 
+  by fast
+
+
+lemma in_sublist_impl_in_list:
+  assumes "sublist a b" "x \<in> set a"
+  shows "x \<in> set b"
+  using assms 
+  by (metis append_Cons append_assoc in_set_conv_decomp sublist_def) 
+
+
 end

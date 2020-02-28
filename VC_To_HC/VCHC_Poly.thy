@@ -1,18 +1,20 @@
 theory VCHC_Poly
-  imports VC_To_HC "../TSTSC_Poly" "../Set_Auxiliaries"
+  imports VC_To_HC "../TSTSC_Poly" "../Auxiliaries/Set_Auxiliaries"
 begin
 
 
 definition "mop_check_distinct E = SPECT [distinct E \<mapsto> length E]"
 
-definition "mop_verts_G E k = SPECT [{Cover i|i. i< k} \<union> {Edge v e 0|v e. e\<in> set E \<and> v \<in> e}\<union> {Edge v e 1|v e. e\<in> set E \<and> v \<in> e} 
+definition "mop_verts_G E k = SPECT [{Cover i|i. i< k} \<union> {Edge v e 0|v e. e\<in> set E \<and> v \<in> e}
+          \<union> {Edge v e 1|v e. e\<in> set E \<and> v \<in> e} 
     \<mapsto> k + 2*(2*(length E))]"
 
 definition "mop_arcs_G E k = SPECT [
             {(Edge v e 0, Edge v e 1)|v e. e\<in> set E \<and> v \<in> e} \<union> 
             {(Edge v e 0, Edge u e 0)|u v e. e\<in>set E \<and> v \<in> e \<and> u \<in> e \<and> u \<noteq> v} \<union>
             {(Edge v e 1, Edge u e 1)|u v e. e\<in> set E \<and> v \<in> e \<and> u \<in> e \<and> u \<noteq> v} \<union>
-            {(Edge v e1 1, Edge v e2 0)| v e1 e2 i j. i<length E \<and> j<length E \<and>  e1 = E!i\<and> e2 = E!j \<and> v \<in> e1 \<and> v \<in> e2 \<and> i<j \<and>
+            {(Edge v e1 1, Edge v e2 0)| v e1 e2 i j. i<length E \<and> j<length E \<and>  e1 = E!i\<and> e2 = E!j 
+            \<and> v \<in> e1 \<and> v \<in> e2 \<and> i<j \<and>
               \<not> (\<exists>i'< size E. v \<in> E!i' \<and> i < i' \<and> i' < j)} \<union>
             {(Edge v e 1, Cover n)| v e n i. i<length E \<and> e = E!i\<and> v \<in> e \<and> 
               \<not> (\<exists>j < size E. v \<in> E!j \<and> i < j) \<and> n< k}\<union>
@@ -21,7 +23,8 @@ definition "mop_arcs_G E k = SPECT [
             {(Cover i, Cover j) |i j.  i < k \<and> j < k}
     \<mapsto> (2*(length E)) + (2*(length E)) + (2*(length E)) + (2*(length E)) + 2*  (length E) * k + k*k]"
 
-(*I can decide last for every edge in O(n) if I start from the end and keep track of an array, whether last has already been found*)
+(*I can decide "last" for every edge in O(n) if I start from the end and keep track of an array, 
+whether the last occurrence has already been found*)
 
 
 definition "vc_hc_alg = (\<lambda>(E,k).   
@@ -46,7 +49,8 @@ definition "space_edges n = 6 * n * 6 * n"
 definition "size_hc = (\<lambda>G. card (verts G) + card (arcs G))"
 definition "size_vc = (\<lambda>(E,k). length E)"
 definition "vc_to_hc_space n  = n + space_verts n + space_edges n + n + 2"
-  (*Space for E, verts of G, edges of G, an additional list of length 2*n for last and first, 2 for case of else*)
+  (*Space for E, verts of G, edges of G, an additional list of length 2*n for last and first, 
+  2 for case of else*)
 
 (*k \<le> 2*(length E) *)
 definition "vc_hc_time n = 1+ n + (2 * n + 1) + 1 + (2*n + 2*(2*(n))) 
@@ -94,13 +98,13 @@ lemma arcs_subset_graph:
   by fastforce
 
 
-
 lemma ugraph_card_verts_smaller_2_length: 
   assumes "\<forall>e\<in> set E. card e = 2" 
   shows "card (\<Union> (set E)) \<le> 2* (length E)"
   using assms proof(induction E)
   case Nil
-  then show ?case by auto
+  then show ?case
+    by auto
 next
   case (Cons a E)
   then have "card a = 2" by auto
@@ -109,8 +113,10 @@ next
   have 2: "2* (length (a#E)) \<le> 2 + 2* (length E)" 
     by simp
   have 3: "card (\<Union> (set E)) \<le> 2*(length E)"
-    using Cons by fastforce
-  then show ?case using 1 2 by simp
+    using Cons 
+    by fastforce
+  then show ?case using 1 2 
+    by simp
 qed
 
 
@@ -124,8 +130,10 @@ lemma k_smaller_2_length:
     using assms ugraph_card_verts_smaller_2_length assms le_trans 
     by blast
   then show ?thesis 
-    using card_length le_trans mult_le_mono by blast 
+    using card_length le_trans mult_le_mono 
+    by blast 
 qed
+
 
 lemma card_Cov:
   assumes "(M::('a, 'b) hc_node set) = {Cover i|i. i< k}" "ugraph (set E)" "k \<le> card (\<Union> (set E))"
@@ -136,28 +144,36 @@ proof -
   obtain T::"('a, 'b) hc_node set set" where T_def: "T = {{Cover j|j. j = i}|i. i\<in> S}"
     by auto
   have card_S: "card S = k"
-    using S_def by simp
+    using S_def 
+    by simp
   have 1: "M = \<Union> T" 
-    using S_def T_def assms by auto
+    using S_def T_def assms 
+    by auto
   then have 10: "card M = card (\<Union> T)"
     by auto
   have 2: "\<forall>i. card {Cover j|j. j = i} = 1" by simp
   then have 3: "\<forall>S' \<in> T. card S' \<le> 1" 
-    using T_def by fastforce
+    using T_def 
+    by fastforce
   have finS: "finite S" 
-    using S_def by simp   
+    using S_def
+    by simp   
   then have fin: "finite T"
-    using fin_dep_on_other_set T_def by simp
+    using fin_dep_on_other_set T_def
+    by simp
   have "card T \<le> card S"
     using finS card_dep_on_other_set T_def
     by fast
   then have cardT: "card T \<le> k"
-    using card_S by blast
+    using card_S
+    by blast
   have "card (\<Union> T) \<le> card T"
     using 3 card_union_if_all_subsets_card_1 fin by blast
   then have 4: "card (\<Union> T) \<le> k" 
-    using cardT by simp 
-  then show ?thesis using 10 k_smaller_2_length assms 
+    using cardT 
+    by simp 
+  then show ?thesis 
+    using 10 k_smaller_2_length assms 
     by fastforce 
 qed
 
@@ -172,33 +188,53 @@ proof -
   obtain T where T_def: "T = {{u|u. f u (v, e)}|v e. (v, e)\<in> S}"
     by auto
   have card_S: "card S \<le> 2*length E"
-    using S_def card_S_Edge assms by blast
+    using S_def card_S_Edge assms 
+    by blast
   have 1: "M = \<Union> T" 
   proof
-    show "M \<subseteq> \<Union> T" proof 
-      have 0: "\<Union> T = {u|u v e. f u (v, e) \<and> (v, e) \<in> S}" using T_def by auto
+    show "M \<subseteq> \<Union> T" 
+    proof 
+      have 0: "\<Union> T = {u|u v e. f u (v, e) \<and> (v, e) \<in> S}" 
+        using T_def 
+        by auto
       fix x assume a1: "x \<in> M"
       then obtain v e where ve_def: "x = Edge v e 0"
-        using assms by auto
+        using assms
+        by auto
       then have 1: "f x (v, e)"
         by simp
-      have "e \<in> set E" "v \<in> e" using ve_def a1 assms by simp+
-      then have "(v, e) \<in> S" using S_def by simp
+      have "e \<in> set E" "v \<in> e"
+        using ve_def a1 assms 
+        by simp+
+      then have "(v, e) \<in> S"
+        using S_def
+        by simp
       then have "x \<in> {u|u v e. f u (v, e) \<and> (v, e) \<in> S}"
-        using 1 by blast
-      then show "x \<in> \<Union> T" using 0 by simp
+        using 1 
+        by blast
+      then show "x \<in> \<Union> T" 
+        using 0 
+        by simp
     qed
   next
-    show "\<Union> T \<subseteq> M" proof 
+    show "\<Union> T \<subseteq> M" 
+    proof 
       fix x assume a1: "x \<in> \<Union> T"
-      have 0: "\<Union> T = {u|u v e. f u (v, e) \<and> (v, e) \<in> S}" using T_def by auto
+      have 0: "\<Union> T = {u|u v e. f u (v, e) \<and> (v, e) \<in> S}" 
+        using T_def 
+        by auto
       then obtain v e  where ve_def: "f x (v, e)" "(v, e) \<in> S" 
-        using a1 by auto
-      then have 1: "x = Edge v e 0" using f_inv by fastforce 
+        using a1 
+        by auto
+      then have 1: "x = Edge v e 0" 
+        using f_inv 
+        by fastforce 
       have 2: "v \<in> e" "e \<in> set E" 
-        using ve_def S_def by blast+
+        using ve_def S_def
+        by blast+
       then show "x \<in> M"
-        using 1 2 assms by simp
+        using 1 2 assms 
+        by simp
     qed
   qed  
   then have 10: "card M = card (\<Union> T)"
@@ -207,12 +243,17 @@ proof -
   proof
     fix S' assume "S' \<in> T" 
     then obtain v e where ve_def: "S' = {u|u. f u (v, e)}" "(v, e)\<in> S"
-      using T_def by blast
-    then have "S' = {Edge v e 0}" using set_f by metis
-    then show "card S' \<le> 1" by simp
+      using T_def 
+      by blast
+    then have "S' = {Edge v e 0}" 
+      using set_f
+      by metis
+    then show "card S' \<le> 1"
+      by simp
   qed
   have finS: "finite S" 
-    using S_def fin_S_Edge assms by auto 
+    using S_def fin_S_Edge assms 
+    by auto 
   then have fin: "finite T"
     using fin_dep_on_other_set T_def 
     by fastforce 
@@ -220,12 +261,16 @@ proof -
     using finS card_dep_on_other_set T_def 
     by fastforce
   then have cardT: "card T \<le> 2* length E"
-    using card_S by simp
+    using card_S
+    by simp
   have "card (\<Union> T) \<le> card T"
     using 3 card_union_if_all_subsets_card_1 fin by blast
   then have 4: "card (\<Union> T) \<le> 2*length E" 
-    using cardT by simp 
-  then show ?thesis using 10 by simp 
+    using cardT
+    by simp 
+  then show ?thesis 
+    using 10
+    by simp 
 qed
 
 
@@ -239,33 +284,52 @@ proof -
   obtain T where T_def: "T = {{u|u. f1 u (v, e)}|v e. (v, e)\<in> S}"
     by auto
   have card_S: "card S \<le> 2*length E"
-    using S_def card_S_Edge assms by blast
+    using S_def card_S_Edge assms
+    by blast
   have 1: "M = \<Union> T" 
   proof
-    show "M \<subseteq> \<Union> T" proof 
-      have 0: "\<Union> T = {u|u v e. f1 u (v, e) \<and> (v, e) \<in> S}" using T_def by auto
+    show "M \<subseteq> \<Union> T" 
+    proof 
+      have 0: "\<Union> T = {u|u v e. f1 u (v, e) \<and> (v, e) \<in> S}" 
+        using T_def 
+        by auto
       fix x assume a1: "x \<in> M"
       then obtain v e where ve_def: "x = Edge v e 1"
         using assms by auto
       then have 1: "f1 x (v, e)"
         by simp
-      have "e \<in> set E" "v \<in> e" using ve_def a1 assms by simp+
-      then have "(v, e) \<in> S" using S_def by simp
+      have "e \<in> set E" "v \<in> e" 
+        using ve_def a1 assms 
+        by simp+
+      then have "(v, e) \<in> S" 
+        using S_def 
+        by simp
       then have "x \<in> {u|u v e. f1 u (v, e) \<and> (v, e) \<in> S}"
-        using 1 by blast
-      then show "x \<in> \<Union> T" using 0 by simp
+        using 1 
+        by blast
+      then show "x \<in> \<Union> T" 
+        using 0 
+        by simp
     qed
   next
-    show "\<Union> T \<subseteq> M" proof 
+    show "\<Union> T \<subseteq> M" 
+    proof 
       fix x assume a1: "x \<in> \<Union> T"
-      have 0: "\<Union> T = {u|u v e. f1 u (v, e) \<and> (v, e) \<in> S}" using T_def by auto
+      have 0: "\<Union> T = {u|u v e. f1 u (v, e) \<and> (v, e) \<in> S}" 
+        using T_def 
+        by auto
       then obtain v e  where ve_def: "f1 x (v, e)" "(v, e) \<in> S" 
-        using a1 by auto
-      then have 1: "x = Edge v e 1" using f1_inv by fastforce 
+        using a1 
+        by auto
+      then have 1: "x = Edge v e 1" 
+        using f1_inv 
+        by fastforce 
       have 2: "v \<in> e" "e \<in> set E" 
-        using ve_def S_def by blast+
+        using ve_def S_def 
+        by blast+
       then show "x \<in> M"
-        using 1 2 assms by simp
+        using 1 2 assms 
+        by simp
     qed
   qed  
   then have 10: "card M = card (\<Union> T)"
@@ -274,12 +338,17 @@ proof -
   proof
     fix S' assume "S' \<in> T" 
     then obtain v e where ve_def: "S' = {u|u. f1 u (v, e)}" "(v, e)\<in> S"
-      using T_def by blast
-    then have "S' = {Edge v e 1}" using set_f1 by metis
-    then show "card S' \<le> 1" by simp
+      using T_def 
+      by blast
+    then have "S' = {Edge v e 1}" 
+      using set_f1 
+      by metis
+    then show "card S' \<le> 1" 
+      by simp
   qed
   have finS: "finite S" 
-    using S_def fin_S_Edge assms by auto 
+    using S_def fin_S_Edge assms 
+    by auto 
   then have fin: "finite T"
     using fin_dep_on_other_set T_def 
     by fastforce 
@@ -287,12 +356,16 @@ proof -
     using finS card_dep_on_other_set T_def 
     by fastforce
   then have cardT: "card T \<le> 2* length E"
-    using card_S by simp
+    using card_S 
+    by simp
   have "card (\<Union> T) \<le> card T"
     using 3 card_union_if_all_subsets_card_1 fin by blast
   then have 4: "card (\<Union> T) \<le> 2*length E" 
-    using cardT by simp 
-  then show ?thesis using 10 by simp 
+    using cardT 
+    by simp 
+  then show ?thesis 
+    using 10 
+    by simp 
 qed
 
 
@@ -302,6 +375,7 @@ lemma fin_verts:
   using fin_Cov fin_Edge0 fin_Edge1 assms 
   by blast  
 
+
 lemma fin_max_arcs:
   assumes "\<forall>e\<in> set E. card e = 2" 
   shows "finite (({Cover i|i. i< k} \<union> {Edge v e 0|v e. e\<in> set E \<and> v \<in> e}\<union> {Edge v e 1|v e. e\<in> set E \<and> v \<in> e}) \<times>
@@ -310,25 +384,36 @@ lemma fin_max_arcs:
   by blast  
 
 
-
 lemma card_verts: 
   assumes "ugraph (set E)" "k \<le> card (\<Union> (set E))" "distinct E" "M1 = {Cover i|i. i< k}"
   shows "card (M1 \<union> {Edge v e 0|v e. e\<in> set E \<and> v \<in> e}\<union> {Edge v e 1|v e. e\<in> set E \<and> v \<in> e}) \<le> 6 * length E"
 proof -
-  have 1: "\<forall>e\<in> set E. card e = 2" using assms ugraph_def by blast
+  have 1: "\<forall>e\<in> set E. card e = 2" 
+    using assms ugraph_def 
+    by blast
   have fin: "finite ({Cover i|i. i< k} \<union> {Edge v e 0|v e. e\<in> set E \<and> v \<in> e}\<union> {Edge v e 1|v e. e\<in> set E \<and> v \<in> e})" 
-    using fin_verts 1 by blast 
+    using fin_verts 1 
+    by blast 
   have fin1: "finite M1" "finite {Edge v e 0|v e. e\<in> set E \<and> v \<in> e}" "finite {Edge v e 1|v e. e\<in> set E \<and> v \<in> e}"
-    using assms fin_Cov apply blast using 1 fin_Edge0 fin_Edge1 by blast+ 
+    using assms fin_Cov 
+      apply blast 
+    using 1 fin_Edge0 fin_Edge1
+    by blast+ 
   then have 2: "card (M1 \<union> {Edge v e 0|v e. e\<in> set E \<and> v \<in> e}\<union> {Edge v e 1|v e. e\<in> set E \<and> v \<in> e}) 
     \<le> card M1 +card {Edge v e 0|v e. e\<in> set E \<and> v \<in> e}+card {Edge v e 1|v e. e\<in> set E \<and> v \<in> e}"
-    using finite_card_3_sets fin1 by blast 
-  have 3: "card M1 \<le> 2* length E" using card_Cov assms by auto
+    using finite_card_3_sets fin1 
+    by blast 
+  have 3: "card M1 \<le> 2* length E" 
+    using card_Cov assms 
+    by auto
   have 4: "card {Edge v e 0|v e. e\<in> set E \<and> v \<in> e} \<le> 2 * length E"
-    using card_Edge0 1 by auto 
+    using card_Edge0 1 
+    by auto 
   have 5: "card {Edge v e 1|v e. e\<in> set E \<and> v \<in> e} \<le> 2 * length E" 
-    using card_Edge1 1 by blast
-  then show ?thesis using 2 3 4 5 
+    using card_Edge1 1
+    by blast
+  then show ?thesis 
+    using 2 3 4 5 
     by fastforce
 qed
 
@@ -336,7 +421,8 @@ qed
 lemma max_card_arcs: 
   assumes "A = ({Cover i|i. i< k} \<union> {Edge v e 0|v e. e\<in> set E \<and> v \<in> e}\<union> {Edge v e 1|v e. e\<in> set E \<and> v \<in> e})"
   shows "card (A \<times> A) = card A * card A"
-  using card_cartesian_product using assms by blast
+  using card_cartesian_product assms 
+  by blast
 
 
 lemma card_arcs: 
@@ -344,68 +430,94 @@ lemma card_arcs:
   shows "card ({(Edge v e 0, Edge v e 1)|v e. e\<in> set E \<and> v \<in> e} \<union> 
             {(Edge v e 0, Edge u e 0)|u v e. e\<in>set E \<and> v \<in> e \<and> u \<in> e \<and> u \<noteq> v} \<union>
             {(Edge v e 1, Edge u e 1)|u v e. e\<in> set E \<and> v \<in> e \<and> u \<in> e \<and> u \<noteq> v} \<union>
-            {(Edge v e1 1, Edge v e2 0)| v e1 e2 i j. i<length E \<and> j<length E \<and>  e1 = E!i\<and> e2 = E!j \<and> v \<in> e1 \<and> v \<in> e2 \<and> i<j \<and>
+            {(Edge v e1 1, Edge v e2 0)| v e1 e2 i j. i<length E \<and> j<length E \<and>  e1 = E!i\<and> e2 = E!j 
+            \<and> v \<in> e1 \<and> v \<in> e2 \<and> i<j \<and>
               \<not> (\<exists>i'< size E. v \<in> E!i' \<and> i < i' \<and> i' < j)} \<union>
             {(Edge v e 1, Cover n)| v e n i. i<length E \<and> e = E!i\<and> v \<in> e \<and> 
               \<not> (\<exists>j < size E. v \<in> E!j \<and> i < j) \<and> n< k}\<union>
             {(Cover n, Edge v e 0)| v e n i. i<length E \<and> e = E!i\<and> v \<in> e \<and> 
               \<not> (\<exists>j < size E. v \<in> E!j \<and> j < i) \<and> n < k} \<union>
-            {(Cover i, Cover j) |i j.  i < k \<and> j < k}) \<le> (6 * length E) * (6 * length E)" (is "card ?A \<le> (6 * length E) * (6 * length E)")
+            {(Cover i, Cover j) |i j.  i < k \<and> j < k}) \<le> (6 * length E) * (6 * length E)" 
+    (is "card ?A \<le> (6 * length E) * (6 * length E)")
 proof -
-  have a1: "\<forall>e\<in> set E. card e = 2" using ugraph_def assms by metis
-  obtain B where B_def: "B = ({Cover i|i. i< k} \<union> {Edge v e 0|v e. e\<in> set E \<and> v \<in> e}\<union> {Edge v e 1|v e. e\<in> set E \<and> v \<in> e})"
+  have a1: "\<forall>e\<in> set E. card e = 2" 
+    using ugraph_def assms 
+    by metis
+  obtain B where B_def: "B = ({Cover i|i. i< k} \<union> {Edge v e 0|v e. e\<in> set E \<and> v \<in> e}
+    \<union> {Edge v e 1|v e. e\<in> set E \<and> v \<in> e})"
     by auto
-  have fB: "finite B" using fin_verts B_def a1 by fast
-  have fBB: "finite (B \<times> B)" using fin_max_arcs B_def a1 by blast
+  have fB: "finite B" 
+    using fin_verts B_def a1 
+    by fast
+  have fBB: "finite (B \<times> B)"
+    using fin_max_arcs B_def a1
+    by blast
   have "?A \<subseteq> 
     B \<times> B"
     using arcs_subset_graph B_def 
     by (auto)
   then have cardA: "card ?A \<le> card (B \<times> B)" 
     using card_mono fBB by(auto simp add: fin_max_arcs card_mono)  
-  have 1: "card B \<le> 6 * length E" using card_verts B_def assms by blast
+  have 1: "card B \<le> 6 * length E" 
+    using card_verts B_def assms 
+    by blast
   then have "card (B \<times> B) = (card B) * (card B)"
-    using card_cartesian_product by blast
+    using card_cartesian_product 
+    by blast
   then have "card (B \<times> B) \<le>  6 * length E *card B"
-    using 1 by(auto)
+    using 1 
+    by(auto)
   then have "card (B \<times> B) \<le>  6 * length E * 6 * length E"
-    using 1 order_subst1 by fastforce 
+    using 1 order_subst1 
+    by fastforce 
   then have "card ?A \<le> 6 * length E * 6 * length E" 
-    using cardA by linarith  
-  then show ?thesis by linarith
+    using cardA 
+    by linarith  
+  then show ?thesis
+    by linarith
 qed
-
 
 
 lemma aux: 
   assumes "ugraph (set E)" "k \<le> card (\<Union> (set E))" "distinct E"
-  shows "card ({Cover i |i. i < k} \<union> {Edge v e 0 |v e. e \<in> set E \<and> v \<in> e} \<union> {Edge v e (Suc 0) |v e. e \<in> set E \<and> v \<in> e}) +
+  shows "card ({Cover i |i. i < k} \<union> {Edge v e 0 |v e. e \<in> set E \<and> v \<in> e} 
+    \<union> {Edge v e (Suc 0) |v e. e \<in> set E \<and> v \<in> e}) +
         card
-         ({(Edge v e 0, Edge v e (Suc 0)) |v e. e \<in> set E \<and> v \<in> e} \<union> {(Edge v e 0, Edge u e 0) |u v e. e \<in> set E \<and> v \<in> e \<and> u \<in> e \<and> u \<noteq> v} \<union>
+         ({(Edge v e 0, Edge v e (Suc 0)) |v e. e \<in> set E \<and> v \<in> e} \<union> 
+          {(Edge v e 0, Edge u e 0) |u v e. e \<in> set E \<and> v \<in> e \<and> u \<in> e \<and> u \<noteq> v} \<union>
           {(Edge v e (Suc 0), Edge u e (Suc 0)) |u v e. e \<in> set E \<and> v \<in> e \<and> u \<in> e \<and> u \<noteq> v} \<union>
           {(Edge v e1 (Suc 0), Edge v e2 0) |v e1 e2.
-           \<exists>i<length E. \<exists>j<length E. e1 = E ! i \<and> e2 = E ! j \<and> v \<in> e1 \<and> v \<in> e2 \<and> i < j \<and> (\<forall>i'>i. v \<in> E ! i' \<longrightarrow> i' < length E \<longrightarrow> \<not> i' < j)} \<union>
-          {(Edge v e (Suc 0), Cover n) |v e n. \<exists>i<length E. e = E ! i \<and> v \<in> e \<and> (\<forall>j. v \<in> E ! j \<longrightarrow> j < length E \<longrightarrow> \<not> i < j) \<and> n < k} \<union>
-          {(Cover n, Edge v e 0) |v e n. \<exists>i<length E. e = E ! i \<and> v \<in> e \<and> (\<forall>j. v \<in> E ! j \<longrightarrow> j < length E \<longrightarrow> \<not> j < i) \<and> n < k} \<union>
+           \<exists>i<length E. \<exists>j<length E. e1 = E ! i \<and> e2 = E ! j \<and> v \<in> e1 \<and> v \<in> e2 \<and> i < j \<and>  
+              (\<forall>i'>i. v \<in> E ! i' \<longrightarrow> i' < length E \<longrightarrow> \<not> i' < j)} \<union>
+          {(Edge v e (Suc 0), Cover n) |v e n. \<exists>i<length E. e = E ! i \<and> v \<in> e \<and> 
+              (\<forall>j. v \<in> E ! j \<longrightarrow> j < length E \<longrightarrow> \<not> i < j) \<and> n < k} \<union>
+          {(Cover n, Edge v e 0) |v e n. \<exists>i<length E. e = E ! i \<and> v \<in> e \<and> 
+              (\<forall>j. v \<in> E ! j \<longrightarrow> j < length E \<longrightarrow> \<not> j < i) \<and> n < k} \<union>
           {(Cover i, Cover j) |i j. i < k \<and> j < k})
         \<le> Suc (Suc (8 * length E + 36 * length E * length E))"
 proof -
-  have 1: "card ({Cover i |i. i < k} \<union> {Edge v e 0 |v e. e \<in> set E \<and> v \<in> e} \<union> {Edge v e (Suc 0) |v e. e \<in> set E \<and> v \<in> e}) \<le> 6 * length E" 
-    using card_verts assms by auto
+  have 1: "card ({Cover i |i. i < k} \<union> {Edge v e 0 |v e. e \<in> set E \<and> v \<in> e} 
+      \<union> {Edge v e (Suc 0) |v e. e \<in> set E \<and> v \<in> e}) \<le> 6 * length E" 
+    using card_verts assms 
+    by auto
   have "card
-         ({(Edge v e 0, Edge v e (Suc 0)) |v e. e \<in> set E \<and> v \<in> e} \<union> {(Edge v e 0, Edge u e 0) |u v e. e \<in> set E \<and> v \<in> e \<and> u \<in> e \<and> u \<noteq> v} \<union>
+         ({(Edge v e 0, Edge v e (Suc 0)) |v e. e \<in> set E \<and> v \<in> e} 
+            \<union> {(Edge v e 0, Edge u e 0) |u v e. e \<in> set E \<and> v \<in> e \<and> u \<in> e \<and> u \<noteq> v} \<union>
           {(Edge v e (Suc 0), Edge u e (Suc 0)) |u v e. e \<in> set E \<and> v \<in> e \<and> u \<in> e \<and> u \<noteq> v} \<union>
           {(Edge v e1 (Suc 0), Edge v e2 0) |v e1 e2.
-           \<exists>i<length E. \<exists>j<length E. e1 = E ! i \<and> e2 = E ! j \<and> v \<in> e1 \<and> v \<in> e2 \<and> i < j \<and> (\<forall>i'>i. v \<in> E ! i' \<longrightarrow> i' < length E \<longrightarrow> \<not> i' < j)} \<union>
-          {(Edge v e (Suc 0), Cover n) |v e n. \<exists>i<length E. e = E ! i \<and> v \<in> e \<and> (\<forall>j. v \<in> E ! j \<longrightarrow> j < length E \<longrightarrow> \<not> i < j) \<and> n < k} \<union>
-          {(Cover n, Edge v e 0) |v e n. \<exists>i<length E. e = E ! i \<and> v \<in> e \<and> (\<forall>j. v \<in> E ! j \<longrightarrow> j < length E \<longrightarrow> \<not> j < i) \<and> n < k} \<union>
+           \<exists>i<length E. \<exists>j<length E. e1 = E ! i \<and> e2 = E ! j \<and> v \<in> e1 \<and> v \<in> e2 \<and> i < j 
+              \<and> (\<forall>i'>i. v \<in> E ! i' \<longrightarrow> i' < length E \<longrightarrow> \<not> i' < j)} \<union>
+          {(Edge v e (Suc 0), Cover n) |v e n. \<exists>i<length E. e = E ! i \<and> v \<in> e 
+              \<and> (\<forall>j. v \<in> E ! j \<longrightarrow> j < length E \<longrightarrow> \<not> i < j) \<and> n < k} \<union>
+          {(Cover n, Edge v e 0) |v e n. \<exists>i<length E. e = E ! i \<and> v \<in> e 
+              \<and> (\<forall>j. v \<in> E ! j \<longrightarrow> j < length E \<longrightarrow> \<not> j < i) \<and> n < k} \<union>
           {(Cover i, Cover j) |i j. i < k \<and> j < k}) \<le> 6 * length E * 6 * length E" 
     using card_arcs assms 
     by fastforce 
-  then show ?thesis using 1 
+  then show ?thesis 
+    using 1 
     by linarith
 qed
-
 
 
 lemma vc_to_hc_size: "size_hc (vc_hc (E, k)) \<le> vc_to_hc_space (size_vc (E, k))" 
@@ -414,13 +526,13 @@ lemma vc_to_hc_size: "size_hc (vc_hc (E, k)) \<le> vc_to_hc_space (size_vc (E, k
   using aux by blast
 
 
-
 lemma time_ugraph_to_hc: 
   assumes "ugraph (set E)" "k \<le> card (\<Union> (set E))" "distinct E" 
   shows "2 * card (set E) + (k + (2 * length E * k + k * k)) \<le> 4 * length E + 8 * (length E * length E)"
 proof -
   have 1: "k \<le> 2*(length E)" 
-    using assms k_smaller_2_length by blast
+    using assms k_smaller_2_length 
+    by blast
   then have 1: "2 * card (set E) + (k + (2 * length E * k + k * k)) \<le> 
     2 * card (set E) + ((2*length E) + (2 * length E * k + k * k))"
     by(auto simp add: 1)  
@@ -429,15 +541,21 @@ proof -
   then have 3: "... \<le> 4 * length E + (2 * length E * k + k * k)"
     by auto
   then have 4: "... \<le> 4 * length E + (2 * length E * (2 * length E)+ k * k)"
-    using 1 by force
+    using 1 
+    by force
   then have 5: "... \<le> 4 * length E + (4 * length E * length E + (2 * length E) * k)" 
-    using 1 by simp
+    using 1 
+    by simp
   then have 6: "... \<le> 4 * length E + (4 * length E * length E + 2 * length E * 2 * length E)"
-    using 1 by fastforce
+    using 1
+    by fastforce
   then have 7: "... \<le> 4 * length E + 8 * length E * length E" 
     by simp
-  then show ?thesis using 1 2 3 4 5 6 7 by linarith
+  then show ?thesis   
+    using 1 2 3 4 5 6 7 
+    by linarith
 qed
+
 
 lemma vc_to_hc_reifnes:
   "vc_hc_alg (E, k) \<le> SPEC (\<lambda>y. y = (vc_hc (E, k))) (\<lambda>_. vc_hc_time (size_vc (E, k)))"
