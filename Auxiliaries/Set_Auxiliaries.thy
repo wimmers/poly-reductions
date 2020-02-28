@@ -254,7 +254,6 @@ next
 qed
 
 
-
 lemma card_forall_for_elements: 
   assumes "\<forall>j \<in> T. card {u. f u j} \<le> 1" "S = {{u. f u j}| j. j \<in> T}"
   shows "\<forall>S' \<in> S. card S' \<le> 1"

@@ -1,6 +1,6 @@
 theory CSTC_Poly
   imports "NREST.NREST" CNF_SAT_to_Clique  "Landau_Symbols.Landau_More"
-    "NREST.RefineMonadicVCG" "NREST.Refine_Foreach" TSTSC_Poly
+    "NREST.RefineMonadicVCG" "NREST.Refine_Foreach" "../TSTSC_Poly"
 begin  
 
 definition "max_size_clauses xs = card (\<Union> (set xs))"
