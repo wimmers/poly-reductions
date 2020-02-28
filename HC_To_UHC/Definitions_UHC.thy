@@ -2,7 +2,7 @@ theory Definitions_UHC
   imports Main "../Three_Sat_To_Set_Cover" Graph_Theory.Digraph  Graph_Theory.Arc_Walk
     Graph_Theory.Vertex_Walk
     "../Auxiliaries/List_Auxiliaries" "../Auxiliaries/Set_Auxiliaries"
-    "../VC_To_HC/Definitions" "../Auxiliaries/Graph_auxiliaries" "../Graph_Extensions/Vwalk_Cycle"
+    "../VC_To_HC/Definitions_HC" "../Auxiliaries/Graph_auxiliaries" "../Graph_Extensions/Vwalk_Cycle"
 begin
 
 
@@ -36,16 +36,17 @@ definition "hc_to_uhc \<equiv>
     else (let x = (SOME x. x \<in> arcs G) in \<lparr>verts = {}, arcs = {((head G x, 0), (head G x, 1))}, tail = fst, head = snd\<rparr>))"
 
 
-
 lemma not_wf_digraph_not_arcs_empty: 
   assumes "\<not> wf_digraph G" 
   shows "arcs G \<noteq> {}"
 proof(rule ccontr)
   assume "\<not> arcs G \<noteq> {}"
   then have "wf_digraph G"
-    using wf_digraph_def by blast 
+    using wf_digraph_def 
+    by blast 
   then show False 
-    using assms by simp
+    using assms 
+    by simp
 qed
 
 
@@ -67,13 +68,17 @@ proof -
     using assms
     by (meson select_convs(1))
   have "arcs G \<noteq> {}" 
-    using not_wf_digraph_not_arcs_empty assms by auto
+    using not_wf_digraph_not_arcs_empty assms 
+    by auto
   then have "arcs G' \<noteq> {}"
     using assms 
     by (metis insert_not_empty select_convs(2)) 
   then have "\<not> wf_digraph G'"
-    using verts_empt_arcs_not_not_wf_digraph vertsG' by auto
-  then show ?thesis using uhc_def by blast
+    using verts_empt_arcs_not_not_wf_digraph vertsG' 
+    by auto
+  then show ?thesis 
+    using uhc_def 
+    by blast
 qed
 
 lemma else_not_in_uhc_2: 
@@ -85,13 +90,17 @@ proof -
     using assms 
     by (meson select_convs(1)) 
   have "arcs G \<noteq> {}" 
-    using assms by auto
+    using assms 
+    by auto
   then have "arcs G' \<noteq> {}"
     using assms 
     by (metis insert_not_empty select_convs(2)) 
   then have "\<not> wf_digraph G'"
-    using verts_empt_arcs_not_not_wf_digraph vertsG' by auto
-  then show ?thesis using uhc_def by blast
+    using verts_empt_arcs_not_not_wf_digraph vertsG'
+    by auto
+  then show ?thesis 
+    using uhc_def 
+    by blast
 qed
 
 
@@ -101,12 +110,16 @@ lemma else_not_in_uhc_3:
     shows "G' \<notin> uhc"
 proof -
   have vertsG': "verts G' = {(v, 0)|v. v \<in> verts G}"
-    using assms by auto
+    using assms 
+    by auto
   then have "verts G' = (verts G) \<times> {0}" 
     by auto
   then have "\<not> finite (verts G')" 
-    using assms finite_cartesian_productD1 by fastforce  
-  then show ?thesis using uhc_def by blast
+    using assms finite_cartesian_productD1 
+    by fastforce  
+  then show ?thesis
+    using uhc_def 
+    by blast
 qed
 
 
@@ -114,7 +127,8 @@ lemma else_not_in_uhc:
   assumes "G' = (let x = (SOME x. x \<in> arcs G) in \<lparr>verts = {}, arcs = {((head G x, 0), (head G x, 1))}, tail = fst, head = snd\<rparr>)" 
       "\<not>(wf_digraph G \<and> ((tail G = fst \<and> head G = snd) \<or> arcs G = {}))"
     shows "G' \<notin> uhc"
-  using else_not_in_uhc_1 else_not_in_uhc_2 assms by blast
+  using else_not_in_uhc_1 else_not_in_uhc_2 assms
+  by blast
 
 
 lemma G_leq_1_vertex_in_uhc: 
@@ -127,7 +141,9 @@ proof -
   then have "wf_digraph (hc_to_uhc G)" "symmetric (hc_to_uhc G)" "finite (verts (hc_to_uhc G))" 
     "arcs (hc_to_uhc G) = {}"  "is_uhc (hc_to_uhc G) []" 
     by(auto simp add: wf_digraph_def symmetric_def arcs_ends_def sym_def is_uhc_def)   
-  then show ?thesis using uhc_def by auto
+  then show ?thesis 
+    using uhc_def 
+    by auto
 qed 
 
 
