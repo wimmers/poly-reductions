@@ -11,7 +11,7 @@ that they can be computed in polynomial time.
 - `VC_To_FNS.thy`: Vertex Cover <= Feedback Node Set
 - `VC_To_HC.thy`: VC <= Hamiltonian Cycle
 
-###Auxiliaries
+### Auxiliaries
 - `VC_Set_To_VC_List.thy`: The representation of Vertex Cover using list makes the reduction from Vertex Cover to Hamiltonian Cycle easier. The rest of the repository uses the representation with sets.
 - `List_Auxiliaries.thy` contains a definition of a sublist used to describe paths.
 - `Graph_Auxiliaries.thy` and `Graph_Auxiliaries.thy` contain some basic lemmas used at different places.
