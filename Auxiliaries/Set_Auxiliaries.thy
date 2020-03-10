@@ -274,4 +274,11 @@ lemma card_leq_1_set_explicit:
   using assms card_0_eq card_1_singletonE le_eq_less_or_eq 
   by auto 
 
+
+lemma get_some_in_set: 
+  assumes "S \<noteq> {}" "e = (SOME e. e \<in> S)"
+  shows "e \<in> S" 
+  using assms 
+  by (meson all_not_in_conv tfl_some) 
+
 end

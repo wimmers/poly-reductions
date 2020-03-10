@@ -1,105 +1,26 @@
 theory VC_Set_To_VC_List
-  imports Main "../VC_To_HC/Definitions_HC"
+  imports Main "../Three_Sat_To_Set_Cover"  "../Auxiliaries/List_Auxiliaries" 
+    "../Auxiliaries/Set_Auxiliaries" "../Auxiliaries/Graph_Auxiliaries"
 begin
 
 section\<open>VC Set to VC List\<close>
 
 subsection\<open>Preliminaries\<close>
 
+definition
+  "is_vertex_cover_list E V \<equiv> \<forall> e \<in> set E. \<exists> v \<in> set V. v \<in> e"
+
+(*If size of V is smaller than k, then there is a problem concerning the cover nodes in the Graph*)
+definition
+  "vertex_cover_list \<equiv>
+  {(E, k). \<exists>V. ugraph (set E) \<and> (set V) \<subseteq> \<Union> (set E) \<and> k \<le> card (\<Union> (set E)) \<and> size V = k \<and> 
+    is_vertex_cover_list E V \<and> distinct E \<and> distinct V}"
+
 definition set_to_list::"'a set \<Rightarrow> 'a list" where
   "set_to_list S = (SOME L. (set L = S  \<and> distinct L))" 
 
 definition " vc_set_to_vc_list \<equiv>
   \<lambda>(E, k). (if ugraph E \<and> k \<le> card (\<Union> E) then (set_to_list E, k) else ([], 1))"
-
-
-fun get_elements:: "nat \<Rightarrow> 'a set \<Rightarrow> 'a set" where 
-  "get_elements 0 S = {}" |
-  "get_elements n S = (let e = (SOME e. e \<in> S) in {e} \<union> (get_elements (n-1) (S-{e})))"
-
-
-lemma get_some_simps: 
-  assumes "e = (SOME e. e \<in> S)"
-  shows "get_elements (Suc n) S = {e}\<union> (get_elements n (S - {e}))"
-proof -
-  have "get_elements (Suc n) S =  (let e = (SOME e. e \<in> S) in {e} \<union> (get_elements (n) (S-{e})))" 
-    by auto
-  then show ?thesis 
-    using assms 
-    by meson
-qed
-
-
-lemma get_some_in_set: 
-  assumes "S \<noteq> {}" "e = (SOME e. e \<in> S)"
-  shows "e \<in> S" 
-  using assms 
-  by (meson all_not_in_conv tfl_some) 
-
-
-lemma get_elements_subset:
-  assumes  "n \<le> card S" 
-  shows "get_elements n S \<subseteq> S"
-  using assms
-proof(induction n arbitrary: S)
-  case 0
-  then show ?case 
-    by auto
-next
-  case (Suc n)
-  then obtain e where e_def: "e = (SOME e. e \<in> S)" 
-    by auto
-  then have 2: "get_elements (Suc n) S = {e}\<union> (get_elements n (S - {e}))" 
-    using get_some_simps 
-    by fast  
-  then have "S \<noteq> {}"  
-    using Suc
-    by auto
-  then have 1: "{e} \<subseteq> S" 
-    using e_def 
-    by (metis bot.extremum_unique empty_subsetI insert_subsetI someI subsetI)  
-  then have "n\<le> card (S-{e})" 
-    using Suc e_def
-    by (metis (no_types, lifting) Diff_empty Diff_insert0 Suc_leD Suc_le_mono antisym card_insert_le_m1 diff_Suc_1 insert_Diff linear zero_less_Suc) 
-  then have "get_elements n (S-{e}) \<subseteq> S" 
-    using Suc  
-    by auto 
-  then show ?case 
-    using 1 2 
-    by auto   
-qed
-
-
-lemma card_get_elements:
-  assumes "n\<le> card S"
-  shows "card (get_elements n S) = n"
-  using assms 
-proof(induction n arbitrary: S)
-  case 0
-  then show ?case 
-    by auto
-next
-  case (Suc n)
-  then obtain e where e_def: "e = (SOME e. e \<in> S)" 
-    by auto
-  then have 2: "get_elements (Suc n) S = {e} \<union> (get_elements n (S -{e}))" 
-    using get_some_simps 
-    by fast
-  then have 3: "n\<le> card (S-{e})" 
-    using Suc e_def
-    by (metis (no_types, lifting) Diff_empty Diff_insert0 Suc_leD Suc_le_mono antisym card_insert_le_m1 diff_Suc_1 insert_Diff linear zero_less_Suc) 
-  then have 1: "card (get_elements (n) (S -{e})) = n"
-    using Suc 
-    by auto 
-  have "get_elements n (S-{e}) \<subseteq> (S-{e})" 
-    using get_elements_subset Suc 3 
-    by auto
-  then have "e \<notin> get_elements n (S-{e})"
-    by auto
-  then show ?case 
-    using 1 2 Suc  
-    by (metis Diff_eq_empty_iff Suc_diff_le \<open>get_elements n (S - {e}) \<subseteq> S - {e}\<close> card_0_eq card_Suc_eq card_infinite diff_is_0_eq' finite.emptyI finite_Diff2 finite_insert insert_is_Un le_numeral_extra(3)) 
-qed
 
 
 lemma set_set_to_list: "finite S \<Longrightarrow> set (set_to_list S) = S" 
@@ -133,22 +54,22 @@ lemma is_vertex_cover_super_set:
   by (smt Collect_mem_eq in_mono mem_Collect_eq order_refl)
 
 
+subsection\<open>In VC_SET implies in VC_LIST\<close>
+
 context
   fixes E k assumes in_vc: "(E, k) \<in> vertex_cover"
 begin
 
 
 lemma make_card_equal: 
-  assumes "ugraph (set E')" "set V' \<subseteq> \<Union> (set E')" "k \<le> card (\<Union> (set E'))" "size V' \<le> k" "is_vertex_cover (set E') (set V')" "distinct V'"
-  shows "\<exists>V. ugraph (set E') \<and> set V \<subseteq> \<Union> (set E') \<and> k \<le> card (\<Union> (set E')) \<and> size V = k \<and> is_vertex_cover (set E') (set V) \<and> distinct V"
+  assumes "ugraph (set E')" "set V' \<subseteq> \<Union> (set E')" "k \<le> card (\<Union> (set E'))" 
+      "size V' \<le> k" "is_vertex_cover (set E') (set V')" "distinct V'"
+  shows "\<exists>V. ugraph (set E') \<and> set V \<subseteq> \<Union> (set E') \<and> k \<le> card (\<Union> (set E')) 
+      \<and> size V = k \<and> is_vertex_cover (set E') (set V) \<and> distinct V"
 proof -
-  obtain k' where k'_def: "k' = k - (size V')" 
-    by simp
-  then obtain leftNodes where leftNodes_def: "leftNodes = ((\<Union> (set E')) - (set V'))"  
-    by simp
+  define k' where k'_def: "k' = k - (size V')" 
+  define leftNodes where leftNodes_def: "leftNodes = ((\<Union> (set E')) - (set V'))"  
   then have "leftNodes \<subseteq> \<Union> (set E')" 
-    by simp
-  then obtain setV where setV_def: "setV= (set V') \<union> get_elements k' leftNodes" 
     by simp
   have 1: "k' \<le> card leftNodes" 
     using assms k'_def leftNodes_def 
@@ -157,33 +78,34 @@ proof -
       using k'_def 
       by (simp add: assms(4))  
     then show ?thesis 
-      by (metis (full_types) Diff_partition Diff_subset_conv Un_Diff_cancel \<open>leftNodes \<subseteq> \<Union> (set E')\<close> assms(2) assms(3) assms(6) card_Un_le distinct_size double_diff k'_def le_diff_conv leftNodes_def order_trans) 
+      by (metis (full_types) Diff_partition Diff_subset_conv Un_Diff_cancel 
+          \<open>leftNodes \<subseteq> \<Union> (set E')\<close> assms(2, 3, 6) card_Un_le distinct_size 
+          double_diff k'_def le_diff_conv leftNodes_def order_trans) 
   qed
+  then obtain V_left where V_left_def: "V_left \<subseteq> leftNodes" "card V_left = k'"
+    using card_Ex_subset 
+    by auto 
+  then obtain setV where setV_def: "setV= (set V') \<union> V_left" 
+    by simp
+  
   then have 2: "setV \<subseteq> \<Union> (set E')"  
-    using \<open>leftNodes \<subseteq> \<Union> (set E')\<close> get_elements_subset setV_def assms 
-    by blast
+    using \<open>leftNodes \<subseteq> \<Union> (set E')\<close> V_left_def setV_def assms 
+    by simp
   have 4: "finite setV" 
     using 2 assms ugraph_def
     by (meson rev_finite_subset ugraph_vertex_set_finite) 
   have 3: "card setV = k" 
     using assms setV_def k'_def 1 
-  proof -
-    have "card (get_elements k' leftNodes) = k'" 
-      by (simp add: "1" card_get_elements) 
-    have a: "(get_elements k' leftNodes) \<subseteq> leftNodes" 
-      by (simp add: "1" get_elements_subset)  
-    have "leftNodes \<inter> set V' = {}" 
-      using leftNodes_def 
+  proof - 
+    have "V_left \<inter> set V' = {}" 
+      using leftNodes_def V_left_def 
       by auto
-    then have "set V' \<inter> (get_elements k' leftNodes) = {}" 
-      using a 
-      by auto
-    then have "card setV = card (set V') + card (get_elements k' leftNodes)" 
+    then have "card setV = card (set V') + card (V_left)" 
       using setV_def 4 
-      by (simp add: card_Un_disjoint)   
+      by (simp add: card_Un_disjoint inf_commute)    
     then show ?thesis 
-      using k'_def setV_def assms \<open>card (get_elements k' leftNodes) = k'\<close> distinct_size 
-      by force 
+      using k'_def setV_def assms
+      by (simp add: V_left_def(2) distinct_size) 
   qed
   then obtain V where V_def: "V = set_to_list setV" 
     by auto
@@ -194,10 +116,7 @@ proof -
     using 4 
     by (simp add: V_def distinct_set_to_list) 
   then have 7: "set V \<subseteq> \<Union> (set E')" "size V = k" 
-    using 5 2 
-     apply(simp) 
-    using 5 3 6 
-    by (simp add: distinct_size) 
+    by(auto simp add: 2 3 5 6 distinct_size) 
   have "set V' \<subseteq> set V" 
     using 5 setV_def
     by simp 
@@ -232,7 +151,8 @@ proof -
   then have 2: "set E' = E" 
     using set_set_to_list E'_def 
     by fast
-  then have 3: "ugraph (set E')" "V \<subseteq> \<Union> (set E')" "k \<le> card (\<Union> (set E'))" "card V \<le> k" "is_vertex_cover (set E') V"
+  then have 3: "ugraph (set E')" "V \<subseteq> \<Union> (set E')" "k \<le> card (\<Union> (set E'))" 
+    "card V \<le> k" "is_vertex_cover (set E') V"
     using V_def E'_def 
     by metis+
   then obtain V' where V'_def: "V' = set_to_list V" 
@@ -267,17 +187,10 @@ end
 
 lemma else_not_in_vc_list:
   shows "([], 1) \<notin> vertex_cover_list" 
-proof -
-  have "card (set []) = 0" 
-    by simp
-  then have "1 > card (set [])" 
-    by simp
-  then have "([], 1) \<notin> vertex_cover_list"
-    using vertex_cover_list_def
-    by force
-  then show ?thesis .
-qed
+  unfolding vertex_cover_list_def by auto 
 
+
+subsection\<open>In VC_LIST implies in VC_SET\<close>
 
 context
   fixes E k assumes in_vc_list: "vc_set_to_vc_list (E,k) \<in> vertex_cover_list"
@@ -296,7 +209,8 @@ lemma in_vc:
   shows "(E,k) \<in> vertex_cover"
 proof - 
   have "(E', k') = (set_to_list E, k)" 
-    using E'_def in_vc_list else_not_in_vc_list vc_set_to_vc_list_def 
+    using E'_def in_vc_list else_not_in_vc_list 
+    unfolding vc_set_to_vc_list_def 
     by (smt old.prod.case)
   then have 2: "k' = k" "E' = set_to_list E" 
     by simp+
@@ -366,11 +280,6 @@ end
 
 subsection\<open> Main theorem \<close>
 
-(*Just some help for Isabelle, since she was not able to figure that out herself*)
-lemma vc_set_implies_vc_list: "(E,k) \<in> vertex_cover  \<Longrightarrow> vc_set_to_vc_list (E,k) \<in> vertex_cover_list"
-  using in_vc_list by auto
-
-
 lemma in_vc_list_implies_in_vc_set: 
   assumes "vc_set_to_vc_list (E,k) \<in> vertex_cover_list"
   shows "(E,k) \<in> vertex_cover"
@@ -391,6 +300,6 @@ qed
 theorem is_reduction_vc: 
   "is_reduction vc_set_to_vc_list vertex_cover vertex_cover_list"
   unfolding is_reduction_def
-  using vc_set_implies_vc_list in_vc_list_implies_in_vc_set by auto
+  using in_vc_list in_vc_list_implies_in_vc_set by auto
 
 end

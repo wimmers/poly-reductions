@@ -1,20 +1,11 @@
 theory Definitions_HC
   imports Main "../Three_Sat_To_Set_Cover"  "../Auxiliaries/List_Auxiliaries" 
-    "../Auxiliaries/Set_Auxiliaries" "../Auxiliaries/Graph_Auxiliaries"
-    Graph_Theory.Digraph  Graph_Theory.Arc_Walk
-    Graph_Theory.Vertex_Walk
+    "../Auxiliaries/Set_Auxiliaries" "../Auxiliaries/Graph_Auxiliaries" 
+    "../VC_Set_to_VC_List/VC_Set_to_VC_List"
+    Graph_Theory.Digraph  Graph_Theory.Arc_Walk Graph_Theory.Vertex_Walk
 begin
 
 subsection\<open>Definitions\<close>
-
-definition
-  "is_vertex_cover_list E V \<equiv> \<forall> e \<in> set E. \<exists> v \<in> set V. v \<in> e"
-
-(*If size of V is smaller than k, then there is a problem concerning the cover nodes in the Graph*)
-definition
-  "vertex_cover_list \<equiv>
-  {(E, k). \<exists>V. ugraph (set E) \<and> (set V) \<subseteq> \<Union> (set E) \<and> k \<le> card (\<Union> (set E)) \<and> size V = k \<and> 
-    is_vertex_cover_list E V \<and> distinct E \<and> distinct V}"
 
 datatype ('a, 'b) hc_node = Cover nat | Edge 'a 'b nat
 

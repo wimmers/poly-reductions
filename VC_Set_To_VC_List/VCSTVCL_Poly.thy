@@ -28,7 +28,8 @@ definition "vcs_vcl_time n = 1+ (2 * n + 1) + 1 + n"
 lemma vcs_to_vcl_size: "size_VC_List (vc_set_to_vc_list (E, k)) \<le> vcs_to_vcl_space (size_VC (E, k))" 
   apply(auto simp: size_VC_List_def vc_set_to_vc_list_def vcs_to_vcl_space_def size_VC_def)
   apply(auto simp add: set_to_list_def)
-  by (metis (mono_tags, lifting) distinct_size eq_imp_le finite_UnionD finite_distinct_list tfl_some ugraph_vertex_set_finite) 
+  by (metis (mono_tags, lifting) distinct_size eq_imp_le finite_UnionD 
+      finite_distinct_list tfl_some ugraph_vertex_set_finite) 
 
 
 lemma vcs_to_vcl_reifnes:
@@ -51,8 +52,8 @@ lemma cnf_sat_to_clique_ispolyred: "ispolyred vcs_to_vcl vertex_cover vertex_cov
   apply(safe)
   subgoal using vcs_to_vcl_reifnes by blast
   subgoal using vcs_to_vcl_size by blast  
-  subgoal unfolding poly_def vcs_vcl_time_def apply(rule exI[where x=2]) by auto
-  subgoal unfolding poly_def vcs_to_vcl_space_def apply(rule exI[where x=2]) by auto
+  subgoal unfolding poly_def vcs_vcl_time_def apply(intro exI[where x=2]) by auto
+  subgoal unfolding poly_def vcs_to_vcl_space_def apply(intro exI[where x=2]) by auto
   subgoal using is_reduction_vc .
   done
 
