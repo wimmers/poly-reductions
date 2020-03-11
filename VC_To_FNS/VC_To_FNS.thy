@@ -36,9 +36,9 @@ proof(induction E' arbitrary: G')
     by auto
 next
   case (Cons a E')
-  then have "e \<in> arcs ((pre_digraph.del_vert G' a))"
-    by fastforce
-  then show ?case 
+  then have "e \<in> arcs (pre_digraph.del_vert G' a)"
+    by  fastforce
+  then show ?case
     by (simp add: pre_digraph.arcs_del_vert) 
 qed
 

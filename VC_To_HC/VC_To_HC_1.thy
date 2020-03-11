@@ -64,35 +64,14 @@ qed
 lemma fin_S_Edge: 
   assumes "S= {(v, e)|v e. e\<in> set E \<and> v \<in> e}"  "\<forall>e\<in> set E. card e = 2"
   shows "finite S"
-  using assms 
-proof(induction E arbitrary: S)
-  case Nil
-  then show ?case 
+proof -
+  have "{(v, e)|v e. e\<in> set E \<and> v \<in> e} \<subseteq> (\<Union> (set E)) \<times> set E"
     by auto
-next
-  case (Cons a E)
-  then have 0: "{(v, e) |v e. e \<in> set (a # E) \<and> v \<in> e} = 
-    {(v, e) |v e. e \<in> set (E) \<and> v \<in> e} \<union> {(v, e)|v e. e = a \<and> v \<in> e}"
-    by auto
-  have 1: "finite {(v, e) |v e. e \<in> set (E) \<and> v \<in> e}" 
-    using Cons assms 
-    by simp
-  have "card a = 2" 
-    using Cons 
-    by simp
-  then obtain u v where "a = {u, v}" "u\<noteq> v" 
-    using Cons e_in_E_e_explicit 
-    by metis
-  then have "{(v, e)|v e. e = a \<and> v \<in> e} = {(v, a), (u, a)}" 
-    by blast
-  then have 2: "finite {(v, e)|v e. e = a \<and> v \<in> e}" 
-    using \<open>u \<noteq> v\<close> 
-    by auto 
-  then show ?case 
-    using 1 2 0 Cons 
-    by simp 
+  moreover have "finite \<dots>"
+    using assms(2) by (force intro: card_ge_0_finite)
+  ultimately show ?thesis
+    unfolding \<open>S = _\<close> by (rule finite_subset)
 qed
-
 
 lemma f_inv: 
   assumes "f x (v, e)"
@@ -125,87 +104,13 @@ lemma fin_Edge0:
   assumes "\<forall>e\<in> set E. card e = 2" 
   shows "finite {Edge v e 0|v e. e\<in> set E \<and> v \<in> e}"
 proof -
-  obtain S where S_def: "S= {(v, e)|v e. e\<in> set E \<and> v \<in> e}" 
+  have "{Edge v e 0|v e. e\<in> set E \<and> v \<in> e} \<subseteq> (\<lambda>(v, e). Edge v e 0) ` ((\<Union> (set E)) \<times> set E)"
     by auto
-  obtain T where T_def: "T = {{u|u. f u (v, e)}|v e. (v, e)\<in> S}"
-    by auto
-  have card_S: "card S \<le> 2*length E"
-    using S_def card_S_Edge assms 
-    by blast
-  have 1: "{Edge v e 0|v e. e\<in> set E \<and> v \<in> e} = \<Union> T" 
-  proof
-    show "{Edge v e 0 |v e. e \<in> set E \<and> v \<in> e} \<subseteq> \<Union> T" 
-    proof 
-      have 0: "\<Union> T = {u|u v e. f u (v, e) \<and> (v, e) \<in> S}" 
-        using T_def 
-        by auto
-      fix x assume a1: "x \<in> {Edge v e 0 |v e. e \<in> set E \<and> v \<in> e}"
-      then obtain v e where ve_def: "x = Edge v e 0"
-        by auto
-      then have 1: "f x (v, e)"
-        by simp
-      have "e \<in> set E" "v \<in> e" 
-        using ve_def a1 
-        by simp+
-      then have "(v, e) \<in> S" 
-        using S_def 
-        by simp
-      then have "x \<in> {u|u v e. f u (v, e) \<and> (v, e) \<in> S}"
-        using 1 
-        by blast
-      then show "x \<in> \<Union> T" 
-        using 0 
-        by simp
-    qed
-  next
-    show "\<Union> T \<subseteq> {Edge v e 0 |v e. e \<in> set E \<and> v \<in> e}" 
-    proof 
-      fix x assume a1: "x \<in> \<Union> T"
-      have 0: "\<Union> T = {u|u v e. f u (v, e) \<and> (v, e) \<in> S}" 
-        using T_def 
-        by auto
-      then obtain v e  where ve_def: "f x (v, e)" "(v, e) \<in> S" 
-        using a1 
-        by auto
-      then have 1: "x = Edge v e 0" 
-        using f_inv 
-        by fastforce 
-      have 2: "v \<in> e" "e \<in> set E" 
-        using ve_def S_def 
-        by blast+
-      then show "x \<in> {Edge v e 0 |v e. e \<in> set E \<and> v \<in> e}"
-        using 1 2
-        by simp
-    qed
-  qed  
-  have 3: "\<forall>S' \<in> T. finite S'" 
-  proof
-    fix S' assume "S' \<in> T" 
-    then obtain v e where ve_def: "S' = {u|u. f u (v, e)}" "(v, e)\<in> S"
-      using T_def by blast
-    then have "S' = {Edge v e 0}" 
-      using set_f 
-      by metis
-    then show "finite S'" 
-      by simp
-  qed
-  have finS: "finite S" 
-    using S_def fin_S_Edge assms
-    by auto 
-  then have fin: "finite T"
-    using fin_dep_on_other_set T_def 
-    by fastforce 
-  have finT: "finite T"
-    using finS fin_dep_on_other_set T_def 
-    by fastforce
-  have "finite (\<Union> T)"
-    using 3 fin by blast
-  then have "finite {Edge v e 0|v e. e\<in> set E \<and> v \<in> e}" 
-    using 1 
-    by simp 
-  then show ?thesis .  
+  moreover have "finite \<dots>"
+    using assms by (force intro: card_ge_0_finite)
+  ultimately show ?thesis
+    by (rule finite_subset)
 qed
-
 
 lemma fin_Edge1:
   assumes "\<forall>e\<in> set E. card e = 2" 
@@ -681,6 +586,9 @@ lemma distinct_edges:
   shows "distinct E"
   using in_vc vertex_cover_list_def by(auto)
 
+lemma get_second_in_set:
+  "get_second S \<in> S" if "S \<noteq> {}"
+  using that unfolding get_second_def by (auto intro: someI)
 
 lemma distinct_edge_lists:
   assumes "u = get_second (aa - {a})" "ugraph (insert aa (set E'))" 
@@ -688,16 +596,11 @@ lemma distinct_edge_lists:
       else [Edge a aa 0, Edge u aa 0, Edge u aa 1, Edge a aa 1])"
 proof -
   have "card aa = 2" 
-    using assms 
-    by (simp add: ugraph_def) 
-  then have "u \<in> (aa - {a})" 
-    using assms  
-    by (metis Diff_empty Diff_insert0 add_diff_cancel_right' card_Diff_singleton finite.emptyI get_second_in_edge infinite_remove insert_Diff_if is_singletonI is_singleton_altdef less_diff_conv not_add_less2 numeral_less_iff odd_card_imp_not_empty odd_one one_add_one semiring_norm(76) singletonI) 
-  then have "u \<noteq> a" 
-    using assms 
-    by blast
-  then show ?thesis 
-    by(auto)
+    using assms by (simp add: ugraph_def)
+  then have "u \<in> (aa - {a})"
+    unfolding \<open>u = _\<close> using e_in_E_e_explicit by (intro get_second_in_set) auto
+  then show ?thesis
+    by auto
 qed
 
 
@@ -716,9 +619,7 @@ lemma edge_in_list_construction_contains_given_e2:
         in if u \<in> C' then [Edge a aa 0, Edge a aa 1] 
         else [Edge a aa 0, Edge u aa 0, Edge u aa 1, Edge a aa 1])"
   shows "e = aa"
-  using assms edge_in_list_construction_contains_given_e 
-  by (smt empty_set hc_node.inject(2) list.simps(15) set_ConsD singleton_iff)
-
+  using assms by (auto simp: Let_def split: if_split_asm)
 
 lemma only_previous_edges_in_new_edges:
   assumes "e \<notin> set E'" "\<exists>u i. Edge u e i \<in> set (construct_cycle_add_edge_nodes E' a C')"

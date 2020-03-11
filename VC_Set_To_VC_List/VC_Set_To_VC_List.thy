@@ -142,6 +142,20 @@ lemma make_card_equal:
   assumes "ugraph (set E')" "set V' \<subseteq> \<Union> (set E')" "k \<le> card (\<Union> (set E'))" "size V' \<le> k" "is_vertex_cover (set E') (set V')" "distinct V'"
   shows "\<exists>V. ugraph (set E') \<and> set V \<subseteq> \<Union> (set E') \<and> k \<le> card (\<Union> (set E')) \<and> size V = k \<and> is_vertex_cover (set E') (set V) \<and> distinct V"
 proof -
+  define k' where k'_def: "k' = k - (size V')"
+  define leftNodes where leftNodes_def: "leftNodes = ((\<Union> (set E')) - (set V'))"  
+  then have "leftNodes \<subseteq> \<Union> (set E')" 
+    by simp
+  have 1: "k' \<le> card leftNodes" 
+  proof -
+    have "k = k' + size V'" 
+      using k'_def by (simp add: assms(4))  
+    with \<open>leftNodes \<subseteq> \<Union> (set E')\<close> assms(2,3,6) show ?thesis
+      unfolding k'_def
+      by (metis (full_types) Diff_partition Diff_subset_conv Un_Diff_cancel card_Un_le distinct_size
+            double_diff le_diff_conv leftNodes_def order_trans) 
+  qed
+proof -
   obtain k' where k'_def: "k' = k - (size V')" 
     by simp
   then obtain leftNodes where leftNodes_def: "leftNodes = ((\<Union> (set E')) - (set V'))"  
