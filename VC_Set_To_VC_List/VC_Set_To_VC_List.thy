@@ -67,27 +67,24 @@ lemma make_card_equal:
   shows "\<exists>V. ugraph (set E') \<and> set V \<subseteq> \<Union> (set E') \<and> k \<le> card (\<Union> (set E')) 
       \<and> size V = k \<and> is_vertex_cover (set E') (set V) \<and> distinct V"
 proof -
-  define k' where k'_def: "k' = k - (size V')" 
+  define k' where k'_def: "k' = k - (size V')"
   define leftNodes where leftNodes_def: "leftNodes = ((\<Union> (set E')) - (set V'))"  
   then have "leftNodes \<subseteq> \<Union> (set E')" 
     by simp
   have 1: "k' \<le> card leftNodes" 
-    using assms k'_def leftNodes_def 
   proof -
     have "k = k' + size V'" 
-      using k'_def 
-      by (simp add: assms(4))  
-    then show ?thesis 
-      by (metis (full_types) Diff_partition Diff_subset_conv Un_Diff_cancel 
-          \<open>leftNodes \<subseteq> \<Union> (set E')\<close> assms(2, 3, 6) card_Un_le distinct_size 
-          double_diff k'_def le_diff_conv leftNodes_def order_trans) 
+      using k'_def by (simp add: assms(4))  
+    with \<open>leftNodes \<subseteq> \<Union> (set E')\<close> assms(2,3,6) show ?thesis
+      unfolding k'_def
+      by (metis (full_types) Diff_partition Diff_subset_conv Un_Diff_cancel card_Un_le distinct_size
+            double_diff le_diff_conv leftNodes_def order_trans) 
   qed
   then obtain V_left where V_left_def: "V_left \<subseteq> leftNodes" "card V_left = k'"
     using card_Ex_subset 
     by auto 
   then obtain setV where setV_def: "setV= (set V') \<union> V_left" 
-    by simp
-  
+    by simp  
   then have 2: "setV \<subseteq> \<Union> (set E')"  
     using \<open>leftNodes \<subseteq> \<Union> (set E')\<close> V_left_def setV_def assms 
     by simp
@@ -95,7 +92,6 @@ proof -
     using 2 assms ugraph_def
     by (meson rev_finite_subset ugraph_vertex_set_finite) 
   have 3: "card setV = k" 
-    using assms setV_def k'_def 1 
   proof - 
     have "V_left \<inter> set V' = {}" 
       using leftNodes_def V_left_def 
@@ -104,8 +100,8 @@ proof -
       using setV_def 4 
       by (simp add: card_Un_disjoint inf_commute)    
     then show ?thesis 
-      using k'_def setV_def assms
-      by (simp add: V_left_def(2) distinct_size) 
+      using k'_def setV_def assms V_left_def
+      by (simp add: distinct_size) 
   qed
   then obtain V where V_def: "V = set_to_list setV" 
     by auto
@@ -273,9 +269,7 @@ proof -
     by blast    
 qed
 
-
 end
-
 
 
 subsection\<open> Main theorem \<close>

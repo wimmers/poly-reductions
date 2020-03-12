@@ -1,14 +1,12 @@
 theory VC_To_FNS
   imports Main "../Three_Sat_To_Set_Cover" Graph_Theory.Digraph Graph_Theory.Arc_Walk
-    "../VC_Set_To_VC_List/VC_Set_To_VC_List"
+    "../VC_Set_To_VC_List/VC_Set_To_VC_List" "../Auxiliaries/Graph_Auxiliaries"
 begin
 
 section\<open>VC To FNS\<close>
 subsubsection\<open>Preliminaries\<close>
 
-fun del_verts:: "('a, 'b) pre_digraph \<Rightarrow> 'a list \<Rightarrow>('a,'b) pre_digraph" where
-  "del_verts G [] = G" |
-  "del_verts G (v#vs) = del_verts (pre_digraph.del_vert G v) vs"
+definition "del_verts G vs = foldr (\<lambda> v G. pre_digraph.del_vert G v) vs G"
 
 definition
   "is_fns (G::('a,'b) pre_digraph) (R:: 'a list)  \<equiv> \<not>(\<exists>p. pre_digraph.cycle (del_verts G R) p) "
@@ -27,78 +25,69 @@ lemma else_not_in_fns:
 
 
 lemma e_in_arcs_del_verts_e_in_arcs: 
-  assumes "e \<in> arcs (del_verts G' E')"
-  shows "e \<in> arcs G'"
+  assumes "e \<in> arcs (del_verts G R)"
+  shows "e \<in> arcs G"
   using assms
-proof(induction E' arbitrary: G')
-  case Nil
-  then show ?case 
-    by auto
-next
-  case (Cons a E')
-  then have "e \<in> arcs ((pre_digraph.del_vert G' a))"
-    by fastforce
-  then show ?case 
-    by (simp add: pre_digraph.arcs_del_vert) 
-qed
+  unfolding del_verts_def
+  by(induction R arbitrary: G)(auto simp add: pre_digraph.arcs_del_vert)  
+
+
+lemma foldr_del_vert: 
+  shows "(pre_digraph.del_vert (foldr (\<lambda>v G. pre_digraph.del_vert G v) R G) v) = 
+    (foldr (\<lambda>v G. pre_digraph.del_vert G v) (v#R) G)"
+  by(induction R arbitrary: G)(auto)
+
+
+lemma e_not_in_del_vert_head_e: 
+  shows "e \<notin> arcs (pre_digraph.del_vert G (head G e))"
+  unfolding pre_digraph.del_vert_def by simp
+
+
+lemma head_del_verts_eq_head_before: 
+  shows "head (del_verts G R) e = head G e" 
+  unfolding del_verts_def pre_digraph.del_vert_def 
+  by(induction R arbitrary: G)(auto)
+
+
+lemma tail_del_verts_eq_tail_before: 
+  shows "tail (del_verts G R) e = tail G e" 
+  unfolding del_verts_def pre_digraph.del_vert_def 
+  by(induction R arbitrary: G)(auto)
 
 
 lemma e_in_arcs_del_verts_impl_not_vertex_in_E: 
-  assumes "e \<in> arcs (del_verts G' E')"
-  shows "head G' e \<notin> set E' \<and> tail G' e \<notin> set E'"
-  using assms 
-proof(induction E' arbitrary: G')
-  case Nil
-  then show ?case 
-    by simp
-next
-  case (Cons a E')
-  then obtain G1 where G1_def: "G1 = (pre_digraph.del_vert G' a)"
-    by auto
-  then have "e \<in> arcs (del_verts G1 E')" 
-    using Cons
-    by auto 
-  then have 1: "head G' e \<notin> set E' \<and> tail G' e \<notin> set E'"
-    using Cons 
-    by (metis del_verts.simps(2) pre_digraph.head_del_vert pre_digraph.tail_del_vert)
-  have "head G' e \<noteq> a \<and> tail G' e \<noteq> a" 
-  proof(rule ccontr)
-    assume "\<not> (head G' e \<noteq> a \<and> tail G' e \<noteq> a)"
-    then have "head G' e = a \<or> tail G' e = a" 
-      by auto
-    then have "e \<notin> arcs G1" 
-      using G1_def 
-      by(auto simp add: pre_digraph.del_vert_def)  
-    then have "e \<notin> arcs (del_verts G1 E')" 
-      using e_in_arcs_del_verts_e_in_arcs 
-      by metis
-    then show False
-      using Cons G1_def 
-      by simp
-  qed
-  then show ?case
-    using 1 
-    by simp
-qed
+  assumes "e \<in> arcs (del_verts G R)"
+  shows "head G e \<notin> set R \<and> tail G e \<notin> set R"
+  using assms
+  unfolding del_verts_def 
+  apply(induction R arbitrary: G) 
+   apply(auto simp add: pre_digraph.arcs_del_vert)
+  using tail_del_verts_eq_tail_before 
+      e_not_in_del_vert_head_e head_del_verts_eq_head_before
+  unfolding del_verts_def by fast+
 
 
 lemma e_in_arcs_not_in_R:
-  assumes "e \<in> arcs G" "head G e \<notin> set E" "tail G e \<notin> set E"
-  shows "e \<in> arcs (del_verts G E)"
+  assumes "e \<in> arcs G" "head G e \<notin> set R" "tail G e \<notin> set R"
+  shows "e \<in> arcs (del_verts G R)"
   using assms 
-proof(induction E arbitrary: G)
+proof(induction R arbitrary: G)
   case Nil
   then show ?case 
+    unfolding del_verts_def
     by auto
 next
-  case (Cons a E)
-  then have "e \<in> arcs (pre_digraph.del_vert G a)" 
+  case (Cons a R)
+  then have e_in: "e \<in> arcs (pre_digraph.del_vert G a)" 
     by (simp add: pre_digraph.del_vert_def) 
-  then have "e \<in> arcs (del_verts (pre_digraph.del_vert G a) E)"
+  then have "e \<in> arcs (foldr (\<lambda> v G. pre_digraph.del_vert G v) R G)"
     using Cons
+    unfolding del_verts_def
     by (simp add: pre_digraph.head_del_vert pre_digraph.tail_del_vert) 
   then show ?case 
-    by simp
+    by (metis (mono_tags, lifting) e_in del_verts_def 
+        foldr_del_vert head_del_verts_eq_head_before mem_Collect_eq pre_digraph.arcs_del_vert 
+        tail_del_verts_eq_tail_before) 
 qed
 
 
@@ -110,22 +99,6 @@ context
   fixes Cov assumes Cov_def: "Cov \<subseteq> \<Union> E" "card Cov \<le> k" "is_vertex_cover E Cov" 
   fixes R assumes R_def: "R = set_to_list Cov"
 begin
-
-
-lemma k_k':
-  shows "k' = k+1"
-proof -
-  have ugraph: "ugraph E" "k \<le> card (\<Union> E)"
-    using in_vc vertex_cover_def
-    by auto
-  then have "vc_to_fns (E, k) 
-    = (\<lparr>verts = {v. v \<in> \<Union> E}, arcs = {(u, v)| u v. {u, v} \<in> E}, tail = fst, head = snd \<rparr>, k+1)"
-    by(auto simp add: vc_to_fns_def) 
-  then show ?thesis 
-    using G_def 
-    by simp
-qed
-
 
 lemma G_def_2:
   shows "G = \<lparr>verts = {v. v \<in> \<Union> E}, arcs = {(u, v)| u v. {u, v} \<in> E}, tail = fst, head = snd\<rparr>"
@@ -148,16 +121,23 @@ lemma wf_digraph_G:
   by(auto simp add: wf_digraph_def) 
 
 
-lemma ugraph_E:
-  shows "ugraph E"
+lemma ugraph_E_card_k:
+  shows "ugraph E" "k \<le> card (\<Union> E)"
   using in_vc vertex_cover_def
   by auto
 
 
 lemma finite_E:
   shows "finite (\<Union> E)"
-  using ugraph_vertex_set_finite ugraph_E 
+  using ugraph_vertex_set_finite ugraph_E_card_k 
   by auto
+
+
+lemma k_k':
+  shows "k' = k+1"
+  using ugraph_E_card_k G_def 
+  unfolding vc_to_fns_def 
+  by simp
 
 
 lemma finite_Cov: 
@@ -185,7 +165,6 @@ lemma card_R:
   by simp
 
 
-
 lemma in_arcs_G_imp_in_set_R: 
   assumes "e \<in> arcs G"
   shows "head G e \<in> set R \<or> tail G e \<in> set R"
@@ -198,7 +177,8 @@ proof -
     using G_def_2 assms vu_def 
     by(auto simp add: G_def_2 insert_commute)
   then have "u \<in> Cov \<or> v \<in> Cov"
-    using Cov_def is_vertex_cover_def e'_def 
+    using Cov_def e'_def
+    unfolding is_vertex_cover_def
     by fast 
   then show ?thesis
     using vu_def R_def finite_Cov set_set_to_list
@@ -213,33 +193,6 @@ lemma arcs_del_g_empty:
   by fast  
 
 
-lemma empty_arcs_impl_no_cycle: 
-  assumes "arcs G' = {}"
-  shows  "\<not>(\<exists>p. pre_digraph.cycle G' p)"
-proof(rule ccontr)
-  assume "\<not>\<not>(\<exists>p. pre_digraph.cycle G' p)"
-  then obtain p where 1: "pre_digraph.cycle G' p"
-    by auto
-  then have 0: "p \<noteq> []" 
-    using pre_digraph.cycle_def 
-    by fastforce
-  then have "\<exists>u. pre_digraph.awalk G' u p u"
-    using 1 pre_digraph.cycle_def
-    by metis
-  then obtain u where 2: "pre_digraph.awalk G' u p u"
-    by auto
-  then have "set p \<subseteq> arcs G'" 
-    using pre_digraph.awalk_def 
-    by fast
-  then have "p = []" 
-    using assms 
-    by simp
-  then show False 
-    using 0 
-    by simp 
-qed
-
-
 lemma is_fns_R:
   shows "is_fns G R"
   using empty_arcs_impl_no_cycle arcs_del_g_empty is_fns_def 
@@ -248,17 +201,9 @@ lemma is_fns_R:
 
 lemma R_subset_verts:
   shows "set R \<subseteq> verts G"
-proof -
-  have "set R = Cov" 
-    using R_def set_to_list_def 
-    by (simp add: finite_Cov set_set_to_list) 
-  then have "set R \<subseteq> \<Union> E" 
-    using Cov_def
-    by simp
-  then show ?thesis 
-    using G_def_2
-    by auto 
-qed
+  using R_def Cov_def G_def_2 set_set_to_list finite_Cov
+  unfolding set_to_list_def 
+  by auto
 
 
 lemma in_fns_context:
@@ -280,46 +225,24 @@ begin
 
 lemma cardE_k:
   shows "k \<le> card (\<Union> E)"
-proof(rule ccontr)
-  assume "\<not> k \<le> card (\<Union> E)"
-  then have "(G, k') = (\<lparr>verts = {}, arcs = {}, tail = fst, head = snd \<rparr>, 0)"
-    using Ek_def
-    by(auto simp add: vc_to_fns_def)  
-  then show False 
-    using else_not_in_fns G_def 
-    by auto
-qed
+  using Ek_def G_def
+  unfolding vc_to_fns_def
+  by(auto split: if_split_asm simp add: else_not_in_fns)
 
 
 lemma ugraphE:
   shows "ugraph E"
-proof(rule ccontr)
-  assume "\<not> ugraph E"
-  then have "(G, k') = (\<lparr>verts = {}, arcs = {}, tail = fst, head = snd \<rparr>, 0)"
-    using Ek_def 
-    by(auto simp add: vc_to_fns_def)  
-  then show False
-    using else_not_in_fns G_def 
-    by auto
-qed
+  using Ek_def G_def
+  unfolding vc_to_fns_def
+  by(auto split: if_split_asm simp add: else_not_in_fns)
 
 
 lemma G_def_3:
   shows "G = \<lparr>verts = {v. v \<in> \<Union> E}, arcs = {(u, v)| u v. {u, v} \<in> E}, 
-    tail = fst, head = snd\<rparr>" "k' = k+1"
-proof -
-  have "(G, k') = (if ugraph E \<and> k \<le> card (\<Union> E) 
-  then (\<lparr>verts = {v. v \<in> \<Union> E}, arcs = {(u, v)| u v. {u, v} \<in> E}, tail = fst, head = snd \<rparr>, k+1)
-  else (\<lparr>verts = {}, arcs = {}, tail = fst, head = snd \<rparr>, 0))"
-    by(auto simp add: Ek_def vc_to_fns_def)  
-  then have "(G, k') = 
-    (\<lparr>verts = {v. v \<in> \<Union> E}, arcs = {(u, v)| u v. {u, v} \<in> E}, tail = fst, head = snd \<rparr>, k+1)"
-    using ugraphE cardE_k 
-    by auto
-  then show "G = 
-    \<lparr>verts = {v. v \<in> \<Union> E}, arcs = {(u, v)| u v. {u, v} \<in> E}, tail = fst, head = snd\<rparr>" "k' = k+1"
-    by auto
-qed
+    tail = fst, head = snd\<rparr>" "k' = k+1"  
+  using Ek_def G_def
+  unfolding vc_to_fns_def
+  by(auto split: if_split_asm simp add: else_not_in_fns)
 
 
 lemma wf_digraph_G_2:
@@ -331,45 +254,9 @@ lemma wf_digraph_G_2:
 lemma e_in_E_e_explicit: 
   assumes "e \<in> E"
   shows "\<exists>u v. e = {u ,v} \<and> u \<noteq> v" 
-proof -
-  have 1: "card e = 2" 
-    using ugraphE ugraph_def assms
-    by blast 
-  then have 2: "finite e" 
-    using card_infinite
-    by fastforce
-  then have "\<exists>u. u \<in> e"
-    using all_not_in_conv 1
-    by fastforce 
-  then obtain u where u_def: "u \<in> e"
-    by auto
-  then have 3: "card (e -{u}) = 1" 
-    using 1 2 
-    by simp  
-  then have 4: "finite (e -{u})" 
-    using 2 
-    by simp
-  then have "\<exists>v. v \<in> (e -{u})" 
-    using all_not_in_conv 3 2
-    by (metis card_1_singletonE singletonI) 
-  then obtain v where v_def: "v \<in> (e -{u})"
-    by auto
-  then have 5: "card (e -{u, v}) = 0"
-    using 2 3 4 
-    by (metis Diff_insert2 card_Diff_singleton_if diff_is_0_eq' le_numeral_extra(4)) 
-  then have "finite (e -{u, v})"
-    using 4 2 
-    by blast
-  then have "(e -{u, v}) = {}" 
-    using 5 
-    by auto
-  then have "e = {u, v}"
-    using 1 u_def v_def 
-    by auto  
-  then show ?thesis 
-    using u_def v_def 
-    by auto 
-qed
+  using ugraphE assms 
+  unfolding ugraph_def
+  by (simp add: e_in_E_e_explicit)  
 
 
 lemma G_symmetric:
@@ -379,77 +266,16 @@ lemma G_symmetric:
   by(auto simp add: assms G_def_3 insert_commute)  
 
 
-lemma pre_digraph_cas_edge:
-  assumes  "head G' = snd" "tail G' = fst"
-  shows "pre_digraph.cas G' v [(v, u), (u, v)] v"
-proof -
-  have 1: "pre_digraph.cas G' v [(v, u), (u, v)] v =
-     (tail G' (v, u) = v \<and> pre_digraph.cas G' (head G' (v, u)) [(u,v)] v)"
-    by (simp add: pre_digraph.cas.simps(2)) 
-  then have 2: "... = pre_digraph.cas G' u [(u,v)] v" 
-    using assms  
-    by simp
-  then have 3: "... = (tail G' (u, v) = u \<and> pre_digraph.cas G' (head G' (u, v)) [] v)"
-    by (simp add: pre_digraph.cas.simps(2)) 
-  then have 4: "... = True" 
-    using assms 
-    by (simp add: pre_digraph.cas.simps)
-  then show ?thesis 
-    using 1 2 3 4 
-    by simp
-qed
-
-
-lemma edge_cycle:
-  assumes "(u, v) \<in> arcs G'" "(v, u) \<in> arcs G'" "u \<noteq> v" "tail G' = fst" "head G' = snd" "wf_digraph G'"
-  shows "pre_digraph.cycle G' [(v, u), (u, v)]"
-  using pre_digraph.cycle_def 
-proof -
-  have 1:  "[(v, u), (u, v)] \<noteq> []"
-    by auto
-  have 2: "pre_digraph.awalk G' v [(v, u), (u, v)] v"
-    unfolding pre_digraph.awalk_def
-  proof -
-    have 1: "v \<in> verts G'" 
-      using wf_digraph_def assms 
-      by fastforce
-    have 2: "set [(v, u), (u, v)] \<subseteq> arcs G'" 
-      using assms by simp
-    have 3: "pre_digraph.cas G' v [(v, u), (u, v)] v"
-      using pre_digraph_cas_edge assms 
-      by fast
-    then show "v \<in> verts G' \<and> set [(v, u), (u, v)] \<subseteq> arcs G' \<and> pre_digraph.cas G' v [(v, u), (u, v)] v"
-      using 1 2 3 
-      by auto
-  qed
-  have 3: "distinct (tl (pre_digraph.awalk_verts G' v [(v, u), (u, v)]))"
-  proof -
-    have "(pre_digraph.awalk_verts G' v [(v, u), (u, v)]) = [v, u, v]"
-      by(auto simp add: pre_digraph.awalk_verts_def assms)
-    then show ?thesis 
-      using assms
-      by auto
-  qed     
-  then show ?thesis 
-    using 1 2 3 pre_digraph.cycle_def 
-    by blast
-qed
-
-
-lemma head_tail_del_verts: 
-  shows "head (del_verts G' E') = head G'" "tail (del_verts G' E') = tail G'"
-  by(induction E' arbitrary: G')(auto simp add: pre_digraph.head_del_vert pre_digraph.tail_del_vert) 
-
-
 lemma wf_digraph_del_verts:
   assumes "wf_digraph G'"
   shows "wf_digraph (del_verts G' E')"
   using assms 
+  unfolding del_verts_def
   by(induction E' arbitrary: G')(auto simp add: wf_digraph.wf_digraph_del_vert) 
 
 
 lemma cycle_in_R: 
-  assumes "pre_digraph.cycle G [(v, u), (u, v)]" "(u, v) \<in> arcs G" "(v, u) \<in> arcs G" "u \<noteq> v"
+  assumes "(u, v) \<in> arcs G" "(v, u) \<in> arcs G" "u \<noteq> v"
   shows "u \<in> set R \<or> v \<in> set R"
 proof(rule ccontr)
   assume "\<not>(u \<in> set R \<or> v \<in> set R)"
@@ -460,7 +286,7 @@ proof(rule ccontr)
     by force+
   have 2: "tail (del_verts G R) = fst" "head (del_verts G R) = snd"
     using G_def_3 
-    by(auto simp add: head_tail_del_verts)   
+    by(auto simp add: tail_del_verts_eq_tail_before head_del_verts_eq_head_before)   
   have "wf_digraph (del_verts G R)" 
     using wf_digraph_G_2 wf_digraph_del_verts
     by auto
@@ -481,17 +307,8 @@ lemma G_fst_snd:
 lemma in_arcs_one_in_R:
   assumes "e \<in> arcs G" "e = (u, v)" "u \<noteq> v"
   shows "u \<in> set R \<or> v \<in> set R"
-proof -
-  have 1: "(v, u) \<in> arcs G" "(u, v) \<in> arcs G"
-    using assms G_symmetric 
-    by blast+
-  then have "pre_digraph.cycle G [(v, u), (u, v)]"
-    using edge_cycle assms wf_digraph_G_2 G_fst_snd 
-    by fast
-  then show "u \<in> set R \<or> v \<in> set R" 
-    using cycle_in_R 1 assms
-    by blast
-qed
+  using assms G_symmetric cycle_in_R
+  by blast
 
 
 lemma Cov_properties:

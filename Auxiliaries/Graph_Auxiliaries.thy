@@ -294,4 +294,44 @@ lemma in_sublist_impl_in_list:
   by (metis append_Cons append_assoc in_set_conv_decomp sublist_def) 
 
 
+lemma empty_arcs_impl_no_cycle: 
+  assumes "arcs G = {}"
+  shows  "\<not>(\<exists>p. pre_digraph.cycle G p)"
+proof(rule ccontr)
+  assume "\<not>\<not>(\<exists>p. pre_digraph.cycle G p)"
+  then obtain p where 1: "pre_digraph.cycle G p"
+    by auto
+  then have 0: "p \<noteq> []" 
+    using pre_digraph.cycle_def 
+    by fastforce
+  then have "\<exists>u. pre_digraph.awalk G u p u"
+    using 1 pre_digraph.cycle_def
+    by metis
+  then obtain u where 2: "pre_digraph.awalk G u p u"
+    by auto
+  then have "set p \<subseteq> arcs G" 
+    using pre_digraph.awalk_def 
+    by fast
+  then have "p = []" 
+    using assms 
+    by simp
+  then show False 
+    using 0 
+    by simp 
+qed
+
+
+lemma pre_digraph_cas_edge:
+  assumes  "head G = snd" "tail G = fst"
+  shows "pre_digraph.cas G v [(v, u), (u, v)] v"
+  using assms 
+  by(simp add: pre_digraph.cas.simps)
+
+
+lemma edge_cycle:
+  assumes "(u, v) \<in> arcs G" "(v, u) \<in> arcs G" "u \<noteq> v" "tail G = fst" "head G = snd" "wf_digraph G"
+  shows "pre_digraph.cycle G [(v, u), (u, v)]"
+  using assms pre_digraph_cas_edge
+  unfolding  pre_digraph.cycle_def pre_digraph.awalk_def wf_digraph_def pre_digraph.awalk_verts_def
+  apply auto by fast
 end
