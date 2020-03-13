@@ -20,31 +20,9 @@ definition
   "hc \<equiv> {G. \<exists>c. wf_digraph G \<and> is_hc G c \<and> ((tail G = fst \<and> head G = snd) \<or> arcs G = {}) 
     \<and> finite (verts G)}"
 
-definition
-  "vc_hc \<equiv> \<lambda>(E, k).
-    if ugraph (set E) \<and>  k \<le> card (\<Union> (set E)) \<and> distinct E
-        then  \<lparr>verts = {Cover i|i. i< k} \<union> {Edge v e 0|v e. e\<in> set E \<and> v \<in> e}\<union> 
-            {Edge v e 1|v e. e\<in> set E \<and> v \<in> e},
-          arcs = {(Edge v e 0, Edge v e 1)|v e. e\<in> set E \<and> v \<in> e} \<union> 
-            {(Edge v e 0, Edge u e 0)|u v e. e\<in>set E \<and> v \<in> e \<and> u \<in> e \<and> u \<noteq> v} \<union>
-            {(Edge v e 1, Edge u e 1)|u v e. e\<in> set E \<and> v \<in> e \<and> u \<in> e \<and> u \<noteq> v} \<union>
-            {(Edge v e1 1, Edge v e2 0)| v e1 e2 i j. i<length E \<and> j<length E 
-              \<and>  e1 = E!i\<and> e2 = E!j \<and> v \<in> e1 \<and> v \<in> e2 \<and> i<j \<and>
-              \<not> (\<exists>i'< size E. v \<in> E!i' \<and> i < i' \<and> i' < j)} \<union>
-            {(Edge v e 1, Cover n)| v e n i. i<length E \<and> e = E!i\<and> v \<in> e \<and> 
-              \<not> (\<exists>j < size E. v \<in> E!j \<and> i < j) \<and> n< k}\<union>
-            {(Cover n, Edge v e 0)| v e n i. i<length E \<and> e = E!i\<and> v \<in> e \<and> 
-              \<not> (\<exists>j < size E. v \<in> E!j \<and> j < i) \<and> n < k} \<union>
-            {(Cover i, Cover j) |i j.  i < k \<and> j < k},
-          tail = fst, head = snd \<rparr>
-        else \<lparr>verts = {Cover 0, Cover 1}, arcs = {}, tail = fst, head = snd\<rparr>"
-
-definition get_second where
-  "get_second e \<equiv> SOME v. v \<in> e"
-
 definition next_edge where
-  "next_edge v E e1 e2 \<equiv> \<exists>i j. i<length E \<and> j<length E \<and>  e1 = E!i \<and> e2 = E!j \<and> v \<in> e1 \<and> v \<in> e2 \<and> i<j \<and>
-              \<not> (\<exists>k < size E. v \<in> E!k \<and> i < k \<and> k < j)"
+  "next_edge v E e1 e2 \<equiv> \<exists>i j. i<length E \<and> j<length E \<and> e1 = E!i \<and> e2 = E!j \<and> v \<in> e1 \<and> v \<in> e2 
+        \<and> i<j \<and> \<not> (\<exists>k < size E. v \<in> E!k \<and> i < k \<and> k < j)"
 
 definition first_edge where
   "first_edge v e E \<equiv> (\<exists>i<length E. e = E!i\<and> v \<in> e \<and> 
@@ -53,6 +31,24 @@ definition first_edge where
 definition last_edge where
   "last_edge v e E \<equiv> \<exists>i<length E. e = E!i\<and> v \<in> e \<and> 
               \<not> (\<exists>j < size E. v \<in> E!j \<and> i < j)"
+
+definition
+  "vc_hc \<equiv> \<lambda>(E, k).
+    if ugraph (set E) \<and>  k \<le> card (\<Union> (set E)) \<and> distinct E
+        then  \<lparr>verts = {Cover i|i. i< k} \<union> {Edge v e 0|v e. e\<in> set E \<and> v \<in> e}\<union> 
+            {Edge v e 1|v e. e\<in> set E \<and> v \<in> e},
+          arcs = {(Edge v e 0, Edge v e 1)|v e. e\<in> set E \<and> v \<in> e} \<union> 
+            {(Edge v e 0, Edge u e 0)|u v e. e\<in>set E \<and> v \<in> e \<and> u \<in> e \<and> u \<noteq> v} \<union>
+            {(Edge v e 1, Edge u e 1)|u v e. e\<in> set E \<and> v \<in> e \<and> u \<in> e \<and> u \<noteq> v} \<union>
+            {(Edge v e1 1, Edge v e2 0)| v e1 e2. next_edge v E e1 e2} \<union>
+            {(Edge v e 1, Cover n)| v e n. last_edge v e E \<and> n < k}\<union>
+            {(Cover n, Edge v e 0)| v e n. first_edge v e E \<and> n < k} \<union>
+            {(Cover i, Cover j) |i j.  i < k \<and> j < k},
+          tail = fst, head = snd \<rparr>
+        else \<lparr>verts = {Cover 0, Cover 1}, arcs = {}, tail = fst, head = snd\<rparr>"
+
+definition get_second where
+  "get_second e \<equiv> SOME v. v \<in> e"
 
 
 subsection\<open>Proofs for Definitions\<close>
@@ -114,63 +110,25 @@ lemma get_second_in_edge:
 lemma first_not_next: 
   assumes "first_edge v e1 E" "next_edge v E e2 e1" "distinct E" 
   shows False
-proof -
-  obtain i where 1: "i<length E \<and> e1 = E!i \<and> v \<in> e1 \<and> 
-              \<not> (\<exists>j < size E. v \<in> E!j \<and> j < i)"
-    using assms first_edge_def 
-    by metis
-  obtain i' j' where 2: "i'<length E \<and> j'<length E \<and>  e2 = E!i' \<and> e1 = E!j' 
-      \<and> v \<in> e2 \<and> v \<in> e1 \<and> i'<j' \<and>
-      \<not> (\<exists>k < size E. v \<in> E!k \<and> i' < k \<and> k < j')"
-    using assms next_edge_def 
-    by metis 
-  then have "i = j'" using 1 2 
-    by (simp add: "1" assms(3) nth_eq_iff_index_eq)  
-  then have "i' < i"
-    using 2 
-    by simp
-  then show ?thesis 
-    using 1 2 
-    by blast 
-qed
+  using assms
+  unfolding first_edge_def next_edge_def
+  by(auto simp add: nth_eq_iff_index_eq)
 
 
 lemma last_not_next:
   assumes "last_edge v e1 E" "next_edge v E e1 e2" "distinct E"
   shows False
-proof -
-  obtain i where 1: "i<length E \<and> e1 = E!i\<and> v \<in> e1 \<and> 
-              \<not> (\<exists>j < size E. v \<in> E!j \<and> i < j)"
-    using assms last_edge_def 
-    by metis
-  obtain i' j' where 2: "i'<length E \<and> j'<length E \<and>  e1 = E!i' \<and> e2 = E!j' \<and> v \<in> e1 \<and> v \<in> e2 
-      \<and> i'<j' \<and> \<not>(\<exists>k < size E. v \<in> E!k \<and> i' < k \<and> k < j')"
-    using assms next_edge_def 
-    by metis
-  then have "i = i'"
-    using 1 2 
-    by (simp add: "1" assms(3) nth_eq_iff_index_eq)  
-  then have "i < j'" 
-    using 2 
-    by simp
-  then show ?thesis 
-    using 1 2 
-    by blast 
-qed
+  using assms 
+  unfolding last_edge_def next_edge_def 
+  by(auto simp add: nth_eq_iff_index_eq)
 
 
 lemma hd_is_first_edge:
   assumes "e = hd E" "v\<in> e" "E \<noteq> []"
   shows "first_edge v e E"
-proof -
-  have 1: "e = E!0" "0 < length E" 
-    by (simp add: assms hd_conv_nth)+
-  have 2: "\<not> (\<exists>j < size E. v \<in> E!j \<and> j < 0)"
-    by simp
-  then show ?thesis 
-    using first_edge_def 1 2 assms  
-    by fast 
-qed
+  using assms 
+  unfolding first_edge_def 
+  by(auto simp add: hd_conv_nth)
 
 
 lemma next_edge_cons: 
@@ -355,6 +313,133 @@ next
     qed
   qed
 qed 
+
+
+lemma get_second_explicit: 
+  assumes  "v \<in> e" "u \<in> e" "card e = 2" "v \<noteq> u"
+  shows "get_second (e - {v}) = u"
+proof -
+  have "\<exists>u v. e = {u, v} \<and> u \<noteq> v"
+    using e_in_E_e_explicit assms 
+    by blast
+  then have "e = {u, v}" 
+    using assms 
+    by blast
+  then show ?thesis 
+    using assms 
+    unfolding get_second_def 
+    by auto
+qed
+
+
+lemma get_second_in_e: 
+  assumes  "v \<in> e" "card e = 2" 
+  shows "get_second (e - {v}) \<in> e"
+  using assms e_in_E_e_explicit 
+  unfolding get_second_def 
+  by blast
+
+
+lemma get_secon_in_set: 
+  assumes "e \<noteq> {}"
+  shows "get_second e \<in> e"
+  using assms 
+  unfolding get_second_def 
+  by (meson all_not_in_conv someI_ex)
+
+
+lemma get_second_minus_noteq_minus: 
+  assumes "v \<in> e" "card e = 2"
+  shows "get_second (e - {v}) \<noteq> v"
+  using assms get_secon_in_set 
+  by (metis emptyE get_second_in_edge is_singletonI' is_singleton_altdef member_remove odd_one 
+      one_dvd remove_def) 
+
+
+lemma get_second_in_set:
+  "get_second S \<in> S" if "S \<noteq> {}"
+  using that unfolding get_second_def by (auto intro: someI)
+
+subsubsection\<open>Edge sets are finite\<close>
+
+lemma fin_Cov:
+  shows "finite {Cover i|i. i< k}"
+  by simp
+
+
+lemma card_S_Edge: 
+  assumes "S= {(v, e)|v e. e\<in> set E \<and> v \<in> e}"  "\<forall>e\<in> set E. card e = 2"
+  shows "card S \<le> 2 * length E"
+  using assms 
+proof(induction E arbitrary: S)
+  case Nil
+  then show ?case 
+    by auto
+next
+  case (Cons a E)
+  then have 0: "{(v, e) |v e. e \<in> set (a # E) \<and> v \<in> e} = 
+    {(v, e) |v e. e \<in> set (E) \<and> v \<in> e} \<union> {(v, e)|v e. e = a \<and> v \<in> e}"
+    by auto
+  have 1: "card {(v, e) |v e. e \<in> set (E) \<and> v \<in> e} \<le> 2 * length E" 
+    using Cons assms
+    by simp
+  have "card a = 2" 
+    using Cons 
+    by simp
+  then obtain u v where "a = {u, v}" "u\<noteq> v" 
+    using Cons e_in_E_e_explicit 
+    by metis
+  then have "{(v, e)|v e. e = a \<and> v \<in> e} = {(v, a), (u, a)}" 
+    by blast
+  then have 2: "card {(v, e)|v e. e = a \<and> v \<in> e} = 2" 
+    using \<open>u \<noteq> v\<close> 
+    by auto 
+  then have "card {(v, e) |v e. e \<in> set (a # E) \<and> v \<in> e} \<le> 
+    card {(v, e) |v e. e \<in> set (E) \<and> v \<in> e} + card {(v, e)|v e. e = a \<and> v \<in> e}"
+    using 0 
+    by (metis (no_types, lifting) card_Un_le) 
+  then show ?case 
+    using 1 2 Cons 
+    by fastforce
+qed
+
+
+lemma fin_S_Edge: 
+  assumes "S= {(v, e)|v e. e\<in> set E \<and> v \<in> e}"  "\<forall>e\<in> set E. card e = 2"
+  shows "finite S"
+proof -
+  have "{(v, e)|v e. e\<in> set E \<and> v \<in> e} \<subseteq> (\<Union> (set E)) \<times> set E"
+    by auto
+  moreover have "finite \<dots>"
+    using assms(2) by (force intro: card_ge_0_finite)
+  ultimately show ?thesis
+    unfolding \<open>S = _\<close> by (rule finite_subset)
+qed
+
+
+lemma fin_Edge0:
+  assumes "\<forall>e\<in> set E. card e = 2" 
+  shows "finite {Edge v e 0|v e. e\<in> set E \<and> v \<in> e}"
+proof -
+  have "{Edge v e 0|v e. e\<in> set E \<and> v \<in> e} \<subseteq> (\<lambda>(v, e). Edge v e 0) ` ((\<Union> (set E)) \<times> set E)"
+    by auto
+  moreover have "finite \<dots>"
+    using assms by (force intro: card_ge_0_finite)
+  ultimately show ?thesis
+    by (rule finite_subset)
+qed
+
+lemma fin_Edge1:
+  assumes "\<forall>e\<in> set E. card e = 2" 
+  shows "finite {Edge v e 1|v e. e\<in> set E \<and> v \<in> e}"
+proof -
+  have "{Edge v e 1|v e. e\<in> set E \<and> v \<in> e} \<subseteq> (\<lambda>(v, e). Edge v e 1) ` ((\<Union> (set E)) \<times> set E)"
+    by auto
+  moreover have "finite \<dots>"
+    using assms by (force intro: card_ge_0_finite)
+  ultimately show ?thesis
+    by (rule finite_subset)
+qed
 
 
 subsection\<open>Auxiliary lemmas\<close>

@@ -2,203 +2,11 @@ theory VC_To_HC_1
   imports  Main "../Three_Sat_To_Set_Cover" 
     Graph_Theory.Digraph  Graph_Theory.Arc_Walk
     Graph_Theory.Vertex_Walk
-    "../Auxiliaries/List_Auxiliaries"
+    "../Auxiliaries/List_Auxiliaries" "../Auxiliaries/Graph_Auxiliaries"
     Definitions_HC
 begin
 
 subsection\<open>(E,k) \<in> vc \<Longrightarrow> vc_hc (E, k) f \<in> hc\<close>
-
-lemma fin_Cov:
-  shows "finite {Cover i|i. i< k}"
-proof -
-  show ?thesis by simp
-qed
-
-fun f where
-  "f (Edge v e i) (v' ,e') = (v = v' \<and> e = e' \<and> i = 0)" |
-  "f _ _ = False"
-
-fun f1 where
-  "f1 (Edge v e i) (v' ,e') = (v = v' \<and> e = e' \<and> i = 1)" |
-  "f1 _ _ = False"
-
-subsubsection\<open>Edge sets are finite\<close>
-
-lemma card_S_Edge: 
-  assumes "S= {(v, e)|v e. e\<in> set E \<and> v \<in> e}"  "\<forall>e\<in> set E. card e = 2"
-  shows "card S \<le> 2 * length E"
-  using assms 
-proof(induction E arbitrary: S)
-  case Nil
-  then show ?case 
-    by auto
-next
-  case (Cons a E)
-  then have 0: "{(v, e) |v e. e \<in> set (a # E) \<and> v \<in> e} = 
-    {(v, e) |v e. e \<in> set (E) \<and> v \<in> e} \<union> {(v, e)|v e. e = a \<and> v \<in> e}"
-    by auto
-  have 1: "card {(v, e) |v e. e \<in> set (E) \<and> v \<in> e} \<le> 2 * length E" 
-    using Cons assms
-    by simp
-  have "card a = 2" 
-    using Cons 
-    by simp
-  then obtain u v where "a = {u, v}" "u\<noteq> v" 
-    using Cons e_in_E_e_explicit 
-    by metis
-  then have "{(v, e)|v e. e = a \<and> v \<in> e} = {(v, a), (u, a)}" 
-    by blast
-  then have 2: "card {(v, e)|v e. e = a \<and> v \<in> e} = 2" 
-    using \<open>u \<noteq> v\<close> 
-    by auto 
-  then have "card {(v, e) |v e. e \<in> set (a # E) \<and> v \<in> e} \<le> 
-    card {(v, e) |v e. e \<in> set (E) \<and> v \<in> e} + card {(v, e)|v e. e = a \<and> v \<in> e}"
-    using 0 
-    by (metis (no_types, lifting) card_Un_le) 
-  then show ?case 
-    using 1 2 Cons 
-    by fastforce
-qed
-
-
-lemma fin_S_Edge: 
-  assumes "S= {(v, e)|v e. e\<in> set E \<and> v \<in> e}"  "\<forall>e\<in> set E. card e = 2"
-  shows "finite S"
-proof -
-  have "{(v, e)|v e. e\<in> set E \<and> v \<in> e} \<subseteq> (\<Union> (set E)) \<times> set E"
-    by auto
-  moreover have "finite \<dots>"
-    using assms(2) by (force intro: card_ge_0_finite)
-  ultimately show ?thesis
-    unfolding \<open>S = _\<close> by (rule finite_subset)
-qed
-
-lemma f_inv: 
-  assumes "f x (v, e)"
-  shows "x= Edge v e 0" 
-  using assms f.elims(2) 
-  by blast 
-
-
-lemma set_f: 
-  assumes "S' = {u|u. f u (v, e)}"
-  shows "S' = {Edge v e 0}"
-  using assms f_inv 
-  by fastforce 
-
-lemma f1_inv: 
-  assumes "f1 x (v, e)"
-  shows "x= Edge v e 1" 
-  using assms f1.elims(2) 
-  by blast 
-
-
-lemma set_f1: 
-  assumes "S' = {u|u. f1 u (v, e)}"
-  shows "S' = {Edge v e 1}"
-  using assms f1_inv 
-  by fastforce 
-
-
-lemma fin_Edge0:
-  assumes "\<forall>e\<in> set E. card e = 2" 
-  shows "finite {Edge v e 0|v e. e\<in> set E \<and> v \<in> e}"
-proof -
-  have "{Edge v e 0|v e. e\<in> set E \<and> v \<in> e} \<subseteq> (\<lambda>(v, e). Edge v e 0) ` ((\<Union> (set E)) \<times> set E)"
-    by auto
-  moreover have "finite \<dots>"
-    using assms by (force intro: card_ge_0_finite)
-  ultimately show ?thesis
-    by (rule finite_subset)
-qed
-
-lemma fin_Edge1:
-  assumes "\<forall>e\<in> set E. card e = 2" 
-  shows "finite {Edge v e 1|v e. e\<in> set E \<and> v \<in> e}"
-proof -
-  obtain S where S_def: "S= {(v, e)|v e. e\<in> set E \<and> v \<in> e}" 
-    by auto
-  obtain T where T_def: "T = {{u|u. f1 u (v, e)}|v e. (v, e)\<in> S}"
-    by auto
-  have card_S: "card S \<le> 2*length E"
-    using S_def card_S_Edge assms 
-    by blast
-  have 1: "{Edge v e 1|v e. e\<in> set E \<and> v \<in> e} = \<Union> T" 
-  proof
-    show "{Edge v e 1 |v e. e \<in> set E \<and> v \<in> e} \<subseteq> \<Union> T" 
-    proof 
-      have 0: "\<Union> T = {u|u v e. f1 u (v, e) \<and> (v, e) \<in> S}" 
-        using T_def 
-        by auto
-      fix x assume a1: "x \<in> {Edge v e 1 |v e. e \<in> set E \<and> v \<in> e}"
-      then obtain v e where ve_def: "x = Edge v e 1"
-        by auto
-      then have 1: "f1 x (v, e)"
-        by simp
-      have "e \<in> set E" "v \<in> e"
-        using ve_def a1 
-        by simp+
-      then have "(v, e) \<in> S" 
-        using S_def 
-        by simp
-      then have "x \<in> {u|u v e. f1 u (v, e) \<and> (v, e) \<in> S}"
-        using 1 
-        by blast
-      then show "x \<in> \<Union> T" 
-        using 0 
-        by simp
-    qed
-  next
-    show "\<Union> T \<subseteq> {Edge v e 1 |v e. e \<in> set E \<and> v \<in> e}" 
-    proof 
-      fix x assume a1: "x \<in> \<Union> T"
-      have 0: "\<Union> T = {u|u v e. f1 u (v, e) \<and> (v, e) \<in> S}" 
-        using T_def 
-        by auto
-      then obtain v e  where ve_def: "f1 x (v, e)" "(v, e) \<in> S" 
-        using a1 
-        by auto
-      then have 1: "x = Edge v e 1" 
-        using f1_inv 
-        by fastforce 
-      have 2: "v \<in> e" "e \<in> set E" 
-        using ve_def S_def
-        by blast+
-      then show "x \<in> {Edge v e 1 |v e. e \<in> set E \<and> v \<in> e}"
-        using 1 2 
-        by simp
-    qed
-  qed  
-  have 3: "\<forall>S' \<in> T. finite S'" 
-  proof
-    fix S' assume "S' \<in> T" 
-    then obtain v e where ve_def: "S' = {u|u. f1 u (v, e)}" "(v, e)\<in> S"
-      using T_def 
-      by blast
-    then have "S' = {Edge v e 1}" 
-      using set_f1 
-      by metis
-    then show "finite S'"
-      by simp
-  qed
-  have finS: "finite S" 
-    using S_def fin_S_Edge assms 
-    by auto 
-  then have fin: "finite T"
-    using fin_dep_on_other_set T_def 
-    by fastforce 
-  have finT: "finite T"
-    using finS fin_dep_on_other_set T_def 
-    by fastforce
-  have "finite (\<Union> T)"
-    using 3 fin 
-    by blast
-  then have "finite {Edge v e 1|v e. e\<in> set E \<and> v \<in> e}" 
-    using 1 
-    by simp 
-  then show ?thesis .  
-qed
-
 
 subsubsection\<open>Construction of the Cycle\<close>
 
@@ -243,7 +51,8 @@ lemma card_dedges:
 
 
 lemma "size Cov = card (set Cov)"
-  using Cov_def by (simp add: distinct_card)
+  using Cov_def 
+  by (simp add: distinct_card)
 
 
 lemma in_vc_k_smaller:
@@ -259,29 +68,15 @@ lemma G_def_2:
           arcs = {(Edge v e 0, Edge v e 1)|v e. e\<in> set E \<and> v \<in> e} \<union> 
             {(Edge v e 0, Edge u e 0)|u v e. e\<in>set E \<and> v \<in> e \<and> u \<in> e \<and> u \<noteq> v} \<union>
             {(Edge v e 1, Edge u e 1)|u v e. e\<in> set E \<and> v \<in> e \<and> u \<in> e  \<and> u \<noteq> v} \<union>
-            {(Edge v e1 1, Edge v e2 0)| v e1 e2 i j. i<length E \<and> j<length E 
-              \<and>  e1 = E!i\<and> e2 = E!j \<and> v \<in> e1 \<and> v \<in> e2 \<and> i<j \<and>
-              \<not> (\<exists>i'< size E. v \<in> E!i' \<and> i < i' \<and> i' < j)} \<union>
-            {(Edge v e 1, Cover n)| v e n i. i<length E \<and> e = E!i\<and> v \<in> e \<and> 
-              \<not> (\<exists>j < size E. v \<in> E!j \<and> i < j) \<and> n< k}\<union>
-            {(Cover n, Edge v e 0)| v e n i. i<length E \<and> e = E!i\<and> v \<in> e \<and> 
-              \<not> (\<exists>j < size E. v \<in> E!j \<and> j < i) \<and> n < k} \<union>
+            {(Edge v e1 1, Edge v e2 0)| v e1 e2. next_edge v E e1 e2} \<union>
+            {(Edge v e 1, Cover n)| v e n. last_edge v e E \<and> n< k}\<union>
+            {(Cover n, Edge v e 0)| v e n i. first_edge v e E \<and> n < k} \<union>
             {(Cover i, Cover j) |i j.  i < k \<and> j < k},
           tail = fst, head = snd \<rparr>" 
     (is "G = ?L")
-proof -
-  have 1: "ugraph (set E)" "k \<le> card (\<Union> (set E))" "distinct E" 
-    using in_vc vertex_cover_list_def 
-      apply auto 
-    by force
-  have "G = (if ugraph (set E) \<and>  k \<le> card (\<Union> (set E)) \<and> distinct E
-        then  ?L
-        else \<lparr>verts = {Cover 0, Cover 1}, arcs = {}, tail = fst, head = snd\<rparr>)"
-    by(auto simp add: vc_hc_def G_def) 
-  then show "G = ?L" 
-    using 1 
-    by argo 
-qed 
+  using G_def in_vc
+  unfolding vc_hc_def vertex_cover_list_def first_edge_def last_edge_def next_edge_def
+  by(auto split: if_split)
 
 
 lemma ugraph_E:
@@ -292,7 +87,9 @@ lemma ugraph_E:
 
 lemma is_wf_digraph:
   shows "wf_digraph G"
-  by(auto simp add: G_def_2 wf_digraph_def) 
+  using G_def_2
+  unfolding first_edge_def last_edge_def next_edge_def wf_digraph_def
+  by fastforce
 
 
 lemma finite_verts_G:
@@ -304,38 +101,17 @@ lemma finite_verts_G:
 lemma function_of_edge_nodes: 
   assumes "v \<in> set (construct_cycle_1 E (CS) n C)" "\<forall>k'. v \<noteq> Cover k'"
   shows "\<exists> x. v \<in> set (construct_cycle_add_edge_nodes E x C)"
-  using assms apply(induction CS arbitrary: n)
-  by(auto) 
-
-
-lemma edge_0_with_many_prems:
-  assumes "ugraph (insert a (set Ea))" "v \<in> set (let u = get_second (a - {x}) 
-    in if u \<in> C then [Edge x a 0, Edge x a 1] else [Edge x a 0, Edge u a 0, Edge u a 1, Edge x a 1])"
-    "x \<in> a" "\<forall>e u. u \<in> e \<longrightarrow> v = Edge u e (Suc 0) \<longrightarrow> e \<noteq> a \<and> e \<notin> set Ea"
-  shows "\<exists>e u. v = Edge u e 0 \<and> u \<in> e \<and> (e = a \<or> e \<in> set Ea)"
-proof -
-  have not_empty: "(a - {x}) \<noteq> {}" 
-    using edge_contains_minus_one_not_empty assms 
-    by (metis list.set_intros(1) list.simps(15))
-  then obtain u where u_def: "u = get_second (a-{x})" 
-    by(auto)
-  then have "u \<in> a" 
-    using not_empty get_second_in_edge 
-    by fast
-  then show ?thesis 
-    using u_def assms 
-    apply(auto)
-    by (smt One_nat_def empty_set insert_iff set_ConsD singleton_iff)
-qed
+  using assms by(induction CS arbitrary: n)(auto) 
 
 
 lemma no_Cover_in_edge_function: 
   assumes "v \<in> set (construct_cycle_add_edge_nodes E x C)" "ugraph (set E)"
   shows "(\<exists> e u. v = Edge u e 0 \<and> u \<in> e \<and> e \<in> set E) \<or> (\<exists> e u. v = Edge u e 1 \<and> u \<in> e \<and> e \<in> set E)"
   using assms 
-  apply(induction E arbitrary: ) 
-   apply(auto split: if_split_asm simp add: ugraph_implies_smaller_set_ugraph) 
-  by(auto simp add: edge_0_with_many_prems)
+  apply(induction E) 
+   apply(auto split: if_split_asm simp add: ugraph_implies_smaller_set_ugraph Let_def) 
+  using edge_contains_minus_one_not_empty get_second_in_edge
+  by (metis List.set_insert insert_Diff insert_iff)+
 
 
 lemma cover_in_construct_cycle:
@@ -364,39 +140,18 @@ lemma edge_nodes_in_construct_cycle_both_in_Cover:
   by(auto simp add: Edge_nodes_in_construct_edge)
 
 
-lemma edge_nodes_construct_edges_expanded:
-  assumes "u \<in> e" "u \<notin> Cs'"  "v \<in> e"  "card e = 2" "u \<noteq> v"
-  shows "Edge u e 0 \<in> set (let u' = get_second (e - {v}) 
-    in if u' \<in> Cs' then [Edge v e 0, Edge v e 1] 
-    else [Edge v e 0, Edge u' e 0, Edge u' e 1, Edge v e 1])
-    \<and> Edge u e 1 \<in> set (let u' = get_second (e - {v}) 
-    in if u' \<in> Cs' then [Edge v e 0, Edge v e 1] 
-    else [Edge v e 0, Edge u' e 0, Edge u' e 1, Edge v e 1])"
-proof -
-  have "card (e - {v}) = 1" 
-    using assms 
-    apply(auto)
-    by (metis Diff_empty card_Diff_insert card_infinite diff_Suc_1 insert_absorb insert_not_empty numeral_2_eq_2 zero_neq_numeral) 
-  then have "(e - {v}) = {u}" 
-    using assms 
-    by (metis card_1_singletonE empty_iff insertE insert_Diff)
-  then have "get_second (e - {v}) = u" 
-    using get_second_in_edge
-    by (metis insert_not_empty singletonD)
-  then show ?thesis 
-    using assms 
-    by(auto)
-qed
+lemma not_in_edges_not_in_cycle: 
+  assumes "e \<notin> set E'"
+  shows "Edge u e 0 \<notin> set (construct_cycle_add_edge_nodes E' v Cs')"
+  using assms apply(induction E') by(auto simp add: Let_def)
 
 
 lemma edge_nodes_in_construct_edgess:
   assumes "v \<in> e" "u \<in> e" "e \<in> set E'" "u \<notin> Cs'" "card e = 2" "v \<noteq> u"
-  shows "Edge u e 0 \<in> set (construct_cycle_add_edge_nodes E' v Cs') \<and> Edge u e 1 \<in> set (construct_cycle_add_edge_nodes E' v Cs')"
+  shows "Edge u e 0 \<in> set (construct_cycle_add_edge_nodes E' v Cs') 
+    \<and> Edge u e 1 \<in> set (construct_cycle_add_edge_nodes E' v Cs')"
   using assms 
-  apply(induction E') 
-  using ugraph_def edge_nodes_construct_edges_expanded 
-   apply(auto) 
-  by fast+
+  by(induction E') (auto simp add: Let_def get_second_explicit)
 
 
 lemma edge_nodes_in_construct_cycle_one_in_Cover:
@@ -406,8 +161,9 @@ lemma edge_nodes_in_construct_cycle_one_in_Cover:
   using assms 
   apply(induction Cs arbitrary: n) 
   using Edge_nodes_in_construct_edge edge_nodes_in_construct_edgess card_dedges  
-   apply(auto) 
-  by (smt assms(3) assms(6) edge_nodes_in_construct_edgess card_dedges numeral_1_eq_Suc_0 numeral_2_eq_2 numerals(1))+   
+   apply(auto)
+  by (smt assms(3) assms(6) edge_nodes_in_construct_edgess card_dedges numeral_1_eq_Suc_0 
+      numeral_2_eq_2 numerals(1))+   
 
 
 lemma edge_nodes_in_cycle:
@@ -457,7 +213,8 @@ proof -
     using \<open>u\<noteq>v\<close> contains_two_card_greater_1 
     by fastforce 
   then show ?thesis 
-    by (metis \<open>u \<in> set Cycle\<close> card_length leD length_pos_if_in_set less_numeral_extra(3) less_one linorder_neqE_nat)
+    using  \<open>u \<in> set Cycle\<close>
+    by (metis card_length leD length_pos_if_in_set less_numeral_extra(3) less_one linorder_neqE_nat)
 qed 
 
 
@@ -480,7 +237,8 @@ lemma function_of_cover_nodes:
 
 lemma nodes_of_cycle:
   assumes "v\<in> set Cycle" "k>0"
-  shows "(\<exists>k'. v = Cover k' \<and> k' <k) \<or> (\<exists>e u. v = Edge u e 0 \<and> e \<in> set E \<and> u \<in> e) \<or> (\<exists>e u. v = Edge u e 1\<and> e \<in> set E \<and> u \<in> e)"
+  shows "(\<exists>k'. v = Cover k' \<and> k' <k) \<or> (\<exists>e u. v = Edge u e 0 \<and> e \<in> set E \<and> u \<in> e) 
+    \<or> (\<exists>e u. v = Edge u e 1\<and> e \<in> set E \<and> u \<in> e)"
   using assms no_Cover_in_edge_function Cycle_def function_of_edge_nodes 
     function_of_cover_nodes in_vc vertex_cover_list_def 
   by (metis (no_types, lifting) case_prodD le_eq_less_or_eq linorder_neqE_nat mem_Collect_eq)
@@ -496,13 +254,15 @@ lemma Cover_in_G:
 lemma Edge0_in_G:
   assumes "e \<in> set E" "u\<in> e" "v = Edge u e 0"
   shows "v \<in> verts G"
-  using G_def_2 assms by(auto)
+  using G_def_2 assms 
+  by(auto)
 
 
 lemma Edge1_in_G:
   assumes "e \<in> set E" "u \<in> e" "v = Edge u e 1"
   shows "v \<in> verts G"
-  using G_def_2 assms by auto
+  using G_def_2 assms 
+  by auto
 
 
 lemma in_cycle_in_verts: 
@@ -552,22 +312,11 @@ lemma cycle_arcs_not_empty:
   by auto
 
 
-lemma Cover_not_in_sublists:
-  assumes " u = get_second (aa - {a})" 
-    "Cover i
-        \<in> set (if u \<in> C' then [Edge a aa 0, Edge a aa 1] else [Edge a aa 0, Edge u aa 0, Edge u aa 1, Edge a aa 1])"
-  shows "False"
-  using assms 
-  by(auto split: if_split_asm)
-
-
 lemma Cover_not_in_edge_nodes:
   assumes "Cover i \<in> set (construct_cycle_add_edge_nodes E' a C')"
   shows False
   using assms apply(induction E') 
-   apply(auto simp add: Cover_not_in_sublists split: if_split_asm) 
-  using Cover_not_in_sublists 
-  by (metis (mono_tags, lifting))
+   by(auto split: if_split_asm simp add: Let_def) 
 
 
 lemma constraints_for_Cover_nodes: 
@@ -586,48 +335,13 @@ lemma distinct_edges:
   shows "distinct E"
   using in_vc vertex_cover_list_def by(auto)
 
-lemma get_second_in_set:
-  "get_second S \<in> S" if "S \<noteq> {}"
-  using that unfolding get_second_def by (auto intro: someI)
-
-lemma distinct_edge_lists:
-  assumes "u = get_second (aa - {a})" "ugraph (insert aa (set E'))" 
-  shows "distinct (if u \<in> C' then [Edge a aa 0, Edge a aa 1] 
-      else [Edge a aa 0, Edge u aa 0, Edge u aa 1, Edge a aa 1])"
-proof -
-  have "card aa = 2" 
-    using assms by (simp add: ugraph_def)
-  then have "u \<in> (aa - {a})"
-    unfolding \<open>u = _\<close> using e_in_E_e_explicit by (intro get_second_in_set) auto
-  then show ?thesis
-    by auto
-qed
-
-
-lemma edge_in_list_construction_contains_given_e:
-  assumes 
-    "Edge u e i
-        \<in> set (if u \<in> C' then [Edge a aa 0, Edge a aa 1] 
-    else [Edge a aa 0, Edge u aa 0, Edge u aa 1, Edge a aa 1])"
-  shows "aa = e"
-  using assms by(auto split: if_split_asm)
-
-
-lemma edge_in_list_construction_contains_given_e2:
-  assumes "Edge u e i
-        \<in> set (let u = get_second (aa - {a}) 
-        in if u \<in> C' then [Edge a aa 0, Edge a aa 1] 
-        else [Edge a aa 0, Edge u aa 0, Edge u aa 1, Edge a aa 1])"
-  shows "e = aa"
-  using assms by (auto simp: Let_def split: if_split_asm)
 
 lemma only_previous_edges_in_new_edges:
   assumes "e \<notin> set E'" "\<exists>u i. Edge u e i \<in> set (construct_cycle_add_edge_nodes E' a C')"
   shows False
   using assms 
   apply(induction E') 
-   apply(auto split: if_split_asm)
-  using edge_in_list_construction_contains_given_e2 by fastforce+
+  by(auto split: if_split_asm simp add: Let_def)
 
 
 lemma distinct_construct_edge_nodes:
@@ -635,12 +349,15 @@ lemma distinct_construct_edge_nodes:
   shows "distinct (construct_cycle_add_edge_nodes E' a C')"
   using assms 
   apply(induction E') 
-   apply(auto)
-  using distinct_edge_lists 
-     apply smt
-    apply (auto simp add: ugraph_implies_smaller_set_ugraph) 
-  using only_previous_edges_in_new_edges 
-  by (smt empty_set list.simps(15) set_ConsD singleton_iff)
+   apply(auto simp add: Let_def ugraph_implies_smaller_set_ugraph not_in_edges_not_in_cycle ) 
+      apply (meson only_previous_edges_in_new_edges) 
+  using get_second_minus_noteq_minus 
+  unfolding ugraph_def 
+  apply fastforce 
+    apply (simp add: get_second_minus_noteq_minus) 
+   by (meson only_previous_edges_in_new_edges)+  
+
+ 
 
 
 lemma card_3_element_set:
@@ -664,11 +381,8 @@ qed
 lemma elements_of_edges_helper:
   assumes "v\<in> e" "u\<in> e" "card e = 2" "v \<noteq> u" "finite e"
   shows "e = {v, u}"
-  using assms 
-  apply(auto) 
-  apply(rule ccontr) 
-  using card_3_element_set 
-  by (metis add_le_cancel_right numeral_le_one_iff numeral_plus_one one_add_one semiring_norm(5) semiring_norm(69))
+  using assms e_in_E_e_explicit 
+  by blast 
 
 
 lemma node_of_node_of_edge_construction:
@@ -685,63 +399,7 @@ lemma node_of_edge_construction_contains_a:
   shows "a \<in> e"
   using assms 
   apply(induction E') 
-   apply(auto split: if_split_asm) 
-  using edge_in_list_construction_contains_given_e2 by fastforce
-
-
-lemma vertex_in_dege_of_node_helper2:
-  assumes "Edge v e i
-        \<in> set (if u \<in> C' then [Edge a aa 0, Edge a aa 1] 
-      else [Edge a aa 0, Edge u aa 0, Edge u aa 1, Edge a aa 1])"
-    "u = get_second (aa - {a})"
-  shows "v = a \<or> v = u"
-  using assms 
-  by(auto split: if_split_asm)
-
-
-lemma vertex_in_edge_of_node_helper2: 
-  assumes "Edge v e i
-        \<in> set (if u \<in> C' then [Edge a aa 0, Edge a aa 1] 
-      else [Edge a aa 0, Edge u aa 0, Edge u aa 1, Edge a aa 1])"
-    "u = get_second (aa - {a})" "a \<in> aa" "card e \<ge> 2"
-  shows "v \<in> e"
-proof -
-  have 2: "e = aa" 
-    using assms 
-    by(auto split: if_split_asm)
-  have 1: "v = a \<or> v = u" 
-    using vertex_in_dege_of_node_helper2 assms 
-    by fast
-  have "u \<in> aa" 
-    using assms 
-    by (metis Suc_1 \<open>e = aa\<close> card_empty card_insert_le_m1 diff_is_0_eq' get_second_in_edge insert_Diff insert_iff le_numeral_extra(3) le_numeral_extra(4) less_numeral_extra(1) not_less_eq_eq)
-  then show ?thesis 
-    using 1 2 assms 
-    by(auto)
-qed
-
-
-lemma vertex_in_edge_of_node_helpe3:
-  assumes "ugraph (insert aa (set E'))" "a \<in> aa" 
-    "Edge v e i
-        \<in> set (let u = get_second (aa - {a}) 
-    in if u \<in> C' then [Edge a aa 0, Edge a aa 1] 
-    else [Edge a aa 0, Edge u aa 0, Edge u aa 1, Edge a aa 1])"
-  shows "v \<in> e"
-proof -
-  have 1: "card aa = 2" 
-    using assms 
-    by (simp add: ugraph_def)
-  then have "e = aa" 
-    using edge_in_list_construction_contains_given_e2 assms 
-    by fastforce
-  then have "card e = 2" 
-    using 1 
-    by auto
-  then show ?thesis 
-    using assms vertex_in_edge_of_node_helper2 
-    by (smt Suc_1 Suc_le_mono le_numeral_extra(4))
-qed
+   by(auto split: if_split_asm simp add: Let_def) 
 
 
 lemma vertex_in_edge_of_node: 
@@ -749,11 +407,10 @@ lemma vertex_in_edge_of_node:
   shows "v \<in> e"
   using assms 
   apply(induction E') 
-   apply(auto split: if_split_asm) 
-  using assms vertex_in_edge_of_node_helpe3 
-    apply fast    
-  using ugraph_implies_smaller_set_ugraph 
-  by auto
+   apply(auto split: if_split_asm simp add: Let_def)   
+  using assms ugraph_implies_smaller_set_ugraph 
+  unfolding ugraph_def
+    by(auto simp add: get_second_in_e)
 
 
 lemma edge_of_vertex_contains: 
@@ -859,7 +516,8 @@ lemma distinct_nodes:
   apply(induction Cs arbitrary: n) 
    apply(auto)
   using vertex_cover_list_def in_vc
-  by(auto simp add: distinct_construct_edge_nodes distinct_n_greater_0 cover_node_not_in_other_edge in_vc vertex_cover_list_def)
+  by(auto simp add: distinct_construct_edge_nodes distinct_n_greater_0 
+      cover_node_not_in_other_edge in_vc vertex_cover_list_def)
 
 
 lemma cycle_distinct:
@@ -944,7 +602,8 @@ next
     by linarith
   then have "vwalk_arcs C = []" 
     apply(auto) 
-    by (metis One_nat_def cancel_comm_monoid_add_class.diff_cancel length_greater_0_conv less_numeral_extra(3) vwalk_length_def vwalk_length_simp)
+    by (metis One_nat_def cancel_comm_monoid_add_class.diff_cancel 
+        length_greater_0_conv less_numeral_extra(3) vwalk_length_def vwalk_length_simp)
   then have "(pre_digraph.awalk_verts G v (vwalk_arcs C)) = [v]" 
     by (simp add: pre_digraph.awalk_verts.simps(1))
   then show ?thesis 
@@ -959,22 +618,12 @@ lemma distinct_arcs: "distinct (tl (pre_digraph.awalk_verts G v (vwalk_arcs Cycl
 
 subsubsection\<open>Edges of Cycle are Edges of Graph\<close>
 
-lemma Edgei_not_in_construct_edge_nodes_helper:
-  assumes " u = get_second (aa - {a})" "1<i" "Edge u1 e1 i
-        \<in> set (if u \<in> C' then [Edge a aa 0, Edge a aa 1] 
-    else [Edge a aa 0, Edge u aa 0, Edge u aa 1, Edge a aa 1])"
-  shows "False"
-  using assms 
-  by(auto split: if_split_asm)
-
 lemma Edgei_not_in_construct_edge_nodes: 
   assumes "Suc 0 < i" "Edge u1 e1 i \<in> set (construct_cycle_add_edge_nodes E' a C')"
   shows "False"
   using assms 
   apply(induction E')
-   apply(auto split: if_split_asm) 
-  using Edgei_not_in_construct_edge_nodes_helper
-  by (smt One_nat_def)
+  by(auto split: if_split_asm simp add: Let_def)
 
 
 lemma Edgei_not_in_construct_cycle:
@@ -990,7 +639,8 @@ lemma Edgei_not_in_construct_cycle:
 lemma in_cycle:
   assumes "v \<in> set (construct_cycle_1 E (CS) n C)" "ugraph (set E)"
   shows "(\<exists>i. v = Cover i \<and>  ((i<length CS + n \<and> i \<ge> n)  \<or> i = 0)) 
-        \<or> (\<exists> e u. v = Edge u e 0 \<and> u \<in> e \<and> e \<in> set E) \<or> (\<exists> e u. v = Edge u e 1 \<and> u \<in> e \<and> e \<in> set E)"
+        \<or> (\<exists> e u. v = Edge u e 0 \<and> u \<in> e \<and> e \<in> set E) 
+        \<or> (\<exists> e u. v = Edge u e 1 \<and> u \<in> e \<and> e \<in> set E)"
   using assms 
   apply(induction CS arbitrary: n) 
    apply(auto) 
@@ -999,22 +649,21 @@ lemma in_cycle:
 
 
 lemma last_construct_cycle_not_Edge0: 
-  assumes "v1 = last (construct_cycle_add_edge_nodes E' a C')" "v1 = Edge v e 0" "construct_cycle_add_edge_nodes E' a C' \<noteq> []"
+  assumes "v1 = last (construct_cycle_add_edge_nodes E' a C')" 
+    "v1 = Edge v e 0" "construct_cycle_add_edge_nodes E' a C' \<noteq> []"
   shows False
   using assms 
   apply(induction E') 
-   apply(auto split: if_split_asm) 
-  by (smt append.right_neutral hc_node.inject(2) last_ConsL last_ConsR less_numeral_extra(1) list.discI nat_neq_iff)
+  by(auto split: if_split_asm simp add: Let_def) 
 
 
 lemma hd_construct_cycle_not_Edge1: 
-  assumes "v1 = hd (construct_cycle_add_edge_nodes E' a C')" "v1 = Edge v e 1" "construct_cycle_add_edge_nodes E' a C' \<noteq> []"
+  assumes "v1 = hd (construct_cycle_add_edge_nodes E' a C')" 
+    "v1 = Edge v e 1" "construct_cycle_add_edge_nodes E' a C' \<noteq> []"
   shows False
   using assms 
   apply(induction E') 
-   apply(auto split: if_split_asm) 
-   apply (smt One_nat_def hc_node.inject(2) less_numeral_extra(1) list.sel(1) nat_neq_iff)
-  by (smt One_nat_def hc_node.inject(2) hd_append less_Suc_eq_0_disj less_numeral_extra(4) list.sel(1)) 
+   by(auto split: if_split_asm simp add: Let_def) 
 
 
 lemma edge0_in_construct_cycle:
@@ -1054,25 +703,13 @@ lemma helper_for_helper_arcs_explicit_Cover_Edge0_Edge0:
 proof(induction E')
   case Nil
   then show ?case 
-    unfolding sublist_def by simp
+    unfolding sublist_def
+    by simp
 next
   case (Cons e E')
-  have 1: "construct_cycle_add_edge_nodes (e # E') a C = (if a \<in> e then 
-    (let u = (get_second (e-{a})) in 
-      (if u\<in> C then [(Edge a e 0), (Edge a e 1)] 
-      else [(Edge a e 0), (Edge u e 0), (Edge u e 1), (Edge a e 1)])) 
-        @ construct_cycle_add_edge_nodes E' a C 
-    else construct_cycle_add_edge_nodes E' a C)" 
-    by simp 
   then show ?case 
   proof (cases "a\<in>e")
     case True
-    then have 2: "construct_cycle_add_edge_nodes (e # E') a C = (let u = (get_second (e-{a})) in 
-      (if u\<in> C then [(Edge a e 0), (Edge a e 1)] 
-      else [(Edge a e 0), (Edge u e 0), (Edge u e 1), (Edge a e 1)])) 
-        @ construct_cycle_add_edge_nodes E' a C" 
-      using 1 
-      by simp
     then obtain u where u_def: "u = get_second (e-{a})" 
       by auto
     then show ?thesis 
@@ -1080,8 +717,8 @@ next
       case True
       then have 3: "construct_cycle_add_edge_nodes (e # E') a C =  [(Edge a e 0), (Edge a e 1)] 
            @ construct_cycle_add_edge_nodes E' a C" 
-        using 2 u_def 
-        by simp
+        using u_def \<open>a \<in> e\<close> 
+        by(auto simp add: Let_def)
       then show ?thesis 
       proof(cases "v1 \<in> set [(Edge a e 0), (Edge a e 1)]")
         case True
@@ -1123,8 +760,8 @@ next
       then have 3: "construct_cycle_add_edge_nodes (e # E') a C 
          = [(Edge a e 0), (Edge u e 0), (Edge u e 1), (Edge a e 1)]
          @ construct_cycle_add_edge_nodes E' a C" 
-        using 2 u_def \<open>a\<in> e\<close>
-        by smt
+        using u_def \<open>a\<in> e\<close> 
+        by(auto simp add: Let_def)
       then show ?thesis
       proof(cases "v1 \<in> set [(Edge a e 0), (Edge u e 0), (Edge u e 1), (Edge a e 1)]")
         case True
@@ -1137,7 +774,7 @@ next
           \<or> v1 = hd (tl(construct_cycle_add_edge_nodes (e#E') a C))"
           using True 4 3 Cons 
           by simp
-        then have "v2 = hd (tl (construct_cycle_add_edge_nodes (e#E') a C)) 
+        then have v2_or: "v2 = hd (tl (construct_cycle_add_edge_nodes (e#E') a C)) 
               \<or> v2 = hd (tl  (tl(construct_cycle_add_edge_nodes (e#E') a C)))" 
         proof(cases "v1 = hd (construct_cycle_add_edge_nodes (e#E') a C)")
           case True
@@ -1174,8 +811,8 @@ next
               using 9 3 
               by simp 
             then have "v2 = hd (tl (tl(construct_cycle_add_edge_nodes (e#E') a C)))" 
-              using 3 Cons True 4  
-              by (metis \<open>v2 = hd (tl (construct_cycle_add_edge_nodes (e # E') a C)) \<or> v2 = hd (tl (tl (construct_cycle_add_edge_nodes (e # E') a C)))\<close> assms(1) assms(4) sublist_implies_in_set_a)  
+              using 3 Cons True 4 v2_or 
+              by (metis assms(1, 4) sublist_implies_in_set_a)  
             then show ?thesis 
               using 9 Cons.prems(1) Cons.prems(4) 8 sublist_implies_in_set_a  
               by metis
@@ -1214,7 +851,6 @@ next
   next
     case False
     then have "construct_cycle_add_edge_nodes (e # E') a C = construct_cycle_add_edge_nodes E' a C" 
-      using 1
       by simp
     then show ?thesis 
       using Cons 
@@ -1224,31 +860,21 @@ qed
 
 
 lemma helper_for_helper_arcs_explicit_Cover_Edge0_Edge1: 
-  assumes "sublist [v1, v2] (construct_cycle_add_edge_nodes E' a C)" "v1 = Edge u1 e1 0" "v2 = Edge u2 e2 1"
+  assumes "sublist [v1, v2] (construct_cycle_add_edge_nodes E' a C)" 
+    "v1 = Edge u1 e1 0" "v2 = Edge u2 e2 1"
     "distinct (construct_cycle_add_edge_nodes E' a C)" 
   shows "e1 = e2 \<and> u1 = u2"
   using assms
 proof(induction E')
   case Nil
   then show ?case 
-    unfolding sublist_def by simp
+    unfolding sublist_def 
+    by simp
 next
   case (Cons e E')
-  have 1: "construct_cycle_add_edge_nodes (e # E') a C = (if a \<in> e then 
-    (let u = (get_second (e-{a})) in 
-      (if u\<in> C then [(Edge a e 0), (Edge a e 1)] 
-      else [(Edge a e 0), (Edge u e 0), (Edge u e 1), (Edge a e 1)])) 
-    @ construct_cycle_add_edge_nodes E' a C 
-    else construct_cycle_add_edge_nodes E' a C)" by simp 
   then show ?case
   proof (cases "a\<in>e")
     case True
-    then have 2: "construct_cycle_add_edge_nodes (e # E') a C = (let u = (get_second (e-{a})) in 
-    (if u\<in> C then [(Edge a e 0), (Edge a e 1)] 
-      else [(Edge a e 0), (Edge u e 0), (Edge u e 1), (Edge a e 1)])) 
-      @ construct_cycle_add_edge_nodes E' a C" 
-      using 1 
-      by simp
     then obtain u where u_def: "u = get_second (e-{a})"
       by auto
     then show ?thesis 
@@ -1256,8 +882,8 @@ next
       case True
       then have 3: "construct_cycle_add_edge_nodes (e # E') a C =  [(Edge a e 0), (Edge a e 1)] 
            @ construct_cycle_add_edge_nodes E' a C" 
-        using 2 u_def 
-        by simp
+        using u_def \<open>a \<in> e\<close> 
+        by(auto simp add: Let_def) 
       then show ?thesis 
       proof(cases "v1 \<in> set [(Edge a e 0), (Edge a e 1)]")
         case True
@@ -1294,8 +920,8 @@ next
       then have 3: "construct_cycle_add_edge_nodes (e # E') a C = 
          [(Edge a e 0), (Edge u e 0), (Edge u e 1), (Edge a e 1)]
          @ construct_cycle_add_edge_nodes E' a C" 
-        using 2 u_def \<open>a\<in> e\<close> 
-        by smt
+        using u_def \<open>a\<in> e\<close> 
+        by(auto simp add: Let_def)
       then show ?thesis 
       proof(cases "v1 \<in> set [(Edge a e 0), (Edge u e 0), (Edge u e 1), (Edge a e 1)]")
         case True
@@ -1353,8 +979,7 @@ next
     qed
   next
     case False
-    then have "construct_cycle_add_edge_nodes (e # E') a C = construct_cycle_add_edge_nodes E' a C" 
-      using 1 
+    then have "construct_cycle_add_edge_nodes (e # E') a C = construct_cycle_add_edge_nodes E' a C"
       by simp
     then show ?thesis
       using Cons 
@@ -1368,28 +993,17 @@ lemma helper_for_helper_arcs_explicit_Cover_Edge1_Edge1:
     "v1 = Edge u1 e1 1" "v2 = Edge u2 e2 1"
     "distinct (construct_cycle_add_edge_nodes E' a C)" 
   shows "e1 = e2 \<and> u1 \<noteq> u2"
-  using assms proof(induction E')
+  using assms 
+proof(induction E')
   case Nil
   then show ?case
     unfolding sublist_def 
     by simp
 next
   case (Cons e E')
-  have 1: "construct_cycle_add_edge_nodes (e # E') a C = (if a \<in> e then 
-    (let u = (get_second (e-{a})) in 
-      (if u\<in> C then [(Edge a e 0), (Edge a e 1)] 
-      else [(Edge a e 0), (Edge u e 0), (Edge u e 1), (Edge a e 1)])) 
-    @ construct_cycle_add_edge_nodes E' a C 
-    else construct_cycle_add_edge_nodes E' a C)" 
-    by simp 
-  then show ?case proof (cases "a\<in>e")
+  then show ?case 
+  proof (cases "a\<in>e")
     case True
-    then have 2: "construct_cycle_add_edge_nodes (e # E') a C = (let u = (get_second (e-{a})) in 
-      (if u\<in> C then [(Edge a e 0), (Edge a e 1)] 
-      else [(Edge a e 0), (Edge u e 0), (Edge u e 1), (Edge a e 1)])) 
-      @ construct_cycle_add_edge_nodes E' a C" 
-      using 1
-      by simp
     then obtain u where u_def: "u = get_second (e-{a})" 
       by auto
     then show ?thesis 
@@ -1397,19 +1011,21 @@ next
       case True
       then have 3: "construct_cycle_add_edge_nodes (e # E') a C =  [(Edge a e 0), (Edge a e 1)] 
            @ construct_cycle_add_edge_nodes E' a C" 
-        using 2 u_def 
-        by simp
+        using u_def \<open>a \<in> e\<close> 
+        by(auto)
       then show ?thesis 
       proof(cases "v1 \<in> set [(Edge a e 0), (Edge a e 1)]")
         case True
         then have 4: "v1 = (Edge a e 1)" 
           using assms 
           by simp
-        then have 7: "v1 = last [(Edge a e 0), (Edge a e 1)]" "v1 \<in> set [(Edge a e 0), (Edge a e 1)]" 
+        then have 7: "v1 = last [(Edge a e 0), (Edge a e 1)]" 
+          "v1 \<in> set [(Edge a e 0), (Edge a e 1)]" 
           by simp+
         then have 5: "v2 = hd (construct_cycle_add_edge_nodes E' a C)" 
-          using 3 4
-          by (metis (mono_tags, lifting) Cons.prems(1) Cons.prems(4) Cons_eq_appendI sublist_set_last_ls1 last_ConsL list.set_intros(1))
+          using 4 3 Cons u_def \<open>a \<in> e\<close> \<open>u \<in> C\<close>
+          apply(auto simp add: Let_def split: if_split_asm) 
+          by (metis "3" "7"(1) Cons.prems(1) Cons.prems(4) True sublist_set_last_ls1_1)
         then have 6: "v2 \<in> set (construct_cycle_add_edge_nodes E' a C)" 
           using Cons True sublist_set_last_ls1_1_1 3 4 7
           by fast 
@@ -1442,8 +1058,8 @@ next
       then have 3: "construct_cycle_add_edge_nodes (e # E') a C 
           = [(Edge a e 0), (Edge u e 0), (Edge u e 1), (Edge a e 1)]
          @ construct_cycle_add_edge_nodes E' a C" 
-        using 2 u_def \<open>a\<in> e\<close> 
-        by smt
+        using u_def \<open>a\<in> e\<close> 
+        by(auto simp add: Let_def)
       then show ?thesis 
       proof(cases "v1 \<in> set [(Edge a e 0), (Edge u e 0), (Edge u e 1), (Edge a e 1)]")
         case True
@@ -1515,8 +1131,8 @@ next
     qed
   next
     case False
-    then have "construct_cycle_add_edge_nodes (e # E') a C = construct_cycle_add_edge_nodes E' a C" 
-      using 1 
+    then have "construct_cycle_add_edge_nodes (e # E') a C 
+    = construct_cycle_add_edge_nodes E' a C" 
       by simp
     then show ?thesis 
       using Cons 
@@ -1576,38 +1192,28 @@ proof(induction E' arbitrary: i j)
   then show ?case by simp
 next
   case (Cons e E')
-  have 1: "construct_cycle_add_edge_nodes (e # E') a C = (if a \<in> e then 
-    (let u = (get_second (e-{a})) in 
-      (if u\<in> C then [(Edge a e 0), (Edge a e 1)] 
-      else [(Edge a e 0), (Edge u e 0), (Edge u e 1), (Edge a e 1)])) 
-      @ construct_cycle_add_edge_nodes E' a C 
-    else construct_cycle_add_edge_nodes E' a C)" by simp 
   then show ?case
   proof (cases "a\<in>e")
-    case True (*a\<in> e*)
-    then have 2: "construct_cycle_add_edge_nodes (e # E') a C = (let u = (get_second (e-{a})) in 
-      (if u\<in> C then [(Edge a e 0), (Edge a e 1)] 
-      else [(Edge a e 0), (Edge u e 0), (Edge u e 1), (Edge a e 1)])) @ construct_cycle_add_edge_nodes E' a C" 
-      using 1
-      by simp
+    case True 
     then obtain u where u_def: "u = get_second (e-{a})" 
       by auto
     then show ?thesis 
     proof(cases "u\<in>C")
       case True
       then have 3: "construct_cycle_add_edge_nodes (e # E') a C =  [(Edge a e 0), (Edge a e 1)] 
-           @ construct_cycle_add_edge_nodes E' a C" using 2 u_def by simp
+           @ construct_cycle_add_edge_nodes E' a C" 
+        using u_def \<open>a \<in> e\<close> 
+        by(auto) 
       then show ?thesis
       proof(cases "Edge a e1 1 \<in> set [(Edge a e 0), (Edge a e 1)]")
         case True
         then have 4: "e1 = e" 
           using assms 
           by simp
-        then obtain i1 where i1_def: "i1 = (1::nat)" 
-          by auto
+        define i1 where i1_def: "i1 = (1::nat)" 
         then have i1_Edge: "(construct_cycle_add_edge_nodes (e#E') a C)! i1 = Edge a e1 1" 
-          using 3 4 
-          by simp
+          using 4 u_def Cons \<open>u \<in> C\<close> 
+          by(auto simp add: Let_def) 
         have "e2 \<in> set E'" 
           using Cons indices_length_set_ls2_only_append 
           by auto 
@@ -1656,15 +1262,11 @@ next
         then have j_fin: "(E')!(j-1) = e2  \<and> (j-1)<length (E') \<and> i-1 < j-1" 
           using i_def j_def  
           by auto
-        then have "\<exists>i1 j1 . (construct_cycle_add_edge_nodes E' a C)! i1 = Edge a e1 1 
-        \<and> (construct_cycle_add_edge_nodes E' a C)! j1 = Edge a e2 1 \<and> i1< j1
-        \<and> j1 < length (construct_cycle_add_edge_nodes E' a C)" 
-          using Cons  i_fin j_fin 
-          by blast 
         then obtain i1 j1 where "(construct_cycle_add_edge_nodes E' a C)! i1 = Edge a e1 1 
         \<and> (construct_cycle_add_edge_nodes E' a C)! j1 = Edge a e2 1 \<and> i1< j1
         \<and> j1 < length (construct_cycle_add_edge_nodes E' a C)" 
-          by auto
+          using Cons i_fin 
+          by blast
         then have "([(Edge a e 0), (Edge a e 1)] 
            @ construct_cycle_add_edge_nodes E' a C) ! (i1+2) = Edge a e1 1" 
           "([(Edge a e 0), (Edge a e 1)] 
@@ -1682,15 +1284,14 @@ next
       then have 3: "construct_cycle_add_edge_nodes (e # E') a C 
         = [(Edge a e 0), (Edge u e 0), (Edge u e 1), (Edge a e 1)]
          @ construct_cycle_add_edge_nodes E' a C" 
-        using 2 u_def \<open>a\<in> e\<close> 
-        by smt
+        using u_def \<open>a\<in> e\<close> 
+        by(auto simp add: Let_def)
       then show ?thesis 
       proof(cases "Edge a e1 1 \<in> set [(Edge a e 0), (Edge u e 0), (Edge u e 1), (Edge a e 1)]")
         case True
         then have 4: "e1 = e" 
           by auto
-        then obtain i1 where i1_def: "i1 = (3::nat)" 
-          by auto
+        define i1 where i1_def: "i1 = (3::nat)"
         then have i1_Edge: "(construct_cycle_add_edge_nodes (e#E') a C)! i1 = Edge a e1 1" 
           using 3 4
           by simp
@@ -1703,13 +1304,10 @@ next
         then have "Edge a e2 1 \<in> set (construct_cycle_add_edge_nodes (e#E') a C)" 
           using Cons helper5_for_helper_arcs_explicit_Cover_Edge0_Edge0_1 
           by simp
-        then have "\<exists>j1. (construct_cycle_add_edge_nodes (E') a C)! j1 = Edge a e2 1 
-          \<and> j1 < length (construct_cycle_add_edge_nodes (E') a C)" 
-          using x_in_implies_exist_index e2_set_1 
-          by metis
         then obtain j1 where "(construct_cycle_add_edge_nodes (E') a C)! j1 = Edge a e2 1 
           \<and> j1 < length (construct_cycle_add_edge_nodes (E') a C)" 
-          by auto
+          using e2_set_1 x_in_implies_exist_index
+          by fastforce
         then have j1_def: "(construct_cycle_add_edge_nodes (e#E') a C)! (j1+4) = Edge a e2 1 
           \<and> (j1+4) < length (construct_cycle_add_edge_nodes (e#E') a C)" 
           using 3 
@@ -1741,13 +1339,11 @@ next
         then have j_fin: "(E')!(j-1) = e2  \<and> (j-1)<length (E') \<and> i-1 < j-1" 
           using i_def j_def 
           by auto
-        then have "\<exists>i1 j1 . (construct_cycle_add_edge_nodes E' a C)! i1 = Edge a e1 1 
-          \<and> (construct_cycle_add_edge_nodes E' a C)! j1 = Edge a e2 1 \<and> i1< j1
-          \<and> j1 < length (construct_cycle_add_edge_nodes E' a C)" using Cons  i_fin j_fin 
-          by blast 
         then obtain i1 j1 where "(construct_cycle_add_edge_nodes E' a C)! i1 = Edge a e1 1 
         \<and> (construct_cycle_add_edge_nodes E' a C)! j1 = Edge a e2 1 \<and> i1< j1
-        \<and> j1 < length (construct_cycle_add_edge_nodes E' a C)" by auto
+        \<and> j1 < length (construct_cycle_add_edge_nodes E' a C)" 
+          using Cons i_fin 
+          by blast
         then have "([(Edge a e 0), (Edge u e 0), (Edge u e 1), (Edge a e 1)] 
            @ construct_cycle_add_edge_nodes E' a C) ! (i1+4) = Edge a e1 1" 
           "([(Edge a e 0), (Edge u e 0), (Edge u e 1), (Edge a e 1)] 
@@ -1763,8 +1359,8 @@ next
     qed
   next
     case False
-    then have 3: "construct_cycle_add_edge_nodes (e # E') a C = construct_cycle_add_edge_nodes E' a C" 
-      using 1
+    then have 3: "construct_cycle_add_edge_nodes (e # E') a C 
+        = construct_cycle_add_edge_nodes E' a C" 
       by simp
     have 10: "e \<noteq> e1" 
       using Cons False 
@@ -1789,7 +1385,8 @@ next
       by auto
     then have "\<exists>i1 j1 . (construct_cycle_add_edge_nodes E' a C)! i1 = Edge a e1 1 
       \<and> (construct_cycle_add_edge_nodes E' a C)! j1 = Edge a e2 1 \<and> i1< j1
-      \<and> j1 < length (construct_cycle_add_edge_nodes E' a C)" using Cons  i_fin j_fin 
+      \<and> j1 < length (construct_cycle_add_edge_nodes E' a C)" 
+      using Cons  i_fin j_fin 
       by blast 
     then show ?thesis
       using Cons 3 
@@ -1803,28 +1400,16 @@ lemma helper4_for_helper_arcs_explicit_Cover_Edge0_Edge0:
   shows "\<exists>i1 j1. (construct_cycle_add_edge_nodes E' a C)! i1 = Edge a e1 1 
     \<and> (construct_cycle_add_edge_nodes E' a C)! j1 = Edge a e2 0 \<and> i1< j1
     \<and> j1 < length (construct_cycle_add_edge_nodes E' a C)" 
-  using assms proof(induction E' arbitrary: i j)
+  using assms 
+proof(induction E' arbitrary: i j)
   case Nil
   then show ?case 
     by simp
 next
   case (Cons e E')
-  have 1: "construct_cycle_add_edge_nodes (e # E') a C = (if a \<in> e then 
-    (let u = (get_second (e-{a})) in 
-      (if u\<in> C then [(Edge a e 0), (Edge a e 1)] 
-      else [(Edge a e 0), (Edge u e 0), (Edge u e 1), (Edge a e 1)])) 
-      @ construct_cycle_add_edge_nodes E' a C 
-    else construct_cycle_add_edge_nodes E' a C)" 
-    by simp 
   then show ?case 
   proof (cases "a\<in>e")
-    case True (*a\<in> e*)
-    then have 2: "construct_cycle_add_edge_nodes (e # E') a C = (let u = (get_second (e-{a})) in 
-      (if u\<in> C then [(Edge a e 0), (Edge a e 1)] 
-      else [(Edge a e 0), (Edge u e 0), (Edge u e 1), (Edge a e 1)])) 
-        @ construct_cycle_add_edge_nodes E' a C" 
-      using 1 
-      by simp
+    case True
     then obtain u where u_def: "u = get_second (e-{a})" 
       by auto
     then show ?thesis 
@@ -1832,16 +1417,15 @@ next
       case True
       then have 3: "construct_cycle_add_edge_nodes (e # E') a C =  [(Edge a e 0), (Edge a e 1)] 
            @ construct_cycle_add_edge_nodes E' a C" 
-        using 2 u_def 
-        by simp
+        using u_def \<open>a \<in> e\<close> 
+        by(auto)
       then show ?thesis 
       proof(cases "Edge a e1 1 \<in> set [(Edge a e 0), (Edge a e 1)]")
         case True
         then have 4: "e1 = e" 
           using assms 
           by simp
-        then obtain i1 where i1_def: "i1 = (1::nat)" 
-          by auto
+        define i1 where i1_def: "i1 = (1::nat)" 
         then have i1_Edge: "(construct_cycle_add_edge_nodes (e#E') a C)! i1 = Edge a e1 1" 
           using 3 4
           by simp
@@ -1916,20 +1500,15 @@ next
       qed
     next
       case False
-      then have 3: "construct_cycle_add_edge_nodes (e # E') a C = [(Edge a e 0), (Edge u e 0), (Edge u e 1), (Edge a e 1)]
-         @ construct_cycle_add_edge_nodes E' a C" 
-        using 2 u_def \<open>a\<in> e\<close> 
-        by smt
       then show ?thesis 
       proof(cases "Edge a e1 1 \<in> set [(Edge a e 0), (Edge u e 0), (Edge u e 1), (Edge a e 1)]")
         case True
         then have 4: "e1 = e" 
           by auto
-        then obtain i1 where i1_def: "i1 = (3::nat)" 
-          by auto
+        define i1 where i1_def: "i1 = (3::nat)" 
         then have i1_Edge: "(construct_cycle_add_edge_nodes (e#E') a C)! i1 = Edge a e1 1" 
-          using 3 4 
-          by simp
+          using 4 \<open>a \<in> e\<close> False u_def 
+          by(auto simp add: Let_def) 
         have "e2 \<in> set E'" 
           using Cons indices_length_set_ls2_only_append 
           by auto 
@@ -1939,17 +1518,14 @@ next
         then have "Edge a e2 0 \<in> set (construct_cycle_add_edge_nodes (e#E') a C)" 
           using Cons helper5_for_helper_arcs_explicit_Cover_Edge0_Edge0_1 
           by simp
-        then have "\<exists>j1. (construct_cycle_add_edge_nodes (E') a C)! j1 = Edge a e2 0
-          \<and> j1 < length (construct_cycle_add_edge_nodes (E') a C)" 
-          using x_in_implies_exist_index e2_set_1
-          by metis
         then obtain j1 where "(construct_cycle_add_edge_nodes (E') a C)! j1 = Edge a e2 0
           \<and> j1 < length (construct_cycle_add_edge_nodes (E') a C)"
-          by auto
+          using e2_set_1 x_in_implies_exist_index
+          by fastforce
         then have j1_def: "(construct_cycle_add_edge_nodes (e#E') a C)! (j1+4) = Edge a e2 0 
           \<and> (j1+4) < length (construct_cycle_add_edge_nodes (e#E') a C)" 
-          using 3 
-          by simp
+          using False u_def assms 4 
+          by(auto simp add: Let_def) 
         then have "i1<(j1+4)" 
           using i1_def 
           by simp  
@@ -1978,15 +1554,11 @@ next
         then have j_fin: "(E')!(j-1) = e2  \<and> (j-1)<length (E') \<and> i-1 < j-1" 
           using i_def j_def 
           by auto
-        then have "\<exists>i1 j1 . (construct_cycle_add_edge_nodes E' a C)! i1 = Edge a e1 1 
-          \<and> (construct_cycle_add_edge_nodes E' a C)! j1 = Edge a e2 0 \<and> i1< j1
-          \<and> j1 < length (construct_cycle_add_edge_nodes E' a C)" 
-          using Cons  i_fin j_fin 
-          by blast 
         then obtain i1 j1 where "(construct_cycle_add_edge_nodes E' a C)! i1 = Edge a e1 1 
         \<and> (construct_cycle_add_edge_nodes E' a C)! j1 = Edge a e2 0 \<and> i1< j1
         \<and> j1 < length (construct_cycle_add_edge_nodes E' a C)" 
-          by auto
+          using Cons assms i_fin 
+          by blast
         then have "([(Edge a e 0), (Edge u e 0), (Edge u e 1), (Edge a e 1)] 
            @ construct_cycle_add_edge_nodes E' a C) ! (i1+4) = Edge a e1 1" 
           "([(Edge a e 0), (Edge u e 0), (Edge u e 1), (Edge a e 1)] 
@@ -1996,16 +1568,18 @@ next
            @ construct_cycle_add_edge_nodes E' a C)" 
           by auto 
         then show ?thesis 
-          using 3 
-          by metis
+          apply(auto simp add: Let_def) 
+          by (metis diff_Suc_Suc nth_Cons_Suc zero_less_diff)+
       qed
     qed
   next
     case False
-    then have 3: "construct_cycle_add_edge_nodes (e # E') a C = construct_cycle_add_edge_nodes E' a C" 
-      using 1 
+    then have 3: "construct_cycle_add_edge_nodes (e # E') a C = 
+      construct_cycle_add_edge_nodes E' a C" 
       by simp
-    have 10: "e \<noteq> e1" using Cons False by blast 
+    have 10: "e \<noteq> e1"
+      using Cons False 
+      by blast 
     then have  i_def: "(e#E')!i = e1  \<and> i<length (e#E') "  
       using Cons 
       by simp
@@ -2026,7 +1600,8 @@ next
       by auto
     then have "\<exists>i1 j1 . (construct_cycle_add_edge_nodes E' a C)! i1 = Edge a e1 1 
       \<and> (construct_cycle_add_edge_nodes E' a C)! j1 = Edge a e2 0 \<and> i1< j1
-        \<and> j1 < length (construct_cycle_add_edge_nodes E' a C)" using Cons  i_fin j_fin 
+        \<and> j1 < length (construct_cycle_add_edge_nodes E' a C)" 
+      using Cons  i_fin j_fin 
       by blast 
     then show ?thesis
       using Cons 3 
@@ -2038,29 +1613,27 @@ qed
 lemma helper3_for_helper_arcs_explicit_Cover_Edge0_Edge0:
   assumes "v1 = Edge a (E' ! i) 1" "v2 = Edge a (E' ! j) 0" 
     "distinct (construct_cycle_add_edge_nodes E' a C)" "j < length E'"
-    "\<exists>p1 p2. p1 @ v1 # v2 # p2 = construct_cycle_add_edge_nodes E' a C" 
+    "sublist [v1, v2] (construct_cycle_add_edge_nodes E' a C)" 
     "i < i'" "a \<in> E' ! i'"
     "i' < j"
   shows False
 proof -
-  obtain e1 where e1_def: "e1 = (E' ! i)" 
-    by auto
-  obtain e2 where e2_def: "e2 = (E'!j)" 
-    by auto
-  obtain e3 where e3_def: "e3 = (E'!i')" 
-    by auto
+  define e1 where e1_def: "e1 = (E' ! i)" 
+  define e2 where e2_def: "e2 = (E'!j)" 
+  define e3 where e3_def: "e3 = (E'!i')" 
   have "\<exists>i. (construct_cycle_add_edge_nodes E' a C)!i = v1
      \<and> (construct_cycle_add_edge_nodes E' a C)!(i+1) = v2 
      \<and> (i+1)< length (construct_cycle_add_edge_nodes E' a C)" 
     using helper6_for_helper_arcs_explicit_Cover_Edge0_Edge0 assms 
-    by fast
+    unfolding sublist_def
+    by (metis Cons_eq_append_conv Suc_eq_plus1 eq_Nil_appendI)
   then obtain i where i_def: "(construct_cycle_add_edge_nodes E' a C)!i = v1 
     \<and> (construct_cycle_add_edge_nodes E' a C)!(i+1) = v2 
     \<and> (i+1)< length (construct_cycle_add_edge_nodes E' a C)"
     by auto
   have "a\<in> e1" 
     using e1_def assms 
-    by (metis (full_types) in_set_conv_decomp node_of_edge_construction_contains_a) 
+    by (meson node_of_edge_construction_contains_a sublist_implies_in_set(1))
   then have "\<exists>i1 j1. (construct_cycle_add_edge_nodes E' a C)! i1 = Edge a e1 1 
     \<and> (construct_cycle_add_edge_nodes E' a C)! j1 = Edge a e3 1 
     \<and> i1< j1 \<and> j1 < length (construct_cycle_add_edge_nodes E' a C)"
@@ -2124,7 +1697,7 @@ qed
 lemma helper2_for_helper_arcs_explicit_Cover_Edge0_Edge0_1:
   assumes "sublist [v1, v2] (construct_cycle_add_edge_nodes E' a C)" 
     "v1 = Edge a e1 1" "v2 = Edge a e2 0"
-    "distinct (construct_cycle_add_edge_nodes E' a C)" "E'!i = e1" "E' ! j = e2"
+    "distinct (construct_cycle_add_edge_nodes E' a C)" "E'!i = e1" "E'!j = e2"
     "i<length E'" "j<length E'" "distinct E'"
   shows "i<j"
   using assms
@@ -2134,21 +1707,9 @@ proof(induction E' arbitrary: i j)
     by auto
 next
   case (Cons e E')
-  have 1: "construct_cycle_add_edge_nodes (e#E') a C = (if a \<in> e then 
-    (let u = (get_second (e-{a})) in 
-      (if u\<in> C then [(Edge a e 0), (Edge a e 1)] 
-      else [(Edge a e 0), (Edge u e 0), (Edge u e 1), (Edge a e 1)])) @
-         construct_cycle_add_edge_nodes E' a C 
-    else construct_cycle_add_edge_nodes E' a C)" 
-    by auto
-  then show ?case proof(cases "a \<in> e")
+  then show ?case 
+  proof(cases "a \<in> e")
     case True
-    then have 1: "construct_cycle_add_edge_nodes (e#E') a C = 
-    (let u = (get_second (e-{a})) in 
-      (if u\<in> C then [(Edge a e 0), (Edge a e 1)] 
-      else [(Edge a e 0), (Edge u e 0), (Edge u e 1), (Edge a e 1)])) 
-        @ construct_cycle_add_edge_nodes E' a C"
-      by simp
     obtain u where u_def: "u = get_second (e -{a})"
       by simp
     then show ?thesis 
@@ -2156,18 +1717,20 @@ next
       case True
       then have 1: "construct_cycle_add_edge_nodes (e#E') a C = 
          [(Edge a e 0), (Edge a e 1)] @ construct_cycle_add_edge_nodes E' a C"
-        using 1 u_def 
+        using u_def \<open>a \<in> e\<close> 
         by simp
       then have "v1 = Edge a e 1 \<or> v1 \<in> set (construct_cycle_add_edge_nodes E' a C)" 
         using Cons 
-        by (metis Edge_nodes_in_construct_edge(2) node_of_edge_construction_contains_a nth_mem set_ConsD sublist_implies_in_set(1)) 
+        by (metis Edge_nodes_in_construct_edge(2) node_of_edge_construction_contains_a 
+            nth_mem set_ConsD sublist_implies_in_set(1)) 
       then show ?thesis
       proof
         assume "v1 = Edge a e 1" 
         then have 2: "v1 = last [Edge a e 0, Edge a e 1]"
           by simp
         then have "v2 = hd (construct_cycle_add_edge_nodes E' a C)"
-          by (metis "1" Cons.prems(1) Cons.prems(4) \<open>v1 = Edge a e 1\<close> append_Cons last.simps list.set_intros(1) sublist_set_last_ls1_3)
+          using \<open>v1 = Edge a e 1\<close>  Cons.prems(1, 4) 1
+          by (metis append_Cons last.simps list.set_intros(1) sublist_set_last_ls1_3)
         have "e1 = e" 
           using 2 Cons 
           by simp
@@ -2175,8 +1738,9 @@ next
           using 2 Cons 
           by (metis length_greater_0_conv list.discI nth_Cons_0 nth_eq_iff_index_eq)
         have "i \<noteq> j" 
-          using Cons 
-          by (metis "1" "2" \<open>e1 = e\<close> distinct.simps(2) only_previous_edges_in_new_edges sublist_set_last_ls1_1_1 sublist_v1_in_subsets)
+          using Cons 1 2 \<open>e1 = e\<close>
+          by (metis distinct.simps(2) only_previous_edges_in_new_edges 
+              sublist_set_last_ls1_1_1 sublist_v1_in_subsets)
         then show "i < j" 
           by (simp add: \<open>i = 0\<close>) 
       next
@@ -2187,8 +1751,8 @@ next
         then have e1: "e1 \<noteq> e"
           by (simp add: assms(2)) 
         have e2: "e2 \<noteq> e" 
-          using Cons 
-          by (metis "1" \<open>v1 \<in> set (construct_cycle_add_edge_nodes E' a C)\<close> distinct.simps(2) only_previous_edges_in_new_edges sublist_set_ls2_1) 
+          using Cons 1 \<open>v1 \<in> set (construct_cycle_add_edge_nodes E' a C)\<close>
+          by (metis distinct.simps(2) only_previous_edges_in_new_edges sublist_set_ls2_1) 
         then have 4: "E'!(i-1) = e1" "E'!(j-1) = e2" 
            apply (metis Cons.prems(5) e1 nth_non_equal_first_eq) 
           by (metis Cons.prems(6) e2 nth_non_equal_first_eq)   
@@ -2233,9 +1797,10 @@ next
       then have 1: "construct_cycle_add_edge_nodes (e#E') a C = 
          [(Edge a e 0), (Edge u e 0), (Edge u e 1), (Edge a e 1)] 
         @ construct_cycle_add_edge_nodes E' a C"
-        using u_def 1 
-        by smt 
-      then have or: "v1 \<in> set [(Edge a e 0), (Edge u e 0), (Edge u e 1), (Edge a e 1)] \<or> v1 \<in> set (construct_cycle_add_edge_nodes E' a C)"
+        using u_def \<open>a \<in> e\<close>
+        by(auto simp add: Let_def)
+      then have or: "v1 \<in> set [(Edge a e 0), (Edge u e 0), (Edge u e 1), (Edge a e 1)] 
+        \<or> v1 \<in> set (construct_cycle_add_edge_nodes E' a C)"
         using Cons.prems(1) sublist_v1_in_subsets 
         by fastforce 
       show ?thesis 
@@ -2251,7 +1816,8 @@ next
             by blast
         qed
         then have "i = 0" 
-          by (metis Cons.prems(5) Cons.prems(7) Cons.prems(9) assms(2) hc_node.inject(2) length_greater_0_conv list.distinct(1) nth_Cons_0 nth_eq_iff_index_eq) 
+          by (metis Cons.prems(5, 7, 9) assms(2) hc_node.inject(2) 
+              length_greater_0_conv list.distinct(1) nth_Cons_0 nth_eq_iff_index_eq) 
         have "v1 = last [(Edge a e 0), (Edge u e 0), (Edge u e 1), (Edge a e 1)]" 
           using \<open>v1 = Edge a e 1\<close> 
           by auto 
@@ -2259,8 +1825,12 @@ next
           using Cons 
           by (metis "1" True sublist_set_last_ls1_1) 
         have "i \<noteq> j" 
-          using Cons 
-          by (metis "1" \<open>i = 0\<close> \<open>v1 = Edge a e 1\<close> \<open>v1 = last [Edge a e 0, Edge u e 0, Edge u e 1, Edge a e 1]\<close> \<open>v2 = hd (construct_cycle_add_edge_nodes E' a C)\<close> append_Nil2 distinct.simps(2) distinct_sublist_last_first_of_sublist_false hd_in_set nth_Cons_0 only_previous_edges_in_new_edges)  
+          using Cons 1
+            \<open>i = 0\<close> \<open>v1 = Edge a e 1\<close> 
+            \<open>v1 = last [Edge a e 0, Edge u e 0, Edge u e 1, Edge a e 1]\<close> 
+            \<open>v2 = hd (construct_cycle_add_edge_nodes E' a C)\<close>
+          by (metis append_Nil2 distinct.simps(2) distinct_sublist_last_first_of_sublist_false
+              hd_in_set nth_Cons_0 only_previous_edges_in_new_edges)  
         then show ?thesis 
           by (simp add: \<open>i = 0\<close>) 
       next
@@ -2272,12 +1842,13 @@ next
           using False
           by (simp add: assms(2)) 
         have e2: "e2 \<noteq> e" 
-          by (metis "1" Cons.prems(1) Cons.prems(4) Cons.prems(9) assms(3) distinct.simps(2) only_previous_edges_in_new_edges sublist_set_ls2_1 v1_in) 
+          using 1
+          by (metis Cons.prems(1, 4, 9) assms(3) distinct.simps(2) 
+              only_previous_edges_in_new_edges sublist_set_ls2_1 v1_in) 
         then have 4: "E'!(i-1) = e1" "E'!(j-1) = e2" 
            apply (metis Cons.prems(5) e1 nth_non_equal_first_eq) 
           by (metis Cons.prems(6) e2 nth_non_equal_first_eq)   
         have 6: "(i-1) < length E'" "j-1 < length E'"
-          using Cons e1 
         proof -
           have "i < length (e#E')"  "j < length (e#E')"
             using Cons 
@@ -2321,15 +1892,18 @@ next
     then have e: "e \<noteq> e1" "e\<noteq> e2"
       using Cons.prems False assms node_of_edge_construction_contains_a sublist_implies_in_set 
        apply fastforce
-      using Cons.prems(1) False assms(3) node_of_edge_construction_contains_a sublist_implies_in_set(2)
+      using Cons.prems(1) False assms(3) node_of_edge_construction_contains_a 
+        sublist_implies_in_set(2)
       by fastforce 
     then have 4: "E'!(i-1) = e1" "E'!(j-1) = e2"
        apply(metis Cons.prems(5) nth_non_equal_first_eq)
       using e 
       by(metis Cons.prems(6) nth_non_equal_first_eq)
     have 6: "(i-1) < length E'" "j-1 < length E'"
-      using Cons 
-      by (metis "2" One_nat_def Suc_length_conv Suc_pred construct_cycle_add_edge_nodes.simps(1) length_greater_0_conv less_diff_conv less_imp_diff_less linorder_neqE_nat list.distinct(1) list.set_cases n_not_Suc_n not_add_less1 not_less_eq sublist_implies_in_set(1))+ 
+      using Cons 2
+      by (metis One_nat_def Suc_length_conv Suc_pred construct_cycle_add_edge_nodes.simps(1)
+          length_greater_0_conv less_diff_conv less_imp_diff_less linorder_neqE_nat list.distinct(1) 
+          list.set_cases n_not_Suc_n not_add_less1 not_less_eq sublist_implies_in_set(1))+ 
     have 3: "sublist [v1, v2] (construct_cycle_add_edge_nodes E' a C)" 
       using Cons 2 
       by metis
@@ -2347,21 +1921,24 @@ qed
 
 
 lemma helper2_for_helper_arcs_explicit_Cover_Edge0_Edge0:
-  assumes "sublist [v1, v2] (construct_cycle_add_edge_nodes E' a C)" "v1 = Edge a e1 1" "v2 = Edge a e2 0"
+  assumes "sublist [v1, v2] (construct_cycle_add_edge_nodes E' a C)" 
+    "v1 = Edge a e1 1" "v2 = Edge a e2 0"
     "distinct (construct_cycle_add_edge_nodes E' a C)" "E'!i = e1" "E' ! j = e2" 
     "i<length E'" "j<length E'" "distinct E'"
   shows "(\<forall>i'>i. a \<in> E' ! i' \<longrightarrow> i' < length E' \<longrightarrow> \<not> i' < j)" "i<j" 
   using assms apply(auto)[1]
   unfolding sublist_def
-  using helper3_for_helper_arcs_explicit_Cover_Edge0_Edge0 assms 
-   apply (metis append_Cons) 
-  using assms helper2_for_helper_arcs_explicit_Cover_Edge0_Edge0_1 by fastforce 
+  using helper3_for_helper_arcs_explicit_Cover_Edge0_Edge0 assms
+   apply (metis) 
+  using assms helper2_for_helper_arcs_explicit_Cover_Edge0_Edge0_1
+  by fastforce 
 
 
 lemma helper8_for_helper_arcs_explicit_Cover_Edge0_Edge0: 
-  assumes "sublist [v1, v2] (construct_cycle_add_edge_nodes E' a C)" "v1 = Edge u1 e1 1" "v2 = Edge u2 e2 0"
+  assumes "sublist [v1, v2] (construct_cycle_add_edge_nodes E' a C)" 
+    "v1 = Edge u1 e1 1" "v2 = Edge u2 e2 0"
     "distinct (construct_cycle_add_edge_nodes E' a C)" 
-  shows "u1 = u2 \<and> u1 =a"
+  shows "u1 = u2 \<and> u1 = a"
   using assms 
 proof(induction E')
   case Nil
@@ -2370,21 +1947,9 @@ proof(induction E')
     by simp
 next
   case (Cons e E')
-  have 1: "construct_cycle_add_edge_nodes (e # E') a C = (if a \<in> e then 
-    (let u = (get_second (e-{a})) in 
-      (if u\<in> C then [(Edge a e 0), (Edge a e 1)] 
-      else [(Edge a e 0), (Edge u e 0), (Edge u e 1), (Edge a e 1)])) 
-      @ construct_cycle_add_edge_nodes E' a C 
-    else construct_cycle_add_edge_nodes E' a C)" 
-    by simp 
   then show ?case 
   proof (cases "a\<in>e")
     case True
-    then have 2: "construct_cycle_add_edge_nodes (e # E') a C = (let u = (get_second (e-{a})) in 
-      (if u\<in> C then [(Edge a e 0), (Edge a e 1)] 
-      else [(Edge a e 0), (Edge u e 0), (Edge u e 1), (Edge a e 1)])) @ construct_cycle_add_edge_nodes E' a C" 
-      using 1 
-      by simp
     then obtain u where u_def: "u = get_second (e-{a})" 
       by auto
     then show ?thesis 
@@ -2392,8 +1957,8 @@ next
       case True
       then have 3: "construct_cycle_add_edge_nodes (e # E') a C =  [(Edge a e 0), (Edge a e 1)] 
            @ construct_cycle_add_edge_nodes E' a C" 
-        using 2 u_def 
-        by simp
+        using u_def \<open>a \<in> e\<close> 
+        by auto 
       then show ?thesis 
       proof(cases "v1 \<in> set [(Edge a e 0), (Edge a e 1)]")
         case True
@@ -2405,12 +1970,14 @@ next
           by simp+
         then have 5: "v2 = hd (construct_cycle_add_edge_nodes E' a C)" 
           using 3 4
-          by (metis (mono_tags, lifting) Cons.prems(1) Cons.prems(4) Cons_eq_appendI sublist_set_last_ls1 last_ConsL list.set_intros(1))
+          by (metis (mono_tags, lifting) Cons.prems(1) Cons.prems(4) Cons_eq_appendI 
+              sublist_set_last_ls1 last_ConsL list.set_intros(1))
         then have 6: "v2 \<in> set (construct_cycle_add_edge_nodes E' a C)" 
           using Cons True sublist_set_last_ls1_1_1 3 4 7
           by fast 
         then show ?thesis 
-          by (metis "4" "5" assms(2) assms(3) helper7_for_helper_arcs_explicit_Cover_Edge0_Edge0 distinct.simps(2) distinct_singleton hc_node.inject(2)) 
+          by (metis 4 5 assms(2, 3) helper7_for_helper_arcs_explicit_Cover_Edge0_Edge0 
+              distinct.simps(2) distinct_singleton hc_node.inject(2)) 
       next
         case False
         then have "v1 \<in> set (construct_cycle_add_edge_nodes E' a C)" 
@@ -2428,8 +1995,8 @@ next
       then have 3: "construct_cycle_add_edge_nodes (e # E') a C 
           = [(Edge a e 0), (Edge u e 0), (Edge u e 1), (Edge a e 1)]
          @ construct_cycle_add_edge_nodes E' a C" 
-        using 2 u_def \<open>a\<in> e\<close> 
-        by smt
+        using u_def \<open>a\<in> e\<close> 
+        by (auto simp add: Let_def)
       then show ?thesis
       proof(cases "v1 \<in> set [(Edge a e 0), (Edge u e 0), (Edge u e 1), (Edge a e 1)]")
         case True
@@ -2478,7 +2045,9 @@ next
             by fast
           then show ?thesis 
             using 5 
-            by (metis \<open>v1 = Edge a e 1\<close> assms(2) assms(3) helper7_for_helper_arcs_explicit_Cover_Edge0_Edge0 distinct.simps(2) distinct_singleton hc_node.inject(2)) 
+            by (metis \<open>v1 = Edge a e 1\<close> assms(2, 3) 
+                helper7_for_helper_arcs_explicit_Cover_Edge0_Edge0 distinct.simps(2) 
+                distinct_singleton hc_node.inject(2)) 
         qed
       next
         case False
@@ -2496,7 +2065,6 @@ next
   next
     case False
     then have "construct_cycle_add_edge_nodes (e # E') a C = construct_cycle_add_edge_nodes E' a C" 
-      using 1 
       by simp
     then show ?thesis
       using Cons 
@@ -2509,8 +2077,7 @@ lemma helper_for_helper_arcs_explicit_Cover_Edge1_Edge0:
   assumes "sublist [v1, v2] (construct_cycle_add_edge_nodes E' a C)"
     "v1 = Edge u1 e1 1" "v2 = Edge u2 e2 0"
     "distinct (construct_cycle_add_edge_nodes E' a C)" "distinct E'"
-  shows "u1 = u2 \<and> (\<exists>i<length E'. \<exists>j<length E'. e1 = E' ! i \<and> e2 = E' ! j 
-  \<and> i<j \<and> (\<forall>i'>i. u1 \<in> E' ! i' \<longrightarrow> i' < length E' \<longrightarrow> \<not> i' < j))"
+  shows "u1 = u2 \<and> next_edge u1 E' e1 e2"
 proof -
   have 1: "u1 = u2" 
     using assms helper8_for_helper_arcs_explicit_Cover_Edge0_Edge0 
@@ -2521,6 +2088,9 @@ proof -
   then have 3: "u2 = a"
     using 1 
     by simp
+  have in_e1_e2: "u1 \<in> e1" "u1 \<in> e2" 
+    using assms 1 3 node_of_edge_construction_contains_a sublist_implies_in_set
+    by fastforce+
   have i_def: "\<exists>i<length (E'). (E')!i = e1" 
     using assms 
     by (metis "2" sublist_implies_in_set(1) in_set_conv_nth only_previous_edges_in_new_edges) 
@@ -2530,13 +2100,13 @@ proof -
   then have j_def: "\<exists>j<length (E'). (E')!j = e2" 
     using assms 
     by (meson in_set_conv_nth only_previous_edges_in_new_edges)
-  then have "(\<exists>i<length E'. \<exists>j<length E'. e1 = E' ! i \<and> e2 = E' ! j \<and> i<j 
-    \<and> (\<forall>i'>i. u1 \<in> E' ! i' \<longrightarrow> i' < length E' \<longrightarrow> \<not> i' < j))" 
-    using i_def assms helper2_for_helper_arcs_explicit_Cover_Edge0_Edge0 1 3 
+  then have "next_edge u1 E' e1 e2" 
+    using i_def assms helper2_for_helper_arcs_explicit_Cover_Edge0_Edge0 1 3 in_e1_e2
+    unfolding next_edge_def
     by (metis)
-  then show ?thesis 
+  then show ?thesis
     using 1 
-    by simp
+    by(auto)  
 qed
 
 
@@ -2869,8 +2439,7 @@ qed
 lemma helper_arcs_explicit_Cover_Edge1_Edge0_1:
   assumes "sublist [v1, v2] (construct_cycle_1 E C n C')" "v1 = Edge u1 e1 1" "v2 = Edge u2 e2 0" 
     "distinct (tl (construct_cycle_1 E C n C'))"
-  shows "u1 = u2 \<and> (\<exists>i<length E. \<exists>j<length E. e1 = E ! i \<and> e2 = E ! j 
-    \<and> i<j \<and> (\<forall>i'>i. u1 \<in> E ! i' \<longrightarrow> i' < length E \<longrightarrow> \<not> i' < j))"
+  shows "u1 = u2 \<and> next_edge u1 E e1 e2"
   using assms 
 proof(induction C arbitrary: n)
   case Nil
@@ -2912,7 +2481,8 @@ next
       have "sublist [v1, v2] (tl (construct_cycle_1 E (a#C) n C'))" 
         using Cons
         unfolding sublist_def
-        by (metis "1" "11" "3" Cover_not_in_edge_nodes append_self_conv2 hd_append list.distinct(1) list.sel(1) tl_append2) 
+        by (metis "1" "11" "3" Cover_not_in_edge_nodes append_self_conv2 hd_append 
+            list.distinct(1) list.sel(1) tl_append2) 
       then have "v2 = hd (construct_cycle_1 E C (Suc n) C')" 
         using Cons sublist_set_last_ls1_1 1 3 11 True 
         by fast  
@@ -2961,8 +2531,7 @@ lemma helper_arcs_explicit_Cover_Edge1_Edge0:
   assumes "sublist [v1, v2] (construct_cycle_1 E C n C')" "v1 = Edge u1 e1 1" "v2 = Edge u2 e2 0"
     "distinct (tl (construct_cycle_1 E C n C'))"
   shows "u1 = u2" "u1 \<in> e1" "u1 \<in> e2" "e1 \<in> set E" "e2 \<in> set E" 
-    "(\<exists>i<length E. \<exists>j<length E. e1 = E ! i \<and> e2 = E ! j \<and> i<j 
-    \<and> (\<forall>i'>i. u1 \<in> E ! i' \<longrightarrow> i' < length E \<longrightarrow> \<not> i' < j))"
+    "next_edge u1 E e1 e2"
 proof -
   have v1_in_set: "v1 \<in> set (construct_cycle_1 E C n C')" 
     using assms sublist_implies_in_set 
@@ -2980,13 +2549,11 @@ next
   then have u2_in_e2: "u2 \<in> e2"  
     using assms in_cycle edge0_in_construct_cycle 
     by auto
-  then have "u1 = u2 \<and> (\<exists>i<length E. \<exists>j<length E. e1 = E ! i \<and> e2 = E ! j \<and> i<j 
-    \<and> (\<forall>i'>i. u1 \<in> E ! i' \<longrightarrow> i' < length E \<longrightarrow> \<not> i' < j))"
-    using helper_arcs_explicit_Cover_Edge1_Edge0_1 assms  
-    by simp  
+  then have "u1 = u2 \<and> next_edge u1 E e1 e2"
+    using helper_arcs_explicit_Cover_Edge1_Edge0_1 assms edge1_in_construct_cycle(1) 
+    by metis
   then show "u1 = u2" "u1 \<in> e2" 
-    "(\<exists>i<length E. \<exists>j<length E. e1 = E ! i \<and> e2 = E ! j \<and> i<j 
-    \<and> (\<forall>i'>i. u1 \<in> E ! i' \<longrightarrow> i' < length E \<longrightarrow> \<not> i' < j))"
+    "next_edge u1 E e1 e2"
     using u2_in_e2
     by auto
 qed
@@ -3009,7 +2576,7 @@ next
     by simp
   then show ?case
   proof(cases)
-    assume "v1 = Cover n"
+    assume v1_Cov: "v1 = Cover n"
     then show False 
     proof(cases "v2 = hd (construct_cycle_add_edge_nodes E a C')")
       case True
@@ -3025,7 +2592,9 @@ next
         have "v2 = Cover (n+1) \<or> v2 = Cover 0" 
           using Cons 2 hd_construct_cycle   
           unfolding sublist_def  
-          by (metis (no_types, lifting) "1"  Cons.prems(5) True add.commute append_self_conv2 assms(2) assms(3) assms(4) distinct_tl hd_append2 list.collapse list.discI list.inject plus_1_eq_Suc tl_append2)  
+          by (metis (no_types, lifting) 1  Cons.prems(5) True add.commute 
+              append_self_conv2 assms(2, 3, 4) distinct_tl hd_append2 list.collapse 
+              list.discI list.inject plus_1_eq_Suc tl_append2)  
         then show ?thesis 
           using Cons
           by auto
@@ -3037,13 +2606,17 @@ next
       qed
     next
       case False
-      then have "v1 \<in> set (construct_cycle_add_edge_nodes E a C' @ construct_cycle_1 E C (Suc n) C')" 
-        using Cons 
-        by (metis (mono_tags, lifting) "1" \<open>v1 = Cover n\<close> sublist3_hd_lists hd_construct_cycle distinct.simps(2) hc_node.distinct(1) hd_append list.sel(3)) 
-      then have "distinct (construct_cycle_add_edge_nodes E a C' @ construct_cycle_1 E C (Suc n) C')"
+      then have "v1 \<in> set (construct_cycle_add_edge_nodes E a C' 
+          @ construct_cycle_1 E C (Suc n) C')" 
+        using Cons v1_Cov 
+        by (metis (mono_tags, lifting) 1 sublist3_hd_lists hd_construct_cycle 
+            distinct.simps(2) hc_node.distinct(1) hd_append list.sel(3)) 
+      then have "distinct (construct_cycle_add_edge_nodes E a C' 
+          @ construct_cycle_1 E C (Suc n) C')"
         using Cons 1 
         by auto
-      then have 3: "sublist [v1, v2] (construct_cycle_add_edge_nodes E a C' @ construct_cycle_1 E C (Suc n) C')" 
+      then have 3: "sublist [v1, v2] (construct_cycle_add_edge_nodes E a C' 
+          @ construct_cycle_1 E C (Suc n) C')" 
         using Cons 1 sublist_set_v2_noteq_hd_lists False 
         by (metis (no_types, lifting) hd_construct_cycle hc_node.distinct(1) hd_append)  
       then have "v1 \<in> set (construct_cycle_add_edge_nodes E a C' @ construct_cycle_1 E C (Suc n) C')" 
@@ -3066,10 +2639,12 @@ next
     qed
   next
     assume 2: "v1 \<noteq> Cover n"
-    then have 3: "sublist [v1, v2] (construct_cycle_add_edge_nodes E a C' @ construct_cycle_1 E C (Suc n) C')" 
+    then have 3: "sublist [v1, v2] (construct_cycle_add_edge_nodes E a C' 
+      @ construct_cycle_1 E C (Suc n) C')" 
       using Cons 1 sublist_set_noteq_l1 
       by fast  
-    then have "v1 \<in> set (construct_cycle_add_edge_nodes E a C' @ construct_cycle_1 E C (Suc n) C')" 
+    then have "v1 \<in> set (construct_cycle_add_edge_nodes E a C' 
+      @ construct_cycle_1 E C (Suc n) C')" 
       using Cons 1 append_Cons sublist_implies_in_set(1) list.inject 
       by fastforce 
     then have 4: "v1 \<in> set (construct_cycle_1 E C (Suc n) C')" 
@@ -3089,9 +2664,10 @@ qed
 
 
 lemma helper_arcs_explicit_Cover_Edge_0__1:
-  assumes "Edge v e 0 = hd (construct_cycle_add_edge_nodes E' a C)" "distinct (construct_cycle_add_edge_nodes E' a C)"
+  assumes "Edge v e 0 = hd (construct_cycle_add_edge_nodes E' a C)" 
+    "distinct (construct_cycle_add_edge_nodes E' a C)"
     "ugraph (set E')" "construct_cycle_add_edge_nodes E' a C \<noteq> []" "distinct E'"
-  shows "\<exists>i<length E'. e = E' ! i \<and> v \<in> e \<and> (\<forall>j. v \<in> E' ! j \<longrightarrow> j < length E' \<longrightarrow> \<not> j < i)"
+  shows "first_edge v e E'"
 proof -
   have 1: "Edge v e 0 \<in> set (construct_cycle_add_edge_nodes E' a C)" 
     using assms 
@@ -3144,7 +2720,8 @@ proof -
       by simp
   qed
   then show ?thesis 
-    using "2" i_def 
+    using 2 i_def 
+    unfolding first_edge_def
     by blast 
 qed
 
@@ -3152,7 +2729,7 @@ qed
 lemma helper_arcs_explicit_Cover_Edge_0:
   assumes "sublist [v1, v2] (construct_cycle_1 E C n C')" "v1 = Cover c" "v2 = Edge u2 e2 0"
     "distinct (tl (construct_cycle_1 E C n C'))"
-  shows "(\<exists>i<length E. e2 = E ! i \<and> u2 \<in> e2 \<and> (\<forall>j. u2 \<in> E ! j \<longrightarrow> j < length E \<longrightarrow> \<not> j < i) \<and> c < length C+n)"
+  shows "first_edge u2 e2 E \<and> c < length C+n"
   using assms 
 proof(induction C arbitrary: n)
   case Nil
@@ -3170,7 +2747,8 @@ next
     then show ?thesis 
     proof(cases "v2 = hd (construct_cycle_add_edge_nodes E a C'@ construct_cycle_1 E C (Suc n) C')")
       case True
-      then have 2: "v2 = hd (construct_cycle_add_edge_nodes E a C' @ construct_cycle_1 E C (Suc n) C')" .
+      then have 2: "v2 = 
+        hd (construct_cycle_add_edge_nodes E a C' @ construct_cycle_1 E C (Suc n) C')" .
       then show ?thesis
       proof (cases "(construct_cycle_add_edge_nodes E a C') = []")
         case True
@@ -3187,31 +2765,29 @@ next
           using Cons by auto
       next
         case False
-        have distinct: "distinct E" 
-          using in_vc vertex_cover_list_def 
-          by auto
-        have ugraph: "ugraph (set E)"
-          using in_vc vertex_cover_list_def 
-          by auto 
         then have "v2 = hd (construct_cycle_add_edge_nodes E a C')" 
           using 2 False 
           by simp
-        then have "\<exists>i<length E. e2 = E! i \<and> u2 \<in> e2 \<and> (\<forall>j. u2 \<in> E ! j \<longrightarrow> j < length E \<longrightarrow> \<not> j < i)" 
-          using Cons False helper_arcs_explicit_Cover_Edge_0__1 ugraph distinct
+        then have "first_edge u2 e2 E" 
+          using Cons False helper_arcs_explicit_Cover_Edge_0__1 ugraph_E distinct_edges
           by (simp add: Cons.IH \<open>v2 = Edge u2 e2 0\<close> helper_arcs_explicit_Cover_Edge_0__1) 
         then show ?thesis 
           using Cons False 
-          by (metis sublist_implies_in_set(1) constraints_for_Cover_nodes length_greater_0_conv list.discI trans_less_add1) 
+          by (metis sublist_implies_in_set(1) constraints_for_Cover_nodes 
+              length_greater_0_conv list.discI trans_less_add1) 
       qed
     next
       case False
-      then have "v1 \<in> set (construct_cycle_add_edge_nodes E a C' @ construct_cycle_1 E C (Suc n) C')" 
-        using Cons 
-        by (metis (mono_tags, lifting) "1" \<open>v1 = Cover n\<close> sublist3_hd_lists distinct.simps(2) list.sel(3)) 
-      then have "distinct (construct_cycle_add_edge_nodes E a C' @ construct_cycle_1 E C (Suc n) C')" 
+      then have "v1 \<in> set (construct_cycle_add_edge_nodes E a C' 
+          @ construct_cycle_1 E C (Suc n) C')" 
+        using Cons True
+        by (metis (mono_tags, lifting) "1" sublist3_hd_lists distinct.simps(2) list.sel(3)) 
+      then have "distinct (construct_cycle_add_edge_nodes E a C' 
+          @ construct_cycle_1 E C (Suc n) C')" 
         using Cons 1 
         by auto
-      then have 3: "sublist [v1, v2] (construct_cycle_add_edge_nodes E a C' @ construct_cycle_1 E C (Suc n) C')" 
+      then have 3: "sublist [v1, v2] (construct_cycle_add_edge_nodes E a C' 
+          @ construct_cycle_1 E C (Suc n) C')" 
         using Cons 1 sublist_set_v2_noteq_hd_lists False 
         by (metis (no_types, lifting))  
       then have "v1 \<in> set (construct_cycle_add_edge_nodes E a C' @ construct_cycle_1 E C (Suc n) C')" 
@@ -3229,11 +2805,13 @@ next
         by fast
       then show ?thesis 
         using Cons 3 6 
-        by (metis "4" Nat.add_0_right Suc_n_not_le_n True constraints_for_Cover_nodes distinct_tl gr0I hc_node.inject(1) length_0_conv list.discI)  
+        by (metis "4" Nat.add_0_right Suc_n_not_le_n True constraints_for_Cover_nodes 
+            distinct_tl gr0I hc_node.inject(1) length_0_conv list.discI)  
     qed
   next
     case False
-    then have 3: "sublist [v1, v2] (construct_cycle_add_edge_nodes E a C' @ construct_cycle_1 E C (Suc n) C')" 
+    then have 3: "sublist [v1, v2] (construct_cycle_add_edge_nodes E a C' 
+        @ construct_cycle_1 E C (Suc n) C')" 
       using Cons 1 sublist_set_noteq_l1 
       by fast  
     then have "v1 \<in> set (construct_cycle_add_edge_nodes E a C' @ construct_cycle_1 E C (Suc n) C')" 
@@ -3261,7 +2839,7 @@ lemma helper_arcs_explicit_Edge_1_Cover__1:
   assumes "Edge v e 1 = last (construct_cycle_add_edge_nodes E' a C)" 
     "distinct (construct_cycle_add_edge_nodes E' a C)"
     "ugraph (set E')" "construct_cycle_add_edge_nodes E' a C \<noteq> []" "distinct E'"
-  shows "\<exists>i<length E'. e = E' ! i \<and> v \<in> e \<and> (\<forall>j. v \<in> E' ! j \<longrightarrow> j < length E' \<longrightarrow> \<not> i < j)"
+  shows "last_edge v e E'"
 proof -
   have 1: "Edge v e 1 \<in> set (construct_cycle_add_edge_nodes E' a C)" 
     using assms 
@@ -3316,15 +2894,16 @@ proof -
   qed
   then show ?thesis 
     using 2 i_def 
+    unfolding last_edge_def
     by auto 
 qed
 
 
 lemma helper_arcs_explicit_Edge_1_Cover:
-  assumes "sublist [v1, v2] (construct_cycle_1 E C n C')" "v1 = Edge u1 e1 1" "v2 = Cover c"
+  assumes "sublist [v1, v2] (construct_cycle_1 E C n C')" 
+    "v1 = Edge u1 e1 1" "v2 = Cover c"
     "distinct (tl (construct_cycle_1 E C n C'))"
-  shows "(\<exists>i<length E. e1 = E ! i \<and> u1 \<in> e1 \<and> (\<forall>j. u1 \<in> E ! j \<longrightarrow> j < length E \<longrightarrow> \<not> i < j) 
-    \<and> c < length C + n)"
+  shows "last_edge u1 e1 E \<and> c < length C + n"
   using assms
 proof(induction C arbitrary: n)
   case Nil
@@ -3341,29 +2920,29 @@ next
     assume a1: "v1 \<in> set (construct_cycle_add_edge_nodes E a C')"
     then have not_empty: "construct_cycle_add_edge_nodes E a C' \<noteq> []" 
       by auto
-    have distinct: "distinct (construct_cycle_add_edge_nodes E a C' @ construct_cycle_1 E C (Suc n) C')" 
+    have distinct: "distinct 
+        (construct_cycle_add_edge_nodes E a C' @ construct_cycle_1 E C (Suc n) C')" 
       using Cons 1 
       by auto  
-    show ?case proof(cases "v1 = last (construct_cycle_add_edge_nodes E a C')")
+    show ?case 
+    proof(cases "v1 = last (construct_cycle_add_edge_nodes E a C')")
       case True
       have distinct: "distinct E"
         using in_vc vertex_cover_list_def 
         by auto
-      have ugraph: "ugraph (set E)" 
-        using in_vc vertex_cover_list_def
-        by auto 
-      then have "(\<exists>i<length E. e1 = E ! i \<and> u1 \<in> e1 \<and> (\<forall>j. u1 \<in> E ! j \<longrightarrow> j < length E \<longrightarrow> \<not> i < j))" 
-        using Cons helper_arcs_explicit_Edge_1_Cover__1 distinct ugraph  
+      then have "last_edge u1 e1 E" 
+        using Cons helper_arcs_explicit_Edge_1_Cover__1 distinct ugraph_E
         by (metis True distinct_construct_edge_nodes not_empty) 
       then show ?thesis
         using Cons constraints_for_Cover_nodes 
-        by (metis add_strict_increasing sublist_implies_in_set(2) le_add1 le_add_same_cancel1 length_greater_0_conv list.discI)  
+        by (metis add_strict_increasing sublist_implies_in_set(2) 
+            le_add1 le_add_same_cancel1 length_greater_0_conv list.discI)  
     next
       case False
       then have "v2 \<in> set (construct_cycle_add_edge_nodes E a C')" 
         using Cons a1 
-        unfolding sublist_def
-        by (metis "1" Cons.prems(1) Cover_not_in_edge_nodes distinct sublist_cons_impl_sublist_list sublist_set_ls1_1) 
+        by (metis "1" Cons.prems(1) Cover_not_in_edge_nodes distinct 
+            sublist_cons_impl_sublist_list sublist_set_ls1_1) 
       then show ?thesis 
         using assms Cover_not_in_edge_nodes 
         by fast 
@@ -3391,9 +2970,9 @@ next
     have 8: "sublist [v1, v2] (construct_cycle_1 E C (Suc n) C')" 
       using 4 3 5 sublist_set_ls2_3
       by fast
-    then have "\<exists>i<length E. e1 = E ! i \<and> u1 \<in> e1 \<and> (\<forall>j. u1 \<in> E ! j \<longrightarrow> j < length E \<longrightarrow> \<not> i < j) \<and> c < length C + (Suc n)" 
-      using Cons 8 7 
-      by blast  
+    then have "last_edge u1 e1 E \<and> c < length C + (Suc n)" 
+      using Cons 8 7
+      by blast
     then show ?case 
       by auto 
   qed
@@ -3401,7 +2980,8 @@ qed
 
 
 lemma helper_arcs_explicit_Edge_Cover:
-  assumes "sublist [v1, v2] (construct_cycle_1 E C n C')" "v1 = Edge u1 e1 i" "v2 = Cover j" "i\<noteq>1"
+  assumes "sublist [v1, v2] (construct_cycle_1 E C n C')" 
+    "v1 = Edge u1 e1 i" "v2 = Cover j" "i\<noteq>1"
     "distinct (tl (construct_cycle_1 E C n C'))"
   shows "False"
   using assms
@@ -3415,11 +2995,13 @@ next
   have 1: "construct_cycle_1 E (a#C) n C' 
     = Cover n # construct_cycle_add_edge_nodes E a C' @ construct_cycle_1 E C (Suc n) C'" 
     by simp
-  then show ?case proof(cases)
+  then show ?case
+  proof(cases)
     assume a1: "v1 \<in> set (construct_cycle_add_edge_nodes E a C')"
     then have not_empty: "construct_cycle_add_edge_nodes E a C' \<noteq> []" 
       by auto
-    have distinct: "distinct (construct_cycle_add_edge_nodes E a C' @ construct_cycle_1 E C (Suc n) C')" 
+    have distinct: "distinct (construct_cycle_add_edge_nodes E a C' 
+      @ construct_cycle_1 E C (Suc n) C')" 
       using Cons 1
       by auto  
     show False 
@@ -3427,7 +3009,8 @@ next
       case True
       then have "v2 = hd (construct_cycle_1 E C (Suc n) C')" 
         using assms distinct Cons a1 not_empty 
-        by (metis (full_types) One_nat_def last_construct_cycle_not_Edge0 Edgei_not_in_construct_edge_nodes less_one linorder_neqE_nat)
+        by (metis (full_types) One_nat_def last_construct_cycle_not_Edge0 
+            Edgei_not_in_construct_edge_nodes less_one linorder_neqE_nat)
       show ?thesis 
         using helper7_for_helper_arcs_explicit_Cover_Edge0_Edge0b True not_empty assms 
         by fastforce 
@@ -3435,8 +3018,8 @@ next
       case False
       then have "v2 \<in> set (construct_cycle_add_edge_nodes E a C')" 
         using Cons a1 
-        unfolding sublist_def 
-        by (metis "1" Cons.prems(1) Cover_not_in_edge_nodes distinct sublist_cons_impl_sublist_list sublist_set_ls1_1) 
+        by (metis "1" Cons.prems(1) 
+            Cover_not_in_edge_nodes distinct sublist_cons_impl_sublist_list sublist_set_ls1_1) 
       then show ?thesis 
         using assms Cover_not_in_edge_nodes 
         by fast 
@@ -3469,29 +3052,21 @@ qed
 
 
 lemma helper_arcs_explicit_Cover_Cover:
-  assumes "sublist [v1, v2] (construct_cycle_1 E C n C')" "v1 = Cover i" "v2 = Cover j" "length C + n > 0"
+  assumes "sublist [v1, v2] (construct_cycle_1 E C n C')" 
+    "v1 = Cover i" "v2 = Cover j" "length C + n > 0"
   shows "i<length C + n" "j<length C + n"
-proof -
-  have "v1 \<in> set (construct_cycle_1 E C n C')" "v2 \<in> set (construct_cycle_1 E C n C')" 
-    using assms 
-    by (auto simp add: sublist_implies_in_set) 
-  then  have "i<length C +n" "j<length C + n"
-    using constraints_for_Cover_nodes assms 
-    by(auto)
-  then show "i<length C + n" "j<length C + n" 
-    by auto
-qed 
+  using assms constraints_for_Cover_nodes sublist_implies_in_set 
+  by fast+
 
 
 lemma helper_arcs_explicit_Cover_Nodes:
   assumes "v2 = Edge v e i" "v1 = Cover x1" 
-    "sublist [v1, v2] (construct_cycle_1 E C 0 (set C))" "length C \<le> k"
-    "distinct (tl (construct_cycle_1 E C 0 (set C)))"
-  shows  "i = 0 \<and> (\<exists>i<length E. e = E ! i \<and> v \<in> e \<and> (\<forall>j. v \<in> E ! j \<longrightarrow> j < length E \<longrightarrow> \<not> j < i) \<and> x1 < k)"
-  using assms proof (cases "i = 0")
+    "sublist [v1, v2] Cycle" 
+  shows  "i = 0 \<and> first_edge v e E \<and> x1 < k" 
+proof (cases "i = 0")
   case True
-  then have "(\<exists>i<length E. e = E ! i \<and> v \<in> e \<and> (\<forall>j. v \<in> E ! j \<longrightarrow> j < length E \<longrightarrow> \<not> j < i) \<and> x1 < k)" 
-    using helper_arcs_explicit_Cover_Edge_0 assms 
+  then have "first_edge v e E \<and> x1 < k" 
+    using helper_arcs_explicit_Cover_Edge_0 assms Cov_def Cycle_def cycle_distinct
     by fastforce 
   then show ?thesis
     using True
@@ -3499,31 +3074,30 @@ lemma helper_arcs_explicit_Cover_Nodes:
 next
   case False
   then show ?thesis 
-    using assms helper_arcs_explicit_Cover_Edge_g0 
+    using assms helper_arcs_explicit_Cover_Edge_g0 Cov_def Cycle_def cycle_distinct
     apply(auto) 
     by blast 
 qed
 
 
 lemma helper_arcs_explicit_Edge_Nodes_greater_1:
-  assumes "sublist [v1, v2] (construct_cycle_1 E C 0 (set C))" "v1 = Edge u1 e1 i" "v2 = Edge u2 e2 j" "j > 1 \<or> i > 1"
+  assumes "sublist [v1, v2] Cycle" "v1 = Edge u1 e1 i" "v2 = Edge u2 e2 j" "j > 1 \<or> i > 1"
   shows "False"
 proof -
-  from assms have v1_in:  "v1 \<in> set (construct_cycle_1 E C 0 (set C))" 
+  from assms have v1_in:  "v1 \<in> set Cycle" 
     by (simp add: sublist_implies_in_set(1)) 
-  from assms have v2_in: "v2 \<in> set (construct_cycle_1 E C 0 (set C))" 
+  from assms have v2_in: "v2 \<in> set Cycle" 
     by (simp add: sublist_implies_in_set(2)) 
   then show False 
-    using assms v1_in v2_in Edgei_not_in_construct_cycle \<open>j> 1 \<or> i > 1\<close> 
+    using assms v1_in v2_in Edgei_not_in_construct_cycle Cov_def Cycle_def cycle_distinct
     by meson +
 qed
 
 
 lemma helper_arcs_explicit_Edge_Nodes_0:
   assumes "v1 = Edge u1 e1 0" "v2 = Edge u2 e2 i2" 
-    "sublist [v1, v2] (construct_cycle_1 E C 0 (set C))" "is_vertex_cover_list E C"
-    "distinct (tl (construct_cycle_1 E C 0 (set C)))"
-  shows " (\<exists>v e. v1 = Edge v e 0 \<and> v2 = Edge v e (Suc 0) \<and> e \<in> set E \<and> v \<in> e) \<or>
+    "sublist [v1, v2] Cycle"
+  shows " (\<exists>v e. v1 = Edge v e 0 \<and> v2 = Edge v e 1 \<and> e \<in> set E \<and> v \<in> e) \<or>
     (\<exists>u v e. v1 = Edge v e 0 \<and> v2 = Edge u e 0 \<and> e \<in> set E \<and> v \<in> e \<and> u \<in> e \<and> u \<noteq> v)"
 proof (cases)
   assume "i2 = 0 \<or> i2 = 1"
@@ -3531,12 +3105,12 @@ proof (cases)
   proof 
     assume "i2=0"
     then show ?thesis 
-      using helper_arcs_explicit_Cover_Edge0_Edge0 assms 
+      using helper_arcs_explicit_Cover_Edge0_Edge0 assms Cov_def Cycle_def cycle_distinct
       by fast  
   next
     assume "i2 = 1" 
     then show ?thesis 
-      using helper_arcs_explicit_Cover_Edge0_Edge1 assms 
+      using helper_arcs_explicit_Cover_Edge0_Edge1 assms Cov_def Cycle_def cycle_distinct
       by (metis One_nat_def) 
   qed
 next
@@ -3544,7 +3118,7 @@ next
   then have "i2 > 1" 
     by auto
   then show ?thesis 
-    using helper_arcs_explicit_Edge_Nodes_greater_1 assms 
+    using helper_arcs_explicit_Edge_Nodes_greater_1 assms Cov_def Cycle_def cycle_distinct
     apply(simp) 
     by blast
 qed
@@ -3552,24 +3126,22 @@ qed
 
 lemma helper_arcs_explicit_Edge_Nodes_1:
   assumes "v1 = Edge u1 e1 1" "v2 = Edge u2 e2 i2"
-    "sublist [v1, v2] (construct_cycle_1 E C 0 (set C))" "is_vertex_cover_list E C"
-    "distinct (tl (construct_cycle_1 E C 0 (set C)))"
-  shows "(\<exists>u v e. v1 = Edge v e (Suc 0) \<and> v2 = Edge u e (Suc 0) \<and> e \<in> set E \<and> v \<in> e \<and> u \<in> e \<and> u \<noteq> v) \<or>
-    (\<exists>v e1. v1 = Edge v e1 (Suc 0) \<and> (\<exists>e2. v2 = Edge v e2 0 \<and> (\<exists>i<length E. \<exists>j<length E. e1 = E ! i 
-    \<and> e2 = E ! j \<and> v \<in> e1 \<and> v \<in> e2 \<and> i<j \<and> (\<forall>i'>i. v \<in> E ! i' \<longrightarrow> i' < length E \<longrightarrow> \<not> i' < j))))"
+    "sublist [v1, v2] Cycle"
+  shows "(\<exists>u v e. v1 = Edge v e 1 \<and> v2 = Edge u e 1 \<and> e \<in> set E \<and> v \<in> e \<and> u \<in> e \<and> u \<noteq> v) \<or>
+    (\<exists>v e1. v1 = Edge v e1 1 \<and> (\<exists>e2. v2 = Edge v e2 0 \<and> next_edge v E e1 e2))"
 proof (cases)
   assume "i2 = 0 \<or> i2 = 1"
   then show ?thesis 
   proof 
     assume "i2=0"
     then show ?thesis 
-      using assms helper_arcs_explicit_Cover_Edge1_Edge0 
+      using assms helper_arcs_explicit_Cover_Edge1_Edge0 Cov_def Cycle_def cycle_distinct
       apply(simp) 
       by blast
   next
     assume "i2 = 1" 
     then show ?thesis 
-      using assms helper_arcs_explicit_Cover_Edge1_Edge1 
+      using assms helper_arcs_explicit_Cover_Edge1_Edge1 Cov_def Cycle_def cycle_distinct 
       by (metis One_nat_def) 
   qed
 next
@@ -3577,7 +3149,7 @@ next
   then have "i2 > 1" 
     by auto
   then show ?thesis 
-    using helper_arcs_explicit_Edge_Nodes_greater_1 assms
+    using helper_arcs_explicit_Edge_Nodes_greater_1 assms Cov_def Cycle_def cycle_distinct
     apply(simp) 
     by blast
 qed
@@ -3585,24 +3157,23 @@ qed
 
 lemma helper_arcs_explicit_Edge_Nodes:
   assumes "v1 = Edge u1 e1 i1" "v2 = Edge u2 e2 i2" 
-    "sublist [v1, v2] (construct_cycle_1 E C 0 (set C))" "is_vertex_cover_list E C"
-    "distinct (tl (construct_cycle_1 E C 0 (set C)))"
+    "sublist [v1, v2] Cycle" 
   shows " (\<exists>v e. v1 = Edge v e 0 \<and> v2 = Edge v e (Suc 0) \<and> e \<in> set E \<and> v \<in> e ) \<or>
     (\<exists>u v e. v1 = Edge v e 0 \<and> v2 = Edge u e 0 \<and> e \<in> set E \<and> v \<in> e \<and> u \<in> e  \<and> u \<noteq> v) \<or>
-    (\<exists>u v e. v1 = Edge v e (Suc 0) \<and> v2 = Edge u e (Suc 0) \<and> e \<in> set E \<and> v \<in> e \<and> u \<in> e \<and> u \<noteq> v) \<or>
-    (\<exists>v e1. v1 = Edge v e1 (Suc 0) \<and> (\<exists>e2. v2 = Edge v e2 0 \<and> (\<exists>i<length E. \<exists>j<length E. e1 = E ! i \<and> e2 = E ! j \<and> v \<in> e1 \<and> v \<in> e2 \<and> i<j \<and> (\<forall>i'>i. v \<in> E ! i' \<longrightarrow> i' < length E \<longrightarrow> \<not> i' < j))))"
+    (\<exists>u v e. v1 = Edge v e 1 \<and> v2 = Edge u e 1 \<and> e \<in> set E \<and> v \<in> e \<and> u \<in> e \<and> u \<noteq> v) \<or>
+    (\<exists>v e1. v1 = Edge v e1 1 \<and> (\<exists>e2. v2 = Edge v e2 0 \<and> next_edge v E e1 e2))"
 proof (cases)
   assume "i1 = 0 \<or> i1 = 1"
   then show ?thesis 
   proof 
     assume "i1=0"
     then show ?thesis 
-      using assms helper_arcs_explicit_Edge_Nodes_0 
+      using assms helper_arcs_explicit_Edge_Nodes_0 Cycle_def Cov_def cycle_distinct
       by(simp)
   next
     assume "i1 = 1" 
     then show ?thesis 
-      using assms helper_arcs_explicit_Edge_Nodes_1
+      using assms helper_arcs_explicit_Edge_Nodes_1 Cycle_def Cov_def cycle_distinct
       by simp
   qed
 next
@@ -3610,35 +3181,32 @@ next
   then have "i1 > 1"
     by auto
   then show ?thesis 
-    using helper_arcs_explicit_Edge_Nodes_greater_1 assms 
+    using helper_arcs_explicit_Edge_Nodes_greater_1 assms Cycle_def Cov_def cycle_distinct
     apply(simp) 
     by blast
 qed
 
 
-lemma helper_arcs_explicit:
-  assumes "sublist [v1, v2] (construct_cycle_1 E C 0 (set C))" "is_vertex_cover_list E C" "distinct C" "length  C = k" "k>0"
-  shows "(\<exists>v e. v1 = Edge v e 0 \<and> v2 = Edge v e (Suc 0) \<and> e \<in> set E \<and> v \<in> e) \<or>
-         (\<exists>u v e. v1 = Edge v e 0 \<and> v2 = Edge u e 0 \<and> e \<in> set E \<and> v \<in> e \<and> u \<in> e  \<and> u \<noteq> v) \<or>
-         (\<exists>u v e. v1 = Edge v e (Suc 0) \<and> v2 = Edge u e (Suc 0) \<and> e \<in> set E \<and> v \<in> e \<and> u \<in> e  \<and> u \<noteq> v) \<or>
-         (\<exists>v e1. v1 = Edge v e1 (Suc 0) \<and> (\<exists>e2. v2 = Edge v e2 0 \<and> (\<exists>i<length E. \<exists>j<length E. e1 = E ! i \<and> e2 = E ! j \<and> v \<in> e1 \<and> v \<in> e2 \<and> i<j \<and> (\<forall>i'>i. v \<in> E ! i' \<longrightarrow> i' < length E \<longrightarrow> \<not> i' < j)))) \<or>
-         (\<exists>v e. v1 = Edge v e (Suc 0) \<and> (\<exists>n. v2 = Cover n \<and> (\<exists>i<length E. e = E ! i \<and> v \<in> e \<and> (\<forall>j. v \<in> E ! j \<longrightarrow> j < length E \<longrightarrow> \<not> i < j) \<and> n < k))) \<or>
-         (\<exists>v e n. v1 = Cover n \<and> v2 = Edge v e 0 \<and> (\<exists>i<length E. e = E ! i \<and> v \<in> e \<and> (\<forall>j. v \<in> E ! j \<longrightarrow> j < length E \<longrightarrow> \<not> j < i) \<and> n < k))\<or>
-        (\<exists>i. v1 = Cover i \<and> (\<exists>j. v2 = Cover j \<and> i < k \<and> j < k))"
+lemma distinct_tl_construct_cycle_E_Cov: 
+  shows "distinct (tl (construct_cycle_1 E Cov 0 (set Cov)))"
+  using Cycle_def cycle_distinct by auto
+
+
+lemma sublist_of_cycle_is_arc:
+  assumes "sublist [v1, v2] Cycle" "k>0"
+  shows "(v1, v2) \<in> arcs G"
 proof (cases)
   assume v1: "\<exists>x1. v1 = Cover x1"
   then obtain x1 where v1_2: "v1 = Cover x1" 
-    by blast
-  have distinct_tl: "distinct (tl (construct_cycle_1 E C 0 (set C)))"
-    using assms distinct_edges distinct_nodes
     by blast
   then show ?thesis
   proof (cases)
     assume "\<exists> x2. v2 = Cover x2"
     then show ?thesis 
-      using helper_arcs_explicit_Cover_Cover v1 assms 
+      using helper_arcs_explicit_Cover_Cover v1 assms G_def_2 
       apply simp 
-      by fastforce 
+      using Cov_def(3) Cycle_def 
+      by fastforce
   next
     assume  "\<not> (\<exists> x2. v2 = Cover x2)"
     then have "\<exists>v e i. v2 = Edge v e i" 
@@ -3647,13 +3215,12 @@ proof (cases)
       by blast
     then show ?thesis
       using helper_arcs_explicit_Cover_Edge_g0 helper_arcs_explicit_Cover_Edge_0 
-        v1_2 assms vei_def distinct_tl 
-      by(simp add: helper_arcs_explicit_Cover_Nodes)
+        v1_2 assms vei_def distinct_tl_construct_cycle_E_Cov G_def_2
+      apply(simp add: helper_arcs_explicit_Cover_Nodes first_edge_def) 
+      using helper_arcs_explicit_Cover_Nodes Cov_def(3) Cycle_def 
+      by fast
   qed
 next  
-  have distinct_tl: "distinct (tl (construct_cycle_1 E C 0 (set C)))"
-    using assms distinct_edges distinct_nodes 
-    by blast
   assume "\<not> (\<exists>x1. v1 = Cover x1)"
   then have "\<exists>u1 e1 i1. v1 = Edge u1 e1 i1" 
     by (meson hc_node.exhaust) 
@@ -3668,18 +3235,19 @@ next
       using helper_arcs_explicit_Edge_1_Cover helper_arcs_explicit_Edge_Cover \<open>v1 = _\<close> assms 
     proof(cases "i1 = 1")
       case True
-      then have "\<exists>i<length E. e1 = E ! i \<and> u1 \<in> e1 \<and> 
-        (\<forall>j. u1 \<in> E ! j \<longrightarrow> j < length E \<longrightarrow> \<not> i < j) \<and> x2 < length C + 0" 
-        using helper_arcs_explicit_Edge_1_Cover assms \<open>v1 = _\<close>  \<open>v2 = _\<close>  distinct_tl
+      then have "last_edge u1 e1 E \<and> x2 < length Cov + 0" 
+        using helper_arcs_explicit_Edge_1_Cover assms \<open>v1 = _\<close>  \<open>v2 = _\<close>  
+          distinct_tl_construct_cycle_E_Cov Cycle_def 
         by blast
       then show ?thesis 
         using helper_arcs_explicit_Edge_1_Cover assms  
-          \<open>v1 = _\<close>  \<open>v2 = _\<close>  distinct_tl True 
-        by simp 
+          \<open>v1 = _\<close>  \<open>v2 = _\<close>  distinct_tl True G_def_2 Cycle_def Cov_def
+        by auto
     next
       case False
       then show ?thesis 
-        using helper_arcs_explicit_Edge_Cover assms \<open>v1 = _\<close>  \<open>v2 = _\<close> distinct_tl
+        using helper_arcs_explicit_Edge_Cover assms \<open>v1 = _\<close>  \<open>v2 = _\<close> 
+          distinct_tl_construct_cycle_E_Cov Cycle_def Cov_def
         apply(simp) 
         by blast 
     qed
@@ -3690,16 +3258,11 @@ next
     then obtain u2 e2 i2 where "v2 = Edge u2 e2 i2" 
       by blast
     then show ?thesis
-      using helper_arcs_explicit_Edge_Nodes assms \<open>v1 = _\<close>  \<open>v2 = _\<close> distinct_tl 
+      using helper_arcs_explicit_Edge_Nodes assms \<open>v1 = _\<close>  \<open>v2 = _\<close> 
+        distinct_tl_construct_cycle_E_Cov G_def_2 Cycle_def Cov_def
       by simp  
   qed
 qed
-
-
-lemma sublist_of_cycle_is_arc:
-  assumes "sublist [v1, v2] Cycle" "k>0"
-  shows "(v1, v2) \<in> arcs G"
-  using Cycle_def assms G_def_2 Cov_def helper_arcs_explicit by(simp)
 
 
 lemma edges_of_cycle_are_in_Graph:
@@ -3858,6 +3421,7 @@ proof(cases "k=0")
     by fastforce
   then have arcsG: "arcs G = {}" 
     using empty_E G_def_2 True 
+    unfolding next_edge_def last_edge_def first_edge_def
     by simp
   have head_tail_G: "head G = snd" "tail G = fst" 
     using G_def_2 

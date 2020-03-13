@@ -31,17 +31,23 @@ lemma G_def_2:
               \<not> (\<exists>j < size E. v \<in> E!j \<and> j < i) \<and> n < k} \<union>
             {(Cover i, Cover j) |i j.  i < k \<and> j < k},
           tail = fst, head = snd \<rparr>" (is "G = ?L")
-proof -
+  using G_def vc_hc_def 
+  unfolding first_edge_def last_edge_def next_edge_def vc_hc_def
+  apply(auto split: if_split_asm)
+  
+  apply blast+ 
+  by (metis (full_types) G_def One_nat_def bot_nat_def else_not_in_hc in_hc)+
+(*proof -
   have "G = (if ugraph (set E) \<and>  k \<le> card (\<Union> (set E)) \<and> distinct E
         then  ?L
         else \<lparr>verts = {Cover 0, Cover 1}, arcs = {}, tail = fst, head = snd\<rparr>)"
-    by(auto simp add: vc_hc_def G_def) 
+    by(auto simp add: vc_hc_def G_def first_edge_def last_edge_def next_edge_def) 
   then have G_or: "G = ?L \<or> G = \<lparr>verts = {Cover 0, Cover 1}, arcs = {}, tail = fst, head = snd\<rparr>" 
     by argo
   then show "G = ?L"
     using else_not_in_hc in_hc G_def 
     by fast 
-qed
+qed*)
 
 
 lemma verts_of_Cycle_in_G:
