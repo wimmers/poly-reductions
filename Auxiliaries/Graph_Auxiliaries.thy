@@ -26,12 +26,11 @@ next
       by auto
   next
     case False
-    then have 1: "p\<noteq> []" 
+    then have 1: "p \<noteq> []" 
       by simp
     then have 2: "vwalk_arcs (a#p) = (a, hd p)#vwalk_arcs p"
       using vwalk_arcs_Cons 
       by auto
-    then have "vwalk_arcs (a#p) \<noteq> []" by auto
     then show ?thesis
     proof(cases "vwalk_arcs p = []")
       case True
@@ -129,10 +128,11 @@ lemma vwalk_arcs_from_length_1:
   assumes "length C = 1"
   shows "vwalk_arcs C = []"
   using assms 
-  by (metis length_1_set_L list.set_intros(1) vwalk_arcs.simps(1) vwalk_arcs.simps(2) vwalk_to_vpath.cases) 
+  by (metis length_1_set_L list.set_intros(1) vwalk_arcs.simps(1) vwalk_arcs.simps(2) 
+      vwalk_to_vpath.cases) 
 
 
-lemma at_least_to_nodes_vwalk_arcs_awalk_verts: 
+lemma at_least_two_nodes_vwalk_arcs_awalk_verts: 
   assumes "length C > 1" "head G' = snd" "tail G' = fst"
   shows "(pre_digraph.awalk_verts G' u (vwalk_arcs C)) = C"
   using assms 
@@ -171,11 +171,13 @@ next
       using Cons linorder_neqE_nat 
       by auto 
     then have hd_C: "C = [hd C]" 
-      by (metis "1" list.sel(1) neq_Nil_conv vwalk_arcs.simps(2) vwalk_arcs_Cons vwalk_arcs_from_length_1) 
+      by (metis "1" list.sel(1) neq_Nil_conv vwalk_arcs.simps(2) vwalk_arcs_Cons
+          vwalk_arcs_from_length_1) 
     then have "vwalk_arcs (a#C) = (a, hd C) #[]"
       using 1 lC vwalk_arcs_from_length_1 
       by auto 
-    then have 2: "pre_digraph.awalk_verts G' u (vwalk_arcs (a#C)) = pre_digraph.awalk_verts G' u [(a, hd C)]"
+    then have 2: "pre_digraph.awalk_verts G' u (vwalk_arcs (a#C)) 
+      = pre_digraph.awalk_verts G' u [(a, hd C)]"
       by argo
     then have 3: "... = (tail G' (a, hd C)) # (pre_digraph.awalk_verts G' (head G' (a, hd C)) [])"
       by (simp add: pre_digraph.awalk_verts.simps(2)) 
@@ -215,25 +217,12 @@ proof(rule ccontr)
   assume "\<not> 2 \<le> length C"
   then have length_C: "length C = 1 \<or> length C = 0" 
     by linarith
-  then show False 
-  proof(cases "length C = 1")
-    case True
-    then have "vwalk_arcs C = []" 
-      by (metis One_nat_def Suc_length_conv length_0_conv vwalk_arcs.simps(2))
-    then show ?thesis
-      using assms 
-      by auto
-  next
-    case False
-    then have "length C = 0" 
-      using length_C 
-      by auto
-    then have "vwalk_arcs C = []" 
-      by auto
-    then show ?thesis 
-      using assms 
-      by auto
-  qed
+  then have "vwalk_arcs C = []" 
+    using vwalk_arcs_from_length_1 
+    by auto
+  then show False
+    using assms 
+    by simp 
 qed
 
 
@@ -250,10 +239,12 @@ next
   then have length_C: "length C \<ge> 1" 
     using if_edge_then_cycle_length_geq_2 
     by fastforce
-  then show ?case proof(cases "u = a \<and> v = hd C")
+  then show ?case
+  proof(cases "u = a \<and> v = hd C")
     case True
     then have "[]@[u,v] @ (tl C) = (a#C)" 
-      by (metis Cons.prems append_Cons append_self_conv2 list.collapse list.distinct(1) list.set_cases vwalk_arcs.simps(2))
+      by (metis Cons.prems append_Cons append_self_conv2 list.collapse list.distinct(1) 
+          list.set_cases vwalk_arcs.simps(2))
     then show ?thesis 
       using sublist_def
       by blast
@@ -262,20 +253,11 @@ next
     then have "(u,v) \<in> set (vwalk_arcs C)" 
       using Cons 
       by (metis prod.inject set_ConsD vwalk_arcs.simps(1) vwalk_arcs.simps(2) vwalk_arcs_Cons) 
-    then have "\<exists>p1 p2. p1 @ [u, v] @ p2 = C" 
+    then have "sublist [u, v] C"
       using Cons 
-      unfolding sublist_def 
       by auto
-    then obtain p1 p2 where p_def: "p1 @ [u, v] @ p2 = C"
-      by blast
-    then obtain p1' where "p1' = a # p1" 
-      by auto
-    then have "p1' @ [u, v] @ p2 = (a#C)" 
-      using p_def 
-      by auto
-    then show ?thesis
-      using Cons sublist_def
-      by blast
+    then show ?thesis 
+      by (simp add: sublist_cons)
   qed
 qed
 
@@ -334,4 +316,14 @@ lemma edge_cycle:
   using assms pre_digraph_cas_edge
   unfolding  pre_digraph.cycle_def pre_digraph.awalk_def wf_digraph_def pre_digraph.awalk_verts_def
   apply auto by fast
+
+
+lemma arcs_subset_eq_verts_times_verts: 
+  assumes "head G = snd" "tail G = fst" "wf_digraph G"
+  shows "arcs G \<subseteq> (verts G) \<times> (verts G)"
+  using assms 
+  unfolding wf_digraph_def
+  by auto
+
+
 end

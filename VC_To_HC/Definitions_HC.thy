@@ -417,7 +417,7 @@ proof -
 qed
 
 
-lemma card_verts_set_Edge_i:
+lemma fin_verts_set_Edge_i:
   assumes "\<forall>e \<in> set E. card e = 2"
   shows "finite {Edge v e i|v e. e\<in> set E \<and> v \<in> e}"
 proof -
@@ -430,17 +430,74 @@ proof -
 qed 
 
 
+lemma card_Edge_set: 
+  assumes "v \<noteq> u"
+  shows "card {Edge v a i, Edge u a i} \<le> 2" 
+proof -
+  have 1: "card {Edge u a i} = 1"  "card {Edge v a i} = 1"
+    by auto
+  have "{Edge v a i, Edge u a i} = {Edge u a i} \<union> {Edge v a i}"
+    by simp
+  then have "card {Edge u a i, Edge v a i} \<le> card {Edge u a i} + card {Edge v a i}"
+    by (metis card_Un_le insert_commute)
+  then show ?thesis 
+    using 1 
+    by (simp add: insert_commute)
+qed
+
+
+lemma card_verts_set_Edge_i:
+  assumes "\<forall>e \<in> set E. card e = 2" "T = {Edge v e i|v e. e\<in> set E \<and> v \<in> e}"
+  shows "card T \<le> 2 * length E"
+  using assms 
+proof(induction E arbitrary: T)
+  case Nil
+  then show ?case 
+    by auto
+next
+  case (Cons a E)
+  then have "T = {Edge v e i|v e. e\<in> set E \<and> v \<in> e} \<union> {Edge v a i|v. v \<in> a}"
+    by(auto)
+  then have "card T \<le> card {Edge v e i|v e. e\<in> set E \<and> v \<in> e} + card {Edge v a i|v. v \<in> a}"
+    by (simp add: card_Un_le)
+  then have 1: "card T \<le> 2 * length E + card {Edge v a i|v. v \<in> a}"
+    using Cons 
+    by fastforce 
+  have "card {Edge v a i|v. v \<in> a} \<le> 2"
+  proof -
+    have "card a = 2"
+      using Cons 
+      by auto
+    then obtain u v where uv_def: "a = {u, v}" "u \<noteq> v"
+      by (meson e_in_E_e_explicit)
+    then have 1: "{Edge v a i|v. v \<in> a} = {Edge v a i, Edge u a i}"
+      by fastforce
+    have "card {Edge v a i, Edge u a i} \<le> 2"
+      using card_Edge_set uv_def
+      by metis
+    then show ?thesis 
+      using 1 
+      by auto
+  qed
+  then have "card T \<le> 2 * length E + 2"
+    using 1 
+    by linarith
+  then show ?case  
+    by simp
+qed
+
+
 lemma fin_Edge0:
   assumes "\<forall>e\<in> set E. card e = 2" 
   shows "finite {Edge v e 0|v e. e\<in> set E \<and> v \<in> e}"
-  using card_verts_set_Edge_i assms
+  using fin_verts_set_Edge_i assms
   by auto
 
 
 lemma fin_Edge1:
   assumes "\<forall>e\<in> set E. card e = 2" 
   shows "finite {Edge v e 1|v e. e\<in> set E \<and> v \<in> e}"
-  using card_verts_set_Edge_i assms
+  using fin_verts_set_Edge_i assms
   by auto
 
 

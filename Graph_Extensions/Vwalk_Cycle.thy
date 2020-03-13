@@ -48,7 +48,7 @@ lemma vwalk_cycle_vwalk_arcs:
 lemma distinct_awalk_verts_vwalk_arcs: 
   assumes "head G = snd" "tail G = fst" "distinct (tl p)" "length p \<ge> 2"
   shows "distinct (tl (pre_digraph.awalk_verts G u (vwalk_arcs p)))"
-  using assms at_least_to_nodes_vwalk_arcs_awalk_verts 
+  using assms at_least_two_nodes_vwalk_arcs_awalk_verts 
   by (metis leD le_antisym less_one nat_neq_iff num.distinct(1) one_eq_numeral_iff one_le_numeral zero_less_numeral)
 
 
@@ -296,7 +296,7 @@ lemma cycle_implies_vwalk_cycle:
   shows "vwalk_cycle G c" 
 proof -
   have "\<forall>u. pre_digraph.awalk_verts G u (vwalk_arcs c) = c"
-    using assms at_least_to_nodes_vwalk_arcs_awalk_verts 
+    using assms at_least_two_nodes_vwalk_arcs_awalk_verts 
     by force
   then have 1: "distinct (tl c)" 
     using assms pre_digraph.cycle_def 

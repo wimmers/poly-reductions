@@ -155,7 +155,7 @@ proof -
     by simp
   then have fin2: "finite {Edge v e 0|v e. e\<in> set E \<and> v \<in> e}"
     "finite {Edge v e 1|v e. e\<in> set E \<and> v \<in> e}"
-    using card_verts_set_Edge_i ugraph
+    using fin_verts_set_Edge_i ugraph
     unfolding ugraph_def
     by blast+
   then show "finite (verts G)" 
