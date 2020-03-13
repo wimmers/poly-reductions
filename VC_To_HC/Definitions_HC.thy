@@ -417,29 +417,31 @@ proof -
 qed
 
 
-lemma fin_Edge0:
-  assumes "\<forall>e\<in> set E. card e = 2" 
-  shows "finite {Edge v e 0|v e. e\<in> set E \<and> v \<in> e}"
+lemma card_verts_set_Edge_i:
+  assumes "\<forall>e \<in> set E. card e = 2"
+  shows "finite {Edge v e i|v e. e\<in> set E \<and> v \<in> e}"
 proof -
-  have "{Edge v e 0|v e. e\<in> set E \<and> v \<in> e} \<subseteq> (\<lambda>(v, e). Edge v e 0) ` ((\<Union> (set E)) \<times> set E)"
+  have "{Edge v e i|v e. e\<in> set E \<and> v \<in> e} \<subseteq> (\<lambda>(v, e). Edge v e i) ` ((\<Union> (set E)) \<times> set E)"
     by auto
   moreover have "finite \<dots>"
     using assms by (force intro: card_ge_0_finite)
   ultimately show ?thesis
     by (rule finite_subset)
-qed
+qed 
+
+
+lemma fin_Edge0:
+  assumes "\<forall>e\<in> set E. card e = 2" 
+  shows "finite {Edge v e 0|v e. e\<in> set E \<and> v \<in> e}"
+  using card_verts_set_Edge_i assms
+  by auto
+
 
 lemma fin_Edge1:
   assumes "\<forall>e\<in> set E. card e = 2" 
   shows "finite {Edge v e 1|v e. e\<in> set E \<and> v \<in> e}"
-proof -
-  have "{Edge v e 1|v e. e\<in> set E \<and> v \<in> e} \<subseteq> (\<lambda>(v, e). Edge v e 1) ` ((\<Union> (set E)) \<times> set E)"
-    by auto
-  moreover have "finite \<dots>"
-    using assms by (force intro: card_ge_0_finite)
-  ultimately show ?thesis
-    by (rule finite_subset)
-qed
+  using card_verts_set_Edge_i assms
+  by auto
 
 
 subsection\<open>Auxiliary lemmas\<close>

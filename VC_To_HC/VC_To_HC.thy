@@ -6,7 +6,7 @@ theory VC_To_HC
 begin
 
 
-subsection\<open> Main theorem \<close>
+subsection\<open>Main theorem\<close>
 
 lemma vc_impl_hc: "(E,k) \<in> vertex_cover_list \<Longrightarrow> vc_hc (E,k) \<in> hc"
 proof -
