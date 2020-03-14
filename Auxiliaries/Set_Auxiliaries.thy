@@ -114,49 +114,6 @@ next
 qed
 
 
-(*lemma fin_dep_on_other_set:
-  assumes "finite T" 
-  shows "finite {{u. f u j}|j. j \<in> T}" 
-  using assms 
-proof (induction "card T" arbitrary: T)
-  case 0
-  then have "T = {}" 
-    using assms 
-    by simp
-  then have "{{u. f u j}|j. j \<in> T} = {}" 
-    using assms 0 
-    by auto
-  then show ?case 
-    by auto
-next
-  case (Suc x)
-  then have "\<exists>x. x \<in> T" 
-    by (metis card_eq_SucD insertI1) 
-  then obtain t where t_def: "t \<in> T" 
-    by auto
-  then obtain T' where T'_def: "T' = T - {t}" 
-    by auto
-  then have card: "x = card T'" 
-    using Suc t_def 
-    by simp
-  then have 1: "finite {{u. f u j}|j. j \<in> T'}" 
-    using Suc card T'_def
-    by blast
-  have 2: "T = T' \<union> {t}" 
-    using T'_def t_def 
-    by auto 
-  then have 3: "{{u. f u j}|j. j \<in> T} = {{u. f u j}|j. j \<in> T'} \<union> {{u. f u t}}"
-    using T'_def 
-    by blast
-  then have "finite ({{u. f u j}|j. j \<in> T'} \<union> {{u. f u t}})"
-    using 1 
-    by blast 
-  then show ?case 
-    using 3
-    by simp
-qed*)
-
-
 lemma finite_union_if_all_subset_fin:
   assumes "\<forall>S' \<in> S. finite S'" "finite S"  
   shows "finite (\<Union> S)"
@@ -244,7 +201,6 @@ proof
     using assms 
     by blast 
 qed
-
 
 
 lemma card_union_if_all_subsets_card_1:
