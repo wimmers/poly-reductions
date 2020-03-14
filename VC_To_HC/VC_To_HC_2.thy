@@ -2377,7 +2377,6 @@ proof -
     qed
   qed
   have 3: "finite Cover_is" 
-    using Cover_is_def 1 
   proof (cases "k = 0")
     case True
     then have "{i. Cover i \<in> verts G} = {}" 

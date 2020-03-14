@@ -1774,4 +1774,10 @@ next
   qed
 qed
 
+
+lemma hd_last_eq_in_tl: 
+  assumes "hd xs = last xs" "x \<in> set xs" "length xs > 1"
+  shows "x \<in> set (tl xs)"
+  using assms by(induction xs)(auto split: if_split_asm)
+
 end

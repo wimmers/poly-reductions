@@ -326,4 +326,12 @@ lemma arcs_subset_eq_verts_times_verts:
   by auto
 
 
+lemma not_wf_digraph_not_arcs_empty: 
+  assumes "\<not> wf_digraph G" 
+  shows "arcs G \<noteq> {}"
+  using assms
+  unfolding wf_digraph_def
+  by auto
+
+
 end

@@ -413,7 +413,8 @@ lemma cnf_sat_to_clique_ispolyred: "ispolyred vc_hc_alg vertex_cover_list hc siz
   subgoal using vc_to_hc_reifnes by blast
   subgoal using vc_to_hc_size by blast  
   subgoal unfolding poly_def vc_hc_time_def apply(rule exI[where x=2]) by auto  
-  subgoal unfolding poly_def vc_to_hc_space_def space_verts_def space_edges_def apply(rule exI[where x=2]) by auto
+  subgoal unfolding poly_def vc_to_hc_space_def space_verts_def space_edges_def 
+    apply(rule exI[where x=2]) by auto
   subgoal using is_reduction_vc_to_hc .
   done
 
