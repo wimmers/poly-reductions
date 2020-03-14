@@ -40,7 +40,8 @@ definition "cnf_sat_to_clique_space n  = n * n + n"
 
 
 lemma brr2:
-  shows "{{f l1, g l2} |l1 l2.  h l1 l2 \<and> l1 \<in> X \<and> l2 \<in> Y} \<subseteq>  UNION X (\<lambda>x. UNION Y (\<lambda>y. {{f x, g y}}))" 
+  shows "{{f l1, g l2} |l1 l2.  h l1 l2 \<and> l1 \<in> X \<and> l2 \<in> Y} 
+  \<subseteq> UNION X (\<lambda>x. UNION Y (\<lambda>y. {{f x, g y}}))" 
 proof -
   have "{{f l1, g l2} |l1 l2. h l1 l2 \<and> l1 \<in> X \<and> l2 \<in> Y } \<subseteq> 
         {{f l1, g l2} |l1 l2. l1 \<in> X \<and> l2 \<in> Y}" 
@@ -169,7 +170,8 @@ proof -
     by(auto)+ 
   then show ?thesis 
     using 1 
-    by (metis (no_types, lifting) assms card_mono dual_order.trans finite_SigmaI finite_atLeastLessThan mult.commute) 
+    by (metis (no_types, lifting) assms card_mono dual_order.trans finite_SigmaI 
+        finite_atLeastLessThan mult.commute) 
 qed
 
 
@@ -214,8 +216,10 @@ proof -
 qed
 
 
-lemma cnf_sat_to_clique_size: "size_Clique (cnf_sat_to_clique p) \<le> cnf_sat_to_clique_space (size_CNF_SAT p)" 
-  apply(auto simp: size_Clique_def cnf_sat_to_clique_def cnf_sat_to_clique_space_def size_CNF_SAT_def number_clauses_CNF_SAT_def max_size_clauses_def card_clauses_samller)
+lemma cnf_sat_to_clique_size: "size_Clique (cnf_sat_to_clique p) 
+  \<le> cnf_sat_to_clique_space (size_CNF_SAT p)" 
+  apply(auto simp: size_Clique_def cnf_sat_to_clique_def cnf_sat_to_clique_space_def 
+      size_CNF_SAT_def number_clauses_CNF_SAT_def max_size_clauses_def card_clauses_samller)
   apply(rule add_mono)
    apply(auto simp add: card_E3)
   apply(auto simp add: card_V)
@@ -230,10 +234,12 @@ lemma cnf_sat_to_clique_refines:
     add_nodes_cstc_def
   apply(rule T_specifies_I) 
   apply(vcg' \<open>-\<close> rules: T_SPEC )
-  by(auto simp: cnf_sat_to_clique_time_def number_clauses_CNF_SAT_def max_size_clauses_def one_enat_def size_CNF_SAT_def)
+  by(auto simp: cnf_sat_to_clique_time_def number_clauses_CNF_SAT_def 
+      max_size_clauses_def one_enat_def size_CNF_SAT_def)
 
 
-lemma cnf_sat_to_clique_ispolyred: "ispolyred cnf_sat_to_clique_alg cnf_sat clique size_CNF_SAT size_Clique" 
+lemma cnf_sat_to_clique_ispolyred: 
+  "ispolyred cnf_sat_to_clique_alg cnf_sat clique size_CNF_SAT size_Clique" 
   unfolding ispolyred_def
   apply(rule exI[where x=cnf_sat_to_clique])
   apply(rule exI[where x=cnf_sat_to_clique_time])

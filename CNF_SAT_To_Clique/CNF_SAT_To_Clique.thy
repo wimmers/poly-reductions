@@ -53,7 +53,8 @@ lemma V_def: "V = {(l1, i) | l1 i. i < length F \<and>   l1 \<in> F ! i}"
   by (metis (mono_tags, lifting) fst_conv old.prod.exhaust snd_conv)
 
 
-lemma E_def: "E = {{(l1, i), (l2, j)} | l1 l2 i j. i < length F \<and> j < length F \<and> i\<noteq> j \<and> \<not> conflict l1 l2 \<and>
+lemma E_def: "E = {{(l1, i), (l2, j)} | l1 l2 i j. i < length F 
+         \<and> j < length F \<and> i\<noteq> j \<and> \<not> conflict l1 l2 \<and>
          l1 \<in> F ! i \<and> l2 \<in> F ! j} " using cnf_sat_to_clique_def triple fin_1
   by (metis (mono_tags, lifting) fst_eqD)
 
@@ -111,51 +112,8 @@ lemmas
 lemma get_some_true_yields_clique:
   assumes "u\<in>C" "v\<in>C"
   shows "{u, v} \<in> E \<or> u = v"
-    (*using assms triple E_def V_def C_def conflict_models_ccontr get_some_true_index get_some_true_sat by blast+*)
-proof (cases "u=v")
-  case False
-  obtain u1 u2 where "u=(u1, u2)" 
-    using \<open>u\<in> _\<close> C_def 
-    by blast 
-  obtain v1 v2 where "v=(v1, v2)" 
-    using \<open>v\<in> _\<close> C_def 
-    by blast
-  have "u2 < length F" "v2 < length F"  
-    using \<open>u\<in> _\<close>  \<open>u= (u1, u2)\<close> \<open>v\<in> _\<close>  \<open>v= (v1, v2)\<close> C_def 
-    by(auto)
-  have 2: "u2 \<noteq> v2" 
-    using  get_some_true_def \<open>u = (u1, u2)\<close> \<open>u \<in> _\<close> \<open>v = (v1, v2)\<close> \<open>v \<in>_\<close> C_def False 
-    by force
-  moreover have l1: "lift \<sigma> u1" 
-    using \<open>u = (u1, u2)\<close> assms select get_some_true_sat  C_def 
-    unfolding get_some_true_def 
-    by force
-  moreover have l2:"lift \<sigma> v1" 
-    using  \<open>v = (v1, v2)\<close>  assms select  C_def get_some_true_sat 
-    unfolding get_some_true_def 
-    by force
-  from l1 l2 have 3: "\<not> conflict u1 v1" 
-    unfolding get_some_true_def 
-    using conflict_models_ccontr get_some_true_def \<open>u = (u1, u2)\<close> \<open>u \<in> _\<close> \<open>v = (v1, v2)\<close> \<open>v \<in>_\<close> 
-    by(auto)
-  then have i1:"v1 \<in> F ! v2" 
-    using \<open>v = (v1, v2)\<close> \<open>v \<in> _\<close> sigma_def C_def 
-    by (simp add: get_some_true_index) 
-  then have i2: "u1 \<in> F ! u2" 
-    using \<open>u = (u1, u2)\<close> \<open>u \<in> _\<close> sigma_def C_def 
-    by (simp add: get_some_true_index) 
-  then have " {u, v} \<in> {{(l1, i), (l2, j)} |l1 l2 i j. i < length F \<and> j < length F \<and> i \<noteq> j \<and> \<not> conflict l1 l2 \<and> l1 \<in> F ! i \<and> l2 \<in> F ! j}" 
-    using\<open>u = (u1, u2)\<close> \<open>u \<in> _\<close> \<open>v = (v1, v2)\<close> \<open>v \<in>_\<close> l1 l2 i1 i2 2 3 C_def
-    by(auto)
-  then have "{u,v} \<in> E" 
-    using E_def 
-    by(auto simp add: cnf_sat_to_clique_def fin_1)
-  then show ?thesis ..
-next
-  case True
-  then show ?thesis 
-    by(auto)
-qed 
+  using assms triple E_def V_def C_def conflict_models_ccontr 
+    get_some_true_index get_some_true_sat by blast+
 
 
 lemma is_clique:
@@ -266,19 +224,21 @@ lemma finite_F_1:
 
 lemma E_def_C:
   assumes "E \<noteq> {}"
-  shows "E= {{(l1, i), (l2, j)} | l1 l2 i j. i < length F \<and> j < length F \<and> i\<noteq> j \<and> \<not> conflict l1 l2 \<and>
-         l1 \<in> F ! i \<and> l2 \<in> F ! j}"  
+  shows "E= {{(l1, i), (l2, j)} | l1 l2 i j. i < length F \<and> j < length F 
+        \<and> i\<noteq> j \<and> \<not> conflict l1 l2 \<and> l1 \<in> F ! i \<and> l2 \<in> F ! j}"  
   using triple finite_F_1 aux1 assms
   by(auto)
+
 
 lemma finite_F: 
   shows  "finite (\<Union> (set F))"
   using else_not_in_clique cnf_sat_to_clique_def E_def_C triple finite_F_1 in_clique 
   by (simp add: aux_for_finite_F)
 
+
 lemma no_edges_between_clause:
   assumes "{(l1, i), (l2, i)} \<in> E" 
-  shows "False"
+  shows False
 proof -
   have "E \<noteq> {}" 
     using assms  
@@ -291,8 +251,10 @@ proof -
     by(auto)
 qed
 
+
 lemma conflict_commutative: "conflict l1 l2 = conflict l2 l1"
   by(auto simp add: conflict_def)
+
 
 lemma edge_conflict_aux:
   assumes "{(l1, i), (l2, j)} \<in>E"
@@ -306,7 +268,8 @@ proof (rule ccontr)
     apply(auto)
     by (smt Pair_inject doubleton_eq_iff empty_iff mem_Collect_eq)
   then have "\<not> conflict l1 l2"
-    using conflict_commutative by(auto)
+    using conflict_commutative 
+    by(auto)
   then show False 
     using assms \<open>\<not> \<not> conflict l1 l2\<close> 
     by auto
@@ -324,8 +287,9 @@ proof -
   have "card C \<le> 1" 
     using assms is_clique_def 
     apply(auto)
-    by (metis assms(1) assms(6) card_le_Suc0_iff_eq emptyE is_clique_def)
-  then have "(l1, i) = (l2, j)" using \<open>(l1, i) \<in> C\<close> \<open>(l2, j) \<in> C\<close> aux5  assms
+    by (metis assms(1, 6) card_le_Suc0_iff_eq emptyE is_clique_def)
+  then have "(l1, i) = (l2, j)" 
+    using \<open>(l1, i) \<in> C\<close> \<open>(l2, j) \<in> C\<close> aux5  assms
     by fastforce
   then have "\<not> conflict l1 l2"
     by auto
@@ -459,7 +423,6 @@ qed
 lemma in_clique_implies_in_cnf_sat: 
   assumes "cnf_sat_to_clique F \<in> clique"
   shows "F \<in> cnf_sat"
-  using aux_for_finite_F f_sat cnf_sat_def assms 
 proof - (*found by sledgehammer*)
   have "\<forall>p Ls. cnf_sat_to_clique (Ls::'a lit set list) \<noteq> p \<or> p \<notin> clique \<or> sat Ls"
     by (simp add: f_sat)

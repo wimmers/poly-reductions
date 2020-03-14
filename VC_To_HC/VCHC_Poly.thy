@@ -418,6 +418,4 @@ lemma cnf_sat_to_clique_ispolyred: "ispolyred vc_hc_alg vertex_cover_list hc siz
   subgoal using is_reduction_vc_to_hc .
   done
 
-
-
 end
