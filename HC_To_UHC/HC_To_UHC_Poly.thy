@@ -67,7 +67,6 @@ qed
 lemma card_verts_i: 
   assumes "finite (verts Gr)" 
   shows "card {(v, i)|v. v \<in> verts Gr} \<le> card (verts Gr)"
-  using assms 
 proof -
   have " {(v, i)|v. v \<in> verts Gr} = (verts Gr) \<times> {i}"
     by auto
@@ -83,28 +82,35 @@ lemma card_verts:
     \<le> 3 * card (verts Gr)" 
 proof(cases "finite (verts Gr)")
   case True
-  then show ?thesis using assms 
+  then show ?thesis
   proof(cases "card (verts Gr) > 1")
     case True
-    then have "hc_to_uhc Gr = \<lparr>verts = {(v, (0::nat))|v. v \<in> verts Gr} \<union> {(v, 1)|v. v \<in> verts Gr} \<union> {(v, 2)|v. v \<in> verts Gr}, 
+    then have "hc_to_uhc Gr = \<lparr>verts = {(v, (0::nat))|v. v \<in> verts Gr} \<union> {(v, 1)|v. v \<in> verts Gr} 
+      \<union> {(v, 2)|v. v \<in> verts Gr}, 
     arcs = {((v, 0), (v, 1))|v. v \<in> verts Gr} \<union>{((v, 1), (v, 0))|v. v \<in> verts Gr}\<union>
           {((v, 1), (v, 2))|v. v \<in> verts Gr}\<union>{((v, 2), (v, 1))|v. v \<in> verts Gr}\<union>
           {((v, 2), (u, 0))|v u e. e \<in> arcs Gr \<and> v = tail Gr e \<and> u = head Gr e \<and> u \<noteq> v}\<union> 
           {((u, 0), (v, 2))|v u e. e \<in> arcs Gr \<and> v = tail Gr e \<and> u = head Gr e \<and> u \<noteq> v},
     tail = fst, head = snd\<rparr>" 
-      using assms by(auto simp add: hc_to_uhc_def)
-    then have 1: "card (verts (hc_to_uhc Gr)) = card ({(v, (0::nat))|v. v \<in> verts Gr} \<union> {(v, 1)|v. v \<in> verts Gr} \<union> {(v, 2)|v. v \<in> verts Gr})" 
+      using assms 
+      by(auto simp add: hc_to_uhc_def)
+    then have 1: "card (verts (hc_to_uhc Gr)) = card 
+        ({(v, (0::nat))|v. v \<in> verts Gr} \<union> {(v, 1)|v. v \<in> verts Gr} \<union> {(v, 2)|v. v \<in> verts Gr})" 
       by auto
-    have 2: "... \<le> card {(v, (0::nat))|v. v \<in> verts Gr} + card  ({(v, (1::nat))|v. v \<in> verts Gr} \<union> {(v, (2::nat))|v. v \<in> verts Gr})"
+    have 2: "... \<le> card {(v, (0::nat))|v. v \<in> verts Gr} 
+        + card  ({(v, (1::nat))|v. v \<in> verts Gr} \<union> {(v, (2::nat))|v. v \<in> verts Gr})"
       using card_Un_le 
       by (simp add: card_Un_le sup_assoc) 
-    have 3: "... \<le> card {(v, (0::nat))|v. v \<in> verts Gr} + card  {(v, (1::nat))|v. v \<in> verts Gr} + card {(v, (2::nat))|v. v \<in> verts Gr}"
+    have 3: "... \<le> card {(v, (0::nat))|v. v \<in> verts Gr} 
+        + card  {(v, (1::nat))|v. v \<in> verts Gr} + card {(v, (2::nat))|v. v \<in> verts Gr}"
       using card_Un_le 
       by (simp add: card_Un_le sup_assoc)
-    then have 4: "... \<le> card (verts Gr) + card  {(v, (1::nat))|v. v \<in> verts Gr} + card {(v, (2::nat))|v. v \<in> verts Gr}"
+    then have 4: "... \<le> card (verts Gr) + card  {(v, (1::nat))|v. v \<in> verts Gr} 
+          + card {(v, (2::nat))|v. v \<in> verts Gr}"
       using card_verts_i True
       by force
-    then have 5: "... \<le> card (verts Gr) +card(verts Gr) + card {(v, (2::nat))|v. v \<in> verts Gr}"
+    then have 5: "... \<le> card (verts Gr) +card(verts Gr) 
+        + card {(v, (2::nat))|v. v \<in> verts Gr}"
       using card_verts_i True 
       by force
     then have 6: "... \<le> card (verts Gr) + card(verts Gr) + card (verts Gr)"
@@ -173,7 +179,8 @@ lemma card_arcs_helper:
   shows "finite (verts G') \<and> tail G' = fst \<and> head G' = snd \<and> wf_digraph G'"
 proof(cases "card (verts Gr) > 1")
   case True
-  then have G'_def: "G' = \<lparr>verts = {(v, (0::nat))|v. v \<in> verts Gr} \<union> {(v, 1)|v. v \<in> verts Gr} \<union> {(v, 2)|v. v \<in> verts Gr}, 
+  then have G'_def: "G' = \<lparr>verts = {(v, (0::nat))|v. v \<in> verts Gr} \<union> {(v, 1)|v. v \<in> verts Gr} 
+      \<union> {(v, 2)|v. v \<in> verts Gr}, 
     arcs = {((v, 0::nat), (v, 1))|v. v \<in> verts Gr} \<union>{((v, 1), (v, 0))|v. v \<in> verts Gr}\<union>
           {((v, 1), (v, 2))|v. v \<in> verts Gr}\<union>{((v, 2), (v, 1))|v. v \<in> verts Gr}\<union>
           {((v, 2), (u, 0))|v u e. e \<in> arcs Gr \<and> v = tail Gr e \<and> u = head Gr e \<and> u \<noteq> v}\<union> 
@@ -182,8 +189,9 @@ proof(cases "card (verts Gr) > 1")
     using assms
     by auto
   then have 1: "wf_digraph G'"
-    using wf_digraph_def assms 
-    by(auto simp add: wf_digraph_def) 
+    using assms 
+    unfolding wf_digraph_def
+    by auto
   then have 2: "tail G' = fst \<and> head G' = snd" 
     using G'_def 
     by simp
@@ -191,7 +199,8 @@ proof(cases "card (verts Gr) > 1")
     using assms G'_def finite_verts_i 
   proof -
     have "finite  {(v, (0::nat))|v. v \<in> verts Gr}" "finite {(v, 1)|v. v \<in> verts Gr}" 
-      "finite {(v, 2)|v. v \<in> verts Gr}" using finite_verts_i assms 
+      "finite {(v, 2)|v. v \<in> verts Gr}" 
+      using finite_verts_i assms 
       by auto
     then show ?thesis
       using G'_def finite_UnI 
@@ -226,11 +235,13 @@ proof(cases "finite (verts Gr)")
     else \<lparr>verts = {}, arcs = {}, tail = fst, head = snd\<rparr>)"
     using assms
     by (auto simp add: hc_to_uhc_def)
-  then have 1: "finite (verts (hc_to_uhc Gr))" "tail (hc_to_uhc Gr) = fst \<and> head (hc_to_uhc Gr) = snd"
-    "wf_digraph (hc_to_uhc Gr)"
+  then have 1: "finite (verts (hc_to_uhc Gr))" 
+      "tail (hc_to_uhc Gr) = fst \<and> head (hc_to_uhc Gr) = snd"
+      "wf_digraph (hc_to_uhc Gr)"
     using card_arcs_helper assms True 
     by blast+
-  then have 2: "card (arcs (hc_to_uhc Gr)) \<le> card (verts (hc_to_uhc Gr)) * card (verts (hc_to_uhc Gr))" 
+  then have 2: "card (arcs (hc_to_uhc Gr)) 
+      \<le> card (verts (hc_to_uhc Gr)) * card (verts (hc_to_uhc Gr))" 
     using wf_digraph_card_arcs
     by blast
   have "card (verts (hc_to_uhc Gr)) \<le> 3 * card (verts Gr)" 
@@ -244,7 +255,8 @@ proof(cases "finite (verts Gr)")
     by linarith   
 next
   case False
-  then have 1: "hc_to_uhc Gr = \<lparr>verts = {(v, 0)|v. v \<in> verts Gr}, arcs = {}, tail = fst, head = snd\<rparr>"
+  then have 1: "hc_to_uhc Gr = 
+    \<lparr>verts = {(v, 0)|v. v \<in> verts Gr}, arcs = {}, tail = fst, head = snd\<rparr>"
     using assms hc_to_uhc_def 
     by(auto simp add: hc_to_uhc_def) 
   then show ?thesis 
@@ -333,6 +345,7 @@ lemma vcs_to_vcl_reifnes:
   apply(vcg' \<open>-\<close> rules: T_SPEC )
      apply(auto simp: hc_to_uhc_time_def one_enat_def size_hc_def)
   by (simp add: numeral_eq_enat)+
+
 
 lemma cnf_sat_to_clique_ispolyred: "ispolyred hc_to_uhc_alg hc uhc size_hc size_uhc" 
   unfolding ispolyred_def
