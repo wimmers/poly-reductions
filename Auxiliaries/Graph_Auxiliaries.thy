@@ -334,4 +334,69 @@ lemma not_wf_digraph_not_arcs_empty:
   by auto
 
 
+lemma distinct_awalk_verts_vwalk_arcs: 
+  assumes "head G = snd" "tail G = fst" "distinct (tl p)" "length p \<ge> 2"
+  shows "distinct (tl (pre_digraph.awalk_verts G u (vwalk_arcs p)))"
+  using assms at_least_two_nodes_vwalk_arcs_awalk_verts 
+  by (metis leD le_antisym less_one nat_neq_iff num.distinct(1) one_eq_numeral_iff 
+      one_le_numeral zero_less_numeral)
+
+
+lemma awalk_empty_list: 
+  assumes "u \<in> verts G" 
+  shows "pre_digraph.awalk G u [] u"
+  using assms unfolding pre_digraph.awalk_def 
+  by(auto simp add: pre_digraph.cas.simps)
+
+
+lemma cas_vwalk_length_at_least_2: 
+  assumes "vwalk p G" "head G = snd" "tail G = fst" "length p \<ge> 2"
+  shows "pre_digraph.cas G (hd p) (vwalk_arcs p) (last p)"
+  using assms
+  by(induction p)(auto simp add:  pre_digraph.cas.simps Suc_leI)
+
+
+lemma awalk_vwalk_length_at_least_2:
+  assumes "vwalk p G" "head G = snd" "tail G = fst" "length p \<ge> 2"
+  shows "pre_digraph.awalk G (hd p) (vwalk_arcs p) (last p)"
+  using assms
+  unfolding pre_digraph.awalk_def vwalk_def
+  by(auto simp add: pre_digraph.cas.simps arcs_ends_G' cas_vwalk_length_at_least_2 assms) 
+
+
+lemma last_pre_digraph_cas: 
+  assumes "pre_digraph.cas G u (p) v" "p\<noteq> []" "head G = snd" "tail G = fst" 
+  shows "snd (last p) = v"
+  using assms 
+  by(induction p arbitrary: u)(auto simp add: pre_digraph.cas.simps)
+
+
+lemma hd_pre_digraph_cas: 
+  assumes "pre_digraph.cas G u (p) v" "p\<noteq> []" "head G = snd" "tail G = fst" 
+  shows "fst (hd p) = u"
+  using assms 
+  by(induction p arbitrary: u)(auto simp add: pre_digraph.cas.simps)
+
+
+lemma hd_first_edge: 
+  assumes "length c \<ge> 2" 
+  shows "fst (hd (vwalk_arcs c)) = hd c" 
+  using assms 
+  by (metis Suc_1 Suc_le_lessD hd_vwalk_arcs_last_p length_C_vwalk_arcs_not_empty) 
+
+
+lemma tail_last_edge: 
+  assumes "length c \<ge> 2" 
+  shows "snd (last (vwalk_arcs c))= last c" 
+  using assms 
+  by (metis Suc_1 last_vwalk_arcs_last_p not_less_eq_eq vwalk_arcs_empty_length_p) 
+
+
+lemma hd_last_cycle: 
+  assumes "length c \<ge> 2" "pre_digraph.cycle G (vwalk_arcs c)" "head G = snd" "tail G = fst"
+  shows "hd c = last c" 
+  using assms 
+  unfolding pre_digraph.cycle_def pre_digraph.awalk_def 
+  using hd_first_edge hd_pre_digraph_cas last_pre_digraph_cas tail_last_edge 
+  by fastforce
 end
