@@ -146,7 +146,7 @@ lemma not_in_edges_not_in_cycle:
   using assms apply(induction E') by(auto simp add: Let_def)
 
 
-lemma edge_nodes_in_construct_edgess:
+lemma edge_nodes_in_construct_edges:
   assumes "v \<in> e" "u \<in> e" "e \<in> set E'" "u \<notin> Cs'" "card e = 2" "v \<noteq> u"
   shows "Edge u e 0 \<in> set (construct_cycle_add_edge_nodes E' v Cs') 
     \<and> Edge u e 1 \<in> set (construct_cycle_add_edge_nodes E' v Cs')"
@@ -160,9 +160,9 @@ lemma edge_nodes_in_construct_cycle_one_in_Cover:
     \<and> (Edge v e 1) \<in> set  (construct_cycle_1 E Cs n Cs')"
   using assms 
   apply(induction Cs arbitrary: n) 
-  using Edge_nodes_in_construct_edge edge_nodes_in_construct_edgess card_dedges  
+  using Edge_nodes_in_construct_edge edge_nodes_in_construct_edges card_dedges  
    apply(auto)
-  by (smt assms(3) assms(6) edge_nodes_in_construct_edgess card_dedges numeral_1_eq_Suc_0 
+  by (smt assms(3) assms(6) edge_nodes_in_construct_edges card_dedges numeral_1_eq_Suc_0 
       numeral_2_eq_2 numerals(1))+   
 
 

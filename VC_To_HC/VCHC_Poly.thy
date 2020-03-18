@@ -363,7 +363,8 @@ lemma vc_to_hc_size: "size_hc (vc_hc (E, k)) \<le> vc_to_hc_space (size_vc (E, k
 
 lemma time_ugraph_to_hc: 
   assumes "ugraph (set E)" "k \<le> card (\<Union> (set E))" "distinct E" 
-  shows "2 * card (set E) + (k + (2 * length E * k + k * k)) \<le> 4 * length E + 8 * (length E * length E)"
+  shows "2 * card (set E) + (k + (2 * length E * k + k * k)) 
+    \<le> 4 * length E + 8 * (length E * length E)"
 proof -
   have 1: "k \<le> 2*(length E)" 
     using assms k_smaller_2_length 
