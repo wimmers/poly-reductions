@@ -3,6 +3,10 @@ theory CSTC_Poly
     "NREST.RefineMonadicVCG" "NREST.Refine_Foreach" "../TSTSC_Poly"
 begin  
 
+subsection\<open>Ispolyred of CNF_Sat to Clique\<close>
+
+subsubsection\<open>Definitions\<close>
+
 definition "max_size_clauses xs = card (\<Union> (set xs))"
 
 definition "add_edges_cstc F S = 
@@ -38,6 +42,8 @@ definition "cnf_sat_to_clique_time n = 4 + n * n  + n"
 definition "size_Clique = (\<lambda>(E,V,k). card E + card V)"
 definition "cnf_sat_to_clique_space n  = n * n + n"
 
+
+subsubsection\<open>Auxiliary proofs\<close>
 
 lemma brr2:
   shows "{{f l1, g l2} |l1 l2.  h l1 l2 \<and> l1 \<in> X \<and> l2 \<in> Y} 
@@ -216,6 +222,8 @@ proof -
 qed
 
 
+subsubsection\<open>Main proofs\<close>
+
 lemma cnf_sat_to_clique_size: "size_Clique (cnf_sat_to_clique p) 
   \<le> cnf_sat_to_clique_space (size_CNF_SAT p)" 
   apply(auto simp: size_Clique_def cnf_sat_to_clique_def cnf_sat_to_clique_space_def 
@@ -238,7 +246,7 @@ lemma cnf_sat_to_clique_refines:
       max_size_clauses_def one_enat_def size_CNF_SAT_def)
 
 
-lemma cnf_sat_to_clique_ispolyred: 
+theorem cnf_sat_to_clique_ispolyred: 
   "ispolyred cnf_sat_to_clique_alg cnf_sat clique size_CNF_SAT size_Clique" 
   unfolding ispolyred_def
   apply(rule exI[where x=cnf_sat_to_clique])

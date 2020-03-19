@@ -3,6 +3,8 @@ theory VCSTVCL_Poly
     "NREST.RefineMonadicVCG" "NREST.Refine_Foreach" "../TSTSC_Poly"
 begin
 
+subsection\<open>Ispolyred of VC_Set to VC_List\<close>
+subsubsection\<open>Definitions\<close>
 
 definition "size_VC_List = (\<lambda>(E,k). length E)"
 definition "vcs_to_vcl_space n  = n"
@@ -25,6 +27,8 @@ definition "vcs_to_vcl = (\<lambda>(E,k).
 definition "vcs_vcl_time n = 1+ (2 * n + 1) + 1 + n"
 
 
+subsubsection\<open>Proofs\<close>
+
 lemma vcs_to_vcl_size: "size_VC_List (vc_set_to_vc_list (E, k)) \<le> vcs_to_vcl_space (size_VC (E, k))" 
   apply(auto simp: size_VC_List_def vc_set_to_vc_list_def vcs_to_vcl_space_def size_VC_def)
   apply(auto simp add: set_to_list_def)
@@ -44,7 +48,8 @@ lemma vcs_to_vcl_reifnes:
       one_enat_def)
 
 
-lemma cnf_sat_to_clique_ispolyred: "ispolyred vcs_to_vcl vertex_cover vertex_cover_list size_VC size_VC_List" 
+theorem cnf_sat_to_clique_ispolyred: 
+  "ispolyred vcs_to_vcl vertex_cover vertex_cover_list size_VC size_VC_List" 
   unfolding ispolyred_def
   apply(rule exI[where x=vc_set_to_vc_list])
   apply(rule exI[where x=vcs_vcl_time])

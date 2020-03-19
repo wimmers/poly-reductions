@@ -13,10 +13,12 @@ subsection\<open>Preliminaries\<close>
 (*Case for empty c is already in cycle*)
 definition
   "is_uhc (G::('a,('a \<times> 'a)) pre_digraph) (c:: 'a list)  \<equiv> 
-    ((vwalk_cycle G c \<and> (\<forall>x\<in> verts G. x \<in> set c)\<and> distinct (tl c))\<or> card (verts G) \<le> 1)\<and> set c \<subseteq> verts G"
+    ((vwalk_cycle G c \<and> (\<forall>x\<in> verts G. x \<in> set c)\<and> distinct (tl c))\<or> card (verts G) \<le> 1)
+    \<and> set c \<subseteq> verts G"
 
 definition
-  "uhc \<equiv> {G. \<exists>c. wf_digraph G \<and> symmetric G \<and> is_uhc G c \<and>((tail G = fst \<and> head G = snd) \<or> arcs G = {}) \<and> finite (verts G)}"
+  "uhc \<equiv> {G. \<exists>c. wf_digraph G \<and> symmetric G \<and> is_uhc G c \<and>((tail G = fst \<and> head G = snd) 
+    \<or> arcs G = {}) \<and> finite (verts G)}"
 
 fun to_cycle_hc where
 "to_cycle_hc ((a, b)#vs) = (if b = 1 then a#(to_cycle_hc vs) else to_cycle_hc vs)" |

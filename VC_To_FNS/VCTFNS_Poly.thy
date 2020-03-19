@@ -3,6 +3,8 @@ theory VCTFNS_Poly
     "NREST.RefineMonadicVCG" "NREST.Refine_Foreach" "../TSTSC_Poly"
 begin
 
+subsection\<open>Ispolyred VC to FNS\<close>
+
 definition "size_fns = (\<lambda>(G,k). card (verts G)+ card (arcs G))"
 definition "vc_to_fns_space n  = 2*n+2*n"
 
@@ -25,6 +27,8 @@ definition "vc_to_fns_alg = (\<lambda>(E,k).
 
 definition "vc_fns_time n = 1+ (2 * n + 1) + 1 + 2 * n + 2 * n"
 
+
+subsubsection\<open>Auxiliary proofs\<close>
 
 lemma e_in_E_e_explicit: 
   assumes "e \<in> E" "ugraph E"
@@ -228,6 +232,8 @@ proof -
 qed
 
 
+subsubsection\<open>Main proofs\<close>
+
 lemma vc_to_fns_size: "size_fns (vc_to_fns (E, k)) \<le> vc_to_fns_space (size_VC (E, k))" 
   apply(auto simp: size_fns_def vc_set_to_vc_list_def vc_to_fns_space_def size_VC_def)
   by(auto simp add: vc_to_fns_def card_G)
@@ -244,7 +250,7 @@ lemma vc_to_fns_reifnes:
       one_enat_def)
 
 
-lemma cnf_sat_to_clique_ispolyred: "ispolyred vc_to_fns_alg vertex_cover fns size_VC size_fns" 
+theorem cnf_sat_to_clique_ispolyred: "ispolyred vc_to_fns_alg vertex_cover fns size_VC size_fns" 
   unfolding ispolyred_def
   apply(rule exI[where x=vc_to_fns])
   apply(rule exI[where x=vc_fns_time])

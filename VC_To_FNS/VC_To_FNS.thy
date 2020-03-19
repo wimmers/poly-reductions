@@ -91,7 +91,7 @@ next
 qed
 
 
-subsection\<open>in VC implies in FNS\<close>
+subsection\<open>In VC implies in FNS\<close>
 
 context
   fixes E k assumes in_vc: "(E, k) \<in> vertex_cover"
@@ -214,7 +214,7 @@ lemma in_fns_context:
 end
 
 
-subsection\<open>vc_to_fns in FNS implies in HC\<close>
+subsection\<open>VC_to_FNS in FNS implies in HC\<close>
 
 context
   fixes G k' assumes G_def: "(G, k') \<in> fns"

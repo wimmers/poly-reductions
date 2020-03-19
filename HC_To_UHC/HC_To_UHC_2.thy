@@ -2,7 +2,9 @@ theory HC_To_UHC_2
   imports Definitions_UHC
 begin
 
-subsection\<open>hc_to_uhc G \<in> uhc --> G \<in> hc\<close>
+subsection\<open>HC_to_UHC G \<in> UHC --> G \<in> HC\<close>
+
+subsubsection\<open>Preliminaries\<close>
 
 lemma is_hc_impl_length_c: 
   assumes "is_hc G c" "card (verts G) > 1"
@@ -75,7 +77,6 @@ next
       by simp
   qed
 qed
-
 
 
 lemma finite_verts_G: 
@@ -228,6 +229,10 @@ lemma distinct_tl_Cyc1:
   by blast 
 
 
+subsubsection\<open>Proof of theorem for specific Cycle\<close>
+text\<open>There are some lemmas taking care of cases where the cycle does not end 
+  with (x,2) or (x,0) for the reverse case, but with some other number. These cases
+  blow up the paragraph.\<close>
 
 context
   fixes Cy1 assumes Cy1_def: "is_uhc G' Cy1"
@@ -2230,7 +2235,6 @@ proof -
 qed
 
 
-
 lemma vwalk_last_C1_G: 
   assumes  "(\<forall>x \<in> verts G. sublist [(x, 1), (x, 2)] Cy1 \<and> sublist [(x, 0), (x, 1)] Cy1)"
     "last C1 \<noteq> hd C1"
@@ -2250,6 +2254,10 @@ lemma last_C1_neq_hd_C1_vwalk_cycle:
 
 end
 
+
+subsubsection\<open>Proof for given cycle\<close>
+text\<open>It may be necessary, to revert the given cycle, if it is of the 
+  form ...(x, 2)(x, 1)(x,0).... Then the above lemmas can be used.\<close>
 
 lemma always_exist_vwalk_cycle: 
   shows "(\<exists>c. vwalk_cycle G c \<and>  (\<forall>x\<in>verts G. x \<in> set c) \<and> set c \<subseteq> verts G \<and> distinct (tl c))" 
@@ -2395,6 +2403,7 @@ qed
 
 end
 
+subsubsection\<open>Only one vertex in the graph\<close>
 context
   assumes verts_G: "\<not> card (verts G) > 1" 
 begin

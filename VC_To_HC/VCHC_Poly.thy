@@ -393,7 +393,7 @@ proof -
 qed
 
 
-lemma vc_to_hc_reifnes:
+lemma vc_to_hc_refines:
   "vc_hc_alg (E, k) \<le> SPEC (\<lambda>y. y = (vc_hc (E, k))) (\<lambda>_. vc_hc_time (size_vc (E, k)))"
   unfolding SPEC_def
   unfolding vc_hc_alg_def vc_hc_def   
@@ -411,7 +411,7 @@ lemma cnf_sat_to_clique_ispolyred: "ispolyred vc_hc_alg vertex_cover_list hc siz
   apply(rule exI[where x=vc_hc_time])
   apply(rule exI[where x=vc_to_hc_space])
   apply(safe)
-  subgoal using vc_to_hc_reifnes by blast
+  subgoal using vc_to_hc_refines by blast
   subgoal using vc_to_hc_size by blast  
   subgoal unfolding poly_def vc_hc_time_def apply(rule exI[where x=2]) by auto  
   subgoal unfolding poly_def vc_to_hc_space_def space_verts_def space_edges_def 

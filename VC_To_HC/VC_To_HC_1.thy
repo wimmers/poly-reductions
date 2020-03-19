@@ -3286,7 +3286,7 @@ proof
 qed
 
 
-subsection\<open>Cycle is awalk\<close>
+subsubsection\<open>Cycle is awalk\<close>
 
 lemma hd_construct_cycle_Cover_0:
   shows "(hd (construct_cycle_1 E C 0 C')) = Cover 0"
@@ -3369,7 +3369,7 @@ lemma verts_of_graph:
   by (simp add: in_cycle_in_verts subsetI) 
 
 
-subsection\<open>Is in HC\<close>
+subsubsection\<open>Is in HC\<close>
 
 lemma is_cylce: 
   assumes "card (verts G) > 1" "v \<in> (verts G)" "v =(hd Cycle)" 

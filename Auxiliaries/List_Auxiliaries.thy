@@ -4,6 +4,97 @@ begin
 
 section\<open>Auxiliaries for Lists\<close>
 
+subsection\<open>General Proofs\<close>
+
+lemma x_in_implies_exist_index:
+  assumes "x \<in> set L" 
+  shows "\<exists>i. x = L!i \<and> i<length L"
+  using assms 
+  by (metis in_set_conv_nth)
+
+
+lemma indices_length_set_ls2:
+  assumes "\<exists>i. l = (ls1@ls2)!i \<and> i\<ge> length ls1 \<and> i< length (ls1@ls2)"
+  shows "l \<in> set ls2"  
+  using assms 
+  apply(induction "ls1@ls2") 
+   apply(auto)  
+  by (metis add_less_imp_less_left le_iff_add nth_append_length_plus nth_mem) 
+
+
+lemma indices_length_set_ls2_only_append: 
+  assumes "\<exists>i. l = (l1#ls2)!i \<and> i\<ge> 1 \<and> i< length (l1#ls2)"
+  shows "l \<in> set ls2"
+  using assms indices_length_set_ls2 
+  by auto
+
+
+lemma distinct_same_indices:
+  assumes "distinct L" "L!i = L!j" "i<length L" "j<length L"
+  shows "i = j"
+  using assms 
+  apply(induction L) 
+   apply(auto)
+  by (simp add: nth_eq_iff_index_eq)
+
+
+lemma length_1_set_L:
+  assumes "length L = 1" "l \<in> set L"
+  shows "L = [l]" 
+  using assms 
+  by (metis append_butlast_last_id butlast.simps(2) diff_is_0_eq' 
+      in_set_conv_nth last.simps last_conv_nth le_numeral_extra(4) length_0_conv 
+      length_butlast less_one list.distinct(1) zero_neq_one) 
+
+
+lemma last_in_set_tl: 
+  assumes "l = last L" "length L \<ge> 2" 
+  shows "l \<in> set (tl L)"
+  using assms by(induction L)(auto)
+
+
+lemma card_subset: 
+  assumes "s \<subseteq> set L"
+  shows "card s \<le> card (set L)"
+  using assms finite_subset card_mono 
+  by blast
+
+
+
+lemma length_2_hd_last: 
+  assumes "length L = 2" 
+  shows "L = [hd L, last L]"
+  using assms 
+  apply(induction L) 
+   apply(auto) 
+  by (metis append_butlast_last_id append_eq_append_conv append_self_conv2 length_Cons list.size(3))
+
+
+lemma length_2_exits: 
+  assumes "length L = 2" 
+  shows "\<exists>l1 l2. L = [l1, l2]" 
+  using assms 
+  apply(induction L) 
+   apply(auto) 
+  by (metis Suc_length_conv length_0_conv) 
+
+
+lemma length_geq_2_tt_not_empty: 
+  assumes "length C \<ge> 2"
+  shows "tl C \<noteq> []"
+  using assms 
+  apply(induction C)
+  by(auto)
+
+
+lemma hd_last_eq_in_tl: 
+  assumes "hd xs = last xs" "x \<in> set xs" "length xs > 1"
+  shows "x \<in> set (tl xs)"
+  using assms by(induction xs)(auto split: if_split_asm)
+
+
+subsection\<open>Sublist\<close>
+
 definition "sublist l ls \<equiv> \<exists>p1 p2. p1 @ l @ p2 = ls"
 
 
@@ -578,92 +669,12 @@ lemma sublist_v1_hd_v2_hd_tl_lists:
   by (metis append_self_conv2 in_set_conv_decomp list.sel(3) tl_append2) 
 
 
-lemma indices_length_set_ls2:
-  assumes "\<exists>i. l = (ls1@ls2)!i \<and> i\<ge> length ls1 \<and> i< length (ls1@ls2)"
-  shows "l \<in> set ls2"  
-  using assms 
-  apply(induction "ls1@ls2") 
-   apply(auto)  
-  by (metis add_less_imp_less_left le_iff_add nth_append_length_plus nth_mem) 
-
-
-lemma indices_length_set_ls2_only_append: 
-  assumes "\<exists>i. l = (l1#ls2)!i \<and> i\<ge> 1 \<and> i< length (l1#ls2)"
-  shows "l \<in> set ls2"
-  using assms indices_length_set_ls2 
-  by auto
-
-
 lemma sublist_append_not_eq:
   assumes "sublist [v1, v2] (a#L)" "v1 \<noteq> a"
   shows "sublist [v1, v2] L"
   using assms 
   unfolding sublist_def
-  by (metis Cons_eq_append_conv append_self_conv2 list.sel(1) list.sel(3) tl_append2) 
-
-
-lemma x_in_implies_exist_index:
-  assumes "x \<in> set L" 
-  shows "\<exists>i. x = L!i \<and> i<length L"
-  using assms 
-  by (metis in_set_conv_nth)
-
-
-lemma distinct_same_indices:
-  assumes "distinct L" "L!i = L!j" "i<length L" "j<length L"
-  shows "i = j"
-  using assms 
-  apply(induction L) 
-   apply(auto)
-  by (simp add: nth_eq_iff_index_eq)
-
-
-lemma length_1_set_L:
-  assumes "length L = 1" "l \<in> set L"
-  shows "L = [l]" 
-  using assms 
-  by (metis append_butlast_last_id butlast.simps(2) diff_is_0_eq' 
-      in_set_conv_nth last.simps last_conv_nth le_numeral_extra(4) length_0_conv 
-      length_butlast less_one list.distinct(1) zero_neq_one)  
-
-
-lemma last_in_set_tl: 
-  assumes "l = last L" "length L \<ge> 2" 
-  shows "l \<in> set (tl L)"
-  using assms by(induction L)(auto)
-
-
-lemma card_subset: 
-  assumes "s \<subseteq> set L"
-  shows "card s \<le> card (set L)"
-  using assms finite_subset card_mono 
-  by blast
-
-
-lemma length_2_hd_last: 
-  assumes "length L = 2" 
-  shows "L = [hd L, last L]"
-  using assms 
-  apply(induction L) 
-   apply(auto) 
-  by (metis append_butlast_last_id append_eq_append_conv append_self_conv2 length_Cons list.size(3))
-
-
-lemma length_2_exits: 
-  assumes "length L = 2" 
-  shows "\<exists>l1 l2. L = [l1, l2]" 
-  using assms 
-  apply(induction L) 
-   apply(auto) 
-  by (metis Suc_length_conv length_0_conv) 
-
-
-lemma length_geq_2_tt_not_empty: 
-  assumes "length C \<ge> 2"
-  shows "tl C \<noteq> []"
-  using assms 
-  apply(induction C)
-  by(auto)
+  by (metis Cons_eq_append_conv append_self_conv2 list.sel(1) list.sel(3) tl_append2)  
 
 
 lemma sublist_transitiv:
@@ -1417,11 +1428,5 @@ next
       by auto 
   qed
 qed
-
-
-lemma hd_last_eq_in_tl: 
-  assumes "hd xs = last xs" "x \<in> set xs" "length xs > 1"
-  shows "x \<in> set (tl xs)"
-  using assms by(induction xs)(auto split: if_split_asm)
 
 end

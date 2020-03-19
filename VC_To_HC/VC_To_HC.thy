@@ -5,6 +5,7 @@ theory VC_To_HC
     Definitions_HC
 begin
 
+section\<open>VC to HC\<close>
 
 subsection\<open>Main theorem\<close>
 

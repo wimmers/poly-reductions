@@ -2,9 +2,15 @@ theory Vwalk_Cycle
   imports "../Auxiliaries/List_Auxiliaries" "../Auxiliaries/Graph_Auxiliaries" 
 begin
 
+section\<open>Vwalk_Cycle\<close>
+
+subsection\<open>Definitions\<close>
+
 definition vwalk_cycle where 
   "vwalk_cycle G p \<equiv> distinct (tl p) \<and> vwalk p G \<and> hd p = last p \<and> length p \<ge> 2"
 
+
+subsection\<open>Auxiliary proofs\<close>
 
 lemma vwalk_cycle_rev: 
   assumes "symmetric G" "vwalk_cycle G p" 
@@ -35,6 +41,8 @@ lemma vwalk_cycle_impl_cycle:
   using assms vwalk_cycle_vwalk_arcs distinct_awalk_verts_vwalk_arcs awalk_vwalk_length_at_least_2 
   by metis
 
+
+subsubsection\<open>Cycle and Vwalk_cycle are the same\<close>
 
 lemma cycle_implies_vwalk_cycle: 
   assumes "head G = snd" "tail G = fst" "pre_digraph.cycle G (vwalk_arcs c)" 

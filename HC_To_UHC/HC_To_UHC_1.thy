@@ -4,6 +4,8 @@ begin
 
 subsection\<open>G \<in> hc --> hc_to_uhc G \<in> uhc\<close>
 
+subsubsection\<open>Preliminaries\<close>
+
 fun to_cycle_uhc::"('a, ('a \<times> 'a)) pre_digraph \<Rightarrow> 'a list \<Rightarrow> ('a \<times> nat) list" where
   "to_cycle_uhc G [] = []" |
   "to_cycle_uhc G (v#vs) = [(v, 0), (v, 1), (v, 2)] @ to_cycle_uhc G vs"
@@ -369,6 +371,9 @@ proof -
 qed  
 
 
+subsubsection\<open>Cy is a pre_digraph.cycle\<close>
+
+
 lemma vwalk_arcs_Cy_not_empty: 
   assumes "arcs G \<noteq> {}" "card (verts G) > 1"
   shows "vwalk_arcs Cy \<noteq> []"
@@ -390,7 +395,7 @@ proof -
 qed
 
 
-lemma at_least_to_nodes_vwalk_arcs_awalk_verts: 
+lemma at_least_two_nodes_vwalk_arcs_awalk_verts: 
   assumes "length C > 1"
   shows "(pre_digraph.awalk_verts G' u (vwalk_arcs C)) = C"
   using head_tail_G' at_least_two_nodes_vwalk_arcs_awalk_verts assms 
@@ -418,7 +423,7 @@ next
     then have "length (a#C) > 1"
       by simp
     then show ?thesis 
-      using at_least_to_nodes_vwalk_arcs_awalk_verts Cons  
+      using at_least_two_nodes_vwalk_arcs_awalk_verts Cons  
       by presburger 
   qed
 qed
@@ -765,8 +770,7 @@ qed
 lemma sublist_disitnct_not_eq: 
   assumes "sublist [a, b] C" "distinct C"
   shows "a \<noteq> b"
-  using assms sublist_implies_in_set_a 
-  by fast
+  using assms by(rule sublist_implies_in_set_a) 
 
 
 lemma sublist_ab_a_noteq_b: 
@@ -877,6 +881,8 @@ lemma pre_digraph_cycle_Cy_G':
   by fastforce
 
 
+subsubsection\<open>Cy is a vwalk_cycle\<close>
+
 lemma card_verts_length_Cy: 
   assumes "card (verts G) > 1"
   shows "length Cy > 1" 
@@ -902,6 +908,8 @@ proof -
     by fastforce
 qed
 
+
+subsubsection\<open>G' is in UHC\<close>
 
 lemma is_uhc_Cy_G':
   assumes "arcs G \<noteq> {}" "card (verts G) > 1"

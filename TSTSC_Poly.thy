@@ -189,7 +189,7 @@ thm is_reduction_is_vc
 
 text \<open>And we show that it actually is a polynomial reduction:\<close>
 
-lemma is_to_vc_ispolyred: "ispolyred is_to_vc independent_set vertex_cover size_IS size_VC" 
+theorem is_to_vc_ispolyred: "ispolyred is_to_vc independent_set vertex_cover size_IS size_VC" 
   unfolding ispolyred_def
   apply(rule exI[where x=is_vc])
   apply(rule exI[where x=vc_time])
@@ -365,7 +365,7 @@ thm ispolyredd_refine[OF is_to_vc_ispolyred[THEN ispolyredd_generalizes_ispolyre
 text \<open>Finally we can show that the new algorithm also is a polynomial reduction acting on 
       lists of tuples instead of an abstract edge set\<close>
 
-lemma "ispolyredd is_to_vc2
+theorem "ispolyredd is_to_vc2
        (R_edge_set_tuple_list \<times>\<^sub>r nat_rel) (R_edge_set_tuple_list \<times>\<^sub>r nat_rel)
         independent_set vertex_cover size_IS size_VC"
   apply(rule ispolyredd_refine[OF is_to_vc_ispolyred[THEN ispolyredd_generalizes_ispolyredD], simplified])
@@ -579,7 +579,7 @@ lemma vc_to_sc_size:
   done
 
 
-lemma vc_to_sc_ispolyred: "ispolyred vc_to_sc vertex_cover set_cover size_VC size_SC" 
+theorem vc_to_sc_ispolyred: "ispolyred vc_to_sc vertex_cover set_cover size_VC size_SC" 
   unfolding ispolyred_def
   apply(rule exI[where x=vc_sc])
   apply(rule exI[where x=sc_time])
@@ -723,7 +723,7 @@ lemma sat_to_is_size: "size_IS (sat_is p) \<le> sat_to_is_space (size_SAT p)"
   
 
 
-lemma sat_to_is_ispolyred: "ispolyred sat_to_is three_cnf_sat independent_set size_SAT size_IS" 
+theorem sat_to_is_ispolyred: "ispolyred sat_to_is three_cnf_sat independent_set size_SAT size_IS" 
   unfolding ispolyred_def
   apply(rule exI[where x=sat_is])
   apply(rule exI[where x=sat_to_is_time])
@@ -738,11 +738,17 @@ lemma sat_to_is_ispolyred: "ispolyred sat_to_is three_cnf_sat independent_set si
 
 
 
-section \<open>combination\<close>
+section \<open>Combination\<close>
+
+theorem is_to_sc_ispolyred: 
+  "ispolyred (\<lambda>a. (is_to_vc a) \<bind> vc_to_sc) independent_set set_cover size_IS size_SC"
+  by(rule sat_to_is_ispolyred is_to_vc_ispolyred vc_to_sc_ispolyred  
+      ispolyred_trans[OF is_to_vc_ispolyred vc_to_sc_ispolyred])
 
 
-thm sat_to_is_ispolyred is_to_vc_ispolyred vc_to_sc_ispolyred  ispolyred_trans[OF is_to_vc_ispolyred vc_to_sc_ispolyred ]
-
-thm ispolyred_trans [OF ispolyred_trans[OF sat_to_is_ispolyred is_to_vc_ispolyred] vc_to_sc_ispolyred]
+theorem sat_to_sc_ispolyred: 
+  "ispolyred (\<lambda>a. (sat_to_is a \<bind> is_to_vc) \<bind> vc_to_sc) three_cnf_sat set_cover size_SAT size_SC"
+  by (rule ispolyred_trans [OF ispolyred_trans
+        [OF sat_to_is_ispolyred is_to_vc_ispolyred] vc_to_sc_ispolyred])
 
 end

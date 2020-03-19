@@ -3,6 +3,8 @@ theory HC_To_UHC_Poly
     "NREST.RefineMonadicVCG" "NREST.Refine_Foreach" "../TSTSC_Poly"
 begin
 
+subsection\<open>Ispolyred of HC to UHC\<close>
+subsubsection\<open>Definitions\<close>
 
 definition "size_uhc = (\<lambda>G. card (verts G) + card (arcs G))"
 definition "size_hc = (\<lambda>G. card (verts G))"
@@ -49,6 +51,8 @@ definition "hc_to_uhc_alg = (\<lambda>G.
 
 definition "hc_to_uhc_time n = 6 + 3*n + 3 * n * 3 * n"
 
+
+subsubsection\<open>Auxiliary proofs\<close>
 
 lemma wf_digraph_card_arcs: 
   assumes "wf_digraph Gr" "(tail Gr = fst \<and> head Gr = snd) \<or> arcs Gr = {}" 
@@ -302,6 +306,8 @@ proof -
 qed
 
 
+subsubsection\<open>Main proofs\<close>
+
 lemma vcs_to_vcl_size: "size_uhc (hc_to_uhc Gr) \<le> hc_to_uhc_space (size_hc Gr)" 
   unfolding size_uhc_def hc_to_uhc_space_def size_hc_def 
 proof (cases "wf_digraph Gr \<and> (tail Gr = fst \<and> head Gr = snd) \<or> arcs Gr = {}")
@@ -347,7 +353,7 @@ lemma vcs_to_vcl_reifnes:
   by (simp add: numeral_eq_enat)+
 
 
-lemma cnf_sat_to_clique_ispolyred: "ispolyred hc_to_uhc_alg hc uhc size_hc size_uhc" 
+theorem cnf_sat_to_clique_ispolyred: "ispolyred hc_to_uhc_alg hc uhc size_hc size_uhc" 
   unfolding ispolyred_def
   apply(rule exI[where x=hc_to_uhc])
   apply(rule exI[where x=hc_to_uhc_time])

@@ -2,6 +2,9 @@ theory HC_To_UHC
   imports  Main Definitions_UHC HC_To_UHC_1 HC_To_UHC_2
 begin
 
+
+section\<open>HC to UHC\<close>
+
 subsection\<open> Main theorem \<close>
 
 (*Just some helpt for isabelle, since she was not able to figure that out herself*)
