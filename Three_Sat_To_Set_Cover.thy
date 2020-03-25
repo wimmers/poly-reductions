@@ -1,5 +1,5 @@
 theory Three_Sat_To_Set_Cover
-  imports Main "HOL-ex.Sketch_and_Explore"
+  imports Main
 begin
 
 subsection \<open>Preliminaries\<close>
