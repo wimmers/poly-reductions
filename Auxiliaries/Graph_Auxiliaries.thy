@@ -344,5 +344,5 @@ lemma hd_last_cycle:
   shows "hd c = last c"
   using assms hd_first_edge hd_pre_digraph_cas last_pre_digraph_cas tail_last_edge
   unfolding pre_digraph.cycle_def pre_digraph.awalk_def by fastforce
-thm vwalk_sublist_in_arcs
+
 end
