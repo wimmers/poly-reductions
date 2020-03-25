@@ -1,11 +1,15 @@
 # Polynomial-Time Reductions in Isabelle/HOL
 This repository sets out to formalize some classic results about NP-completeness in Isabelle/HOL. 
 
+## Overview
+The following reductions are currently formalized:
+![Graph of all formalized reductions](doc/reductions.png)
+
 ## Index
 ### Polynomial-Time Reductions
 So far the following classic reductions between NP-hard problems have been formalized:
 - `Three_Sat_To_Set_Cover.thy`: 3CNF-SAT <= Independent Set <= Vertex Cover <= Set Cover 
-- `CNF_SAT_To_Clique.thy`: CNF-SAT <= Clique
+- `CNF_SAT_To_Clique.thy`: 3CNF-SAT <= Clique
 - `HC_To_UHC.thy`: Hamiltonian Cycle <= Undicrected Hamiltonian Cycle
 - `VC_To_FNS.thy`: Vertex Cover <= Feedback Node Set
 - `VC_To_HC.thy`: Vertex Cover <= Hamiltonian Cycle

@@ -1,0 +1,15 @@
+digraph reductions {
+cnf_sat [label="3CNF-SAT"];
+is [label="Independent Set"];
+vc [label="Vertex Cover"];
+sc [label="Set Cover"];
+clique [label="Clique"];
+hc [label="Hamiltonian Cycle"];
+uhc [label="Undicrected Hamiltonian Cycle"];
+fns [label="Feedback Node Set"];
+cnf_sat -> is -> vc -> sc;
+cnf_sat -> clique;
+hc -> uhc;
+vc -> fns;
+vc -> hc;
+}
