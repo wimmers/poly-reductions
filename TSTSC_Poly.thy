@@ -1,9 +1,8 @@
 theory TSTSC_Poly
-  imports "NREST.NREST" Three_Sat_To_Set_Cover  "Landau_Symbols.Landau_More"
-  "NREST.RefineMonadicVCG" "NREST.Refine_Foreach"
+  imports "Landau_Symbols.Landau_More" "NREST.Refine_Foreach" Three_Sat_To_Set_Cover
 begin                             
 
-
+subsection \<open>The first reduction chain is polynomial\<close>
 
 definition poly :: "(nat \<Rightarrow> nat) \<Rightarrow> bool" where
   "poly f = (\<exists>e. f \<in> O(\<lambda>n. n^e))" 

@@ -4,6 +4,8 @@ begin
 
 section\<open>Set auxiliaries\<close>
 
+lemmas [trans] = finite_subset
+
 lemma card_greater_1_contains_two_elements:
   assumes "card S > 1"
   shows "\<exists>u v. v \<in> S \<and> u \<in> S \<and> u \<noteq> v"
@@ -79,5 +81,61 @@ lemma card_leq_1_set_explicit:
   assumes "card S \<le> 1" "finite S"
   shows "(\<exists>x. S = {x}) \<or> S = {}"
   using assms card_0_eq card_1_singletonE le_eq_less_or_eq by auto
+
+lemma two_elem_card_le:
+  "card {a, b} \<le> 2"
+  by (simp add: card_insert_le_m1)
+
+lemma finite_ordered_pairs:
+  assumes "finite E"
+  shows "finite {(u, v). {u, v} \<in> E}" (is "finite ?S")
+proof -
+  let ?E = "{{u, v} | u v. {u, v} \<in> E}"
+  have "?E \<subseteq> E"
+    by auto
+  also have "finite E"
+    by (rule assms)
+  finally have "finite ?E" .
+  have "?S \<subseteq> (\<Union>?E) \<times> (\<Union>?E)"
+    by auto
+  also from \<open>finite ?E\<close> have "finite \<dots>"
+    by auto
+  finally show ?thesis .
+qed
+
+lemma card_ordered_pairs:
+  assumes "finite E"
+  shows "card {(u, v). {u, v} \<in> E} \<le> 2 * card E" (is "card ?S \<le> _")
+  using assms
+proof induction
+  case empty
+  then show ?case
+    by simp
+next
+  case (insert x E)
+  let ?E = "insert x E"
+  let ?S = "{(u, v). {u, v} \<in> E}" and ?T = "{(u, v). {u, v} \<in> ?E}"
+  from \<open>finite E\<close> have "finite ?S"
+    by (rule finite_ordered_pairs)
+  consider (same) "?T = ?S" | (new) a b where "x = {a, b}"
+    by auto
+  then show ?case
+  proof cases
+    case same
+    with insert show ?thesis
+      by simp
+  next
+    case new
+    then have "?T \<subseteq> {(a, b), (b, a)} \<union> ?S"
+      by fast
+    with \<open>finite ?S\<close> have "card ?T \<le> card \<dots>"
+      by (intro card_mono) auto
+    also have "\<dots> \<le> 2 + card ?S"
+      by (intro order.trans[OF card_Un_le], simp add: two_elem_card_le)
+    also from insert have "\<dots> \<le> 2 * card (insert x E)"
+      by simp
+    finally show ?thesis .
+  qed
+qed
 
 end
