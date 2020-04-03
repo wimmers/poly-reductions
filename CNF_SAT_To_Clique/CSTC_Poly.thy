@@ -1,5 +1,5 @@
 theory CSTC_Poly
-  imports "../TSTSC_Poly" CNF_SAT_to_Clique
+  imports "../TSTSC_Poly" CNF_SAT_To_Clique
 begin
 
 subsection\<open>The reduction from \<open>CNF_Sat\<close> to \<open>Clique\<close> is polynomial\<close>
@@ -46,18 +46,8 @@ subsubsection\<open>Auxiliary proofs\<close>
 
 lemma brr2:
   shows "{{f l1, g l2} |l1 l2.  h l1 l2 \<and> l1 \<in> X \<and> l2 \<in> Y}
-  \<subseteq> UNION X (\<lambda>x. UNION Y (\<lambda>y. {{f x, g y}}))"
-proof -
-  have "{{f l1, g l2} |l1 l2. h l1 l2 \<and> l1 \<in> X \<and> l2 \<in> Y } \<subseteq>
-        {{f l1, g l2} |l1 l2. l1 \<in> X \<and> l2 \<in> Y}"
-    by auto
-  also have "\<dots> =
-      UNION X (\<lambda>x. {{f x, g l2} |l2. l2 \<in> Y})"
-    by auto
-  also have "\<dots> = UNION X (\<lambda>x. UNION Y (\<lambda>y. {{f x, g y}}))"
-    by auto
-  finally show ?thesis .
-qed
+  \<subseteq> (\<Union>x \<in> X. \<Union>y \<in> Y. {{f x, g y}})"
+  using brr by auto
 
 lemma upperbounding_card_m:
   "\<forall>x\<in>X. card x \<le> m \<and> finite x \<Longrightarrow> x\<in>X \<Longrightarrow> y\<in>X \<Longrightarrow>
