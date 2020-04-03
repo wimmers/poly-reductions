@@ -1,20 +1,11 @@
 theory TSTSC_Poly
   imports "Landau_Symbols.Landau_More" "NREST.Refine_Foreach" Three_Sat_To_Set_Cover
-begin                             
+    Polynomial_Growth_Functions
+begin
 
 subsection \<open>The first reduction chain is polynomial\<close>
 
-definition poly :: "(nat \<Rightarrow> nat) \<Rightarrow> bool" where
-  "poly f = (\<exists>e. f \<in> O(\<lambda>n. n^e))" 
- 
-lemma poly_plus: "poly f \<Longrightarrow> poly g \<Longrightarrow> poly (\<lambda>x. f x + g x)"
-  unfolding poly_def sorry
-
-lemma poly_comp: "poly f \<Longrightarrow> poly g \<Longrightarrow> poly (\<lambda>x. f (g x))"
-  unfolding poly_def sorry
-
-lemma poly_linear: "poly (\<lambda>a. a)"
-  unfolding poly_def apply(rule exI[where x=1]) by auto
+thm poly_compose
 
 (* a program c :: 'a\<Rightarrow>'b nrest
      is a poly_reduction wrt to a reduction red :: 'a\<Rightarrow>'b\<Rightarrow>bool 
@@ -34,7 +25,6 @@ definition "ispolyredd c RI RO A B ma mb = (\<exists>f p ps. \<forall>pi pi'. ((
                               \<and>  (\<forall>pi. mb (f pi) \<le> ps (ma pi))
                                    \<and> poly p \<and> poly ps \<and> is_reduction f A B )" 
 
-thm SPEC_def
 lemma ispolyredd_generalizes_ispolyred:
   "ispolyred c A B ma mb = ispolyredd c Id Id A B ma mb"
   unfolding ispolyred_def ispolyredd_def by auto
@@ -78,6 +68,12 @@ proof -
     done
 qed
 
+
+lemma poly_monoE:
+  assumes "poly p2"
+  obtains p2' where "\<And>x. p2 x \<le> p2' x" "poly p2'" "mono p2'"
+  using assms by (intro that[where p2' = "make_mono p2"]) (auto simp: poly_make_mono_iff)
+
 lemma ispolyredd_trans:
   assumes 1: "ispolyredd c1 RA RB A B ma mb"
     and 2: "ispolyredd c2 RB RC B C mb mc"
@@ -97,14 +93,20 @@ proof -
   thm spec1[unfolded SPEC_def ]
   thm spec2[unfolded SPEC_def ]
 
-  then obtain p2' where p2'_ub: "\<And>x. p2 x \<le> p2' x" and p2'_poly: "poly p2'"
+  from \<open>poly p2\<close> obtain p2' where p2'_ub: "\<And>x. p2 x \<le> p2' x" and p2'_poly: "poly p2'"
     and   p2'_mono: "\<And>i j. i\<le>j \<Longrightarrow> p2' i \<le> p2' j" 
-    sorry (* works because p2 is poly *)
+    by - (erule poly_monoE, auto simp: mono_def)
 
-  then obtain ps2' where "\<And>x. ps2 x \<le> ps2' x" and ps2'_poly: "poly ps2'"
-    and   ps2'_mono: "\<And>i j. i\<le>j \<Longrightarrow> ps2 i \<le> ps2' j" 
-    sorry (* works because ps2 is poly *)
- 
+  obtain ps2' where "\<And>x. ps2 x \<le> ps2' x" and ps2'_poly: "poly ps2'"
+    and   ps2'_mono: "\<And>i j. i\<le>j \<Longrightarrow> ps2 i \<le> ps2' j"
+    subgoal premises that
+      using \<open>poly ps2\<close>
+      apply -
+      apply (erule poly_monoE)
+      apply (rule that)
+        apply (auto simp: mono_def intro: order.trans)
+      done
+    done
 
   show ?thesis
     unfolding ispolyredd_def
@@ -127,9 +129,9 @@ proof -
     subgoal apply simp  apply(rule order_trans[OF size2])
       apply(rule ps2'_mono) by(rule size1) 
     subgoal
-      using p1 p2'_poly by(auto intro!: poly_plus intro: poly_comp  )
+      using p1 p2'_poly by(auto intro!: poly_add intro: poly_compose[unfolded comp_def])
     subgoal
-      using p1 ps2'_poly by(auto intro!: poly_plus intro: poly_comp)   
+      using p1 ps2'_poly by(auto intro!: poly_add intro: poly_compose[unfolded comp_def])
     subgoal
       apply(rule is_reduction_trans) by fact+ 
     done
@@ -637,23 +639,20 @@ definition "sat_to_is_space n = 9 * n + 9 * n * n"
 
 
 lemma paf2: "{f l1 l2 i j |l1 l2 i j. i < k \<and> g l1 l2 i j} 
-    = UNION  {..<k::nat} (\<lambda>i. {f l1 l2 i j |l1 l2 j. g l1 l2 i j}) "
+    = (\<Union>i \<in> {..<k::nat}. {f l1 l2 i j |l1 l2 j. g l1 l2 i j}) "
   by auto
 
 lemma paf: "{f l1 l2 i |l1 l2 i. i < j \<and> g l1 l2 i} 
-    = UNION  {..<j::nat} (\<lambda>i. {f l1 l2 i |l1 l2. g l1 l2 i}) " by auto 
-
-lemma "UNION S f = \<Union> (f ` S)" by simp
+    = (\<Union>i \<in> {..<j::nat}. {f l1 l2 i |l1 l2. g l1 l2 i})"
+  by auto 
 
 lemma brr:
-  shows "{{f l1, g l2} |l1 l2. l1 \<in> X \<and> l2 \<in> Y \<and> h l1 l2} \<subseteq>  UNION X (\<lambda>x. UNION Y (\<lambda>y. {{f x, g y}}))" 
+  shows "{{f l1, g l2} |l1 l2. l1 \<in> X \<and> l2 \<in> Y \<and> h l1 l2} \<subseteq> (\<Union>x \<in> X. \<Union>y \<in> Y. {{f x, g y}})"
+  (is "?lhs \<subseteq> ?rhs")
 proof -
-  have "{{f l1, g l2} |l1 l2. l1 \<in> X \<and> l2 \<in> Y \<and> h l1 l2} \<subseteq> 
-        {{f l1, g l2} |l1 l2. l1 \<in> X \<and> l2 \<in> Y}" by auto
-  also have "\<dots> = 
-      UNION X (\<lambda>x. {{f x, g l2} |l2. l2 \<in> Y})
-          " by auto
-  also have "\<dots> = UNION X (\<lambda>x. UNION Y (\<lambda>y. {{f x, g y}}))" by auto
+  have "?lhs \<subseteq> {{f l1, g l2} |l1 l2. l1 \<in> X \<and> l2 \<in> Y}" by auto
+  also have "\<dots> = (\<Union>x \<in> X. {{f x, g l2} |l2. l2 \<in> Y})" by auto
+  also have "\<dots> = ?rhs" by auto
   finally show ?thesis .
 qed
 
