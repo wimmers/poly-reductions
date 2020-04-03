@@ -1,5 +1,7 @@
+section \<open>\<open>3CNF-SAT\<close> To \<open>Set Cover\<close>\<close>
+
 theory Three_Sat_To_Set_Cover
-  imports Main
+  imports Reductions
 begin
 
 subsection \<open>Preliminaries\<close>
@@ -42,9 +44,6 @@ definition
   (* "set_cover \<equiv> {(T, k). \<exists> S \<subseteq> T. \<Union> S = \<Union> T \<and> card S \<le> k \<and> finite T \<and> finite (\<Union> T)}" *)
   "set_cover \<equiv> {(T, k). \<exists> S \<subseteq> T. \<Union> S = \<Union> T \<and> card S \<le> k}"
 
-definition is_reduction :: "('a \<Rightarrow> 'b) \<Rightarrow> 'a set \<Rightarrow> 'b set \<Rightarrow> bool" where
-  "is_reduction f A B \<equiv> \<forall>a. a \<in> A \<longleftrightarrow> f a \<in> B "
-
 definition
   "is_vc \<equiv> \<lambda>(E, k). if k > card (\<Union> E) then (E, k) else (E, card (\<Union> E) - k)"
 
@@ -52,11 +51,6 @@ definition
   "vc_sc \<equiv> \<lambda>(E, k).
     if ugraph E \<and> k \<le> card (\<Union> E) then ({{e. e \<in> E \<and> v \<in> e} | v. v \<in> \<Union>E}, k)
     else ({{undefined}}, 0)"
-
-lemma is_reduction_trans:
-  assumes "is_reduction f A B" "is_reduction g B C"
-  shows "is_reduction (g o f) A C"
-  using assms unfolding is_reduction_def by auto
 
 lemma is_independent_set_is_vertex_cover:
   "is_independent_set E V \<longleftrightarrow> is_vertex_cover E ((\<Union>E) - V)" if "ugraph E"
