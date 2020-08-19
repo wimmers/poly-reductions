@@ -5,6 +5,9 @@ This repository sets out to formalize some classic results about NP-completeness
 The following reductions are currently formalized:
 ![Graph of all formalized reductions](doc/reductions.png)
 
+## Work Plan
+The current work plan is summarized [here](doc/PLAN.md) and tracked by Github issues and milestones.
+
 ## Index
 ### Polynomial-Time Reductions
 So far the following classic reductions between NP-hard problems have been formalized:
