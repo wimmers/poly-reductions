@@ -105,3 +105,7 @@ Proof obligations:
 
 - Functional correctness of the translation
 - Polynomial size bound on the transition system
+
+Questions:
+
+- Should Turing machines be an intermediate translation step?
