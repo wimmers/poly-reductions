@@ -14,7 +14,7 @@ whiletm -> impm [style="dashed",label="#16"];
 impm -> sas_plus [label="#8,#9"];
 sas_plus -> sat [label="#10"];
 sat -> three_cnf_sat [label="#5,#11"];
-whilet -> sat [style="dotted",label="#12"];
+impm -> sat [style="dotted",label="#12"];
 three_cnf_sat -> np_zoo [label="#3,#4"];
 sat -> impm [label="#6",style="dashed"];
 }
