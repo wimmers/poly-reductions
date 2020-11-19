@@ -1,5 +1,5 @@
 theory Small_StepT
-  imports Main Big_StepT HOL.Transitive_Closure "~~/src/HOL/IMP/Star"
+  imports Main Big_StepT "~~/src/HOL/IMP/Star"
 begin
 
 inductive
@@ -30,6 +30,7 @@ abbreviation
 subsection\<open>Executability\<close>
 
 code_pred small_step .
+code_pred small_steps .
 
 values "{(c',map t [''x'',''y'',''z'']) |c' t .
    ((''x'' ::= A (V ''z'');; ''y'' ::=A ( V ''x''),
@@ -61,7 +62,7 @@ inductive_cases SeqE[elim]: "(c1;;c2,s) \<rightarrow> ct"
 thm SeqE
 inductive_cases IfE[elim!]: "(IF b\<noteq>0 THEN c1 ELSE c2,s) \<rightarrow> ct"
 inductive_cases WhileE[elim]: "(WHILE b\<noteq>0 DO c, s) \<rightarrow> ct"
-
+thm WhileE
 text\<open>A simple property:\<close>
 lemma deterministic:
   "cs \<rightarrow> cs' \<Longrightarrow> cs \<rightarrow> cs'' \<Longrightarrow> cs'' = cs'"
@@ -86,7 +87,7 @@ qed
 
 lemma seq_comp:
   "\<lbrakk> (c1,s1) \<rightarrow>* t1 \<down> (SKIP,s2); (c2,s2) \<rightarrow>* t2 \<down> (c3,s3) \<rbrakk>
-   \<Longrightarrow> (c1;;c2, s1) \<rightarrow>* (t1 + t2 + 1) \<down> (c3,s3)"
+   \<Longrightarrow> (c1;;c2, s1) \<rightarrow>* (t1 + t2 +1) \<down> (c3,s3)"
 proof (induction t1 arbitrary: c1 s1)
   case 0
   then have "(c1;;c2, s1) \<rightarrow> (c2, s2)" by auto
@@ -101,7 +102,10 @@ next
   then show ?case using Suc by (metis Seq2 * ** add_Suc relpowp_Suc_I2)
 qed
 
-lemma  "(c, s) \<Rightarrow> t \<Down> s' \<Longrightarrow> t = Suc t' \<Longrightarrow> (c, s) \<rightarrow>* t' \<down> (SKIP,s')"
+lemma sum_transitive: "\<lbrakk>cc \<rightarrow>* x \<down> cc'; cc' \<rightarrow>* y \<down> cc''\<rbrakk> \<Longrightarrow> cc \<rightarrow>* x+y \<down> cc'' "
+  by (simp add: relcomppI relpowp_add)
+
+lemma big_to_small_helper: "(c, s) \<Rightarrow> t \<Down> s' \<Longrightarrow> t = Suc t' \<Longrightarrow> (c, s) \<rightarrow>* t' \<down> (SKIP,s')"
 proof (induction arbitrary: t' rule: big_step_t_induct)
   case (Skip s)
   then show ?case by simp
@@ -129,10 +133,43 @@ next
     by (metis add_diff_cancel_left' add_diff_cancel_right' plus_1_eq_Suc relpowp_Suc_I2 small_step.IfFalse)
 next
   case (WhileFalse s b c)
-  then show ?case sorry
+  then show ?case by fastforce
 next
   case (WhileTrue s1 b c x s2 y s3 z)
-  then show ?case sorry
+  let ?w = "WHILE b \<noteq>0 DO c"
+  obtain x' y' where suc_def:"x =Suc x'" "y = Suc y'"
+    by (meson WhileTrue.hyps(2) WhileTrue.hyps(3) bigstep_progress gr0_implies_Suc)
+  have "(?w,s1) \<rightarrow>*1 \<down> (c;;?w,s1)" using WhileTrue by auto
+  moreover have "(c;;?w,s1)\<rightarrow>* x' \<down> (SKIP;;?w,s2)" using WhileTrue  by (simp add: suc_def star_seq2) 
+  moreover have "(SKIP;;?w,s2) \<rightarrow>* 1 \<down>(?w,s2)" by auto
+  moreover have "(?w,s2) \<rightarrow>* y' \<down> (SKIP,s3)" using WhileTrue  \<open>y = Suc y'\<close> by blast
+  ultimately have "(?w,s1) \<rightarrow>* 1+x'+1+y'\<down> (SKIP,s3)" using sum_transitive by blast
+  moreover have "t' =  1+x'+1+y' " using WhileTrue suc_def  by auto
+  thus ?case  using calculation by blast
 qed
+
+lemma small1_big_continue:
+  "cs \<rightarrow> cs' \<Longrightarrow> cs' \<Rightarrow> t \<Down> cs'' \<Longrightarrow> cs \<Rightarrow> Suc t \<Down> cs''"
+  apply (induction arbitrary: cs'' t rule:small_step.induct )
+  apply auto
+  apply fastforce
+  done
+
+lemma big_to_small: "(c, s) \<Rightarrow> Suc t \<Down> s' \<Longrightarrow> (c, s) \<rightarrow>* t \<down> (SKIP,s')"
+  using big_to_small_helper by blast
+
+lemma small_to_big :
+ "cs \<rightarrow>* t \<down> (SKIP,s') \<Longrightarrow> cs \<Rightarrow> Suc t \<Down> s' "
+  apply(induction t arbitrary:cs s')
+  apply auto[1]
+  by (metis relpowp_Suc_E2 small1_big_continue)
+
+lemma equiv_small_big_pair:
+ "(c,s) \<rightarrow>* t \<down> (SKIP,s') \<longleftrightarrow> (c,s) \<Rightarrow> Suc t \<Down> s' "
+  using big_to_small small_to_big  by auto 
+  (* the pairs problem strikes again *)
+lemma equiv_small_big:
+ "cs \<rightarrow>* t \<down> (SKIP,s') = cs \<Rightarrow> Suc t \<Down> s' "
+  using equiv_small_big_pair sorry
 
 end
