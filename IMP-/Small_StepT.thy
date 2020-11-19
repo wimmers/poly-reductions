@@ -101,4 +101,38 @@ next
   then show ?case using Suc by (metis Seq2 * ** add_Suc relpowp_Suc_I2)
 qed
 
+lemma  "(c, s) \<Rightarrow> t \<Down> s' \<Longrightarrow> t = Suc t' \<Longrightarrow> (c, s) \<rightarrow>* t' \<down> (SKIP,s')"
+proof (induction arbitrary: t' rule: big_step_t_induct)
+  case (Skip s)
+  then show ?case by simp
+next
+  case (Assign x a s)
+  then have "t' = Suc 0" by auto
+  moreover have "(x ::= a, s) \<rightarrow> (SKIP, s(x := aval a s))" by blast
+  ultimately show ?case by (meson relpowp_0_I relpowp_Suc_I)
+next
+  case (Seq c1 s1 x s2 c2 y s3 z)
+  then obtain x' y' where *: "x = Suc x'" and **: "y = Suc y'" by (meson bigstep_progress gr0_implies_Suc)
+  then have "(c1, s1) \<rightarrow>* x' \<down> (SKIP, s2)" using Seq by auto
+  moreover have "(c2, s2) \<rightarrow>* y' \<down> (SKIP, s3)" using Seq ** by auto
+  ultimately have "(c1 ;; c2, s1) \<rightarrow>* (x' + y' + 1) \<down> (SKIP, s3)" using seq_comp by simp  
+  then show ?case using Seq * ** by simp
+next
+  case (IfTrue s b c1 x t y c2)
+  then obtain x' where "x = Suc x'" by (meson bigstep_progress gr0_implies_Suc)
+  then show ?case using IfTrue 
+    by (metis add_diff_cancel_left' add_diff_cancel_right' plus_1_eq_Suc relpowp_Suc_I2 small_step.IfTrue)
+next
+  case (IfFalse s b c2 x t y c1)
+  then obtain x' where "x = Suc x'" by (meson bigstep_progress gr0_implies_Suc)
+  then show ?case using IfFalse
+    by (metis add_diff_cancel_left' add_diff_cancel_right' plus_1_eq_Suc relpowp_Suc_I2 small_step.IfFalse)
+next
+  case (WhileFalse s b c)
+  then show ?case sorry
+next
+  case (WhileTrue s1 b c x s2 y s3 z)
+  then show ?case sorry
+qed
+
 end
