@@ -5,7 +5,7 @@ inductive
   big_step_t :: "com \<times> state \<Rightarrow> nat \<Rightarrow> state \<Rightarrow> bool"  ("_ \<Rightarrow> _ \<Down> _" 55)
 where
 Skip: "(SKIP,s) \<Rightarrow> Suc (0::nat) \<Down> s"|
-Assign: "(x ::= a,s) \<Rightarrow> Suc 0 \<Down> s(x := aval a s)" |
+Assign: "(x ::= a,s) \<Rightarrow> Suc (Suc 0) \<Down> s(x := aval a s)" |
 Seq: "\<lbrakk> (c1,s1) \<Rightarrow> x \<Down> s2;  (c2,s2) \<Rightarrow> y \<Down> s3 ; z=x+y \<rbrakk> \<Longrightarrow> (c1;;c2, s1) \<Rightarrow> z \<Down> s3" |
 IfTrue: "\<lbrakk> s b \<noteq> 0;  (c1,s) \<Rightarrow> x \<Down> t; y=x+1 \<rbrakk> \<Longrightarrow> (IF b \<noteq>0 THEN c1 ELSE c2, s) \<Rightarrow> y \<Down> t" |
 IfFalse: "\<lbrakk> s b = 0; (c2,s) \<Rightarrow> x \<Down> t; y=x+1  \<rbrakk> \<Longrightarrow> (IF b \<noteq>0 THEN c1 ELSE c2, s) \<Rightarrow> y \<Down> t" |
@@ -65,7 +65,7 @@ next
 qed
 qed
 lemma assign_t_simp:
-  "((x ::= a,s) \<Rightarrow> Suc 0 \<Down>  s') \<longleftrightarrow> (s' = s(x := aval a s))"
+  "((x ::= a,s) \<Rightarrow> Suc(Suc 0) \<Down>  s') \<longleftrightarrow> (s' = s(x := aval a s))"
   by (auto)
 
 text "goal_cases"
@@ -117,7 +117,7 @@ lemma SKIPt: "\<down>\<^sub>s(SKIP,s) = s"
   apply auto done 
 
 
-lemma ASSp: "(THE p. Ex (big_step_t (x ::= e, s) p)) = Suc 0"
+lemma ASSp: "(THE p. Ex (big_step_t (x ::= e, s) p)) = Suc(Suc 0)"
   apply(rule the_equality)
   apply fast
   apply auto done 
@@ -127,7 +127,7 @@ lemma ASSt: "(THE t. \<exists>p. (x ::= e, s) \<Rightarrow> p \<Down> t) = s(x :
   apply fast
   apply auto done 
 
-lemma ASSnot: "( \<not> (x ::= e, s) \<Rightarrow> p \<Down> t ) = (p\<noteq>Suc 0 \<or> t\<noteq>s(x := aval e s))"
+lemma ASSnot: "( \<not> (x ::= e, s) \<Rightarrow> p \<Down> t ) = (p\<noteq>Suc(Suc 0) \<or> t\<noteq>s(x := aval e s))"
   apply auto done
 
 lemma If_THE_True: "Suc (THE n. \<exists>a. (c1, s) \<Rightarrow> n \<Down> a) =  (THE n. \<exists>a. (IF b \<noteq>0 THEN c1 ELSE c2, s) \<Rightarrow> n \<Down> a)"
