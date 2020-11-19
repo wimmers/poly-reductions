@@ -9,7 +9,7 @@ Assign: "(x ::= a,s) \<Rightarrow> Suc (Suc 0) \<Down> s(x := aval a s)" |
 Seq: "\<lbrakk> (c1,s1) \<Rightarrow> x \<Down> s2;  (c2,s2) \<Rightarrow> y \<Down> s3 ; z=x+y \<rbrakk> \<Longrightarrow> (c1;;c2, s1) \<Rightarrow> z \<Down> s3" |
 IfTrue: "\<lbrakk> s b \<noteq> 0;  (c1,s) \<Rightarrow> x \<Down> t; y=x+1 \<rbrakk> \<Longrightarrow> (IF b \<noteq>0 THEN c1 ELSE c2, s) \<Rightarrow> y \<Down> t" |
 IfFalse: "\<lbrakk> s b = 0; (c2,s) \<Rightarrow> x \<Down> t; y=x+1  \<rbrakk> \<Longrightarrow> (IF b \<noteq>0 THEN c1 ELSE c2, s) \<Rightarrow> y \<Down> t" |
-WhileFalse: "\<lbrakk> s b = 0 \<rbrakk> \<Longrightarrow> (WHILE b \<noteq>0 DO c,s) \<Rightarrow> Suc(Suc 0) \<Down> s" |
+WhileFalse: "\<lbrakk> s b = 0 \<rbrakk> \<Longrightarrow> (WHILE b \<noteq>0 DO c,s) \<Rightarrow> Suc (Suc 0) \<Down> s" |
 WhileTrue: "\<lbrakk> s1 b \<noteq> 0;  (c,s1) \<Rightarrow> x \<Down> s2;  (WHILE b \<noteq>0 DO c, s2) \<Rightarrow> y \<Down> s3; 1+x+y=z  \<rbrakk> 
     \<Longrightarrow> (WHILE b \<noteq>0 DO c, s1) \<Rightarrow> z \<Down> s3" 
 code_pred big_step_t .
