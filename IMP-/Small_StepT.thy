@@ -129,10 +129,15 @@ next
     by (metis add_diff_cancel_left' add_diff_cancel_right' plus_1_eq_Suc relpowp_Suc_I2 small_step.IfFalse)
 next
   case (WhileFalse s b c)
-  then show ?case sorry
+  then show ?case using WhileFalse.hyps by fastforce
 next
   case (WhileTrue s1 b c x s2 y s3 z)
-  then show ?case sorry
+  then obtain x' y' where *: "x = Suc x'" and **: "y = Suc y'" by (meson bigstep_progress gr0_implies_Suc)
+  then have "(c, s1) \<rightarrow>* x' \<down> (SKIP, s2)" using WhileTrue by auto
+  moreover have "(WHILE b\<noteq>0 DO c, s2) \<rightarrow>* y' \<down> (SKIP, s3)" using WhileTrue ** by auto
+  ultimately have "(c ;; WHILE b\<noteq>0 DO c, s1) \<rightarrow>* (x' + y' + 1) \<down> (SKIP, s3)" using seq_comp by simp
+  then show ?case using WhileTrue * ** 
+    by (metis add.right_neutral add_Suc add_Suc_right add_diff_cancel_left' plus_1_eq_Suc relpowp_Suc_I2 small_step.WhileTrue)
 qed
 
 end
