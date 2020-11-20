@@ -94,12 +94,10 @@ proof (induction t1 arbitrary: c1 s1)
   then show ?case using 0 by (metis Suc_eq_plus1 add_cancel_right_left relpowp_Suc_I2)
 next
   case (Suc t1)
-  (* is there a way to directly obtain the pair? *)
-  then obtain c1s1' where *: "(c1, s1) \<rightarrow> c1s1'" 
-                      and "(c1s1') \<rightarrow>* t1 \<down> (SKIP,s2)" using relpowp_Suc_E2 by metis
-  moreover obtain c1' s1' where **: "c1s1' = (c1', s1')" by (cases c1s1') auto
-  ultimately have "(c1';;c2, s1') \<rightarrow>* (t1 + t2 + 1) \<down> (c3, s3)" using Suc by blast 
-  then show ?case using Suc by (metis Seq2 * ** add_Suc relpowp_Suc_I2)
+  then obtain c1' s1' where *: "(c1, s1) \<rightarrow> (c1',s1')" and "(c1',s1') \<rightarrow>* t1 \<down> (SKIP,s2)"
+    using relpowp_Suc_E2 by (metis old.prod.exhaust) 
+    then have "(c1';;c2, s1') \<rightarrow>* (t1 + t2 + 1) \<down> (c3, s3)" using Suc by blast 
+    then show ?case using Suc by (metis Seq2 * add_Suc relpowp_Suc_I2)
 qed
 
 lemma sum_transitive: "\<lbrakk>cc \<rightarrow>* x \<down> cc'; cc' \<rightarrow>* y \<down> cc''\<rbrakk> \<Longrightarrow> cc \<rightarrow>* x+y \<down> cc'' "
@@ -167,9 +165,10 @@ lemma small_to_big :
 lemma equiv_small_big_pair:
  "(c,s) \<rightarrow>* t \<down> (SKIP,s') \<longleftrightarrow> (c,s) \<Rightarrow> Suc t \<Down> s' "
   using big_to_small small_to_big  by auto 
-  (* the pairs problem strikes again *)
+
 lemma equiv_small_big:
  "cs \<rightarrow>* t \<down> (SKIP,s') = cs \<Rightarrow> Suc t \<Down> s' "
-  using equiv_small_big_pair sorry
+  using equiv_small_big_pair
+  by (metis old.prod.exhaust) 
 
 end
