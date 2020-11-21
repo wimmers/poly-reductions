@@ -1,6 +1,13 @@
-theory Com
-  imports Main AExp
-begin
+(*
+   Authors: Bilel Ghorbel, Florian Kessler
+   Based on the syntax definition of IMP
+*)
+section "IMP- A reduced imperative language"
+
+text "IMP- is a reduced version of IMP that excludes nested arithmetic expressions
+                       and boolean expressions"
+
+theory Com  imports Main AExp begin
 
 datatype
   com = SKIP 

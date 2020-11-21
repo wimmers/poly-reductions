@@ -1,6 +1,14 @@
-theory Big_StepT
-imports Main Com begin
-text "do we need to import Big_Step"
+ (*
+    Authors: Bilel Ghorbel, Florian Kessler
+    Based on the Big step semantics definition  with time of IMP
+ *)
+section "Big step semantics of IMP-"
+theory Big_StepT imports Main Com begin
+
+subsection "Big step semantics definition:"
+
+text "In IMP- Branching is only based on whether a variable's value equals 0."
+
 inductive
   big_step_t :: "com \<times> state \<Rightarrow> nat \<Rightarrow> state \<Rightarrow> bool"  ("_ \<Rightarrow> _ \<Down> _" 55)
 where
@@ -9,11 +17,12 @@ Assign: "(x ::= a,s) \<Rightarrow> Suc (Suc 0) \<Down> s(x := aval a s)" |
 Seq: "\<lbrakk> (c1,s1) \<Rightarrow> x \<Down> s2;  (c2,s2) \<Rightarrow> y \<Down> s3 ; z=x+y \<rbrakk> \<Longrightarrow> (c1;;c2, s1) \<Rightarrow> z \<Down> s3" |
 IfTrue: "\<lbrakk> s b \<noteq> 0;  (c1,s) \<Rightarrow> x \<Down> t; y=x+1 \<rbrakk> \<Longrightarrow> (IF b \<noteq>0 THEN c1 ELSE c2, s) \<Rightarrow> y \<Down> t" |
 IfFalse: "\<lbrakk> s b = 0; (c2,s) \<Rightarrow> x \<Down> t; y=x+1  \<rbrakk> \<Longrightarrow> (IF b \<noteq>0 THEN c1 ELSE c2, s) \<Rightarrow> y \<Down> t" |
-WhileFalse: "\<lbrakk> s b = 0 \<rbrakk> \<Longrightarrow> (WHILE b \<noteq>0 DO c,s) \<Rightarrow> Suc(Suc 0) \<Down> s" |
+WhileFalse: "\<lbrakk> s b = 0 \<rbrakk> \<Longrightarrow> (WHILE b \<noteq>0 DO c,s) \<Rightarrow> Suc (Suc 0) \<Down> s" |
 WhileTrue: "\<lbrakk> s1 b \<noteq> 0;  (c,s1) \<Rightarrow> x \<Down> s2;  (WHILE b \<noteq>0 DO c, s2) \<Rightarrow> y \<Down> s3; 1+x+y=z  \<rbrakk> 
     \<Longrightarrow> (WHILE b \<noteq>0 DO c, s1) \<Rightarrow> z \<Down> s3" 
 code_pred big_step_t .
 
+text "finding out the final state and running time of a command:"
 schematic_goal ex: "(''x'' ::= A (N 5);; ''y'' ::= A (V ''x''), s) \<Rightarrow> ?t \<Down> ?s"
 apply(rule Seq)
 apply(rule Assign)
@@ -32,11 +41,15 @@ values "{map t [''x''] |t x. (''x'' ::=A (N 2), <''x'' := 42>) \<Rightarrow> x \
 
 values "{(map t [''x''],x) |t x. (WHILE ''x''\<noteq>0 DO ''x''::= Sub (V ''x'') (N 1),<''x'':=5>) \<Rightarrow> x \<Down> t }"
 
-text "what does it mean exactly ?"
+text "proof automation:"
+
+text "Introduction rules:"
 declare big_step_t.intros [intro]
 
+text "Induction rules with pair splitting"
 lemmas big_step_t_induct = big_step_t.induct[split_format(complete)]
 
+subsection "Rule inversion"
 inductive_cases Skip_tE[elim!]: "(SKIP,s) \<Rightarrow> x \<Down> t"
 thm Skip_tE
 inductive_cases Assign_tE[elim!]: "(x ::= a,s) \<Rightarrow> p \<Down> t"
@@ -49,6 +62,7 @@ thm If_tE
 inductive_cases While_tE[elim]: "(WHILE b \<noteq>0 DO c,s) \<Rightarrow> x \<Down> t"
 thm While_tE
 
+text "Rule inversion use examples:"
 lemma "(IF b \<noteq>0 THEN SKIP ELSE SKIP, s) \<Rightarrow> x \<Down> t \<Longrightarrow> t = s"
   by blast
 
@@ -68,8 +82,7 @@ lemma assign_t_simp:
   "((x ::= a,s) \<Rightarrow> Suc(Suc 0) \<Down>  s') \<longleftrightarrow> (s' = s(x := aval a s))"
   by (auto)
 
-text "goal_cases"
-text "delete  \<noteq> ==> 0< from simp"
+subsection "Determinism of Big semantics of IMP-"
 theorem big_step_t_determ2: "\<lbrakk> (c,s) \<Rightarrow> p \<Down> t; (c,s) \<Rightarrow> q \<Down> u \<rbrakk> \<Longrightarrow> (u = t \<and> p=q)"
   apply  (induction arbitrary: u q rule: big_step_t_induct)
     apply(elim Skip_tE) apply(simp)
@@ -91,12 +104,17 @@ theorem big_step_t_determ2: "\<lbrakk> (c,s) \<Rightarrow> p \<Down> t; (c,s) \<
 
 lemma bigstep_det: "(c1, s) \<Rightarrow> p1 \<Down> t1 \<Longrightarrow> (c1, s) \<Rightarrow> p \<Down> t \<Longrightarrow> p1=p \<and> t1=t"
   using big_step_t_determ2 by simp
+
+subsection "Progress property"
+text "every command costs time"
 lemma bigstep_progress: "(c, s) \<Rightarrow> p \<Down> t \<Longrightarrow> p > 0"
   apply(induct rule: big_step_t.induct, auto) done
 
+subsection "abbreviations and properties"
 abbreviation terminates ("\<down>") where "terminates cs \<equiv> (\<exists>n a. (cs \<Rightarrow> n \<Down> a))"
 abbreviation thestate ("\<down>\<^sub>s") where "thestate cs \<equiv> (THE a. \<exists>n. (cs \<Rightarrow> n \<Down> a))" 
 abbreviation thetime ("\<down>\<^sub>t") where "thetime cs \<equiv> (THE n. \<exists>a. (cs \<Rightarrow> n \<Down> a))"
+
 
 lemma bigstepT_the_cost: "(c, s) \<Rightarrow> t \<Down> s' \<Longrightarrow> \<down>\<^sub>t(c, s) = t"
   using bigstep_det by blast 
