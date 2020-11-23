@@ -82,13 +82,14 @@ lemma assumes "(IF b \<noteq>0 THEN SKIP ELSE SKIP, s) \<Rightarrow> x \<Down> t
 proof -
   from assms show ?thesis
   proof cases
-  case (IfTrue x)
-  then show ?thesis by blast
-next
-  case (IfFalse x)
-  then show ?thesis by blast
+    case (IfTrue x)
+    then show ?thesis by blast
+  next
+    case (IfFalse x)
+    then show ?thesis by blast
+  qed
 qed
-qed
+
 lemma assign_t_simp:
   "((x ::= a,s) \<Rightarrow> Suc(Suc 0) \<Down>  s') \<longleftrightarrow> (s' = s(x := aval a s))"
   by (auto)
@@ -100,18 +101,19 @@ theorem big_step_t_determ2: "\<lbrakk> (c,s) \<Rightarrow> p \<Down> t; (c,s) \<
     apply(elim Assign_tE) apply(simp)
   apply blast
     apply(elim If_tE) apply(simp) apply blast
-    apply(elim If_tE)  apply (linarith)apply simp
+    apply(elim If_tE)  apply (linarith) apply simp
     apply(erule While_tE) apply(simp) apply simp
-    proof (goal_cases)
-      case 1
-      from 1(7) show ?case apply(safe) 
-        apply(erule While_tE)
-          using 1(1-6) apply fast
-          using 1(1-6) apply (simp)
-        apply(erule While_tE)
-          using 1(1-6) apply fast
-          using 1(1-6) by (simp)
-      qed
+  subgoal premises p for s1 b c x s2 y s3 z u q
+  proof -
+    from p(7) show ?thesis apply(safe) 
+      apply(erule While_tE)
+        using p(1-6) apply fast
+        using p(1-6) apply (simp)
+      apply(erule While_tE)
+        using p(1-6) apply fast
+        using p(1-6) by (simp)
+    qed
+done
 
 lemma bigstep_det: "(c1, s) \<Rightarrow> p1 \<Down> t1 \<Longrightarrow> (c1, s) \<Rightarrow> p \<Down> t \<Longrightarrow> p1=p \<and> t1=t"
   using big_step_t_determ2 by simp
@@ -165,10 +167,8 @@ proof -
   from c1_t obtain p t where a: "(c1, s) \<Rightarrow> p \<Down> t" by blast
   with T have b: "(IF b \<noteq>0 THEN c1 ELSE c2, s) \<Rightarrow> p+1 \<Down> t"  using IfTrue by simp
   from a bigstepT_the_cost have "(THE n. \<exists>a. (c1, s) \<Rightarrow> n \<Down> a) = p" by simp
-moreover    
-  from b bigstepT_the_cost have "(THE n. \<exists>a. (IF b \<noteq>0 THEN c1 ELSE c2, s) \<Rightarrow> n \<Down> a) = p+1" by simp
-ultimately
-  show ?thesis by simp
+  moreover from b bigstepT_the_cost have "(THE n. \<exists>a. (IF b \<noteq>0 THEN c1 ELSE c2, s) \<Rightarrow> n \<Down> a) = p+1" by simp
+  ultimately show ?thesis by simp
 qed
 
 lemma If_THE_False: "Suc (THE n. \<exists>a. (c2, s) \<Rightarrow> n \<Down> a) =  (THE n. \<exists>a. (IF b \<noteq>0 THEN c1 ELSE c2, s) \<Rightarrow> n \<Down> a)"
@@ -177,10 +177,8 @@ proof -
   from c2_t obtain p t where a: "(c2, s) \<Rightarrow> p \<Down> t"  by blast
   with T have b: "(IF b \<noteq>0 THEN c1 ELSE c2, s) \<Rightarrow> p+1 \<Down> t"  using IfFalse by simp
   from a bigstepT_the_cost have "(THE n. \<exists>a. (c2, s) \<Rightarrow> n \<Down> a) = p" by simp
-moreover    
-  from b bigstepT_the_cost have "(THE n. \<exists>a. (IF b \<noteq>0 THEN c1 ELSE c2, s) \<Rightarrow> n \<Down> a) = p+1" by simp
-ultimately
-  show ?thesis by simp
+  moreover from b bigstepT_the_cost have "(THE n. \<exists>a. (IF b \<noteq>0 THEN c1 ELSE c2, s) \<Rightarrow> n \<Down> a) = p+1" by simp
+  ultimately show ?thesis by simp
 qed
     
 
