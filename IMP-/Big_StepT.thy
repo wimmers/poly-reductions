@@ -1,9 +1,10 @@
- (*
-    Authors: Bilel Ghorbel, Florian Kessler
-    Based on the Big step semantics definition  with time of IMP
- *)
+\<^marker>\<open>creator Bilel Ghorbel, Florian Kessler\<close>
 section "Big step semantics of IMP-"
 theory Big_StepT imports Main Com begin
+
+paragraph "Summary"
+text\<open>We define big step semantics with time for IMP-. 
+Based on the big step semantics definition with time of IMP\<close>
 
 subsection "Big step semantics definition:"
 

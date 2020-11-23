@@ -1,11 +1,14 @@
- (*
-    Authors: Bilel Ghorbel, Florian Kessler
-    Based on the Big step semantics definition  with time of IMP
- *)
+\<^marker>\<open>creator Bilel Ghorbel, Florian Kessler\<close>
+
 section "Small step semantics of IMP- "
 
 subsection "Small step semantics definition"
 theory Small_StepT  imports Main Big_StepT Rel_pow begin
+
+paragraph "Summary"
+text\<open>We give small step semantics with time for IMP-. 
+Based on the small step semantics definition time for IMP\<close>
+
 
 inductive
   small_step :: "com * state \<Rightarrow> com * state \<Rightarrow> bool" (infix "\<rightarrow>" 55)

@@ -1,10 +1,9 @@
-(* Authors: Bilel Ghorbel, Florian Kessler 
-   Based on the AExp theory of IMP *)
+\<^marker>\<open>creator Bilel Ghorbel, Florian Kessler\<close>
 section "Arithmetic Expressions"
 
 text \<open>
 We define non-nested arithmetic expressions on natural numbers.
-The defined operations are addition and modified subtraction
+The defined operations are addition and modified subtraction. Based on the AExp theory of IMP.
 \<close>
 
 theory AExp imports Main begin

@@ -1,13 +1,11 @@
-(*
-   Authors: Bilel Ghorbel, Florian Kessler
-   Based on the syntax definition of IMP
-*)
+\<^marker>\<open>creator Bilel Ghorbel, Florian Kessler\<close>
+
 section "IMP- A reduced imperative language"
 
-text "IMP- is a reduced version of IMP that excludes nested arithmetic expressions
-                       and boolean expressions"
-
 theory Com  imports Main AExp begin
+
+paragraph "Summary"
+text\<open>Syntax definition for IMP-. Based on the syntax definition of IMP\<close>
 
 datatype
   com = SKIP 
