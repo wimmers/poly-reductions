@@ -21,6 +21,17 @@ IfFalse: "\<lbrakk> s b = 0; (c2,s) \<Rightarrow> x \<Down> t; y=x+1  \<rbrakk> 
 WhileFalse: "\<lbrakk> s b = 0 \<rbrakk> \<Longrightarrow> (WHILE b \<noteq>0 DO c,s) \<Rightarrow> Suc (Suc 0) \<Down> s" |
 WhileTrue: "\<lbrakk> s1 b \<noteq> 0;  (c,s1) \<Rightarrow> x \<Down> s2;  (WHILE b \<noteq>0 DO c, s2) \<Rightarrow> y \<Down> s3; 1+x+y=z  \<rbrakk> 
     \<Longrightarrow> (WHILE b \<noteq>0 DO c, s1) \<Rightarrow> z \<Down> s3" 
+
+bundle big_step_syntax 
+begin
+notation big_step_t ("_ \<Rightarrow> _ \<Down> _" 55)
+end
+
+bundle no_big_step_syntax 
+begin
+no_notation big_step_t ("_ \<Rightarrow> _ \<Down> _" 55)
+end
+
 code_pred big_step_t .
 
 text "finding out the final state and running time of a command:"

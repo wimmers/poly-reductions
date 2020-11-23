@@ -9,9 +9,8 @@ paragraph "Summary"
 text\<open>We give small step semantics with time for IMP-. 
 Based on the small step semantics definition time for IMP\<close>
 
-
 inductive
-  small_step :: "com * state \<Rightarrow> com * state \<Rightarrow> bool" (infix "\<rightarrow>" 55)
+  small_step :: "com * state \<Rightarrow> com * state \<Rightarrow> bool"  (infix "\<rightarrow>" 55)
 where
 Assign:  "(x ::= a, s) \<rightarrow> (SKIP, s(x := aval a s))" |
 
@@ -28,9 +27,22 @@ WhileFalse:   "s b = 0 \<Longrightarrow> (WHILE b\<noteq>0 DO c,s) \<rightarrow>
 
 subsection "Transitive Closure"
 abbreviation
-  small_step_pow :: "com * state \<Rightarrow> nat \<Rightarrow> com * state \<Rightarrow> bool" ("_ \<rightarrow>* _ \<down> _" 55)
-  where "x \<rightarrow>* t \<down> y == (rel_pow  small_step t)  x y"
+  small_step_pow :: "com * state \<Rightarrow> nat \<Rightarrow> com * state \<Rightarrow> bool"
+  where "small_step_pow x t y == (rel_pow  small_step t)  x y"
 
+bundle small_step_syntax
+begin
+notation small_step (infix "\<rightarrow>" 55) and
+         small_step_pow ("_ \<rightarrow>* _ \<down> _" 55)
+end
+
+bundle no_small_step_syntax
+begin
+no_notation small_step_pow ("_ \<rightarrow>* _ \<down> _" 55) and
+            small_step_pow ("_ \<rightarrow>* _ \<down> _" 55)
+end
+
+unbundle small_step_syntax
 
 subsection\<open>Executability\<close>
 
