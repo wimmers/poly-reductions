@@ -34,15 +34,18 @@ end
 
 code_pred big_step_t .
 
+text "Some examples using the big step semantics"
+experiment
+begin
+
 text "finding out the final state and running time of a command:"
 schematic_goal ex: "(''x'' ::= A (N 5);; ''y'' ::= A (V ''x''), s) \<Rightarrow> ?t \<Down> ?s"
-apply(rule Seq)
-apply(rule Assign)
-apply simp
-apply(rule Assign)
-apply simp
-done
-thm ex[simplified]
+  apply(rule Seq)
+    apply(rule Assign)
+   apply simp
+   apply(rule Assign)
+  apply simp
+  done
 
 
 values "{(t, x). big_step_t (SKIP, \<lambda>_. 0) x t}"
@@ -52,6 +55,8 @@ values "{map t [''x''] |t x. (SKIP, <''x'' := 42>) \<Rightarrow> x \<Down> t}"
 values "{map t [''x''] |t x. (''x'' ::=A (N 2), <''x'' := 42>) \<Rightarrow> x \<Down> t}"
 
 values "{(map t [''x''],x) |t x. (WHILE ''x''\<noteq>0 DO ''x''::= Sub (V ''x'') (N 1),<''x'':=5>) \<Rightarrow> x \<Down> t }"
+
+end
 
 text "proof automation:"
 
