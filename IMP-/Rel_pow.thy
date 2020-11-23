@@ -29,9 +29,7 @@ lemma rel_pow_step1[simp, intro]: "r x y \<Longrightarrow> rel_pow r 1 x y"
   using rel_pow.simps by fastforce
 
 inductive_cases  reflE[elim!]: "rel_pow r 0 x y"
-thm reflE
 inductive_cases  stepE[elim!]: "rel_pow r (Suc n) x y"
-thm stepE
 
 code_pred rel_pow .
   

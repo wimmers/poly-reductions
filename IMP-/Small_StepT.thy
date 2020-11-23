@@ -71,14 +71,11 @@ declare small_step.intros[simp,intro]
 text\<open>Rule inversion:\<close>
 
 inductive_cases SkipE[elim!]: "(SKIP,s) \<rightarrow> ct"
-thm SkipE
 inductive_cases AssignE[elim!]: "(x::=a,s) \<rightarrow> ct"
-thm AssignE
 inductive_cases SeqE[elim]: "(c1;;c2,s) \<rightarrow> ct"
-thm SeqE
 inductive_cases IfE[elim!]: "(IF b\<noteq>0 THEN c1 ELSE c2,s) \<rightarrow> ct"
 inductive_cases WhileE[elim]: "(WHILE b\<noteq>0 DO c, s) \<rightarrow> ct"
-thm WhileE
+
 text\<open>A simple property:\<close>
 lemma deterministic:
   "cs \<rightarrow> cs' \<Longrightarrow> cs \<rightarrow> cs'' \<Longrightarrow> cs'' = cs'"

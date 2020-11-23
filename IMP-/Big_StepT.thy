@@ -68,16 +68,10 @@ lemmas big_step_t_induct = big_step_t.induct[split_format(complete)]
 
 subsection "Rule inversion"
 inductive_cases Skip_tE[elim!]: "(SKIP,s) \<Rightarrow> x \<Down> t"
-thm Skip_tE
 inductive_cases Assign_tE[elim!]: "(x ::= a,s) \<Rightarrow> p \<Down> t"
-thm Assign_tE
 inductive_cases Seq_tE[elim!]: "(c1;;c2,s1) \<Rightarrow> p \<Down> s3"
-thm Seq_tE
 inductive_cases If_tE[elim!]: "(IF b \<noteq>0 THEN c1 ELSE c2,s) \<Rightarrow> x \<Down> t"
-thm If_tE
-
 inductive_cases While_tE[elim]: "(WHILE b \<noteq>0 DO c,s) \<Rightarrow> x \<Down> t"
-thm While_tE
 
 text "Rule inversion use examples:"
 lemma "(IF b \<noteq>0 THEN SKIP ELSE SKIP, s) \<Rightarrow> x \<Down> t \<Longrightarrow> t = s"
