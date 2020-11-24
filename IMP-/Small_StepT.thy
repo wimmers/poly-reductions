@@ -176,7 +176,10 @@ lemma small_to_big :
    apply auto[1]
   using small1_big_continue by blast
 
-text "Equivalence statement"
+text "Equivalence statement. We have a difference of 1 between big step and small step semantics
+because in small step semantics, we count the number of times transformation rules have to be applied
+until a configuration (SKIP, s') is reached, while in big step semantics the time for each step including
+the last command is fully considered."
 lemma equiv_small_big_pair:
  "(c,s) \<rightarrow>\<^bsup> t \<^esup> (SKIP,s') \<longleftrightarrow> (c,s) \<Rightarrow>\<^bsup> Suc t \<^esup> s' "
   using big_to_small small_to_big  by auto 
