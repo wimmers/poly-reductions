@@ -41,6 +41,16 @@ translations
   "_State ms" == "_Update <> ms"
   "_State (_updbinds b bs)" <= "_Update (_State b) bs"
 
+bundle state_syntax
+begin
+notation null_state ("<>")
+end
+
+bundle no_state_syntax
+begin
+no_notation null_state ("<>")
+end
+
 lemma "<a := 1, b := 2> = (<> (a := 1)) (b := (2::int))"
   by (rule refl)
 

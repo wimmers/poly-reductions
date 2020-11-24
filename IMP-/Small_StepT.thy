@@ -27,8 +27,8 @@ WhileFalse:   "s b = 0 \<Longrightarrow> (WHILE b\<noteq>0 DO c,s) \<rightarrow>
 
 subsection "Transitive Closure"
 abbreviation
-  small_step_pow :: "com * state \<Rightarrow> nat \<Rightarrow> com * state \<Rightarrow> bool"
-  where "small_step_pow x t y == (rel_pow  small_step t)  x y"
+  small_step_pow :: "com * state \<Rightarrow> nat \<Rightarrow> com * state \<Rightarrow> bool" ("_ \<rightarrow>\<^bsup>_\<^esup> _" 55)
+  where "x \<rightarrow>\<^bsup>t\<^esup> y == (rel_pow  small_step t)  x y"
 
 bundle small_step_syntax
 begin
@@ -38,11 +38,9 @@ end
 
 bundle no_small_step_syntax
 begin
-no_notation small_step (infix "\<rightarrow>" 55) and
-            small_step_pow ("_ \<rightarrow>\<^bsup>_\<^esup> _" 55)
+  no_notation small_step (infix "\<rightarrow>" 55) and
+              small_step_pow ("_ \<rightarrow>\<^bsup>_\<^esup> _" 55)
 end
-
-unbundle small_step_syntax
 
 subsection\<open>Executability\<close>
 
