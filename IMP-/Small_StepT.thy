@@ -33,13 +33,13 @@ abbreviation
 bundle small_step_syntax
 begin
 notation small_step (infix "\<rightarrow>" 55) and
-         small_step_pow ("_ \<rightarrow>* _ \<down> _" 55)
+         small_step_pow ("_ \<rightarrow>\<^bsup>_\<^esup> _" 55)
 end
 
 bundle no_small_step_syntax
 begin
-no_notation small_step_pow ("_ \<rightarrow>* _ \<down> _" 55) and
-            small_step_pow ("_ \<rightarrow>* _ \<down> _" 55)
+no_notation small_step (infix "\<rightarrow>" 55) and
+            small_step_pow ("_ \<rightarrow>\<^bsup>_\<^esup> _" 55)
 end
 
 unbundle small_step_syntax
@@ -51,7 +51,7 @@ code_pred small_step .
 experiment begin
 values "{(c',map t [''x'',''y'',''z''], n) |c' t n.
    ((''x'' ::= A (V ''z'');; ''y'' ::=A ( V ''x''),
-    <''x'' := 3, ''y'' := 7, ''z'' := 5>) \<rightarrow>* n \<down> (c',t))}"
+    <''x'' := 3, ''y'' := 7, ''z'' := 5>) \<rightarrow>\<^bsup>n\<^esup> (c',t))}"
 end
 subsection\<open>Proof infrastructure\<close>
 
@@ -89,37 +89,37 @@ done
 section "Equivalence with big-step semantics"
 declare rel_pow_intros[simp,intro]
 text "sequence property"
-lemma star_seq2: "(c1,s) \<rightarrow>* t \<down> (c1',s') \<Longrightarrow> (c1;;c2,s) \<rightarrow>* t  \<down> (c1';;c2,s')"
+lemma star_seq2: "(c1,s) \<rightarrow>\<^bsup>t\<^esup> (c1',s') \<Longrightarrow> (c1;;c2,s) \<rightarrow>\<^bsup> t \<^esup> (c1';;c2,s')"
 proof(induction t arbitrary: c1 c1' s s')
   case 0
   then show ?case by auto
 next
   case (Suc t)
   then obtain c1'' s'' where "(c1,s) \<rightarrow> (c1'', s'')" 
-                         and "(c1'', s'')  \<rightarrow>* t \<down>  (c1', s')" by auto
-  moreover then have "(c1'';;c2, s'') \<rightarrow>* t \<down> (c1';;c2, s')" using Suc by simp
+                         and "(c1'', s'')  \<rightarrow>\<^bsup> t \<^esup>  (c1', s')" by auto
+  moreover then have "(c1'';;c2, s'') \<rightarrow>\<^bsup> t \<^esup> (c1';;c2, s')" using Suc by simp
   ultimately show ?case by auto
 qed
 
 text "sequence time is one plus sum of the sub-commands times"
 lemma seq_comp:
-  "\<lbrakk> (c1,s1) \<rightarrow>* t1 \<down> (SKIP,s2); (c2,s2) \<rightarrow>* t2 \<down> (c3,s3) \<rbrakk>
-   \<Longrightarrow> (c1;;c2, s1) \<rightarrow>* (t1 + t2 +1) \<down> (c3,s3)"
+  "\<lbrakk> (c1,s1) \<rightarrow>\<^bsup> t1 \<^esup> (SKIP,s2); (c2,s2) \<rightarrow>\<^bsup> t2 \<^esup> (c3,s3) \<rbrakk>
+   \<Longrightarrow> (c1;;c2, s1) \<rightarrow>\<^bsup> t1 + t2 +1 \<^esup> (c3,s3)"
 proof (induction t1 arbitrary: c1 s1)
   case 0
   then have "(c1;;c2, s1) \<rightarrow> (c2, s2)" by auto
   then show ?case using 0  by simp
 next
   case (Suc t1)
-  then obtain c1' s1' where *: "(c1, s1) \<rightarrow> (c1',s1')" and "(c1',s1') \<rightarrow>* t1 \<down> (SKIP,s2)"
+  then obtain c1' s1' where *: "(c1, s1) \<rightarrow> (c1',s1')" and "(c1',s1') \<rightarrow>\<^bsup> t1 \<^esup> (SKIP,s2)"
     using relpowp_Suc_E2 by auto
-    then have "(c1';;c2, s1') \<rightarrow>* (t1 + t2 + 1) \<down> (c3, s3)" using Suc by blast 
+    then have "(c1';;c2, s1') \<rightarrow>\<^bsup> t1 + t2 + 1 \<^esup> (c3, s3)" using Suc by blast 
     then show ?case using Suc by auto
   qed
 
 
 text "from Big step to small step semantics"
-lemma big_to_small_helper: "(c, s) \<Rightarrow> t \<Down> s' \<Longrightarrow> t = Suc t' \<Longrightarrow> (c, s) \<rightarrow>* t' \<down> (SKIP, s')"
+lemma big_to_small_helper: "(c, s) \<Rightarrow>\<^bsup> t \<^esup> s' \<Longrightarrow> t = Suc t' \<Longrightarrow> (c, s) \<rightarrow>\<^bsup> t' \<^esup> (SKIP, s')"
 proof (induction arbitrary: t' rule: big_step_t_induct)
   case (Skip s)
   then show ?case by simp
@@ -132,9 +132,9 @@ next
   case (Seq c1 s1 x s2 c2 y s3 z)
   then obtain x' y' where suc_ex: "x = Suc x'" "y = Suc y'"
     by (meson bigstep_progress gr0_implies_Suc)
-  then have "(c1, s1) \<rightarrow>* x' \<down> (SKIP, s2)" using Seq by auto
-  moreover have "(c2, s2) \<rightarrow>* y' \<down> (SKIP, s3)" using Seq suc_ex by auto
-  ultimately have "(c1 ;; c2, s1) \<rightarrow>* (x' + y' + 1) \<down> (SKIP, s3)" using seq_comp by simp  
+  then have "(c1, s1) \<rightarrow>\<^bsup> x' \<^esup> (SKIP, s2)" using Seq by auto
+  moreover have "(c2, s2) \<rightarrow>\<^bsup> y' \<^esup> (SKIP, s3)" using Seq suc_ex by auto
+  ultimately have "(c1 ;; c2, s1) \<rightarrow>\<^bsup> (x' + y' + 1) \<^esup> (SKIP, s3)" using seq_comp by simp  
   then show ?case using Seq suc_ex by simp
 next
   case (IfTrue s b c1 x t y c2)
@@ -152,22 +152,22 @@ next
   let ?w = "WHILE b \<noteq>0 DO c"
   obtain x' y' where suc_def:"x =Suc x'" "y = Suc y'"
     by (meson WhileTrue.hyps(2) WhileTrue.hyps(3) bigstep_progress gr0_implies_Suc)
-  have "(?w, s1) \<rightarrow>*1 \<down> (c ;; ?w, s1)" using WhileTrue by auto
-  moreover have "(c ;; ?w, s1)\<rightarrow>* x' \<down> (SKIP ;; ?w, s2)" 
+  have "(?w, s1) \<rightarrow>\<^bsup> 1 \<^esup> (c ;; ?w, s1)" using WhileTrue by auto
+  moreover have "(c ;; ?w, s1)\<rightarrow>\<^bsup> x' \<^esup> (SKIP ;; ?w, s2)" 
     using WhileTrue by (simp add: suc_def star_seq2) 
-  moreover have "(SKIP ;; ?w, s2) \<rightarrow>* 1 \<down>(?w, s2)" by auto
-  moreover have "(?w, s2) \<rightarrow>* y' \<down> (SKIP, s3)" using WhileTrue  \<open>y = Suc y'\<close> by blast
-  ultimately have "(?w, s1) \<rightarrow>* 1 + x' + 1 + y'\<down> (SKIP, s3)" by (meson rel_pow_sum) 
+  moreover have "(SKIP ;; ?w, s2) \<rightarrow>\<^bsup> 1 \<^esup>(?w, s2)" by auto
+  moreover have "(?w, s2) \<rightarrow>\<^bsup> y' \<^esup> (SKIP, s3)" using WhileTrue  \<open>y = Suc y'\<close> by blast
+  ultimately have "(?w, s1) \<rightarrow>\<^bsup> 1 + x' + 1 + y'\<^esup> (SKIP, s3)" by (meson rel_pow_sum) 
   moreover have "t' = Suc (Suc (x' + y')) " using WhileTrue suc_def by auto 
   thus ?case  using calculation by simp
 qed
 
-lemma big_to_small: "(c, s) \<Rightarrow> Suc t \<Down> s' \<Longrightarrow> (c, s) \<rightarrow>* t \<down> (SKIP,s')"
+lemma big_to_small: "(c, s) \<Rightarrow>\<^bsup> Suc t \<^esup> s' \<Longrightarrow> (c, s) \<rightarrow>\<^bsup> t \<^esup> (SKIP,s')"
   using big_to_small_helper by blast
 
 text "from small to big semantics"
 lemma small1_big_continue:
-  "cs \<rightarrow> cs' \<Longrightarrow> cs' \<Rightarrow> t \<Down> cs'' \<Longrightarrow> cs \<Rightarrow> Suc t \<Down> cs''"
+  "cs \<rightarrow> cs' \<Longrightarrow> cs' \<Rightarrow>\<^bsup> t \<^esup> cs'' \<Longrightarrow> cs \<Rightarrow>\<^bsup> Suc t \<^esup> cs''"
   apply (induction arbitrary: cs'' t rule:small_step.induct )
   apply auto
   apply fastforce
@@ -175,18 +175,18 @@ lemma small1_big_continue:
 
 
 lemma small_to_big :
- "cs \<rightarrow>* t \<down> (SKIP,s') \<Longrightarrow> cs \<Rightarrow> Suc t \<Down> s' "
+ "cs \<rightarrow>\<^bsup> t \<^esup> (SKIP,s') \<Longrightarrow> cs \<Rightarrow>\<^bsup> Suc t \<^esup> s' "
   apply(induction t arbitrary:cs s')
    apply auto[1]
   using small1_big_continue by blast
 
 text "Equivalence statement"
 lemma equiv_small_big_pair:
- "(c,s) \<rightarrow>* t \<down> (SKIP,s') \<longleftrightarrow> (c,s) \<Rightarrow> Suc t \<Down> s' "
+ "(c,s) \<rightarrow>\<^bsup> t \<^esup> (SKIP,s') \<longleftrightarrow> (c,s) \<Rightarrow>\<^bsup> Suc t \<^esup> s' "
   using big_to_small small_to_big  by auto 
 
 lemma equiv_small_big:
- "cs \<rightarrow>* t \<down> (SKIP,s') = cs \<Rightarrow> Suc t \<Down> s' "
+ "cs \<rightarrow>\<^bsup> t \<^esup> (SKIP,s') = cs \<Rightarrow>\<^bsup> Suc t \<^esup> s' "
   using equiv_small_big_pair
   by (metis old.prod.exhaust) 
 
