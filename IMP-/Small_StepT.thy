@@ -48,9 +48,11 @@ subsection\<open>Executability\<close>
 
 code_pred small_step .
 
-values "{(c',map t [''x'',''y'',''z'']) |c' t .
+experiment begin
+values "{(c',map t [''x'',''y'',''z''], n) |c' t n.
    ((''x'' ::= A (V ''z'');; ''y'' ::=A ( V ''x''),
-    <''x'' := 3, ''y'' := 7, ''z'' := 5>) \<rightarrow>* 1 \<down> (c',t))}"
+    <''x'' := 3, ''y'' := 7, ''z'' := 5>) \<rightarrow>* n \<down> (c',t))}"
+end
 subsection\<open>Proof infrastructure\<close>
 
 subsubsection\<open>Induction rules\<close>
