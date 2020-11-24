@@ -157,7 +157,7 @@ next
   moreover have "(?w, s2) \<rightarrow>\<^bsup> y' \<^esup> (SKIP, s3)" using WhileTrue  \<open>y = Suc y'\<close> by blast
   ultimately have "(?w, s1) \<rightarrow>\<^bsup> 1 + x' + 1 + y'\<^esup> (SKIP, s3)" by (meson rel_pow_sum) 
   moreover have "t' = Suc (Suc (x' + y')) " using WhileTrue suc_def by auto 
-  thus ?case  using calculation by simp
+  ultimately show ?case by simp
 qed
 
 lemma big_to_small: "(c, s) \<Rightarrow>\<^bsup> Suc t \<^esup> s' \<Longrightarrow> (c, s) \<rightarrow>\<^bsup> t \<^esup> (SKIP,s')"
