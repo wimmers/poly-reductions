@@ -88,18 +88,16 @@ done
 
 section "Equivalence with big-step semantics"
 declare rel_pow_intros[simp,intro]
+
 text "sequence property"
 lemma star_seq2: "(c1,s) \<rightarrow>\<^bsup>t\<^esup> (c1',s') \<Longrightarrow> (c1;;c2,s) \<rightarrow>\<^bsup> t \<^esup> (c1';;c2,s')"
 proof(induction t arbitrary: c1 c1' s s')
-  case 0
-  then show ?case by auto
-next
   case (Suc t)
   then obtain c1'' s'' where "(c1,s) \<rightarrow> (c1'', s'')" 
                          and "(c1'', s'')  \<rightarrow>\<^bsup> t \<^esup>  (c1', s')" by auto
   moreover then have "(c1'';;c2, s'') \<rightarrow>\<^bsup> t \<^esup> (c1';;c2, s')" using Suc by simp
   ultimately show ?case by auto
-qed
+qed auto
 
 text "sequence time is one plus sum of the sub-commands times"
 lemma seq_comp:
