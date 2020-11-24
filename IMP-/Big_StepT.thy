@@ -79,16 +79,7 @@ lemma "(IF b \<noteq>0 THEN SKIP ELSE SKIP, s) \<Rightarrow> x \<Down> t \<Longr
 
 lemma assumes "(IF b \<noteq>0 THEN SKIP ELSE SKIP, s) \<Rightarrow> x \<Down> t"
   shows "t = s"
-proof -
-  from assms show ?thesis
-  proof cases
-    case (IfTrue x)
-    then show ?thesis by blast
-  next
-    case (IfFalse x)
-    then show ?thesis by blast
-  qed
-qed
+  using assms apply cases by auto
 
 lemma assign_t_simp:
   "((x ::= a,s) \<Rightarrow> Suc(Suc 0) \<Down>  s') \<longleftrightarrow> (s' = s(x := aval a s))"
@@ -104,15 +95,13 @@ theorem big_step_t_determ2: "\<lbrakk> (c,s) \<Rightarrow> p \<Down> t; (c,s) \<
     apply(elim If_tE)  apply (linarith) apply simp
     apply(erule While_tE) apply(simp) apply simp
   subgoal premises p for s1 b c x s2 y s3 z u q
-  proof -
-    from p(7) show ?thesis apply(safe) 
+    using p(7) apply(safe) 
       apply(erule While_tE)
         using p(1-6) apply fast
         using p(1-6) apply (simp)
       apply(erule While_tE)
         using p(1-6) apply fast
         using p(1-6) by (simp)
-    qed
 done
 
 lemma bigstep_det: "(c1, s) \<Rightarrow> p1 \<Down> t1 \<Longrightarrow> (c1, s) \<Rightarrow> p \<Down> t \<Longrightarrow> p1=p \<and> t1=t"
