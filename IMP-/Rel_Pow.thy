@@ -1,7 +1,7 @@
 \<^marker>\<open>creator Bilel Ghorbel, Florian Kessler\<close>
 
 section "Inductive definition of relation power"
-theory Rel_pow imports Main begin
+theory Rel_Pow imports Main begin
 
 paragraph "Summary"
 text\<open>We provide an inductive definition for applying a relation n times.\<close>
