@@ -53,7 +53,7 @@ definition P :: "lang set" where
 
 
 definition verif :: "com \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> bool" where
-"verif c x z r \<equiv> (\<forall>s. s ''input'' = x \<longrightarrow> s ''certificate'' = z \<longrightarrow> (\<exists>t. (c,s)\<Rightarrow>\<^bsup>t\<^esup> s(''input'':=r)))"
+"verif c x z r \<equiv> (\<forall>s. s ''input'' = x \<and> s ''certificate'' = z \<longrightarrow>(\<exists>t. (c,s)\<Rightarrow>\<^bsup>t\<^esup> s(''input'':=r)))"
 definition is_verif :: "com \<Rightarrow> lang \<Rightarrow> bool" where
 "is_verif c L  \<equiv> (\<forall>x z. \<exists>r. verif c x z r) \<and> (\<forall>x. (x\<in>L \<longleftrightarrow> (\<exists>z r. verif c x z r \<and> r > 0))) "
   
@@ -87,12 +87,7 @@ lemma comp_comp:
     hence "\<exists>t2. (g,?s') \<Rightarrow>\<^bsup> t2 \<^esup> ?s'(''input'':=z)" using assms(2) comp_def by blast
     ultimately show "(\<exists>t. (f;; g, s)\<Rightarrow>\<^bsup> t \<^esup> s(''input'' := z))" by auto
   qed
-  qed
-
-lemma comp_decomp:
-  assumes "comp (f;;g) x r" "comp f x y"  "comp g y z"
-  shows "z =r"
-  using assms comp_comp comp_det by blast
+qed
 
 lemma reduction_decision_correct: 
   assumes "is_reduction f D D'" "decides g D'"
@@ -147,6 +142,7 @@ proof -
   ultimately show ?thesis by auto 
 qed
 qed
+
 lemma p_sanity:
   assumes "D' \<in> P" "reduces D D'"
   shows "D \<in> P"
@@ -162,6 +158,88 @@ proof
   next 
     show "decides (f;;g) D"
       using assms(1) assms(3) reduction_decision_correct is_polyreduction_def by blast 
+qed
+qed
+
+lemma comp_verif:
+  assumes "comp f x y" "verif g y z r"
+  shows "verif (f;;g) x z r"
+  apply(simp add: verif_def comp_def)
+proof
+  fix s
+  show " s ''input'' = x \<and> s ''certificate'' = z \<longrightarrow> (\<exists>t. (f;; g, s) \<Rightarrow>\<^bsup> t \<^esup> s(''input'' := r))" 
+  proof
+    assume asm:" s ''input'' = x \<and> s ''certificate'' = z"
+    obtain s' where s'_def:"s' = s(''input'':=y)" by simp
+    then obtain t1 where "(f,s)\<Rightarrow>\<^bsup>t1\<^esup> s'" using assms(1) comp_def asm by auto
+    moreover have  "s' ''input'' = y" "s' ''certificate'' = z" using asm by (auto simp add: s'_def)
+    then obtain t2 where "(g,s')\<Rightarrow>\<^bsup>t2\<^esup> s'(''input'':=r)" using assms(2) verif_def asm by auto
+    ultimately have  "(f;;g,s)\<Rightarrow>\<^bsup> t1+t2 \<^esup>  s'(''input'':=r)" by auto
+    moreover have " s'(''input'':=r) =  s(''input'' := r)" using s'_def by simp
+    ultimately show "(\<exists>t. (f;; g, s) \<Rightarrow>\<^bsup> t \<^esup> s(''input'' := r)) " by auto
+  qed
+qed
+
+lemma verif_det:
+  assumes "verif f x z r" "verif f x z r'"
+  shows "r = r'"
+proof -
+  obtain s where s_def: "s =<''input'':=x,''certificate'':=z>" by simp
+  obtain s1 where s1_def: "s1 =<''input'':=r,''certificate'':=z>" by simp
+  obtain s2 where s2_def: "s2 =<''input'':=r',''certificate'':=z>" by simp
+  from s_def have s_cond:"s ''input'' = x \<and> s ''certificate'' = z" by simp 
+  from s_def s1_def have "s(''input'':=r) = s1" by auto 
+  hence "\<exists>t. (f,s)\<Rightarrow>\<^bsup>t\<^esup>s1"  using s_cond verif_def[of f x z r] assms(1) by auto
+  moreover have "s(''input'':=r') = s2" using  s_def s2_def by auto
+  hence "\<exists>t. (f,s)\<Rightarrow>\<^bsup>t\<^esup>s2"  using s_cond verif_def[of f x z r'] assms(2) by auto
+  ultimately have "s1=s2"  using big_step_t_determ2 by blast 
+  thus "r=r'"  by (metis \<open>s(''input'' := r') = s2\<close> \<open>s(''input'' := r) = s1\<close> fun_upd_eqD)  
+qed
+
+lemma reduction_verification_correct:
+
+  assumes "is_reduction f D D'" "is_verif g D'"
+  shows "is_verif (f;;g) D"         
+  apply(simp add:is_verif_def)
+proof
+  show "\<forall>x z. \<exists>r. verif (f;; g) x z r"
+  proof fix x 
+    show "\<forall>z. \<exists>r. verif (f;; g) x z r" 
+    proof 
+      fix z
+      from assms(1) obtain y where  "comp f x y " using is_reduction_def by meson
+      moreover from assms(2) obtain r where  "verif g y z r" using is_verif_def by meson
+      ultimately show "\<exists>r. verif (f;;g) x z r" using comp_verif by blast
+      qed
+    qed
+next
+  show "\<forall>x. (x \<in> D) = (\<exists>z r. verif (f;; g) x z r \<and> 0 < r)"
+  proof
+    fix x 
+    from assms(1) obtain y where y_def:  "comp f x y " " (x\<in>D) = (y\<in>D')" 
+      using is_reduction_def by meson
+    moreover from assms(2) have "(y\<in>D')  = (\<exists>z r. verif g y z r \<and> r > 0)" 
+      using is_verif_def by simp 
+    ultimately have "(x \<in> D) = (\<exists>z r. verif g y z r \<and> r > 0) " by simp
+    thus "(x \<in> D) = (\<exists>z r. verif (f;; g) x z r \<and> 0 < r)" using y_def(1) comp_verif
+      by (metis (full_types) assms(2) is_verif_def verif_det) 
+  qed
+qed
+
+lemma np_sanity:
+  assumes "reduces D D'" "D' \<in> NP"
+  shows "D \<in> NP"
+proof
+  from assms(1) obtain f
+    where f_def: "is_reduction f D D'" "poly_time_bounded f" "poly_result_bounded f"
+    using is_polyreduction_def reduces_def by auto
+  from assms(2) obtain g
+    where g_def: "is_verif g D'" "poly_time_bounded g" 
+    using NP_def is_poly_verif_def by force
+  from f_def(1) g_def(1) have "is_verif (f;;g) D" using reduction_verification_correct by simp
+  moreover from f_def(2) f_def(3) g_def(2) have "poly_time_bounded (f;;g)"
+    using reduction_poly by simp 
+  ultimately show  ?thesis using NP_def is_poly_verif_def by auto
 qed
 
 
