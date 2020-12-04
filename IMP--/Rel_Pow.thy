@@ -32,6 +32,15 @@ inductive_cases  reflE[elim!]: "rel_pow r 0 x y"
 inductive_cases  stepE[elim!]: "rel_pow r (Suc n) x y"
 
 code_pred rel_pow .
+
+lemma rel_pow_Suc_E_util: "rel_pow r n' x z \<Longrightarrow> n' = Suc n \<Longrightarrow> (\<exists>y. rel_pow r n x y \<and> r y z)"
+proof (induction n' x z arbitrary: n rule: rel_pow.induct)
+  case (step x y n z)
+  then show ?case by (cases n) blast+
+qed auto
+
+lemma rel_pow_Suc_E: "rel_pow r (Suc n) x z  \<Longrightarrow> (\<exists>y. rel_pow r n x y \<and> r y z)"
+  using rel_pow_Suc_E_util by metis
   
   
 end

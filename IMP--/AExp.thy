@@ -21,12 +21,12 @@ fun atomVal :: "atomExp \<Rightarrow> state \<Rightarrow> val" where
 "atomVal (N number) _ = number"
 
 text "Defining arithmetic operators and general form of expressions: "
-datatype aexp =  A atomExp | Plus atomExp val | Sub atomExp val
+datatype aexp =  A atomExp | Plus vname val | Sub vname val
 
 fun aval :: "aexp \<Rightarrow> state \<Rightarrow> val" where
 "aval (A atomExp) s = atomVal atomExp s"|
-"aval (Plus a b) s = atomVal a s + b"|
-"aval (Sub a b) s = atomVal a s - b"
+"aval (Plus a b) s = s a + b"|
+"aval (Sub a b) s =  s a - b"
 
 text "Syntactic sugar to write states:"     
 definition null_state ("<>") where
