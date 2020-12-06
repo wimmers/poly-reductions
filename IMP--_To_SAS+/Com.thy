@@ -8,7 +8,7 @@ paragraph "Summary"
 text\<open>Syntax definition for IMP-. Based on the syntax definition of IMP\<close>
 
 datatype
-  com = SKIP 
+  com = SKIP
       | Assign vname aexp      
       | Seq    com  com         
       | If     vname com com     

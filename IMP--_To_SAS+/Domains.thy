@@ -2,17 +2,17 @@
 
 section "Domains"
 
-theory Domains imports "../IMP--/Small_StepT" 
+theory Domains imports Small_StepT
 begin
 
 fun max_constant :: "com \<Rightarrow> nat" where
-"max_constant SKIP = 0" |
+"max_constant (SKIP) = 0" |
 "max_constant (Assign vname aexp) = (case aexp of
   (A a) \<Rightarrow> (case a of (V var) \<Rightarrow> 0 | (N val) \<Rightarrow> val) |
   (Plus a b) \<Rightarrow> b |
   (Sub a b) \<Rightarrow> b)" |
 "max_constant (Seq c1  c2) = max (max_constant c1) (max_constant c2)" |         
-"max_constant (If _ c1 c2) = max (max_constant c1) (max_constant c2)"  |   
+"max_constant (If  _ c1 c2) = max (max_constant c1) (max_constant c2)"  |   
 "max_constant (While _ c) = max_constant c"
 
 lemma step_cant_increase_max_constant: "(c1, s1) \<rightarrow> (c2, s2) \<Longrightarrow> max_constant c1 \<ge> max_constant c2"
@@ -94,4 +94,10 @@ proof (induction t arbitrary: c2 s2 v1)
     qed
   qed
 qed auto
+
+datatype domain_element = Num val | \<omega> 
+
+definition domain :: "com \<Rightarrow> nat \<Rightarrow> domain_element list" where
+"domain c t = (let m = max_constant c in map Num [0 ..<(2 * t * m + 1)]) @ [\<omega>]"
+
 end

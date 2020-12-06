@@ -3,7 +3,7 @@
 section "Small step semantics of IMP- "
 
 subsection "Small step semantics definition"
-theory Small_StepT  imports Main Com Rel_Pow begin
+theory Small_StepT  imports Main Com "../IMP-/Rel_Pow" begin
 
 paragraph "Summary"
 text\<open>We give small step semantics with time for IMP-. 
@@ -21,7 +21,7 @@ IfTrue:  "s b \<noteq> 0 \<Longrightarrow> (IF b \<noteq>0 THEN c\<^sub>1 ELSE c
 IfFalse: "s b = 0 \<Longrightarrow> (IF b \<noteq>0  THEN c\<^sub>1 ELSE c\<^sub>2,s) \<rightarrow> (c\<^sub>2,s)" |
 
 WhileTrue:   "s b \<noteq> 0 \<Longrightarrow> (WHILE b\<noteq>0 DO c,s) \<rightarrow>
-            (c ;; WHILE b \<noteq>0 DO c,s)" |
+            (c ;; (WHILE b \<noteq>0 DO c), s)" |
 WhileFalse:   "s b = 0 \<Longrightarrow> (WHILE b\<noteq>0 DO c,s) \<rightarrow>
             (SKIP,s)"
 
@@ -46,11 +46,6 @@ subsection\<open>Executability\<close>
 
 code_pred small_step .
 
-experiment begin
-values "{(c',map t [''x'',''y'',''z''], n) |c' t n.
-   ((''x'' ::= A (V ''z'');; ''y'' ::=A ( V ''x''),
-    <''x'' := 3, ''y'' := 7, ''z'' := 5>) \<rightarrow>\<^bsup>n\<^esup> (c',t))}"
-end
 subsection\<open>Proof infrastructure\<close>
 
 subsubsection\<open>Induction rules\<close>
@@ -67,7 +62,6 @@ subsubsection\<open>Proof automation\<close>
 
 declare small_step.intros[simp,intro]
 
-
 text\<open>Rule inversion:\<close>
 
 inductive_cases SkipE[elim!]: "(SKIP,s) \<rightarrow> ct"
@@ -76,16 +70,16 @@ inductive_cases SeqE[elim]: "(c1;;c2,s) \<rightarrow> ct"
 inductive_cases IfE[elim!]: "(IF b\<noteq>0 THEN c1 ELSE c2,s) \<rightarrow> ct"
 inductive_cases WhileE[elim]: "(WHILE b\<noteq>0 DO c, s) \<rightarrow> ct"
 
+subsection "Sequence properties"
+declare rel_pow_intros[simp,intro]
+
 text\<open>A simple property:\<close>
 lemma deterministic:
   "cs \<rightarrow> cs' \<Longrightarrow> cs \<rightarrow> cs'' \<Longrightarrow> cs'' = cs'"
 apply(induction arbitrary: cs'' rule: small_step.induct)
-        apply blast+
+      apply blast+
   apply auto
-  done
-
-subsection "Sequence properties"
-declare rel_pow_intros[simp,intro]
+done
 
 text "sequence property"
 lemma star_seq2: "(c1,s) \<rightarrow>\<^bsup>t\<^esup> (c1',s') \<Longrightarrow> (c1;;c2,s) \<rightarrow>\<^bsup> t \<^esup> (c1';;c2,s')"
@@ -96,20 +90,4 @@ proof(induction t arbitrary: c1 c1' s s')
   moreover then have "(c1'';;c2, s'') \<rightarrow>\<^bsup> t \<^esup> (c1';;c2, s')" using Suc by simp
   ultimately show ?case by auto
 qed auto
-
-text "sequence time is one plus sum of the sub-commands times"
-lemma seq_comp:
-  "\<lbrakk> (c1,s1) \<rightarrow>\<^bsup> t1 \<^esup> (SKIP,s2); (c2,s2) \<rightarrow>\<^bsup> t2 \<^esup> (c3,s3) \<rbrakk>
-   \<Longrightarrow> (c1;;c2, s1) \<rightarrow>\<^bsup> t1 + t2 +1 \<^esup> (c3,s3)"
-proof (induction t1 arbitrary: c1 s1)
-  case 0
-  then have "(c1;;c2, s1) \<rightarrow> (c2, s2)" by auto
-  then show ?case using 0  by simp
-next
-  case (Suc t1)
-  then obtain c1' s1' where *: "(c1, s1) \<rightarrow> (c1',s1')" and "(c1',s1') \<rightarrow>\<^bsup> t1 \<^esup> (SKIP,s2)"
-    using relpowp_Suc_E2 by auto
-  then have "(c1';;c2, s1') \<rightarrow>\<^bsup> t1 + t2 + 1 \<^esup> (c3, s3)" using Suc by blast 
-  then show ?case using Suc by auto
-qed
 end
