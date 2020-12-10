@@ -462,13 +462,25 @@ definition state_by_pc_and_vars ::
                           None \<Rightarrow> None) |
   PC \<Rightarrow> Some (Num (index_of cs c))))"
 
+lemma state_by_pc_and_vars_variables_in_d: 
+  "x \<noteq> PC \<Longrightarrow> (state_by_pc_and_vars cs c vs d) x = Some y 
+  \<Longrightarrow> (y = \<omega> \<or> y \<in> set d)"
+  by (auto simp: state_by_pc_and_vars_def split: variable.splits option.splits if_splits)
+
+lemma state_by_pc_and_vars_PC_in_d:
+  "c \<in> set cs \<Longrightarrow> (state_by_pc_and_vars cs c vs d) PC = Some y
+  \<Longrightarrow> y \<in> set (map (\<lambda> i. Num i) [0..<(length cs)])"
+  by (auto simp: state_by_pc_and_vars_def index_of_element_in_list split: variable.splits option.splits if_splits)
+
 definition imp_minus_minus_to_sas_plus :: "com \<Rightarrow> (vname \<rightharpoonup> nat) \<Rightarrow> nat \<Rightarrow> problem" where
 "imp_minus_minus_to_sas_plus c vs t = (let cs = enumerate_subprograms c ; 
   d = domain c t ; 
+  initial_vs = (\<lambda>x. (if x \<in> set (enumerate_variables c) then Some (case vs x of Some y \<Rightarrow> y | None \<Rightarrow> 0)
+    else None)) ;
   pc_d = map (\<lambda> i. Num i) [0..<(length cs)] in
     \<lparr> variables_of = PC # (map (\<lambda> v. VN v) (enumerate_variables c)),
       operators_of = coms_to_operators cs d, 
-      initial_of = state_by_pc_and_vars cs c vs d,
+      initial_of = state_by_pc_and_vars cs c initial_vs d,
       goal_of = state_by_pc_and_vars cs SKIP Map.empty d,
       range_of = (map_of (map (\<lambda> v. (VN v, d)) (enumerate_variables c)))(PC \<mapsto> pc_d)\<rparr>)"
 
@@ -571,13 +583,68 @@ proof -
   then show ?thesis 
     using com_to_operators_variables_distinct assms distinct_list_all pre_in_range eff_in_range 
     apply (auto simp: is_valid_operator_sas_plus_def Let_def) 
-     apply blast+ 
-    done
+    by blast+ 
+qed
+
+lemma SKIP_in_pcs[simp]:  "ListMem (Num (index_of (enumerate_subprograms c) SKIP))
+     (map Num [0..<length (enumerate_subprograms c)])"
+proof -
+  have "index_of (enumerate_subprograms c) SKIP < length (enumerate_subprograms c)"
+    using SKIP_in_enumerate_subprograms index_of_element_in_list by fastforce
+  then show ?thesis by (simp add: ListMem_iff)
 qed
 
 lemma imp_minus_minus_to_sas_plus_valid: 
   "is_valid_problem_sas_plus (imp_minus_minus_to_sas_plus c vs t)"
-  apply(auto simp: is_valid_problem_sas_plus_def Let_def range_defined list_all_def)
-  sorry
+proof -
+  let ?\<Psi> = "imp_minus_minus_to_sas_plus c vs t"
+  let ?ops = "operators_of ?\<Psi>"
+      and ?vs = "variables_of ?\<Psi>"
+      and ?I = "initial_of ?\<Psi>"
+      and ?G = "goal_of ?\<Psi>"
+      and ?D = "range_of ?\<Psi>"
+  have "x \<in> set ?ops \<Longrightarrow> is_valid_operator_sas_plus ?\<Psi> x" for x 
+  proof -
+    assume "x \<in> set ?ops"
+    then have "\<exists>c1 \<in> set (enumerate_subprograms c). 
+      x \<in> set (com_to_operators (enumerate_subprograms c) c1 (domain c t))"
+      by (auto simp: imp_minus_minus_to_sas_plus_def Let_def coms_to_operators_def)
+    then show ?thesis using operators_valid by auto
+  qed
+  moreover have "\<forall>v. ?I v \<noteq> None \<longleftrightarrow> ListMem v ?vs"
+  proof
+    fix v
+    show "?I v \<noteq> None \<longleftrightarrow> ListMem v ?vs" 
+      by (cases v) (auto simp: imp_minus_minus_to_sas_plus_def Let_def state_by_pc_and_vars_def ListMem.elem ListMem_iff)
+  qed
+  moreover have "?I v \<noteq> None \<Longrightarrow> ListMem (the (?I v)) (the (?D v))" for v
+  proof -
+    assume assm: "?I v \<noteq> None" 
+    then show ?thesis
+    proof(cases v)
+      case (VN x1)
+      then have "x1 \<in> set (enumerate_variables c)" 
+        using VN assm by (auto simp: imp_minus_minus_to_sas_plus_def Let_def state_by_pc_and_vars_def split: option.splits if_splits)
+      then have "the (?D v) = domain c t" 
+        using VN by (auto simp: imp_minus_minus_to_sas_plus_def Let_def map_of_variables)
+      then show ?thesis 
+        using VN assm 
+        apply (auto simp: imp_minus_minus_to_sas_plus_def Let_def state_by_pc_and_vars_def elem ListMem_iff split: option.splits)
+        by (meson ListMem_iff omega_in_domain)+
+    next
+      case PC
+      have "c \<in> set (enumerate_subprograms c)" using c_in_all_subprograms_c by auto
+      then show ?thesis using PC 
+        by (auto simp: imp_minus_minus_to_sas_plus_def Let_def state_by_pc_and_vars_def index_of_element_in_list ListMem_iff)
+    qed
+  qed
+  moreover have "\<forall>v. ?G v \<noteq> None \<longrightarrow> ListMem v ?vs"
+    by (auto simp: imp_minus_minus_to_sas_plus_def Let_def state_by_pc_and_vars_def ListMem.elem split: variable.splits)
+  moreover have "\<forall>v. ?G v \<noteq> None \<longrightarrow> ListMem (the (?G v)) (the (?D v))"
+    using SKIP_in_pcs by (auto simp: imp_minus_minus_to_sas_plus_def Let_def state_by_pc_and_vars_def ListMem.elem split: variable.splits)
+
+  ultimately show ?thesis 
+    by (auto simp: is_valid_problem_sas_plus_def Let_def range_defined list_all_def state_by_pc_and_vars_variables_in_d state_by_pc_and_vars_PC_in_d)
+qed
 
 end

@@ -100,4 +100,10 @@ datatype domain_element = Num val | \<omega>
 definition domain :: "com \<Rightarrow> nat \<Rightarrow> domain_element list" where
 "domain c t = (let m = max_constant c in map Num [0 ..<(t * m + 1)]) @ [\<omega>]"
 
+lemma zero_in_domain[simp]: "ListMem (Num 0) (domain c t)"
+  by (auto simp: domain_def Let_def ListMem_iff)
+
+lemma omega_in_domain[simp]: "ListMem \<omega> (domain c t)"
+  by (auto simp: domain_def Let_def ListMem_iff)
+
 end
