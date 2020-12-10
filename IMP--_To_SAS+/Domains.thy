@@ -98,6 +98,6 @@ qed auto
 datatype domain_element = Num val | \<omega> 
 
 definition domain :: "com \<Rightarrow> nat \<Rightarrow> domain_element list" where
-"domain c t = (let m = max_constant c in map Num [0 ..<(2 * t * m + 1)]) @ [\<omega>]"
+"domain c t = (let m = max_constant c in map Num [0 ..<(t * m + 1)]) @ [\<omega>]"
 
 end
