@@ -368,7 +368,7 @@ lemma main_lemma :
                    \<and> ( f \<in> IMP_SAT \<longleftrightarrow>
                                         (\<exists>z. \<forall>s t s'. s ''input'' = x 
                                                       \<and> s ''certificate'' = z 
-                                                      \<and>(v, s) \<Rightarrow>\<^bsup> t \<^esup> s' \<longrightarrow> s' ''input'' >0)
+                                                      \<and>(c, s) \<Rightarrow>\<^bsup> t \<^esup> s' \<longrightarrow> s' ''input'' >0)
                                         )
                       )"
   sorry
