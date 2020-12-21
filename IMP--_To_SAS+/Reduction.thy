@@ -8,7 +8,8 @@ begin
 datatype variable = VN vname | PC
 
 type_synonym operator = "(variable, domain_element) sas_plus_operator"
-type_synonym state = "(variable, domain_element) state"
+type_synonym sas_state = "(variable, domain_element) state"
+type_synonym imp_state = AExp.state
 type_synonym problem = "(variable, domain_element) sas_plus_problem"
 
 fun all_subprograms :: "com \<Rightarrow> com list" where
@@ -122,6 +123,11 @@ lemma SKIP_in_enumerate_subprograms[simp]: "SKIP \<in> set (enumerate_subprogram
 lemma enumerate_subprogams_enumerate_variables: "c' \<in> set (enumerate_subprograms c) 
   \<Longrightarrow> set (all_variables c') \<subseteq> set (enumerate_variables c)" 
   by (auto simp: enumerate_variables_def)
+
+lemma enumerate_subprograms_max_constant: "c' \<in> set (enumerate_subprograms c)
+  \<Longrightarrow> max_constant c' \<le> max_constant c"
+  by (induction c arbitrary: c' rule: all_subprograms.induct)
+       (fastforce  split: if_splits)+
 
 fun index_of :: "'a list \<Rightarrow> 'a \<Rightarrow> nat" where
 "index_of [] c = 0" |
@@ -455,22 +461,22 @@ qed
 definition coms_to_operators :: "com list \<Rightarrow> domain_element list \<Rightarrow> operator list" where
 "coms_to_operators cs d = concat (map (\<lambda> c. com_to_operators cs c d) cs)"
 
-definition state_by_pc_and_vars :: 
-  "com list \<Rightarrow> com  \<Rightarrow> (vname \<rightharpoonup> nat) \<Rightarrow> domain_element list \<Rightarrow> state" where
-"state_by_pc_and_vars cs c vs d =  (\<lambda> v. (case v of 
+definition sas_state_by_pc_and_vars :: 
+  "com list \<Rightarrow> com  \<Rightarrow> (vname \<rightharpoonup> nat) \<Rightarrow> domain_element list \<Rightarrow> sas_state" where
+"sas_state_by_pc_and_vars cs c vs d =  (\<lambda> v. (case v of 
   VN vn \<Rightarrow> (case vs vn of Some x \<Rightarrow> (if Num x \<in> set d then Some (Num x) else Some \<omega>) |
                           None \<Rightarrow> None) |
   PC \<Rightarrow> Some (Num (index_of cs c))))"
 
-lemma state_by_pc_and_vars_variables_in_d: 
-  "x \<noteq> PC \<Longrightarrow> (state_by_pc_and_vars cs c vs d) x = Some y 
+lemma sas_state_by_pc_and_vars_variables_in_d: 
+  "x \<noteq> PC \<Longrightarrow> (sas_state_by_pc_and_vars cs c vs d) x = Some y 
   \<Longrightarrow> (y = \<omega> \<or> y \<in> set d)"
-  by (auto simp: state_by_pc_and_vars_def split: variable.splits option.splits if_splits)
+  by (auto simp: sas_state_by_pc_and_vars_def split: variable.splits option.splits if_splits)
 
-lemma state_by_pc_and_vars_PC_in_d:
-  "c \<in> set cs \<Longrightarrow> (state_by_pc_and_vars cs c vs d) PC = Some y
+lemma sas_state_by_pc_and_vars_PC_in_d:
+  "c \<in> set cs \<Longrightarrow> (sas_state_by_pc_and_vars cs c vs d) PC = Some y
   \<Longrightarrow> y \<in> set (map (\<lambda> i. Num i) [0..<(length cs)])"
-  by (auto simp: state_by_pc_and_vars_def index_of_element_in_list split: variable.splits option.splits if_splits)
+  by (auto simp: sas_state_by_pc_and_vars_def index_of_element_in_list split: variable.splits option.splits if_splits)
 
 definition imp_minus_minus_to_sas_plus :: "com \<Rightarrow> (vname \<rightharpoonup> nat) \<Rightarrow> nat \<Rightarrow> problem" where
 "imp_minus_minus_to_sas_plus c vs t = (let cs = enumerate_subprograms c ; 
@@ -480,8 +486,8 @@ definition imp_minus_minus_to_sas_plus :: "com \<Rightarrow> (vname \<rightharpo
   pc_d = map (\<lambda> i. Num i) [0..<(length cs)] in
     \<lparr> variables_of = PC # (map (\<lambda> v. VN v) (enumerate_variables c)),
       operators_of = coms_to_operators cs d, 
-      initial_of = state_by_pc_and_vars cs c initial_vs d,
-      goal_of = state_by_pc_and_vars cs SKIP Map.empty d,
+      initial_of = sas_state_by_pc_and_vars cs c initial_vs d,
+      goal_of = sas_state_by_pc_and_vars cs SKIP Map.empty d,
       range_of = (map_of (map (\<lambda> v. (VN v, d)) (enumerate_variables c)))(PC \<mapsto> pc_d)\<rparr>)"
 
 lemma range_defined: 
@@ -615,7 +621,7 @@ proof -
   proof
     fix v
     show "?I v \<noteq> None \<longleftrightarrow> ListMem v ?vs" 
-      by (cases v) (auto simp: imp_minus_minus_to_sas_plus_def Let_def state_by_pc_and_vars_def ListMem.elem ListMem_iff)
+      by (cases v) (auto simp: imp_minus_minus_to_sas_plus_def Let_def sas_state_by_pc_and_vars_def ListMem.elem ListMem_iff)
   qed
   moreover have "?I v \<noteq> None \<Longrightarrow> ListMem (the (?I v)) (the (?D v))" for v
   proof -
@@ -624,27 +630,27 @@ proof -
     proof(cases v)
       case (VN x1)
       then have "x1 \<in> set (enumerate_variables c)" 
-        using VN assm by (auto simp: imp_minus_minus_to_sas_plus_def Let_def state_by_pc_and_vars_def split: option.splits if_splits)
+        using VN assm by (auto simp: imp_minus_minus_to_sas_plus_def Let_def sas_state_by_pc_and_vars_def split: option.splits if_splits)
       then have "the (?D v) = domain c t" 
         using VN by (auto simp: imp_minus_minus_to_sas_plus_def Let_def map_of_variables)
       then show ?thesis 
         using VN assm 
-        apply (auto simp: imp_minus_minus_to_sas_plus_def Let_def state_by_pc_and_vars_def elem ListMem_iff split: option.splits)
+        apply (auto simp: imp_minus_minus_to_sas_plus_def Let_def sas_state_by_pc_and_vars_def elem ListMem_iff split: option.splits)
         by (meson ListMem_iff omega_in_domain)+
     next
       case PC
       have "c \<in> set (enumerate_subprograms c)" using c_in_all_subprograms_c by auto
       then show ?thesis using PC 
-        by (auto simp: imp_minus_minus_to_sas_plus_def Let_def state_by_pc_and_vars_def index_of_element_in_list ListMem_iff)
+        by (auto simp: imp_minus_minus_to_sas_plus_def Let_def sas_state_by_pc_and_vars_def index_of_element_in_list ListMem_iff)
     qed
   qed
   moreover have "\<forall>v. ?G v \<noteq> None \<longrightarrow> ListMem v ?vs"
-    by (auto simp: imp_minus_minus_to_sas_plus_def Let_def state_by_pc_and_vars_def ListMem.elem split: variable.splits)
+    by (auto simp: imp_minus_minus_to_sas_plus_def Let_def sas_state_by_pc_and_vars_def ListMem.elem split: variable.splits)
   moreover have "\<forall>v. ?G v \<noteq> None \<longrightarrow> ListMem (the (?G v)) (the (?D v))"
-    using SKIP_in_pcs by (auto simp: imp_minus_minus_to_sas_plus_def Let_def state_by_pc_and_vars_def ListMem.elem split: variable.splits)
+    using SKIP_in_pcs by (auto simp: imp_minus_minus_to_sas_plus_def Let_def sas_state_by_pc_and_vars_def ListMem.elem split: variable.splits)
 
   ultimately show ?thesis 
-    by (auto simp: is_valid_problem_sas_plus_def Let_def range_defined list_all_def state_by_pc_and_vars_variables_in_d state_by_pc_and_vars_PC_in_d)
+    by (auto simp: is_valid_problem_sas_plus_def Let_def range_defined list_all_def sas_state_by_pc_and_vars_variables_in_d sas_state_by_pc_and_vars_PC_in_d)
 qed
 
 end
