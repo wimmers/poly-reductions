@@ -62,7 +62,7 @@ proof (induction c1 is1 c2 is2 rule: small_step_induct)
       let ?op = "\<lparr> precondition_of = [(PC, Num ?i)], 
                   effect_of = [(PC, Num ?j), (VN x, (if val \<le> t * (max_constant c) then Num val else \<omega>))]\<rparr>"
       let ?ss2 = "ss1(VN x \<mapsto> Num val, PC \<mapsto> Num ?j)"
-      have "val \<le> max_constant c" using enumerate_subprograms_max_constant Assign A N by fastforce
+      have *: "val \<le> max_constant c" using enumerate_subprograms_max_constant Assign A N by fastforce
       then have "Num val \<in> set (domain c t)" using Assign by (auto simp: domain_def Let_def) 
           (metis Suc_lessI add.right_neutral atLeastLessThan_iff image_eqI lambda_zero le_0_eq le_less_trans le_neq_implies_less n_less_m_mult_n nat_le_linear times_nat.simps(2))
       moreover have "?op \<in> set (com_to_operators cs (x ::= a) (domain c t))" 
@@ -70,13 +70,13 @@ proof (induction c1 is1 c2 is2 rule: small_step_induct)
       moreover have "is_operator_applicable_in ss1 ?op" using Assign 
         by (auto simp: imp_minus_sas_plus_equivalent_states_def)
            (metis (no_types) fun_upd_triv map_le_empty map_le_upd)
+      moreover have "execute_operator_sas_plus ss1 ?op = ?ss2" using Assign A N * 
+        by auto (metis gr0_implies_Suc times_nat.simps trans_le_add1)
       moreover have "imp_minus_sas_plus_equivalent_states c SKIP ((t' - Suc 0) * max_constant c) 
         (\<lambda>y. if y = x then val else s y)
         ?ss2" using Assign A N 
         by (smt atomVal.simps aval.simps imp_minus_sas_plus_equivalent_states_def list_all_iff imp_minus_sas_plus_equivalent_states_assign[OF Assign(3) Assign(5)])
-      moreover have "ss1(VN x \<mapsto> Num val, PC \<mapsto> Num (index_of (all_subprograms c) SKIP)) 
-        = (\<lambda>a. if a = PC then Some (Num (index_of (all_subprograms c) SKIP)) else (ss1(VN x \<mapsto> Num val)) a)" by auto
-      ultimately show ?thesis using Assign A N by (simp add: domain_def Let_def)
+      ultimately show ?thesis using Assign A N by fastforce
     next
       case (V var)
       then show ?thesis sorry
