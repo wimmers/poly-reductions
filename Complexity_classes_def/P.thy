@@ -51,9 +51,12 @@ definition verif :: "com \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat \
 definition is_verif :: "com \<Rightarrow> lang \<Rightarrow> bool" where
 "is_verif c L  \<equiv> (\<forall>x z. \<exists>r. verif c x z r) \<and> (\<forall>x. (x\<in>L \<longleftrightarrow> (\<exists>z r. verif c x z r \<and> r > 0))) "
   
-
+definition certif_bounded :: "com \<Rightarrow> bound_fun \<Rightarrow> bool" where 
+"certif_bounded c p \<equiv> \<forall>x. (\<exists>z r. verif c x z r \<and> r >0) \<longrightarrow> (\<exists>z r. verif c x z r \<and> r>0 \<and> length z \<le> p (length x))"
+definition poly_certif_bounded :: "com \<Rightarrow> bool" where 
+"poly_certif_bounded c \<equiv> \<exists>p. poly p \<and> certif_bounded c p "
 definition is_poly_verif :: "com \<Rightarrow> lang \<Rightarrow> bool" where
-"is_poly_verif c L \<equiv> is_verif c L \<and> poly_time_bounded c"
+"is_poly_verif c L \<equiv> is_verif c L \<and> poly_time_bounded c \<and> poly_certif_bounded c"
 
 definition NP :: "lang set" where
 "NP \<equiv> {L. \<exists>c. is_poly_verif c L}"
@@ -225,6 +228,47 @@ next
       by (metis (full_types) assms(2) is_verif_def verif_det) 
   qed
 qed
+lemma result_bounded_certif_bounded : 
+  assumes "result_bounded f q" "cons_certif f" "certif_bounded g p" "\<forall>y z. \<exists>r. verif g y z r "
+  shows "certif_bounded (f;;g) (make_mono p o q)"  
+proof (auto simp add: certif_bounded_def)
+  fix x z r
+  assume local_asm:"verif (f;; g) x z r" "0 < r"
+  from assms(1) obtain y where y_def: "comp f x y" "length y \<le> q (length x)" using result_bounded_def by blast
+  from assms(4) obtain r'' where r'_def: "verif g y z r''"  using certif_bounded_def by presburger
+  moreover from y_def(1) r'_def assms(2) have "verif (f;; g) x z r''" using comp_verif by simp
+  hence  "r''>0" using local_asm verif_det by blast
+  ultimately obtain z' r'   where  z'r'_def: " verif g y z' r'"  "0< r'"  "P.length z' \<le> p (length y)"
+    using assms(3) certif_bounded_def by blast
+  from z'r'_def(3) have "length z' \<le> make_mono p (length y)"
+    using le_trans less_imp_le_nat by blast
+  moreover have "make_mono p (length y) \<le> make_mono p (q (length x))"
+    using y_def(2) mono_make_mono by (simp add: incseqD)
+  ultimately have "length z' \<le>  make_mono p (q (length x)) " by simp
+  moreover from z'r'_def(1) y_def(1) assms(2) have "verif (f;;g) x z' r'" using comp_verif by blast
+  ultimately show "\<exists>z r. verif (f;; g) x z r \<and> 0 < r \<and> P.length z \<le> make_mono p (q (P.length x))"
+    using z'r'_def(2) by blast
+qed
+
+lemma poly_result_bounded_poly_certif_bounded:
+  assumes "poly_result_bounded f" "cons_certif f" "poly_certif_bounded g" "\<forall>y z. \<exists>r. verif g y z r "
+  shows "poly_certif_bounded (f;;g)"
+proof (auto simp add: poly_certif_bounded_def)
+  
+  show "\<exists>p. poly p \<and> certif_bounded (f;; g) p "
+  proof - 
+    from assms(1) obtain q where q_def: "poly q" "result_bounded f q" using poly_result_bounded_def
+      by blast
+    from  assms(3) obtain p where p_def: "poly p" "certif_bounded g p" using poly_certif_bounded_def
+      by meson
+    let ?p = "make_mono p o q"
+    from q_def(1) p_def(1) have "poly ?p" 
+      by (simp add: poly_compose poly_make_mono_iff)
+    moreover have "certif_bounded (f;;g) ?p" using q_def(2) p_def(2) assms(2) assms(4) 
+     result_bounded_certif_bounded by simp
+    ultimately show ?thesis by blast
+  qed
+qed
 
 lemma np_sanity:
   assumes "poly_reduces D D'" "D' \<in> NP"
@@ -234,9 +278,13 @@ proof -
     where f_def: "is_reduction f D D'" "poly_time_bounded f" "poly_result_bounded f"
     using is_polyreduction_def poly_reduces_def by auto
   from assms(2) obtain g
-    where g_def: "is_verif g D'" "poly_time_bounded g" 
+    where g_def: "is_verif g D'" "poly_time_bounded g" "poly_certif_bounded g"
     using NP_def is_poly_verif_def by force
-  from f_def(1) g_def(1) have "is_verif (f;;g) D" using reduction_verification_correct by simp
+  from f_def(1) have "cons_certif f" by (simp add: P.is_reduction_def)
+  moreover from g_def(1) have "\<forall>y z. \<exists>r. verif g y z r " by (simp add: is_verif_def)
+  ultimately have "poly_certif_bounded (f;;g)" using f_def(3) g_def(3) 
+      poly_result_bounded_poly_certif_bounded   by blast
+  moreover from f_def(1) g_def(1) have "is_verif (f;;g) D" using reduction_verification_correct by simp
   moreover from f_def(2) f_def(3) g_def(2) have "poly_time_bounded (f;;g)"
     using reduction_poly by blast
   ultimately show  ?thesis using NP_def is_poly_verif_def  by auto
@@ -345,7 +393,7 @@ definition NP_complete :: "lang set" where
 "NP_complete \<equiv> NP_hard \<inter> NP"
 
 locale encode_decode_sat =
-  fixes encode_sat :: "nat three_sat \<Rightarrow> nat"
+  fixes encode_sat :: "nat three_sat \<Rightarrow> nat" (*I think it should be bounded*)
   fixes decode_sat :: "nat\<Rightarrow> nat three_sat"
   assumes decode_encode_inv : "decode_sat (encode_sat F) = F"
 begin
