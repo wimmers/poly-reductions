@@ -401,10 +401,11 @@ definition IMP_SAT :: "nat set" where
 "IMP_SAT == encode_sat ` {n. sat n}"
 
 lemma main_lemma : 
-  fixes c p
-  assumes "poly p"
-  assumes "\<forall>s. \<exists>t. Ex (big_step_t (c, s) t) \<and> t \<le> p (length (s ''input''))"
-  assumes " \<forall>x z. \<exists>r. \<forall>s. s ''input'' = x \<and> s ''certificate'' = z \<longrightarrow>
+  fixes c pt p_cer
+  assumes "poly pt"
+  assumes "poly p_cer"
+  assumes "\<forall>s. \<exists>t. Ex (big_step_t (c, s) t) \<and> t \<le> pt (length (s ''input''))"
+  assumes "\<forall>x z. \<exists>r. \<forall>s. s ''input'' = x \<and> s ''certificate'' = z \<longrightarrow>
                          (\<exists>t s'. (c, s) \<Rightarrow>\<^bsup> t \<^esup> s' \<and> s' ''input'' = r)"
   shows "\<exists>imp_to_sat t_red s_red.
          poly t_red 
@@ -414,9 +415,10 @@ lemma main_lemma :
                    \<and> (\<forall>s. s ''input'' = x \<longrightarrow> (\<exists>t s'. (imp_to_sat,s) \<Rightarrow>\<^bsup> t \<^esup> s' \<and> 
                                           s' ''input'' = f \<and> t \<le> t_red(length x)))
                    \<and> ( f \<in> IMP_SAT \<longleftrightarrow>
-                                        (\<exists>z. \<forall>s t s'. s ''input'' = x 
+                                        (\<exists>z. length z \<le> p_cer (length x) \<and>
+                                                      (\<forall>s t s'. s ''input'' = x 
                                                       \<and> s ''certificate'' = z 
-                                                      \<and>(c, s) \<Rightarrow>\<^bsup> t \<^esup> s' \<longrightarrow> s' ''input'' >0)
+                                                      \<and>(c, s) \<Rightarrow>\<^bsup> t \<^esup> s' \<longrightarrow> s' ''input'' >0))
                                         )
                       )"
   sorry
@@ -424,9 +426,11 @@ lemma NP_reduces_SAT:
   assumes "L \<in> NP"
   shows "poly_reduces L IMP_SAT"
 proof -
-  obtain v p where pv_def:"poly p" "is_verif v L" "time_bounded v p" using assms
-    by (auto simp add: NP_def is_poly_verif_def poly_time_bounded_def)
-  have "poly p" using pv_def by simp
+  obtain v p p_cer where pv_def:"poly p" "is_verif v L" "time_bounded v p" "certif_bounded v p_cer"
+    "poly p_cer"
+    using assms
+    by (auto simp add: NP_def is_poly_verif_def poly_time_bounded_def poly_certif_bounded_def)
+  have "poly p" "poly p_cer" using pv_def by auto
   moreover have "\<forall>s. \<exists>t. Ex (big_step_t (v, s) t) \<and> t \<le> p (length (s ''input''))" using pv_def(3) 
     by(auto simp add: time_bounded_def)
   moreover have " \<forall>x z. \<exists>r. \<forall>s. s ''input'' = x \<and> s ''certificate'' = z \<longrightarrow>
@@ -435,24 +439,28 @@ proof -
   ultimately have "\<exists>imp_to_sat t_red s_red. 
       poly t_red \<and> 
       poly s_red \<and>
+      poly p_cer \<and>
        (\<forall>s t s'. (imp_to_sat,s) \<Rightarrow>\<^bsup> t \<^esup> s' \<longrightarrow> s ''certificate'' = s' ''certificate'') \<and>
       (\<forall>x. \<exists>f. length f \<le> s_red ( length x )
               \<and> (\<forall>s. s ''input'' = x \<longrightarrow> (\<exists>t s'. (imp_to_sat,s) \<Rightarrow>\<^bsup> t \<^esup> s' \<and> 
                                           s' ''input'' = f \<and> t \<le> t_red(length x)))
               \<and> ( f \<in> IMP_SAT \<longleftrightarrow>
-                    (\<exists>z. \<forall>st t st'. st ''input'' = x \<and> st ''certificate'' = z \<and>(v, st) \<Rightarrow>\<^bsup> t \<^esup> st'
-                                         \<longrightarrow> st' ''input'' >0)
-                                       )
+                     (\<exists>z. length z \<le> p_cer (length x) \<and>
+                                                      (\<forall>s t s'. s ''input'' = x 
+                                                      \<and> s ''certificate'' = z 
+                                                      \<and>(v, s) \<Rightarrow>\<^bsup> t \<^esup> s' \<longrightarrow> s' ''input'' >0))
+                                        )
       )" using main_lemma by auto
   then obtain imp_to_sat t_red s_red where main_res:
           "poly t_red " "poly s_red" "\<forall>x. \<exists>f. (length f \<le> s_red ( length x ))
               \<and> (\<forall>s. s ''input'' = x \<longrightarrow> (\<exists>t s'. (imp_to_sat,s) \<Rightarrow>\<^bsup> t \<^esup> s' \<and> 
                                           s' ''input'' = f \<and> t \<le> t_red(length x)))
               \<and> ( f \<in> IMP_SAT \<longleftrightarrow>
-                    (\<exists>z. \<forall>s t s'. s ''input'' = x \<and> s ''certificate'' = z 
-                             \<and> (v, s) \<Rightarrow>\<^bsup> t \<^esup> s'
-                                         \<longrightarrow> s' ''input'' >0)
-                                       )"
+                     (\<exists>z. length z \<le> p_cer (length x) \<and>
+                                                      (\<forall>s t s'. s ''input'' = x 
+                                                      \<and> s ''certificate'' = z 
+                                                      \<and>(v, s) \<Rightarrow>\<^bsup> t \<^esup> s' \<longrightarrow> s' ''input'' >0))
+                                        )"
  "cons_certif imp_to_sat"  by (auto simp add:cons_certif_def)
   have "time_bounded imp_to_sat t_red"  using main_res(3)  by (auto simp add:time_bounded_def) blast 
   hence "poly_time_bounded imp_to_sat" using main_res(1) by (auto simp add:poly_time_bounded_def)
@@ -468,25 +476,30 @@ proof -
               \<and> (\<forall>s. s ''input'' = x \<longrightarrow> (\<exists>t s'. (imp_to_sat,s) \<Rightarrow>\<^bsup> t \<^esup> s' \<and> 
                                           s' ''input'' = f \<and> t \<le> t_red(length x)))
               \<and> ( f \<in> IMP_SAT \<longleftrightarrow>
-                    (\<exists>z. \<forall>s t s'. s ''input'' = x \<and> s ''certificate'' = z 
-                             \<and> (v, s) \<Rightarrow>\<^bsup> t \<^esup> s'
-                                         \<longrightarrow> s' ''input'' >0)
-                                       )"
+                     (\<exists>z. length z \<le> p_cer (length x) \<and>
+                                                      (\<forall>s t s'. s ''input'' = x 
+                                                      \<and> s ''certificate'' = z 
+                                                      \<and>(v, s) \<Rightarrow>\<^bsup> t \<^esup> s' \<longrightarrow> s' ''input'' >0))
+                                        )"
       using main_res(3) 
       by simp
     then obtain f where f_def: "\<forall>s. s ''input'' = x \<longrightarrow> (\<exists>t s'. (imp_to_sat,s) \<Rightarrow>\<^bsup> t \<^esup> s' \<and> 
                                           s' ''input'' = f \<and> t \<le> t_red(length x))" 
                         " f \<in> IMP_SAT \<longleftrightarrow>
-                    (\<exists>z. \<forall>s t s'. s ''input'' = x \<and> s ''certificate'' = z 
-                             \<and> (v, s) \<Rightarrow>\<^bsup> t \<^esup> s'
-                                         \<longrightarrow> s' ''input'' >0)"
+                    (\<exists>z. length z \<le> p_cer (length x) \<and>
+                                                      (\<forall>s t s'. s ''input'' = x 
+                                                      \<and> s ''certificate'' = z 
+                                                      \<and>(v, s) \<Rightarrow>\<^bsup> t \<^esup> s' \<longrightarrow> s' ''input'' >0))"
       by auto
     have "comp imp_to_sat x f" using f_def(1) apply (simp add: comp_def) by blast
     moreover have "x\<in>L \<longleftrightarrow> f \<in> IMP_SAT"
     proof
       assume "x\<in>L"
       hence  "\<exists>z r. verif v x z r \<and> 0 < r" using pv_def by (auto simp add: is_verif_def)
-      then obtain z  where z_def: "\<forall>r. verif v x z r \<longrightarrow>0< r " using verif_det by blast
+      hence  "\<exists>z r. verif v x z r \<and> 0 < r \<and> length z \<le> p_cer (length x)"
+        using pv_def(4) certif_bounded_def by blast
+      then obtain z  where z_def: "\<forall>r. verif v x z r \<longrightarrow>0< r "  "length z \<le> p_cer (length x)"
+        using verif_det by blast
       have "\<forall>s t s'. s ''input'' = x \<and> s ''certificate'' = z 
                              \<and> (v, s) \<Rightarrow>\<^bsup> t \<^esup> s'
                                          \<longrightarrow> s' ''input'' >0"
@@ -501,7 +514,7 @@ proof -
           thus " 0 < s' ''input'' " using z_def  by simp
         qed
         done
-      thus "f \<in> IMP_SAT" using f_def(2) bigstep_det  by (auto simp add: verif_def) 
+      thus "f \<in> IMP_SAT" using f_def(2) z_def(2) bigstep_det  by (auto simp add: verif_def) 
     next 
       assume  "f \<in> IMP_SAT"
       then obtain z where z_def: "\<forall>s t s'. s ''input'' = x \<and> s ''certificate'' = z  \<and>(v, s) \<Rightarrow>\<^bsup> t \<^esup> s'
