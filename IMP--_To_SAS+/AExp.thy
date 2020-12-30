@@ -17,7 +17,7 @@ datatype atomExp = N val | V vname
 
 
 fun atomVal :: "atomExp \<Rightarrow> state \<Rightarrow> val" where
-"atomVal (V var) s = s var"|
+"atomVal (V var) s = s var" |
 "atomVal (N number) _ = number"
 
 text "Defining arithmetic operators and general form of expressions: "
