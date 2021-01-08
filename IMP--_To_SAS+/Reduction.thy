@@ -302,6 +302,22 @@ proof -
     by (metis (no_types, lifting) case_prodI2 list.pred_set)
 qed 
 
+lemma op_applicable_then_PC: "op \<in> set ((imp_minus_minus_to_sas_plus c vs t)\<^sub>\<O>\<^sub>+) 
+  \<Longrightarrow> is_operator_applicable_in s op \<Longrightarrow> the (s PC) = PCV c1 
+  \<Longrightarrow> op \<in> set (com_to_operators c1 (domain c t))"
+  apply(auto simp: imp_minus_minus_to_sas_plus_def Let_def coms_to_operators_def)
+proof -
+  fix x
+  assume  "map_of (precondition_of op) \<subseteq>\<^sub>m s"
+    "the (s PC) = PCV c1"
+    "op \<in> set (com_to_operators x (domain c t))"
+  moreover then have "(map_of (precondition_of op)) PC = Some (PCV x)" by auto
+  ultimately have "x = c1" 
+    by (metis (mono_tags, lifting) domIff domain_element.inject map_le_def option.sel option.simps)
+  then show ?thesis
+    using \<open>op \<in> set (com_to_operators x (domain c t))\<close> by blast
+qed
+
 lemma [simp]: "PCV x \<in> PCV ` y \<longleftrightarrow> x \<in> y" by auto
 
 lemma operators_valid: 
