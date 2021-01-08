@@ -86,6 +86,24 @@ proof(induction t arbitrary: c1 c1' s s')
   ultimately show ?case by auto
 qed auto
 
+lemma enumerate_subprograms_complete_step': "(c1, s1) \<rightarrow>\<^bsub>r\<^esub> (c2, s2) 
+  \<Longrightarrow> c2 \<in> set (enumerate_subprograms c1)"
+apply (induction c1 s1 r c2 s2 rule: \<omega>_small_step_induct)
+  using c_in_all_subprograms_c apply(auto)
+done
+
+lemma enumerate_subprograms_complete': "(c1, s1)\<rightarrow>\<^bsub>r\<^esub>\<^bsup>t\<^esup> (c2, s2)
+  \<Longrightarrow>  c2 \<in> set (enumerate_subprograms c1)"
+proof(induction t arbitrary: c1 s1 c2 s2)
+  case 0
+  then show ?case using c_in_all_subprograms_c by auto
+next
+  case (Suc t)
+  then obtain c1' s1' where "((c1, s1) \<rightarrow>\<^bsub>r\<^esub> (c1', s1')) \<and> ((c1', s1')\<rightarrow>\<^bsub>r\<^esub>\<^bsup>t\<^esup> (c2, s2))" by auto
+  then show ?case using enumerate_subprograms_transitive Suc enumerate_subprograms_complete_step' 
+    by blast
+qed
+
 definition \<omega>_equivalent:: "nat \<Rightarrow> state \<Rightarrow> EState \<Rightarrow> bool" where 
 "\<omega>_equivalent r s s' \<equiv> (\<forall>v. (Num (s v) = s' v) \<or> (s v > r \<and> s' v = \<omega>))"
 
@@ -240,5 +258,29 @@ proof (induction t arbitrary: c2 s2')
   then show ?case by auto
 qed auto
 
+lemma \<omega>_small_step_values_cant_exceed_bound_step: "(c1, s1) \<rightarrow>\<^bsub>r\<^esub> (c2, s2) 
+  \<Longrightarrow> r \<ge> max_constant c1
+  \<Longrightarrow> (\<forall>v x. s1 v = Num x \<longrightarrow> x \<le> r)
+  \<Longrightarrow> (\<forall>v x. s2 v = Num x \<longrightarrow> x \<le> r)"
+proof (induction c1 s1 r c2 s2 rule: \<omega>_small_step_induct)
+  case (Assign x a s r)
+  then show ?case by (cases a) (auto split: if_splits atomExp.splits EVal.splits)
+qed auto
+
+lemma \<omega>_small_step_values_cant_exceed_bound: "(c1, s1) \<rightarrow>\<^bsub>r\<^esub>\<^bsup>t\<^esup> (c2, s2) 
+  \<Longrightarrow> r \<ge> max_constant c1
+  \<Longrightarrow> (\<forall>v x. s1 v = Num x \<longrightarrow> x \<le> r)
+  \<Longrightarrow> (\<forall>v x. s2 v = Num x \<longrightarrow> x \<le> r)"
+proof (induction t arbitrary: c2 s2)
+  case (Suc t)
+  have "\<exists>c3 s3. ((c1, s1) \<rightarrow>\<^bsub>r\<^esub>\<^bsup>t\<^esup> (c3, s3)) \<and> ((c3, s3) \<rightarrow>\<^bsub>r\<^esub> (c2, s2))" 
+    using Suc(2) rel_pow_Suc_E by fast 
+  then obtain c3 s3 where c3s3_def: "((c1, s1) \<rightarrow>\<^bsub>r\<^esub>\<^bsup>t\<^esup> (c3, s3)) \<and> ((c3, s3) \<rightarrow>\<^bsub>r\<^esub> (c2, s2)) "
+    by auto
+  have "c3 \<in> set (enumerate_subprograms c1)" using c3s3_def enumerate_subprograms_complete' by auto
+  then have "r \<ge> max_constant c3" using Suc enumerate_subprograms_enumerate_variables
+    by (meson dual_order.trans enumerate_subprograms_max_constant)
+  then show ?case using Suc \<omega>_small_step_values_cant_exceed_bound_step c3s3_def by blast
+qed auto
 
 end

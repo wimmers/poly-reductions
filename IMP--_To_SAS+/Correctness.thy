@@ -160,7 +160,8 @@ next
 qed auto
 
 lemma sas_plus_to_imp_minus_minus:
-  "list_all (\<lambda>op. op \<in> set ((imp_minus_minus_to_sas_plus c I t)\<^sub>\<O>\<^sub>+)) ops \<Longrightarrow> t > 0
+  "set ops \<subseteq> set ((imp_minus_minus_to_sas_plus c I t)\<^sub>\<O>\<^sub>+) 
+  \<Longrightarrow> t > 0
   \<Longrightarrow> length ops < t
   \<Longrightarrow> c1 \<in> set (enumerate_subprograms c)  
   \<Longrightarrow> imp_minus_sas_plus_equivalent_states c c1 is1 ss1
@@ -169,14 +170,11 @@ lemma sas_plus_to_imp_minus_minus:
   \<Longrightarrow> (\<exists>is2 t'. t' \<le> length ops \<and> ((c1, is1) \<rightarrow>\<^bsub>t * max_constant c\<^esub>\<^bsup>t'\<^esup> (c2, is2)) \<and>
       imp_minus_sas_plus_equivalent_states c c2 is2 ss2)"
 proof (induction ops arbitrary: c1 ss1 is1)
-  case Nil
-  then show ?case by (auto simp: imp_minus_sas_plus_equivalent_states_def)
-next
   case (Cons op ops)
   let ?ss1' = "ss1 \<then>\<^sub>+ op" 
   let ?c1' = "pc_to_com (effect_of op)"
   have "is_operator_applicable_in ss1 op \<or> \<not>(is_operator_applicable_in ss1 op)" by auto
-  then show ?case 
+  then show ?case using Cons
   proof (elim disjE)
     assume a: "is_operator_applicable_in ss1 op"
     then have op_in_cto_c1: "op \<in> set (com_to_operators c1 (domain c t))" using Cons
@@ -188,7 +186,7 @@ next
       by auto
     then obtain is1' where is1'_def: "((c1, is1) \<rightarrow>\<^bsub>t * max_constant c\<^esub> (?c1', is1')) \<and>
       imp_minus_sas_plus_equivalent_states c ?c1' is1' ?ss1'" by blast
-    then have "list_all (\<lambda>op. op \<in> set ((imp_minus_minus_to_sas_plus c I t)\<^sub>\<O>\<^sub>+)) ops"
+    then have "set ops \<subseteq> set ((imp_minus_minus_to_sas_plus c I t)\<^sub>\<O>\<^sub>+)"
       and "execute_serial_plan_sas_plus ?ss1' ops = ss2"
       and "length ops < t"
       and "pc_to_com (effect_of op) \<in> set (all_subprograms c)"
@@ -200,20 +198,17 @@ next
       imp_minus_sas_plus_equivalent_states c c2 is2 ss2" 
       using Cons a is1'_def com_to_operators_PC_is_subprogram enumerate_subprograms_transitive 
             op_in_cto_c1 
-      by blast
+      by simp
     then show ?case using is1'_def by auto
-  next
-    assume "\<not> is_operator_applicable_in ss1 op"
-    then show ?case using Cons by (auto simp: imp_minus_sas_plus_equivalent_states_def)
-  qed
-qed
+  qed (auto simp: imp_minus_sas_plus_equivalent_states_def)
+qed (auto simp: imp_minus_sas_plus_equivalent_states_def)
 
 lemma imp_minus_minus_to_sas_plus_single_step:
    "(c1, is1) \<rightarrow>\<^bsub>r\<^esub> (c2, is2) \<Longrightarrow> cs = enumerate_subprograms c \<Longrightarrow> r = t * max_constant c 
   \<Longrightarrow> c1 \<in> set cs \<Longrightarrow> t > 0 
   \<Longrightarrow> (\<forall>v. EV (is1 v) \<in> set (domain c t))
   \<Longrightarrow> imp_minus_sas_plus_equivalent_states c c1 is1 ss1
-  \<Longrightarrow> (\<exists>op \<in> set (com_to_operators c1 (domain c t)). \<exists>ss2.
+  \<Longrightarrow> (\<exists>op \<in> set (com_to_operators c1 (domain c t)).
      imp_minus_sas_plus_equivalent_states c c2 is2 (execute_operator_sas_plus ss1 op)
     \<and> is_operator_applicable_in ss1 op)"
 proof (induction c1 is1 r c2 is2 arbitrary: ss1 rule: \<omega>_small_step_induct)
@@ -301,8 +296,61 @@ next
   case (WhileFalse s b c1)
   then have "b \<in> set (enumerate_variables c)" 
     using enumerate_subprograms_enumerate_variables by fastforce
-  then show ?case using WhileFalse
+  then show ?case using WhileFalse enumerate_subprograms_enumerate_variables
     by (auto simp: imp_minus_sas_plus_equivalent_states_def)
 qed (auto simp: imp_minus_sas_plus_equivalent_states_def)
+
+lemma  [simp]: "(\<forall>v. EV (is v) \<in> set (domain c t)) 
+  = (\<forall>v x. is v = Num x \<longrightarrow> x \<le> t * max_constant c)"
+proof -
+  have "\<forall>v. (EV (is v) \<in> set (domain c t) = (\<forall>x. is v = Num x \<longrightarrow> x \<le> t * max_constant c))"
+  proof 
+    fix v
+    show " (EV (is v) \<in> set (domain c t) = (\<forall>x. is v = Num x \<longrightarrow> x \<le> t * max_constant c))"
+      by (cases "is v") auto
+  qed
+  then show ?thesis by simp
+qed
+
+lemma imp_minus_minus_to_sas_plus:
+   "(c1, is1) \<rightarrow>\<^bsub>t * max_constant c \<^esub>\<^bsup>t'\<^esup> (c2, is2)
+  \<Longrightarrow> t' < t \<Longrightarrow> t > 0 
+  \<Longrightarrow> c1 \<in> set (enumerate_subprograms c)
+  \<Longrightarrow> (\<forall>v. EV (is1 v) \<in> set (domain c t))
+  \<Longrightarrow> imp_minus_sas_plus_equivalent_states c c1 is1 ss1
+  \<Longrightarrow> (\<exists>ops. set ops \<subseteq> set ((imp_minus_minus_to_sas_plus c I t)\<^sub>\<O>\<^sub>+)
+     \<and> length ops = t'
+     \<and> imp_minus_sas_plus_equivalent_states c c2 is2 (execute_serial_plan_sas_plus ss1 ops))"
+proof (induction t' arbitrary: c1 is1 ss1)
+  case (Suc t')
+  then obtain c1' is1' where c1'_def: "(c1, is1) \<rightarrow>\<^bsub>t * max_constant c \<^esub> (c1', is1')
+    \<and> (c1', is1') \<rightarrow>\<^bsub>t * max_constant c \<^esub>\<^bsup>t'\<^esup> (c2, is2)" by auto
+  then obtain op where op_def: "op \<in> set (com_to_operators c1 (domain c t))
+    \<and> imp_minus_sas_plus_equivalent_states c c1' is1' (ss1 \<then>\<^sub>+ op)
+    \<and> is_operator_applicable_in ss1 op" 
+    using imp_minus_minus_to_sas_plus_single_step Suc c1'_def by metis
+  let ?ss1' = "ss1 \<then>\<^sub>+ op"
+  have "max_constant c1 \<le> max_constant c" using Suc enumerate_subprograms_max_constant by simp
+  then have "max_constant c1 \<le> t * max_constant c" using Suc(3) mult_eq_if by simp
+  then have "(\<forall>v x. is1' v = Num x \<longrightarrow> x \<le> t * max_constant c)" 
+    using \<omega>_small_step_values_cant_exceed_bound_step[where ?c2.0="c1'"] c1'_def Suc by auto
+  moreover have "c1' \<in> set (enumerate_subprograms c)" using Suc.prems(4) c1'_def 
+      enumerate_subprograms_complete_step' enumerate_subprograms_transitive by blast
+  ultimately have "\<exists>ops. set ops \<subseteq> set ((imp_minus_minus_to_sas_plus c I t)\<^sub>\<O>\<^sub>+)
+     \<and> length ops = t'
+     \<and> imp_minus_sas_plus_equivalent_states c c2 is2 (execute_serial_plan_sas_plus ?ss1' ops)"
+    using Suc c1'_def op_def Suc_lessD by auto
+  then obtain ops where ops_def: "set ops \<subseteq> set ((imp_minus_minus_to_sas_plus c I t)\<^sub>\<O>\<^sub>+)
+     \<and> length ops = t'
+     \<and> imp_minus_sas_plus_equivalent_states c c2 is2 (execute_serial_plan_sas_plus ?ss1' ops)"
+    by blast
+  let ?ops' = "op # ops"
+  have "set ?ops' \<subseteq> set ((imp_minus_minus_to_sas_plus c I t)\<^sub>\<O>\<^sub>+)
+     \<and> length ?ops' = Suc t'
+     \<and> imp_minus_sas_plus_equivalent_states c c2 is2 (execute_serial_plan_sas_plus ss1 ?ops')"
+    using Suc c1'_def op_def ops_def
+    by (auto simp: imp_minus_minus_to_sas_plus_def Let_def coms_to_operators_def)
+  then show ?case by blast
+qed auto
 
 end
