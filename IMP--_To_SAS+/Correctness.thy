@@ -7,9 +7,10 @@ begin
 
 definition imp_minus_sas_plus_equivalent_states :: "com \<Rightarrow> com \<Rightarrow> imp_state \<Rightarrow> sas_state \<Rightarrow> bool" where
 "imp_minus_sas_plus_equivalent_states c c1 is ss = (ss PC = Some (PCV c1) 
-  \<and> list_all (\<lambda>v. ss (VN v) = Some (EV (is v))) (enumerate_variables c))"
+  \<and> list_all (\<lambda> v. ss (VN v) = Some (EV (is v))) (enumerate_variables c))"
 
-lemma [simp]: "imp_minus_sas_plus_equivalent_states c c1 is ss \<Longrightarrow> v \<in> set (enumerate_variables c)
+lemma [simp]: "imp_minus_sas_plus_equivalent_states c c1 is ss 
+  \<Longrightarrow> v \<in> set (enumerate_variables c)
   \<Longrightarrow> is v = Num 0 \<longleftrightarrow> ss (VN v) = Some (EV (Num 0))"
   by (auto simp: imp_minus_sas_plus_equivalent_states_def list_all_def)
 
@@ -18,9 +19,6 @@ lemma [simp]: "[VN v \<mapsto> y, PC \<mapsto> x] \<subseteq>\<^sub>m s = (s PC 
 
 lemma [simp]: "[PC \<mapsto> x] \<subseteq>\<^sub>m s \<longleftrightarrow> (s PC = Some x)" 
   by (auto simp: map_le_def)
-
-lemma greater_helper: "(x :: nat) > 0 \<Longrightarrow> b \<le> c \<Longrightarrow> x * c < d \<Longrightarrow> (x - 1) * c < d - b"   
-  by (simp add: mult_eq_if)
 
 lemma map_of_list_update: "distinct (map fst l) \<Longrightarrow> length l > 0 \<Longrightarrow> fst (l ! 0) = x  \<Longrightarrow> z \<noteq> x
   \<Longrightarrow> map_of (list_update l 0 (x, y)) z = map_of l z"
@@ -134,12 +132,13 @@ next
     moreover then have "is_operator_applicable_in ?ss1' op'" 
       using Seq op'_def by auto
     moreover have "map_of (effect_of op') = map_of (effect_of op)(PC \<mapsto> PCV (pc_to_com (effect_of op')))"
-       using op'_def Seq com_to_operators_variables_distinct by auto
+      using op'_def Seq com_to_operators_variables_distinct by auto
     moreover then have "?ss1' \<then>\<^sub>+ op' = ?ss2'" using Seq op'_def by auto
+    (* TODO: simplify this proof (Seq(1)) *)
     ultimately have "\<exists>is2. (cA, is1) \<rightarrow>\<^bsub>t * max_constant c\<^esub> (?c1', is2) \<and>
       imp_minus_sas_plus_equivalent_states c ?c1' is2 ?ss2'" using Seq op'_def by fastforce
     then show ?thesis using Seq op'_def 
-      by (fastforce simp: imp_minus_sas_plus_equivalent_states_def)
+      by(fastforce simp: imp_minus_sas_plus_equivalent_states_def) 
   qed
 next
   case (If b cA cB)
@@ -147,7 +146,7 @@ next
   moreover have "b \<in> set (enumerate_variables (IF b\<noteq>0 THEN cA ELSE cB))" by auto
   moreover then have "b \<in> set (enumerate_variables c)" 
     using If enumerate_subprograms_enumerate_variables by blast
-  ultimately show ?case using If enumerate_subprograms_enumerate_variables 
+  ultimately show ?case using If
     by (fastforce simp: imp_minus_sas_plus_equivalent_states_def)
 next
   case (While b cA)
@@ -166,9 +165,8 @@ lemma imp_minus_minus_to_sas_plus_single_step:
   \<Longrightarrow> (\<forall>v. EV (is1 v) \<in> set (domain c t))
   \<Longrightarrow> imp_minus_sas_plus_equivalent_states c c1 is1 ss1
   \<Longrightarrow> (\<exists>op \<in> set (com_to_operators c1 (domain c t)). \<exists>ss2.
-     imp_minus_sas_plus_equivalent_states c c2 is2 ss2
-    \<and> is_operator_applicable_in ss1 op
-    \<and> execute_operator_sas_plus ss1 op = ss2)"
+     imp_minus_sas_plus_equivalent_states c c2 is2 (execute_operator_sas_plus ss1 op)
+    \<and> is_operator_applicable_in ss1 op)"
 proof (induction c1 is1 r c2 is2 arbitrary: ss1 rule: \<omega>_small_step_induct)
   case (Assign x a s r)
   let ?ss2 = "ss1(VN x \<mapsto> EV (eval a s (t * max_constant c)), PC \<mapsto> PCV SKIP)"
@@ -201,7 +199,7 @@ proof (induction c1 is1 r c2 is2 arbitrary: ss1 rule: \<omega>_small_step_induct
         enumerate_subprograms_enumerate_variables enumerate_variables_def
       by (auto simp: imp_minus_sas_plus_equivalent_states_def list_all_def split: EVal.splits)
   qed 
-  then show ?case using Assign by blast
+  then show ?case using Assign by metis
 next
   case (Seq2 c\<^sub>1 s r c\<^sub>1' s' c\<^sub>2)
   let ?ss1' = "ss1(PC \<mapsto> PCV c\<^sub>1)"
@@ -227,9 +225,9 @@ next
     using op'_def by (auto simp: imp_minus_sas_plus_equivalent_states_def)
   moreover have "is_operator_applicable_in ss1 ?op" 
     using op'_def Seq2 by (auto simp: applicable_in_PC_updated imp_minus_sas_plus_equivalent_states_def)
-  moreover have "execute_operator_sas_plus ss1 ?op = ?ss2"
+  moreover have "?ss2 = execute_operator_sas_plus ss1 ?op"
     using Seq2 op'_def by (auto simp: imp_minus_sas_plus_equivalent_states_def)
-  ultimately show ?case using Seq2 by blast
+  ultimately show ?case using Seq2 by metis
 next
   case (IfTrue s b c\<^sub>1 c\<^sub>2)
   then have "b \<in> set (enumerate_variables c)" 
@@ -257,7 +255,5 @@ next
   then show ?case using WhileFalse
     by (auto simp: imp_minus_sas_plus_equivalent_states_def)
 qed (auto simp: imp_minus_sas_plus_equivalent_states_def)
-  
-      
 
 end

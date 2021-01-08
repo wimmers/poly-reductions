@@ -110,7 +110,8 @@ lemma \<omega>_equivalent_increasing': "r' \<le> r \<Longrightarrow> \<omega>_eq
   by (auto simp: \<omega>_equivalent_def)
 
 lemma small_step_omega_equivalence_step: "(c1, s1) \<rightarrow> (c2, s2)
-  \<Longrightarrow> c1 \<in> set (enumerate_subprograms c) \<Longrightarrow>  \<omega>_equivalent r' s1 s1' \<Longrightarrow> r > r' \<Longrightarrow> r' > max_constant c 
+  \<Longrightarrow> c1 \<in> set (enumerate_subprograms c) \<Longrightarrow>  \<omega>_equivalent r' s1 s1' \<Longrightarrow> r \<ge> r' 
+  \<Longrightarrow> r' > max_constant c 
   \<Longrightarrow>  (\<exists>s2'. (c1, s1') \<rightarrow>\<^bsub>r\<^esub> (c2, s2') \<and> \<omega>_equivalent (r' - max_constant c) s2 s2')"
 proof (induction c1 s1 c2 s2  rule: small_step_induct)
   case (Assign x a s)
@@ -161,7 +162,8 @@ next
 qed (auto simp: \<omega>_equivalent_increasing)
 
 lemma small_step_omega_equivalence: "(c1, s1) \<rightarrow>\<^bsup> t \<^esup> (c2, s2)
-  \<Longrightarrow> c1 \<in> set (enumerate_subprograms c) \<Longrightarrow>  \<omega>_equivalent r' s1 s1' \<Longrightarrow> r > r' \<Longrightarrow> r' > t * max_constant c 
+  \<Longrightarrow> c1 \<in> set (enumerate_subprograms c) \<Longrightarrow>  \<omega>_equivalent r' s1 s1' \<Longrightarrow> r \<ge> r' 
+  \<Longrightarrow> r' > t * max_constant c 
   \<Longrightarrow>  (\<exists>s2'. (c1, s1') \<rightarrow>\<^bsub>r\<^esub>\<^bsup> t \<^esup> (c2, s2') \<and> \<omega>_equivalent (r' - t * max_constant c) s2 s2')"
 proof (induction t arbitrary: c2 s2)
   case (Suc t)
@@ -183,7 +185,7 @@ proof (induction t arbitrary: c2 s2)
 qed auto
 
 lemma omega_small_step_equivalence_step: "(c1, s1') \<rightarrow>\<^bsub>r\<^esub> (c2, s2')
-  \<Longrightarrow>  \<omega>_equivalent r' s1 s1' \<Longrightarrow> r > r' \<Longrightarrow> r' > max_constant c1 
+  \<Longrightarrow>  \<omega>_equivalent r' s1 s1' \<Longrightarrow> r \<ge> r' \<Longrightarrow> r' > max_constant c1 
   \<Longrightarrow>  (\<exists>s2. (c1, s1) \<rightarrow> (c2, s2) \<and> \<omega>_equivalent (r' - max_constant c1) s2 s2')"
 proof (induction c1 s1' r c2 s2' rule: \<omega>_small_step_induct)
   case (Assign x a s r)
@@ -215,7 +217,7 @@ next
 qed (auto simp: \<omega>_equivalent_increasing \<omega>_equivalent_0_iff)
 
 lemma omega_small_step_equivalence: "(c1, s1') \<rightarrow>\<^bsub>r\<^esub>\<^bsup> t \<^esup> (c2, s2')
-  \<Longrightarrow> \<omega>_equivalent r' s1 s1' \<Longrightarrow> r > r' \<Longrightarrow> r' > t * max_constant c1
+  \<Longrightarrow> \<omega>_equivalent r' s1 s1' \<Longrightarrow> r \<ge> r' \<Longrightarrow> r' > t * max_constant c1
   \<Longrightarrow> (\<exists>s2. (c1, s1) \<rightarrow>\<^bsup> t \<^esup> (c2, s2) \<and> \<omega>_equivalent (r' - t * max_constant c1) s2 s2')"
 proof (induction t arbitrary: c2 s2')
   case (Suc t)

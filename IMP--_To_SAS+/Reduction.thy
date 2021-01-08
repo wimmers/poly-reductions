@@ -2,7 +2,7 @@
 
 section "Reduction"
 
-theory Reduction imports  "Verified_SAT_Based_AI_Planning.SAS_Plus_Representation" Omega_Small_StepT
+theory Reduction imports  SAS_Plus_Plus_Representation Omega_Small_StepT
 begin
 
 datatype domain_element = EV EVal | PCV com
@@ -24,6 +24,9 @@ lemma num_in_domain_iff[simp]: "(EV (Num x)) \<in> set (domain c t) = (x \<le> t
 
 lemma [simp]: "((PCV i) \<in> set (domain c t)) = False" 
   by (auto simp: domain_def Let_def)
+
+lemma [simp]: "domain c t \<noteq> []"
+  by (simp add: domain_def)
 
 datatype variable = VN vname | PC
 
@@ -243,11 +246,9 @@ lemma sas_state_by_pc_and_vars_variables_in_d:
 
 definition imp_minus_minus_to_sas_plus :: "com \<Rightarrow> (vname \<rightharpoonup> nat) \<Rightarrow> nat \<Rightarrow> problem" where
 "imp_minus_minus_to_sas_plus c vs t = (let cs = enumerate_subprograms c ; 
-  d = domain c t ; 
-  initial_vs = (\<lambda>x. (if x \<in> set (enumerate_variables c) 
-      then Some (case vs x of Some y \<Rightarrow> y | None \<Rightarrow> 0)
-    else None)) ;
-  pc_d = map (\<lambda> i. PCV i) (enumerate_subprograms c) in
+  d = domain c t in let
+  initial_vs = vs|`(set (enumerate_variables c)) ;
+  pc_d = map (\<lambda> i. PCV i) cs in
     \<lparr> variables_of = PC # (map (\<lambda> v. VN v) (enumerate_variables c)),
       operators_of = coms_to_operators cs d, 
       initial_of = sas_state_by_pc_and_vars cs c initial_vs d,
@@ -332,8 +333,11 @@ proof -
     by (fastforce simp: is_valid_operator_sas_plus_def Let_def) 
 qed
 
+lemma in_range_of_restricted_then: "(f |` S) x = Some y \<Longrightarrow> x \<in> S" 
+  by (metis option.simps restrict_out)
+
 lemma imp_minus_minus_to_sas_plus_valid: 
-  "is_valid_problem_sas_plus (imp_minus_minus_to_sas_plus c vs t)"
+  "is_valid_problem_sas_plus_plus (imp_minus_minus_to_sas_plus c vs t)"
 proof -
   let ?\<Psi> = "imp_minus_minus_to_sas_plus c vs t"
   let ?ops = "operators_of ?\<Psi>"
@@ -341,23 +345,21 @@ proof -
       and ?I = "initial_of ?\<Psi>"
       and ?G = "goal_of ?\<Psi>"
       and ?D = "range_of ?\<Psi>"
-  have "x \<in> set ?ops \<Longrightarrow> is_valid_operator_sas_plus ?\<Psi> x" for x using operators_valid 
-    by (auto simp: imp_minus_minus_to_sas_plus_def Let_def coms_to_operators_def)
-  moreover have "\<forall>v. ?I v \<noteq> None \<longleftrightarrow> ListMem v ?vs"
-    by (auto simp: imp_minus_minus_to_sas_plus_def Let_def sas_state_by_pc_and_vars_def 
-          ListMem.elem ListMem_iff split: variable.splits)
-  moreover have "?I v \<noteq> None \<Longrightarrow> ListMem (the (?I v)) (the (?D v))" for v
+  have "\<forall>x \<in> set ?ops. is_valid_operator_sas_plus ?\<Psi> x" 
+    and "\<forall>v \<in> set ?vs. length (the (?D v)) > 0" 
+    and "\<forall>v. ?I v \<noteq> None \<longrightarrow> ListMem v ?vs"
+    and "\<forall>v. ?G v \<noteq> None \<longrightarrow> ListMem v ?vs"
+    and "\<forall>v. ?G v \<noteq> None \<longrightarrow> ListMem (the (?G v)) (the (?D v))"
+    using operators_valid c_in_all_subprograms_c[where ?c = c] in_range_of_restricted_then
+      SKIP_in_enumerate_subprograms
+    by (auto simp: imp_minus_minus_to_sas_plus_def Let_def coms_to_operators_def 
+        sas_state_by_pc_and_vars_def ListMem_iff split: variable.splits option.splits) fast
+  moreover then have "?I v \<noteq> None \<Longrightarrow> ListMem (the (?I v)) (the (?D v))" for v
     using c_in_all_subprograms_c
-    by (auto simp: imp_minus_minus_to_sas_plus_def Let_def sas_state_by_pc_and_vars_def 
-        ListMem_iff split: variable.splits)
-  moreover have "\<forall>v. ?G v \<noteq> None \<longrightarrow> ListMem v ?vs"
-    by (auto simp: imp_minus_minus_to_sas_plus_def Let_def sas_state_by_pc_and_vars_def ListMem.elem 
-        split: variable.splits)
-  moreover have "\<forall>v. ?G v \<noteq> None \<longrightarrow> ListMem (the (?G v)) (the (?D v))"
-    using SKIP_in_enumerate_subprograms by (auto simp: imp_minus_minus_to_sas_plus_def Let_def 
-        sas_state_by_pc_and_vars_def ListMem_iff split: variable.splits)
+    by (fastforce simp: imp_minus_minus_to_sas_plus_def Let_def sas_state_by_pc_and_vars_def 
+        ListMem_iff split: variable.splits option.splits if_splits) 
   ultimately show ?thesis
-    by (auto simp: is_valid_problem_sas_plus_def range_defined list_all_def)
+    by (auto simp: is_valid_problem_sas_plus_plus_def range_defined list_all_def)
 qed
 
 end
