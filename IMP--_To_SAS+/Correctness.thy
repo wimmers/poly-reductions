@@ -5,20 +5,304 @@ section "Correctness"
 theory Correctness imports Reduction SAS_Plus_Plus_Semantics
 begin 
 
-definition imp_minus_sas_plus_equivalent_states :: "com \<Rightarrow> com \<Rightarrow> imp_state \<Rightarrow> sas_state \<Rightarrow> bool" where
-"imp_minus_sas_plus_equivalent_states c c1 is ss = (ss PC = Some (PCV c1) 
-  \<and> list_all (\<lambda> v. ss (VN v) = Some (EV (is v))) (enumerate_variables c))"
+definition imp_minus_state_to_sas_plus :: "(com \<times> imp_state) \<Rightarrow> sas_state" where
+"imp_minus_state_to_sas_plus ci = ((\<lambda>x. Some (EV x)) \<circ>\<^sub>m (snd ci)
+  \<circ>\<^sub>m (\<lambda>x. (case x of VN v \<Rightarrow> Some v)))
+  (PC \<mapsto> PCV (fst ci))"
 
-lemma [simp]: "imp_minus_sas_plus_equivalent_states c c1 is ss 
+definition sas_plus_state_to_imp_minus:: "sas_state \<Rightarrow> (com \<times> imp_state)" where
+"sas_plus_state_to_imp_minus ss = ((case (the (ss PC)) of (PCV c) \<Rightarrow> c), 
+  (\<lambda>x. (case x of EV y \<Rightarrow> Some y | _ \<Rightarrow> None)) \<circ>\<^sub>m ss \<circ>\<^sub>m (\<lambda>x. Some (VN x)))"
+
+definition sane_sas_plus_state:: "sas_state \<Rightarrow> bool" where
+"sane_sas_plus_state ss \<equiv> (\<exists>x. ss PC = Some (PCV x)) \<and> 
+  (\<forall>v. VN v \<in> dom ss \<longrightarrow> (\<exists>x. ss (VN v) = Some (EV x)))"
+
+lemma [simp]: "sas_plus_state_to_imp_minus (imp_minus_state_to_sas_plus (c, is)) = (c, is)" 
+proof -
+  have "(snd (sas_plus_state_to_imp_minus (imp_minus_state_to_sas_plus (c, is)))) x = is x" for x
+    by (auto simp: imp_minus_state_to_sas_plus_def sas_plus_state_to_imp_minus_def 
+        map_comp_def option.case_eq_if)
+  then show ?thesis
+    by (auto simp: imp_minus_state_to_sas_plus_def sas_plus_state_to_imp_minus_def)
+qed
+
+lemma [simp]: 
+  assumes "sane_sas_plus_state ss "
+  shows "imp_minus_state_to_sas_plus (sas_plus_state_to_imp_minus ss) = ss" 
+proof -
+  have "(imp_minus_state_to_sas_plus (sas_plus_state_to_imp_minus ss)) x = ss x" for x using assms
+    by (fastforce simp: imp_minus_state_to_sas_plus_def sas_plus_state_to_imp_minus_def 
+        sane_sas_plus_state_def option.case_eq_if map_comp_def split: variable.splits)
+  then show ?thesis by (auto simp: imp_minus_state_to_sas_plus_def sas_plus_state_to_imp_minus_def)
+qed
+
+lemma [simp]: "sas_plus_state_to_imp_minus 
+  ((imp_minus_state_to_sas_plus (c, is))(VN x \<mapsto> EV y, PC \<mapsto> PCV z)) 
+  = (z, (is(x \<mapsto> y)))"
+  by (auto simp: imp_minus_state_to_sas_plus_def sas_plus_state_to_imp_minus_def option.case_eq_if 
+      map_comp_def)
+
+lemma [simp]: "(imp_minus_state_to_sas_plus (c, s1) = imp_minus_state_to_sas_plus (c, s2))
+  \<longleftrightarrow> s1 = s2" 
+proof
+  assume a: "imp_minus_state_to_sas_plus (c, s1) = imp_minus_state_to_sas_plus (c, s2)"
+  have "\<forall>v. (s1 v = s2 v)"
+  proof (rule ccontr)
+    assume "\<not> (\<forall>v. s1 v = s2 v)"
+    then obtain v where "s1 v \<noteq> s2 v" by blast
+    then have "imp_minus_state_to_sas_plus (c, s1) (VN v) \<noteq> imp_minus_state_to_sas_plus (c, s2) (VN v)"
+      by (auto simp: imp_minus_state_to_sas_plus_def map_comp_def domD domIff split: option.splits)
+    then show "False" using a by simp
+  qed
+  then show "s1 = s2" by auto
+qed auto
+
+lemma sas_plus_state_to_imp_minus_of_effect: 
+  assumes "op \<in> set (com_to_operators c1 (domain cA t))"
+  shows "sas_plus_state_to_imp_minus (imp_minus_state_to_sas_plus (c, is) ++ map_of (effect_of op)) 
+  = (pc_to_com (effect_of op), is 
+  ++ ((\<lambda>x. (case x of EV y \<Rightarrow> Some y | _ \<Rightarrow> None)) \<circ>\<^sub>m (map_of (effect_of op)) \<circ>\<^sub>m (\<lambda>x. Some (VN x))))"
+proof -
+  have "fst (sas_plus_state_to_imp_minus 
+    (imp_minus_state_to_sas_plus (c, is) ++ map_of (effect_of op))) = pc_to_com (effect_of op)"
+    using assms by(auto simp: imp_minus_state_to_sas_plus_def sas_plus_state_to_imp_minus_def 
+                   com_to_operators_variables_distinct) 
+  moreover have "snd (sas_plus_state_to_imp_minus 
+    (imp_minus_state_to_sas_plus (c, is) ++ map_of (effect_of op))) a = (is ++ ((\<lambda>x. (case x of 
+      EV y \<Rightarrow> Some y | _ \<Rightarrow> None)) \<circ>\<^sub>m (map_of (effect_of op)) \<circ>\<^sub>m (\<lambda>x. Some (VN x)))) a"
+    for a using assms
+    by(auto simp: imp_minus_state_to_sas_plus_def sas_plus_state_to_imp_minus_def 
+      option.case_eq_if map_comp_def map_add_def com_to_operators_variables_distinct 
+      split: domain_element.splits)
+  moreover then have "snd (sas_plus_state_to_imp_minus 
+    (imp_minus_state_to_sas_plus (c, is) ++ map_of (effect_of op))) = (is 
+   ++ ((\<lambda>x. (case x of EV y \<Rightarrow> Some y | _ \<Rightarrow> None)) \<circ>\<^sub>m (map_of (effect_of op)) \<circ>\<^sub>m (\<lambda>x. Some (VN x))))"
+    by auto
+  ultimately show ?thesis using assms by (metis prod.collapse)
+qed
+
+lemma [simp]: "imp_minus_state_to_sas_plus (c1, is) = ss
   \<Longrightarrow> v \<in> set (enumerate_variables c)
-  \<Longrightarrow> is v = Num 0 \<longleftrightarrow> ss (VN v) = Some (EV (Num 0))"
-  by (auto simp: imp_minus_sas_plus_equivalent_states_def list_all_def)
+  \<Longrightarrow> is v = Some (Num 0) \<longleftrightarrow> ss (VN v) = Some (EV (Num 0))"
+  by (auto simp: imp_minus_state_to_sas_plus_def option.case_eq_if map_comp_def split: if_splits)
+
+lemma [simp]: "(imp_minus_state_to_sas_plus (c1, is1))(PC \<mapsto> PCV c2) 
+  = imp_minus_state_to_sas_plus (c2, is1)"
+  by(auto simp: imp_minus_state_to_sas_plus_def option.case_eq_if)
+
+lemma [simp]: "sas_plus_state_to_imp_minus
+  (\<lambda>a. if a = PC then Some (PCV c1)
+       else ss a)
+  = (c1, snd (sas_plus_state_to_imp_minus ss))"
+  by (auto simp: imp_minus_state_to_sas_plus_def sas_plus_state_to_imp_minus_def map_comp_def)
+
+lemma [simp]: "sas_plus_state_to_imp_minus (ss(PC \<mapsto> PCV c)) 
+  = (c, snd (sas_plus_state_to_imp_minus ss))"
+  by (auto simp: sas_plus_state_to_imp_minus_def map_comp_def)
+
+lemma [simp]: "(imp_minus_state_to_sas_plus (c, s) (VN x) = Some y) 
+  \<longleftrightarrow> ((map_option EV (s x)) = Some y)"
+  by (simp add: imp_minus_state_to_sas_plus_def map_comp_Some_iff)
+
+lemma imp_minus_state_to_sas_plus_of_effect: 
+  assumes "op \<in> set (com_to_operators cB (domain cA t))"
+  shows "((imp_minus_state_to_sas_plus (c1, s) ++ map_of (effect_of op))(PC \<mapsto> PCV c2) =
+    imp_minus_state_to_sas_plus (c2, s')) \<longleftrightarrow> ((s ++ ((\<lambda>x. (case x of EV y \<Rightarrow> Some y | _ \<Rightarrow> None)) 
+    \<circ>\<^sub>m map_of (effect_of op) \<circ>\<^sub>m (\<lambda>x. Some (VN x)))) = s')"
+proof
+  assume *: "(imp_minus_state_to_sas_plus (c1, s) ++ map_of (effect_of op))(PC \<mapsto> PCV c2) 
+    = imp_minus_state_to_sas_plus (c2, s')"
+  have "\<forall>a. (s ++ ((\<lambda>x. (case x of EV y \<Rightarrow> Some y | _ \<Rightarrow> None)) 
+    \<circ>\<^sub>m map_of (effect_of op) \<circ>\<^sub>m (\<lambda>x. Some (VN x)))) a = s' a"
+  proof(rule ccontr)
+    assume "\<not>(\<forall>a. (s ++ ((\<lambda>x. (case x of EV y \<Rightarrow> Some y | _ \<Rightarrow> None)) 
+      \<circ>\<^sub>m map_of (effect_of op) \<circ>\<^sub>m (\<lambda>x. Some (VN x)))) a = s' a)"
+    then obtain a where "(s ++ ((\<lambda>x. (case x of EV y \<Rightarrow> Some y | _ \<Rightarrow> None)) 
+      \<circ>\<^sub>m map_of (effect_of op) \<circ>\<^sub>m (\<lambda>x. Some (VN x)))) a \<noteq> s' a" by auto
+    then have "((imp_minus_state_to_sas_plus (c1, s) ++ map_of (effect_of op))(PC \<mapsto> PCV c2)) (VN a)
+      \<noteq> imp_minus_state_to_sas_plus (c2, s') (VN a)"
+      by(auto simp: imp_minus_state_to_sas_plus_def map_comp_def map_add_def domD domIff 
+            split: option.splits)
+    then show "False" using * by auto
+  qed
+  then show "((s ++ ((\<lambda>x. (case x of EV y \<Rightarrow> Some y | _ \<Rightarrow> None)) 
+    \<circ>\<^sub>m map_of (effect_of op) \<circ>\<^sub>m (\<lambda>x. Some (VN x)))) = s')" by auto
+next
+  assume *: "((s ++ ((\<lambda>x. (case x of EV y \<Rightarrow> Some y | _ \<Rightarrow> None)) 
+    \<circ>\<^sub>m map_of (effect_of op) \<circ>\<^sub>m (\<lambda>x. Some (VN x)))) = s')"
+  then have "((imp_minus_state_to_sas_plus (c1, s) ++ map_of (effect_of op))(PC \<mapsto> PCV c2)) a
+      = imp_minus_state_to_sas_plus (c2, s') a" for a
+    using assms by(cases a) (auto simp: com_to_operators_variables_distinct 
+        imp_minus_state_to_sas_plus_def map_comp_def map_add_def option.case_eq_if
+        split: option.splits domain_element.splits)
+  then show "(imp_minus_state_to_sas_plus (c1, s) ++ map_of (effect_of op))(PC \<mapsto> PCV c2) 
+    = imp_minus_state_to_sas_plus (c2, s')" by auto
+qed
+
+lemma imp_minus_state_to_sas_plus_of_effect': 
+  assumes "op \<in> set (com_to_operators cB (domain cA t))"
+  shows "((imp_minus_state_to_sas_plus (c1, s) ++ map_of (effect_of op)) =
+    imp_minus_state_to_sas_plus (c2, s')) \<longleftrightarrow> ((pc_to_com (effect_of op) = c2) \<and> 
+  (s ++ ((\<lambda>x. (case x of EV y \<Rightarrow> Some y | _ \<Rightarrow> None)) 
+    \<circ>\<^sub>m map_of (effect_of op) \<circ>\<^sub>m (\<lambda>x. Some (VN x)))) = s')"
+proof -
+  have "imp_minus_state_to_sas_plus (c1, s) ++ map_of (effect_of op) = 
+    ((imp_minus_state_to_sas_plus (c1, s) ++ map_of (effect_of op))
+    (PC \<mapsto> PCV (pc_to_com (effect_of op))))"
+    using assms com_to_operators_variables_distinct by auto
+  moreover have "((imp_minus_state_to_sas_plus (c1, s) ++ map_of (effect_of op))
+  (PC \<mapsto> PCV (pc_to_com (effect_of op))) =
+    imp_minus_state_to_sas_plus ((pc_to_com (effect_of op)), s')) 
+    \<longleftrightarrow> ((s ++ ((\<lambda>x. (case x of EV y \<Rightarrow> Some y | _ \<Rightarrow> None)) 
+    \<circ>\<^sub>m map_of (effect_of op) \<circ>\<^sub>m (\<lambda>x. Some (VN x)))) = s')" 
+    using assms imp_minus_state_to_sas_plus_of_effect by simp
+  ultimately show ?thesis using assms imp_minus_state_to_sas_plus_def map_upd_eqD1 by fastforce
+qed
+
+lemma [simp]: "(\<lambda>v. case v of VN v \<Rightarrow> f v | PC \<Rightarrow> Some x) =
+    (\<lambda>v. case v of VN v \<Rightarrow> f v | PC \<Rightarrow> y)(PC \<mapsto> x)"
+proof - 
+  have "(case v of VN v \<Rightarrow> f v | PC \<Rightarrow> Some x) 
+    = ((\<lambda>v. case v of VN v \<Rightarrow> f v | PC \<Rightarrow> y)(PC \<mapsto> x)) v" for v
+    by (cases v) auto
+  then show ?thesis by auto
+qed
+
+lemma updated_state_is_sane:
+  assumes "op \<in> set (com_to_operators c (domain cA t))" 
+    "sane_sas_plus_state ss1"
+  shows "sane_sas_plus_state (ss1 \<then>\<^sub>+ op)"
+proof -
+  have "\<exists>x. (VN v, EV x) \<in> set (effect_of op) \<or> map_of (effect_of op) (VN v) = None" for v
+    using assms variables_in_effect by simp
+  then show ?thesis using assms
+    by(auto simp: sane_sas_plus_state_def com_to_operators_variables_distinct map_add_Some_iff)
+qed
+
+lemma [simp]: "(\<lambda>a. if a = PC then Some (PCV c2) 
+   else (imp_minus_state_to_sas_plus (c1, is1)) a) 
+    = imp_minus_state_to_sas_plus (c2, is1)"
+proof -
+  have "(if a = PC then Some (PCV c2) else ((imp_minus_state_to_sas_plus (c1, is1)) a))
+    = (imp_minus_state_to_sas_plus (c2, is1)) a" for a
+    by (auto simp: imp_minus_state_to_sas_plus_def split: variable.splits)
+  then show ?thesis by auto
+qed
+
+lemma [simp]: 
+  assumes "y \<in> set (domain c t)" 
+  shows "imp_minus_state_to_sas_plus (c1, s)(VN x \<mapsto> y, PC \<mapsto> PCV z) =
+  imp_minus_state_to_sas_plus (z, s(x := (case y of EV y' \<Rightarrow> Some y' | _ \<Rightarrow> None)))"
+proof-
+  have "(imp_minus_state_to_sas_plus (c1, s)(VN x \<mapsto> y, PC \<mapsto> PCV z)) a =
+  imp_minus_state_to_sas_plus (z, s(x := (case y of EV y' \<Rightarrow> Some y' | _ \<Rightarrow> None))) a" for a
+    using assms apply(auto simp: imp_minus_state_to_sas_plus_def domain_def Let_def map_comp_def 
+          split: option.splits domain_element.splits)
+    by (metis option.inject variable.exhaust variable.simps)+
+  then show ?thesis by auto
+qed
+
+
+lemma [simp]: "(\<lambda>a. if a = PC then Some (PCV c2) 
+   else (imp_minus_state_to_sas_plus (c1, is1)(VN x \<mapsto> EV y)) a) 
+    = imp_minus_state_to_sas_plus (c2, is1(x \<mapsto> y))"
+proof -
+  have "(if a = PC then Some (PCV c2) else ((imp_minus_state_to_sas_plus (c1, is1)(VN x \<mapsto> EV y)) a))
+    = (imp_minus_state_to_sas_plus (c2, is1(x \<mapsto> y))) a" for a
+    by (auto simp: imp_minus_state_to_sas_plus_def map_comp_def split: variable.splits)
+  then show ?thesis by auto
+qed
+
+lemma [simp]: 
+  assumes "y \<in> set (domain c t)"
+  shows "sas_plus_state_to_imp_minus (imp_minus_state_to_sas_plus 
+  (x ::= A (V var), is1)(VN x \<mapsto> y, PC \<mapsto> PCV z)) =
+          (z, is1(x \<mapsto> (case y of EV y' \<Rightarrow> y')))"
+proof -
+  have "(snd (sas_plus_state_to_imp_minus (imp_minus_state_to_sas_plus
+  (x ::= A (V var), is1)(VN x \<mapsto> y, PC \<mapsto> PCV z)))) a =
+           (is1(x \<mapsto> (case y of EV y' \<Rightarrow> y'))) a" for a using assms
+    by (auto simp: imp_minus_state_to_sas_plus_def sas_plus_state_to_imp_minus_def option.case_eq_if
+        domain_def Let_def map_comp_def split: variable.splits)
+  then show ?thesis 
+    using assms by (auto simp: imp_minus_state_to_sas_plus_def sas_plus_state_to_imp_minus_def)
+qed
+
+lemma [simp]: 
+  "snd (sas_plus_state_to_imp_minus
+                (imp_minus_state_to_sas_plus (c, is)(VN x \<mapsto> y))) 
+    = is(x := (case y of EV y' \<Rightarrow> Some y' | _ \<Rightarrow> None))"
+  by (auto simp: imp_minus_state_to_sas_plus_def sas_plus_state_to_imp_minus_def 
+      domain_def Let_def map_comp_def option.case_eq_if)
+
+lemma [simp]: "(is(x := case y of EV y' \<Rightarrow> Some y' | _ \<Rightarrow> None) = is(x \<mapsto> z)) 
+  \<longleftrightarrow> (y = EV z)"
+  apply(cases y)
+  using fun_upd_eqD map_upd_eqD1 by fastforce+
+
+lemma [simp]: " s(x := case z of EV z' \<Rightarrow> Some z' | _ \<Rightarrow> None) = (\<lambda>a. if a = x then Some y else s a)
+  \<longleftrightarrow> (z = EV y)"
+  apply(cases z)
+   apply(auto)
+   apply(smt fun_upd_same option.inject)
+  by (smt fun_upd_apply option.distinct)
+
+lemma [simp]: "(s(x \<mapsto> y) = (\<lambda>a. if a = x then Some z else s a))
+  \<longleftrightarrow> (y = z)"
+  apply(auto)
+  by (meson map_upd_Some_unfold)
 
 lemma [simp]: "[VN v \<mapsto> y, PC \<mapsto> x] \<subseteq>\<^sub>m s = (s PC = Some x \<and> s (VN v) = Some y)"
   by (auto simp: map_le_def)
 
+lemma [simp]: "[VN v \<mapsto> y, PC \<mapsto> x] \<subseteq>\<^sub>m (imp_minus_state_to_sas_plus (c1, is)) 
+  = (x = PCV c1 \<and> map_option EV (is v) = Some y)"
+  by (auto simp: map_le_def imp_minus_state_to_sas_plus_def option.case_eq_if map_comp_def)
+
+lemma [simp]: "op \<in> set (com_to_operators c1 d) \<Longrightarrow> 
+  map_of (precondition_of op)(PC \<mapsto> PCV c2) \<subseteq>\<^sub>m imp_minus_state_to_sas_plus (c2, s)
+  \<longleftrightarrow>  map_of (precondition_of op) \<subseteq>\<^sub>m imp_minus_state_to_sas_plus (c1, s)"
+  by(auto simp: imp_minus_state_to_sas_plus_def map_le_def)
+
+lemma applicable_in_imp_minus_then[simp]: 
+  "is_operator_applicable_in (imp_minus_state_to_sas_plus (c1, is)) 
+  \<lparr>precondition_of = [(PC, x), (VN v, y)], effect_of = effect\<rparr> 
+  \<longleftrightarrow> (x = PCV c1 \<and> map_option EV (is v) = Some y)"
+  by (auto simp: map_le_def imp_minus_state_to_sas_plus_def option.case_eq_if map_comp_def)
+
+lemma [simp]: "op \<in> set ((imp_minus_minus_to_sas_plus c I G t)\<^sub>\<O>\<^sub>+) 
+  \<Longrightarrow> is_operator_applicable_in s op 
+  \<Longrightarrow> op \<in> set (com_to_operators (fst (sas_plus_state_to_imp_minus s)) (domain c t))"
+  apply(auto simp: imp_minus_minus_to_sas_plus_def Let_def coms_to_operators_def 
+      sas_plus_state_to_imp_minus_def)
+proof -
+  fix x
+  assume  "map_of (precondition_of op) \<subseteq>\<^sub>m s"
+    "op \<in> set (com_to_operators x (domain c t))"
+  moreover then have "(map_of (precondition_of op)) PC = Some (PCV x)" by auto
+  ultimately have "the (s PC) = PCV x" by (metis domI map_le_def option.sel)
+  then show "op \<in> set (com_to_operators (case the (s PC) of PCV c \<Rightarrow> c) (domain c t))" 
+    by (simp add: \<open>op \<in> set (com_to_operators x (domain c t))\<close>)
+qed
+
 lemma [simp]: "[PC \<mapsto> x] \<subseteq>\<^sub>m s \<longleftrightarrow> (s PC = Some x)" 
   by (auto simp: map_le_def)
+
+lemma [simp]: "[PC \<mapsto> x] \<subseteq>\<^sub>m (imp_minus_state_to_sas_plus (c1, is)) 
+  = (x = PCV c1)"
+  by (auto simp: map_le_def imp_minus_state_to_sas_plus_def)
+
+lemma [simp]: "(imp_minus_state_to_sas_plus (c1, is)) PC = Some (PCV c1)" 
+  by (simp add: imp_minus_state_to_sas_plus_def)
+
+lemma [simp]: "(imp_minus_state_to_sas_plus (c, is) (VN x) = Some (EV y)) 
+  \<longleftrightarrow> (is x = Some y)"
+  by(auto simp: imp_minus_state_to_sas_plus_def map_comp_Some_iff)
+
+lemma [simp]: "imp_minus_state_to_sas_plus (c, is) (VN x) = Some y \<Longrightarrow>
+       (y \<noteq> EV (Num 0)) \<longleftrightarrow> (is x \<noteq> Some (Num 0))"
+  by(auto simp: imp_minus_state_to_sas_plus_def map_comp_Some_iff)
 
 lemma map_of_list_update: "distinct (map fst l) \<Longrightarrow> length l > 0 \<Longrightarrow> fst (l ! 0) = x  \<Longrightarrow> z \<noteq> x
   \<Longrightarrow> map_of (list_update l 0 (x, y)) z = map_of l z"
@@ -46,10 +330,15 @@ proof -
   then show ?thesis by auto
 qed
 
-lemma pc_of_op: "op \<in> set (com_to_operators c2 d) 
-  \<Longrightarrow> imp_minus_sas_plus_equivalent_states c c1 is ss2 \<Longrightarrow> ss1 \<then>\<^sub>+ op = ss2
-  \<Longrightarrow> pc_to_com (effect_of op) = c1" 
-  by (auto simp: imp_minus_sas_plus_equivalent_states_def com_to_operators_variables_distinct)
+lemma pc_of_op: 
+  assumes "op \<in> set (com_to_operators c2 d)"
+    "ss2 = imp_minus_state_to_sas_plus (c1, is)" 
+    "ss1 \<then>\<^sub>+ op = ss2"
+  shows "pc_to_com (effect_of op) = c1" 
+proof -
+  have "(ss1 \<then>\<^sub>+ op) PC = Some (PCV c1)" using assms by simp
+  then show ?thesis using assms com_to_operators_variables_distinct by auto
+qed
 
 lemma effect_in_updated[simp]: 
   assumes "op' \<in> set (com_to_operators c d)" 
@@ -75,282 +364,225 @@ proof -
 qed
 
 lemma sas_plus_to_imp_minus_minus_single_step:
-  "op \<in> set (com_to_operators c1 (domain c t)) \<Longrightarrow> cs = enumerate_subprograms c 
+  "op \<in> set (com_to_operators c1 (domain c t))
   \<Longrightarrow> c1 \<in> set (enumerate_subprograms c) \<Longrightarrow> t > 0 
-  \<Longrightarrow> imp_minus_sas_plus_equivalent_states c c1 is1 ss1
-  \<Longrightarrow> is_operator_applicable_in ss1 op
-  \<Longrightarrow> ss1 \<then>\<^sub>+ op = ss2
-  \<Longrightarrow> the (ss2 PC) = PCV c2
-  \<Longrightarrow> (\<exists>is2. ((c1, is1) \<rightarrow>\<^bsub>t * max_constant c\<^esub> (c2, is2)) \<and>
-      imp_minus_sas_plus_equivalent_states c c2 is2 ss2)"
-proof (induction c1 arbitrary: op ss1 ss2 is1 c2)
+  \<Longrightarrow> is_operator_applicable_in (imp_minus_state_to_sas_plus (c1, is1)) op
+  \<Longrightarrow> (c1, is1) \<rightarrow>\<^bsub>t * max_constant c\<^esub> 
+  sas_plus_state_to_imp_minus ((imp_minus_state_to_sas_plus (c1, is1)) \<then>\<^sub>+ op)"
+proof (induction c1 arbitrary: op is1)
   case (Assign x a)
-  let ?is2 = "is1(x := eval a is1 (t * max_constant c))"
-  have "imp_minus_sas_plus_equivalent_states c SKIP ?is2 ss2" using Assign
+  have "sas_plus_state_to_imp_minus ((imp_minus_state_to_sas_plus ((x ::= a), is1)) \<then>\<^sub>+ op)
+    = (SKIP, is1(x \<mapsto> eval a is1 (t * max_constant c)))" using Assign
   proof (cases a)
     case (A atom)
-    then show ?thesis
+    then show ?thesis using Assign
     proof (cases atom)
-      case (N val)
-      then show ?thesis using Assign A
-        by (auto simp: imp_minus_sas_plus_equivalent_states_def list_all_def)
-    next
       case (V var)
       have "var \<in> set (enumerate_variables c)" 
         using Assign A V enumerate_subprograms_enumerate_variables by fastforce
-      then show ?thesis using Assign A V 
-        by (auto simp: imp_minus_sas_plus_equivalent_states_def list_all_def)
-    qed
-  qed (auto simp: enumerate_variables_def imp_minus_sas_plus_equivalent_states_def list_all_def 
-        split: EVal.splits)
-  then show ?case using Assign imp_minus_sas_plus_equivalent_states_def by auto
+      then show ?thesis using Assign A V by auto
+    qed auto
+  next
+    case (Plus var val)
+    then have "precondition_of op = [(PC, PCV (x ::= a)), (VN var, EV (the (is1 var)))]"
+      using Assign Plus applicable_in_imp_minus_then by auto
+    then show ?thesis using Assign Plus apply auto using num_in_domain_iff by metis
+  next
+    case (Sub var val)
+    then have "precondition_of op = [(PC, PCV (x ::= a)), (VN var, EV (the (is1 var)))]"
+      using Assign Sub applicable_in_imp_minus_then by auto
+    then show ?thesis using Assign Sub apply auto using num_in_domain_iff by metis
+  qed
+  then show ?case using Assign by auto
 next
   case (Seq cA cB)
   have "cA = SKIP \<or> cA \<noteq> SKIP" by auto
-  then show ?case
+  then show ?case using Seq
   proof (elim disjE)
-    assume "cA = SKIP"
-    then show ?thesis using Seq by (fastforce simp: imp_minus_sas_plus_equivalent_states_def)
-  next
     assume "cA \<noteq> SKIP"
     then obtain op' where op'_def: "op' \<in> set (com_to_operators cA (domain c t)) 
       \<and> op = (let c1' = pc_to_com (effect_of op') in 
-      \<lparr> precondition_of = 
-        list_update (precondition_of op') 0 (PC, PCV (cA ;; cB)),
-        effect_of = 
-        list_update (effect_of op') 0 (PC, PCV (c1' ;; cB))\<rparr>)" using Seq by auto
+      \<lparr> precondition_of = list_update (precondition_of op') 0 (PC, PCV (cA ;; cB)),
+        effect_of = list_update (effect_of op') 0 (PC, PCV (c1' ;; cB))\<rparr>)" using Seq by auto
     let ?c1' = "pc_to_com (effect_of op')"
-    let ?ss1' = "ss1(PC \<mapsto> PCV cA)"
-    let ?ss2' = "ss2(PC \<mapsto> PCV ?c1')"
+    let ?ss1' = "(imp_minus_state_to_sas_plus ((cA ;; cB), is1))(PC \<mapsto> PCV cA)"
+    let ?ss2' = "((imp_minus_state_to_sas_plus ((cA ;; cB), is1)) \<then>\<^sub>+ op)(PC \<mapsto> PCV ?c1')"
     have "cA \<in> set (enumerate_subprograms (cA ;; cB))" using c_in_all_subprograms_c by auto
     then have "cA \<in> set (enumerate_subprograms c)" 
       using Seq enumerate_subprograms_transitive by blast
-    moreover have "imp_minus_sas_plus_equivalent_states c cA is1 ?ss1'" 
-      using Seq by (auto simp: imp_minus_sas_plus_equivalent_states_def)
+    moreover have "imp_minus_state_to_sas_plus (cA, is1) = ?ss1'" by auto
     moreover have "map_of (precondition_of op') = (map_of (precondition_of op))(PC \<mapsto> PCV cA)"
       using op'_def Seq com_to_operators_variables_distinct by auto
     moreover then have "is_operator_applicable_in ?ss1' op'" 
-      using Seq op'_def by auto
+      using Seq op'_def by (metis is_operator_applicable_in_def map_le_upd)
     moreover have "map_of (effect_of op') = map_of (effect_of op)(PC \<mapsto> PCV (pc_to_com (effect_of op')))"
       using op'_def Seq com_to_operators_variables_distinct by auto
-    moreover then have "?ss1' \<then>\<^sub>+ op' = ?ss2'" using Seq op'_def by auto
+    moreover then have "?ss1' \<then>\<^sub>+ op' = ?ss2'" using Seq op'_def
+      using calculation(3) effect_in_updated by blast
     (* TODO: simplify this proof (Seq(1)) *)
-    ultimately have "\<exists>is2. (cA, is1) \<rightarrow>\<^bsub>t * max_constant c\<^esub> (?c1', is2) \<and>
-      imp_minus_sas_plus_equivalent_states c ?c1' is2 ?ss2'" using Seq op'_def by fastforce
-    then show ?thesis using Seq op'_def 
-      by(fastforce simp: imp_minus_sas_plus_equivalent_states_def) 
-  qed
-next
-  case (If b cA cB)
-  then have "c2 = (if ss1 (VN b) \<noteq> Some (EV (Num 0)) then cA else cB)" by auto
-  moreover have "b \<in> set (enumerate_variables (IF b\<noteq>0 THEN cA ELSE cB))" by auto
-  moreover then have "b \<in> set (enumerate_variables c)" 
-    using If enumerate_subprograms_enumerate_variables by blast
-  ultimately show ?case using If
-    by (fastforce simp: imp_minus_sas_plus_equivalent_states_def)
-next
-  case (While b cA)
-  then have "c2 = (if ss1 (VN b) \<noteq> Some (EV (Num 0)) then cA ;; WHILE b \<noteq>0 DO cA else SKIP)" 
-    by auto
-  moreover have "b \<in> set (enumerate_variables (WHILE b\<noteq>0 DO cA))" by auto
-  moreover then have "b \<in> set (enumerate_variables c)" 
-    using While enumerate_subprograms_enumerate_variables by blast
-  ultimately show ?case using While enumerate_subprograms_enumerate_variables 
-    by (fastforce simp: imp_minus_sas_plus_equivalent_states_def)
+    ultimately have "(cA, is1) \<rightarrow>\<^bsub>t * max_constant c\<^esub> sas_plus_state_to_imp_minus ?ss2'" 
+      using Seq op'_def by metis
+    then show ?thesis using Seq op'_def by auto
+  qed auto
 qed auto
 
 lemma sas_plus_to_imp_minus_minus:
-  "set ops \<subseteq> set ((imp_minus_minus_to_sas_plus c I t)\<^sub>\<O>\<^sub>+) 
+  "set ops \<subseteq> set ((imp_minus_minus_to_sas_plus c I G t)\<^sub>\<O>\<^sub>+) 
   \<Longrightarrow> t > 0
   \<Longrightarrow> length ops < t
-  \<Longrightarrow> c1 \<in> set (enumerate_subprograms c)  
-  \<Longrightarrow> imp_minus_sas_plus_equivalent_states c c1 is1 ss1
+  \<Longrightarrow> sane_sas_plus_state ss1
   \<Longrightarrow> execute_serial_plan_sas_plus ss1 ops = ss2
-  \<Longrightarrow> the (ss2 PC) = PCV c2
-  \<Longrightarrow> (\<exists>is2 t'. t' \<le> length ops \<and> ((c1, is1) \<rightarrow>\<^bsub>t * max_constant c\<^esub>\<^bsup>t'\<^esup> (c2, is2)) \<and>
-      imp_minus_sas_plus_equivalent_states c c2 is2 ss2)"
-proof (induction ops arbitrary: c1 ss1 is1)
+  \<Longrightarrow> (\<exists>t'. t' \<le> length ops 
+  \<and> sas_plus_state_to_imp_minus ss1 \<rightarrow>\<^bsub>t * max_constant c\<^esub>\<^bsup>t'\<^esup> sas_plus_state_to_imp_minus ss2)"
+proof (induction ops arbitrary: ss1)
   case (Cons op ops)
+  let ?c1 = "fst (sas_plus_state_to_imp_minus ss1)"
+  let ?is1 = "snd (sas_plus_state_to_imp_minus ss1)"
   let ?ss1' = "ss1 \<then>\<^sub>+ op" 
-  let ?c1' = "pc_to_com (effect_of op)"
   have "is_operator_applicable_in ss1 op \<or> \<not>(is_operator_applicable_in ss1 op)" by auto
   then show ?case using Cons
   proof (elim disjE)
     assume a: "is_operator_applicable_in ss1 op"
-    then have op_in_cto_c1: "op \<in> set (com_to_operators c1 (domain c t))" using Cons
-      by (auto simp: imp_minus_sas_plus_equivalent_states_def op_applicable_then_PC 
-          split: if_splits)
-    then have "\<exists>is1'. ((c1, is1) \<rightarrow>\<^bsub>t * max_constant c\<^esub> (?c1', is1')) \<and>
-      imp_minus_sas_plus_equivalent_states c ?c1' is1' ?ss1'" 
-      using Cons a com_to_operators_variables_distinct sas_plus_to_imp_minus_minus_single_step 
-      by auto
-    then obtain is1' where is1'_def: "((c1, is1) \<rightarrow>\<^bsub>t * max_constant c\<^esub> (?c1', is1')) \<and>
-      imp_minus_sas_plus_equivalent_states c ?c1' is1' ?ss1'" by blast
-    then have "set ops \<subseteq> set ((imp_minus_minus_to_sas_plus c I t)\<^sub>\<O>\<^sub>+)"
-      and "execute_serial_plan_sas_plus ?ss1' ops = ss2"
-      and "length ops < t"
-      and "pc_to_com (effect_of op) \<in> set (all_subprograms c)"
-      and "imp_minus_sas_plus_equivalent_states c (pc_to_com (effect_of op)) is1'
-      (ss1 ++ map_of (effect_of op))"
-      using Cons a by auto (metis op_in_cto_c1 com_to_operators_PC_is_subprogram 
-          enumerate_subprograms_def enumerate_subprograms_transitive set_remdups)
-    then have "\<exists>is2 t'. t' \<le> length ops \<and> ((?c1', is1') \<rightarrow>\<^bsub>t * max_constant c\<^esub>\<^bsup>t'\<^esup> (c2, is2)) \<and>
-      imp_minus_sas_plus_equivalent_states c c2 is2 ss2" 
-      using Cons a is1'_def com_to_operators_PC_is_subprogram enumerate_subprograms_transitive 
-            op_in_cto_c1 
-      by simp
-    then show ?case using is1'_def by auto
-  qed (auto simp: imp_minus_sas_plus_equivalent_states_def)
-qed (auto simp: imp_minus_sas_plus_equivalent_states_def)
+    then have op_in_cto_c1: "op \<in> set (com_to_operators ?c1 (domain c t))" using Cons by auto
+    moreover then have "?c1 \<in> set (enumerate_subprograms c)" using Cons a 
+      apply(auto simp: imp_minus_minus_to_sas_plus_def Let_def coms_to_operators_def)
+      by (metis PC_of_precondition domain_element.simps op_in_cto_c1)
+    ultimately have c1_to_c1': "(?c1, ?is1) \<rightarrow>\<^bsub>t * max_constant c\<^esub> sas_plus_state_to_imp_minus 
+      (imp_minus_state_to_sas_plus (?c1, ?is1) \<then>\<^sub>+ op)" 
+      apply(rule sas_plus_to_imp_minus_minus_single_step)
+      using Cons a op_in_cto_c1 by auto
+    moreover then have "execute_serial_plan_sas_plus ?ss1' ops = ss2"
+      and "sane_sas_plus_state ?ss1'" 
+      using Cons a op_in_cto_c1 updated_state_is_sane by auto 
+    ultimately have "\<exists>t'. t' \<le> length ops \<and> sas_plus_state_to_imp_minus ?ss1' 
+      \<rightarrow>\<^bsub>t * max_constant c\<^esub>\<^bsup>t'\<^esup> sas_plus_state_to_imp_minus ss2"
+      using Cons by(auto)
+    moreover have "imp_minus_state_to_sas_plus (?c1, ?is1) \<then>\<^sub>+ op = ?ss1'" using Cons by auto
+    ultimately show ?case using c1_to_c1' by auto
+  qed auto
+qed auto
 
 lemma imp_minus_minus_to_sas_plus_single_step:
-   "(c1, is1) \<rightarrow>\<^bsub>r\<^esub> (c2, is2) \<Longrightarrow> cs = enumerate_subprograms c \<Longrightarrow> r = t * max_constant c 
-  \<Longrightarrow> c1 \<in> set cs \<Longrightarrow> t > 0 
-  \<Longrightarrow> (\<forall>v. EV (is1 v) \<in> set (domain c t))
-  \<Longrightarrow> imp_minus_sas_plus_equivalent_states c c1 is1 ss1
+   "(c1, is1) \<rightarrow>\<^bsub>r\<^esub> (c2, is2)  \<Longrightarrow> r = t * max_constant c 
+  \<Longrightarrow> c1 \<in> set (enumerate_subprograms c) \<Longrightarrow> t > 0
+  \<Longrightarrow> dom is1 = set (enumerate_variables c)
+  \<Longrightarrow> (\<forall>v x. is1 v = Some (Num x) \<longrightarrow> x \<le> r)
   \<Longrightarrow> (\<exists>op \<in> set (com_to_operators c1 (domain c t)).
-     imp_minus_sas_plus_equivalent_states c c2 is2 (execute_operator_sas_plus ss1 op)
-    \<and> is_operator_applicable_in ss1 op)"
-proof (induction c1 is1 r c2 is2 arbitrary: ss1 rule: \<omega>_small_step_induct)
+      execute_operator_sas_plus (imp_minus_state_to_sas_plus (c1, is1)) op 
+        =  imp_minus_state_to_sas_plus (c2, is2)
+    \<and> is_operator_applicable_in (imp_minus_state_to_sas_plus (c1, is1)) op)"
+proof (induction c1 is1 r c2 is2 rule: \<omega>_small_step_induct)
   case (Assign x a s r)
-  let ?ss2 = "ss1(VN x \<mapsto> EV (eval a s (t * max_constant c)), PC \<mapsto> PCV SKIP)"
-  have "(\<exists>op \<in> set (com_to_operators (x ::= a) (domain c t)). 
-     imp_minus_sas_plus_equivalent_states c SKIP (s(x := eval a s (t * max_constant c)))  ?ss2
-    \<and> is_operator_applicable_in ss1 op
-    \<and> execute_operator_sas_plus ss1 op = ?ss2)" using Assign
+  let ?ss1 = "imp_minus_state_to_sas_plus (x ::= a, s)"
+  let ?ss2 = "imp_minus_state_to_sas_plus (SKIP, s(x \<mapsto> eval a s (t * max_constant c)))"
+  show ?case
   proof (cases a)
     case (A atom)
-    then show ?thesis
+    then show ?thesis using Assign
     proof (cases atom)
-      case (N val)
-      then show ?thesis using Assign A
-        by (auto simp: imp_minus_sas_plus_equivalent_states_def list_all_def)
-    next
       case (V var)
       have "var \<in> set (enumerate_variables c)" 
         using Assign A V enumerate_subprograms_enumerate_variables by fastforce
-      then show ?thesis using Assign A V
-        by (auto simp: imp_minus_sas_plus_equivalent_states_def list_all_def)
-    qed
+      then show ?thesis using Assign A V by (auto split: EVal.splits) force+
+    qed auto
   next
     case (Plus var val)
-    then show ?thesis using Assign Plus 
-        enumerate_subprograms_enumerate_variables enumerate_variables_def
-      by (auto simp: imp_minus_sas_plus_equivalent_states_def list_all_def split: EVal.splits)
+    have "var \<in> set (enumerate_variables c)" 
+      using Assign Plus enumerate_subprograms_enumerate_variables by fastforce
+    then obtain y where  "s var = Some y" using Assign by force
+    then show ?thesis using Assign Plus by (auto split: EVal.splits domain_element.splits)
   next
     case (Sub var val)
-    then show ?thesis using Assign Sub 
-        enumerate_subprograms_enumerate_variables enumerate_variables_def
-      by (auto simp: imp_minus_sas_plus_equivalent_states_def list_all_def split: EVal.splits)
-  qed 
-  then show ?case using Assign by metis
+    have "var \<in> set (enumerate_variables c)" 
+      using Assign Sub enumerate_subprograms_enumerate_variables by fastforce
+    then obtain y where  "s var = Some y" using Assign by force
+    then show ?thesis using Assign Sub by (auto split: EVal.splits domain_element.splits)
+  qed
 next
   case (Seq2 c\<^sub>1 s r c\<^sub>1' s' c\<^sub>2)
-  let ?ss1' = "ss1(PC \<mapsto> PCV c\<^sub>1)"
   have "c\<^sub>1 \<in> set (enumerate_subprograms (c\<^sub>1 ;; c\<^sub>2))" using c_in_all_subprograms_c by auto
   then have "c\<^sub>1 \<in> set (enumerate_subprograms c)" using Seq2 enumerate_subprograms_transitive by blast
-  then have "(\<exists>op' \<in> set (com_to_operators c\<^sub>1 (domain c t)). \<exists>ss2'.
-   imp_minus_sas_plus_equivalent_states c c\<^sub>1' s' ss2'
-    \<and> is_operator_applicable_in ?ss1' op'
-    \<and> execute_operator_sas_plus ?ss1' op' = ss2')" 
-    using Seq2 by (auto simp: imp_minus_sas_plus_equivalent_states_def)
-  then obtain op' ss2' where op'_def: "(op' \<in> set (com_to_operators c\<^sub>1 (domain c t)) \<and>
-   imp_minus_sas_plus_equivalent_states c c\<^sub>1' s' ss2'
-    \<and> is_operator_applicable_in ?ss1' op'
-    \<and> execute_operator_sas_plus ?ss1' op' = ss2')" by blast
-  let ?op = "\<lparr> precondition_of = 
-        list_update (precondition_of op') 0 (PC, PCV (c\<^sub>1 ;; c\<^sub>2)),
-        effect_of = 
-        list_update (effect_of op') 0 (PC, PCV (c\<^sub>1' ;; c\<^sub>2))\<rparr>"
-  let ?ss2 = "ss2'(PC \<mapsto> PCV (c\<^sub>1' ;; c\<^sub>2))"
-  have "?op \<in> set (com_to_operators (c\<^sub>1 ;; c\<^sub>2) (domain c t))" 
-    using Seq2 op'_def by (auto simp: pc_of_op)
-  moreover have "imp_minus_sas_plus_equivalent_states c (c\<^sub>1' ;; c\<^sub>2) s' ?ss2" 
-    using op'_def by (auto simp: imp_minus_sas_plus_equivalent_states_def)
-  moreover have "is_operator_applicable_in ss1 ?op" 
-    using op'_def Seq2 by (auto simp: applicable_in_PC_updated imp_minus_sas_plus_equivalent_states_def)
-  moreover have "?ss2 = execute_operator_sas_plus ss1 ?op"
-    using Seq2 op'_def by (auto simp: imp_minus_sas_plus_equivalent_states_def)
-  ultimately show ?case using Seq2 by metis
+  then obtain op' where op'_def: "op' \<in> set (com_to_operators c\<^sub>1 (domain c t)) \<and>
+    execute_operator_sas_plus (imp_minus_state_to_sas_plus (c\<^sub>1, s)) op'
+        =  imp_minus_state_to_sas_plus (c\<^sub>1', s')
+    \<and> is_operator_applicable_in (imp_minus_state_to_sas_plus (c\<^sub>1, s)) op'" 
+    using Seq2 by fastforce
+  let ?op = "\<lparr> precondition_of = list_update (precondition_of op') 0 (PC, PCV (c\<^sub>1 ;; c\<^sub>2)),
+        effect_of = list_update (effect_of op') 0 (PC, PCV (c\<^sub>1' ;; c\<^sub>2))\<rparr>"
+  have "?op \<in> set (com_to_operators (c\<^sub>1 ;; c\<^sub>2) (domain c t))"
+    and "execute_operator_sas_plus (imp_minus_state_to_sas_plus ((c\<^sub>1 ;; c\<^sub>2), s)) ?op 
+        = imp_minus_state_to_sas_plus ((c\<^sub>1' ;; c\<^sub>2), s')"
+    and "is_operator_applicable_in (imp_minus_state_to_sas_plus ((c\<^sub>1 ;; c\<^sub>2), s)) ?op"
+    using Seq2 op'_def imp_minus_state_to_sas_plus_of_effect imp_minus_state_to_sas_plus_of_effect'
+    by auto
+  then show ?case using Seq2 by blast
 next
   case (IfTrue s b c\<^sub>1 c\<^sub>2)
-  then have "b \<in> set (enumerate_variables c)" 
-    using enumerate_subprograms_enumerate_variables by fastforce
-  then show ?case using IfTrue 
-    by (auto simp: imp_minus_sas_plus_equivalent_states_def)
-     (metis (mono_tags, lifting) list_all_iff)
+  have "b \<in> set (enumerate_variables c)" 
+      using IfTrue enumerate_subprograms_enumerate_variables by fastforce
+  then obtain y where "s b = Some y" by (metis IfTrue domD)
+  then show ?case using IfTrue by (cases y) auto 
 next
   case (IfFalse s b c\<^sub>1 c\<^sub>2)
-  then have "b \<in> set (enumerate_variables c)" 
-    using enumerate_subprograms_enumerate_variables by fastforce
-  then show ?case using IfFalse
-    by (auto simp: imp_minus_sas_plus_equivalent_states_def)
+  have "b \<in> set (enumerate_variables c)" 
+      using IfFalse enumerate_subprograms_enumerate_variables by fastforce
+  then obtain y where "s b = Some y" by (metis IfFalse domD)
+  then show ?case using IfFalse by (cases y) auto
 next
   case (WhileTrue s b c1)
-  then have "b \<in> set (enumerate_variables c)" 
-    using enumerate_subprograms_enumerate_variables by fastforce
-  then show ?case using WhileTrue 
-    by (auto simp: imp_minus_sas_plus_equivalent_states_def)
-      (metis (mono_tags, lifting) list_all_iff)
+  have "b \<in> set (enumerate_variables c)" 
+      using WhileTrue enumerate_subprograms_enumerate_variables by fastforce
+  then obtain y where "s b = Some y" by (metis WhileTrue domD)
+  then show ?case using WhileTrue by (cases y) auto
 next
   case (WhileFalse s b c1)
-  then have "b \<in> set (enumerate_variables c)" 
-    using enumerate_subprograms_enumerate_variables by fastforce
-  then show ?case using WhileFalse enumerate_subprograms_enumerate_variables
-    by (auto simp: imp_minus_sas_plus_equivalent_states_def)
-qed (auto simp: imp_minus_sas_plus_equivalent_states_def)
-
-lemma  [simp]: "(\<forall>v. EV (is v) \<in> set (domain c t)) 
-  = (\<forall>v x. is v = Num x \<longrightarrow> x \<le> t * max_constant c)"
-proof -
-  have "\<forall>v. (EV (is v) \<in> set (domain c t) = (\<forall>x. is v = Num x \<longrightarrow> x \<le> t * max_constant c))"
-  proof 
-    fix v
-    show " (EV (is v) \<in> set (domain c t) = (\<forall>x. is v = Num x \<longrightarrow> x \<le> t * max_constant c))"
-      by (cases "is v") auto
-  qed
-  then show ?thesis by simp
-qed
+  have "b \<in> set (enumerate_variables c)" 
+      using WhileFalse enumerate_subprograms_enumerate_variables by fastforce
+  then obtain y where "s b = Some y" by (metis WhileFalse domD)
+  then show ?case using WhileFalse by (cases y) auto
+qed auto
 
 lemma imp_minus_minus_to_sas_plus:
    "(c1, is1) \<rightarrow>\<^bsub>t * max_constant c \<^esub>\<^bsup>t'\<^esup> (c2, is2)
   \<Longrightarrow> t' < t \<Longrightarrow> t > 0 
   \<Longrightarrow> c1 \<in> set (enumerate_subprograms c)
-  \<Longrightarrow> (\<forall>v. EV (is1 v) \<in> set (domain c t))
-  \<Longrightarrow> imp_minus_sas_plus_equivalent_states c c1 is1 ss1
-  \<Longrightarrow> (\<exists>ops. set ops \<subseteq> set ((imp_minus_minus_to_sas_plus c I t)\<^sub>\<O>\<^sub>+)
+  \<Longrightarrow> dom is1 = set (enumerate_variables c)
+  \<Longrightarrow> (\<forall>v x. is1 v = Some (Num x) \<longrightarrow> x \<le> t * max_constant c)
+  \<Longrightarrow> (\<exists>ops. set ops \<subseteq> set ((imp_minus_minus_to_sas_plus c I G t)\<^sub>\<O>\<^sub>+)
      \<and> length ops = t'
-     \<and> imp_minus_sas_plus_equivalent_states c c2 is2 (execute_serial_plan_sas_plus ss1 ops))"
-proof (induction t' arbitrary: c1 is1 ss1)
+     \<and> (execute_serial_plan_sas_plus (imp_minus_state_to_sas_plus (c1, is1)) ops)
+        = imp_minus_state_to_sas_plus (c2, is2))"
+proof (induction t' arbitrary: c1 is1)
   case (Suc t')
   then obtain c1' is1' where c1'_def: "(c1, is1) \<rightarrow>\<^bsub>t * max_constant c \<^esub> (c1', is1')
     \<and> (c1', is1') \<rightarrow>\<^bsub>t * max_constant c \<^esub>\<^bsup>t'\<^esup> (c2, is2)" by auto
   then obtain op where op_def: "op \<in> set (com_to_operators c1 (domain c t))
-    \<and> imp_minus_sas_plus_equivalent_states c c1' is1' (ss1 \<then>\<^sub>+ op)
-    \<and> is_operator_applicable_in ss1 op" 
-    using imp_minus_minus_to_sas_plus_single_step Suc c1'_def by metis
-  let ?ss1' = "ss1 \<then>\<^sub>+ op"
+    \<and> execute_operator_sas_plus (imp_minus_state_to_sas_plus (c1, is1)) op 
+        =  imp_minus_state_to_sas_plus (c1', is1')
+    \<and> is_operator_applicable_in (imp_minus_state_to_sas_plus (c1, is1)) op" 
+    using imp_minus_minus_to_sas_plus_single_step Suc by metis
   have "max_constant c1 \<le> max_constant c" using Suc enumerate_subprograms_max_constant by simp
   then have "max_constant c1 \<le> t * max_constant c" using Suc(3) mult_eq_if by simp
-  then have "(\<forall>v x. is1' v = Num x \<longrightarrow> x \<le> t * max_constant c)" 
-    using \<omega>_small_step_values_cant_exceed_bound_step[where ?c2.0="c1'"] c1'_def Suc by auto
+  then have "dom is1' = set (enumerate_variables c)" 
+    and "(\<forall>v x. is1' v = Some (Num x) \<longrightarrow> x \<le> t * max_constant c)" 
+    using \<omega>_small_step_values_cant_exceed_bound_step[where ?c2.0="c1'"] c1'_def Suc 
+        step_doesnt_add_variables
+     apply (auto simp: domIff)
+    by (metis Suc.prems(4) domD domIff option.simps(3) step_doesnt_add_variables)+
   moreover have "c1' \<in> set (enumerate_subprograms c)" using Suc.prems(4) c1'_def 
       enumerate_subprograms_complete_step' enumerate_subprograms_transitive by blast
-  ultimately have "\<exists>ops. set ops \<subseteq> set ((imp_minus_minus_to_sas_plus c I t)\<^sub>\<O>\<^sub>+)
+  ultimately obtain ops where ops_def: "set ops \<subseteq> set ((imp_minus_minus_to_sas_plus c I G t)\<^sub>\<O>\<^sub>+)
      \<and> length ops = t'
-     \<and> imp_minus_sas_plus_equivalent_states c c2 is2 (execute_serial_plan_sas_plus ?ss1' ops)"
-    using Suc c1'_def op_def Suc_lessD by auto
-  then obtain ops where ops_def: "set ops \<subseteq> set ((imp_minus_minus_to_sas_plus c I t)\<^sub>\<O>\<^sub>+)
-     \<and> length ops = t'
-     \<and> imp_minus_sas_plus_equivalent_states c c2 is2 (execute_serial_plan_sas_plus ?ss1' ops)"
-    by blast
+     \<and> (execute_serial_plan_sas_plus (imp_minus_state_to_sas_plus (c1', is1')) ops)
+        = imp_minus_state_to_sas_plus (c2, is2)"
+    using Suc c1'_def Suc_lessD by blast
   let ?ops' = "op # ops"
-  have "set ?ops' \<subseteq> set ((imp_minus_minus_to_sas_plus c I t)\<^sub>\<O>\<^sub>+)
+  have "set ?ops' \<subseteq> set ((imp_minus_minus_to_sas_plus c I G t)\<^sub>\<O>\<^sub>+)
      \<and> length ?ops' = Suc t'
-     \<and> imp_minus_sas_plus_equivalent_states c c2 is2 (execute_serial_plan_sas_plus ss1 ?ops')"
+     \<and> (execute_serial_plan_sas_plus (imp_minus_state_to_sas_plus (c1, is1)) ?ops')
+        = imp_minus_state_to_sas_plus (c2, is2)"
     using Suc c1'_def op_def ops_def
     by (auto simp: imp_minus_minus_to_sas_plus_def Let_def coms_to_operators_def)
   then show ?case by blast
 qed auto
-
 end
