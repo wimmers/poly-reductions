@@ -22,7 +22,8 @@ definition is_serial_solution_for_problem
         I = sas_plus_problem.initial_of \<Psi>
         ; G = sas_plus_problem.goal_of \<Psi>
         ; ops = sas_plus_problem.operators_of \<Psi>
-      in (\<exists>I'. I \<subseteq>\<^sub>m I' \<and> G \<subseteq>\<^sub>m execute_serial_plan_sas_plus I \<psi>
+      in (\<exists>I'. I \<subseteq>\<^sub>m I' \<and> dom I' = set ((\<Psi>)\<^sub>\<V>\<^sub>+)
+        \<and> G \<subseteq>\<^sub>m execute_serial_plan_sas_plus I' \<psi> 
         \<and> list_all (\<lambda>op. ListMem op ops) \<psi>)" 
 
 end

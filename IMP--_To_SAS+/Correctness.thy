@@ -464,7 +464,7 @@ qed auto
 
 lemma imp_minus_minus_to_sas_plus_single_step:
    "(c1, is1) \<rightarrow>\<^bsub>r\<^esub> (c2, is2)  \<Longrightarrow> r = t * max_constant c 
-  \<Longrightarrow> c1 \<in> set (enumerate_subprograms c) \<Longrightarrow> t > 0
+  \<Longrightarrow> c1 \<in> set (enumerate_subprograms c)
   \<Longrightarrow> dom is1 = set (enumerate_variables c)
   \<Longrightarrow> (\<forall>v x. is1 v = Some (Num x) \<longrightarrow> x \<le> r)
   \<Longrightarrow> (\<exists>op \<in> set (com_to_operators c1 (domain c t)).
@@ -544,7 +544,7 @@ qed auto
 
 lemma imp_minus_minus_to_sas_plus:
    "(c1, is1) \<rightarrow>\<^bsub>t * max_constant c \<^esub>\<^bsup>t'\<^esup> (c2, is2)
-  \<Longrightarrow> t' < t \<Longrightarrow> t > 0 
+  \<Longrightarrow> t' < t
   \<Longrightarrow> c1 \<in> set (enumerate_subprograms c)
   \<Longrightarrow> dom is1 = set (enumerate_variables c)
   \<Longrightarrow> (\<forall>v x. is1 v = Some (Num x) \<longrightarrow> x \<le> t * max_constant c)
@@ -569,8 +569,10 @@ proof (induction t' arbitrary: c1 is1)
         step_doesnt_add_variables
      apply (auto simp: domIff)
     by (metis Suc.prems(4) domD domIff option.simps(3) step_doesnt_add_variables)+
-  moreover have "c1' \<in> set (enumerate_subprograms c)" using Suc.prems(4) c1'_def 
-      enumerate_subprograms_complete_step' enumerate_subprograms_transitive by blast
+  moreover have "c1' \<in> set (enumerate_subprograms c)" using c1'_def 
+      enumerate_subprograms_complete_step' enumerate_subprograms_transitive 
+    apply(cases t) 
+    using Suc.prems by blast+
   ultimately obtain ops where ops_def: "set ops \<subseteq> set ((imp_minus_minus_to_sas_plus c I G t)\<^sub>\<O>\<^sub>+)
      \<and> length ops = t'
      \<and> (execute_serial_plan_sas_plus (imp_minus_state_to_sas_plus (c1', is1')) ops)
@@ -585,4 +587,35 @@ proof (induction t' arbitrary: c1 is1)
     by (auto simp: imp_minus_minus_to_sas_plus_def Let_def coms_to_operators_def)
   then show ?case by blast
 qed auto
+
+lemma \<omega>_imp_minus_minus_to_sas_plus_plus:
+  assumes "(c, is1) \<rightarrow>\<^bsub>t * max_constant c \<^esub>\<^bsup>t'\<^esup> (SKIP, is2)"
+   "t' < t" 
+   "dom is1 = set (enumerate_variables c)"
+   "(\<forall>v x. is1 v = Some (Num x) \<longrightarrow> x \<le> t * max_constant c)"
+   "I \<subseteq>\<^sub>m is1"
+  shows "(\<exists>plan.
+     is_serial_solution_for_problem (imp_minus_minus_to_sas_plus c I is2 t) plan
+     \<and> length plan = t')"
+proof -
+  let ?\<Psi> = "imp_minus_minus_to_sas_plus c I is2 t"
+  let ?I' = "imp_minus_state_to_sas_plus (c, is1)" 
+  obtain plan where plan_def: "set plan \<subseteq> set ((?\<Psi>)\<^sub>\<O>\<^sub>+)
+     \<and> length plan = t'
+     \<and> (execute_serial_plan_sas_plus ?I' plan)
+        = imp_minus_state_to_sas_plus (SKIP, is2)"
+    using imp_minus_minus_to_sas_plus[OF assms(1)] assms c_in_all_subprograms_c by auto
+  moreover then have "(?\<Psi>)\<^sub>G\<^sub>+ \<subseteq>\<^sub>m execute_serial_plan_sas_plus ?I' plan"
+    and "dom ?I' = set (((?\<Psi>))\<^sub>\<V>\<^sub>+)"
+    and "((?\<Psi>)\<^sub>I\<^sub>+) \<subseteq>\<^sub>m ?I'"
+    using assms plan_def
+    apply(auto simp: imp_minus_minus_to_sas_plus_def Let_def sas_state_by_pc_and_vars_def 
+        imp_minus_state_to_sas_plus_def map_comp_def map_le_def split: option.splits variable.splits)
+    by auto
+  ultimately have "is_serial_solution_for_problem ?\<Psi> plan" 
+    using assms
+    by(auto simp: is_serial_solution_for_problem_def Let_def list_all_def ListMem_iff)
+  then show ?thesis using plan_def by blast
+qed
+
 end
