@@ -2,10 +2,8 @@
 
 section "Reduction"
 
-theory Reduction imports  SAS_Plus_Plus_Representation Omega_Small_StepT
+theory Reduction imports State_Translations
 begin
-
-datatype domain_element = EV EVal | PCV com
 
 definition domain :: "com \<Rightarrow> nat \<Rightarrow> domain_element list" where
 "domain c t = (let m = max_constant c in map (\<lambda>i. EV (Num i))  [0 ..<(t * m + 1)]) @ [EV \<omega>]"
@@ -34,11 +32,7 @@ lemma [simp]: "y \<in> set (domain c t) \<Longrightarrow> EV (case y of EV y' \<
 lemma [simp]: "EV y \<in> set (domain c t) \<longleftrightarrow> (case y of Num x \<Rightarrow> x \<le> t * max_constant c | \<omega> \<Rightarrow> True)"
   by (cases y) (auto simp: domain_def Let_def)
 
-datatype variable = VN vname | PC
-
 type_synonym operator = "(variable, domain_element) sas_plus_operator"
-type_synonym sas_state = "(variable, domain_element) State_Variable_Representation.state"
-type_synonym imp_state = EState
 type_synonym problem = "(variable, domain_element) sas_plus_problem"
 
 definition pc_to_com :: "(variable \<times> domain_element) list \<Rightarrow> com" where
@@ -172,11 +166,16 @@ lemma [simp]: "op \<in> set (com_to_operators c d)
   by (metis PC_in_effect_precondition domain_element.simps nth_mem old.prod.case pc_to_com_def 
       precondition_nonempty)
 
-lemma [simp]: "op \<in> set (com_to_operators c d) 
+lemma pc_to_com_effect[simp]: "op \<in> set (com_to_operators c d) 
   \<Longrightarrow> (PC, y) \<in> set (effect_of op) \<longleftrightarrow> y = PCV (pc_to_com (effect_of op))"
   using com_to_operators_variables_distinct PC_in_effect_precondition 
   by (auto simp: pc_to_com_def)
    (metis domain_element.simps effect_nonempty eq_key_imp_eq_value nth_mem old.prod.case)+
+
+lemma PC_of_effect[simp]: "op \<in> set (com_to_operators c d) 
+  \<Longrightarrow> map_of (effect_of op) PC = Some (PCV (pc_to_com (effect_of op)))"
+  using com_to_operators_variables_distinct PC_in_effect_precondition 
+  by (auto simp: pc_to_com_def)
 
 lemma com_to_operators_PC_is_subprogram: 
   "op \<in> set (com_to_operators c d)
@@ -215,14 +214,33 @@ lemma [simp]: "op \<in> set (com_to_operators c1 (domain c t)) \<Longrightarrow>
   by (metis (no_types, lifting) in_set_conv_nth length_list_update nth_list_update 
       nth_list_update_neq prod.inject variable.distinct(1))
 
-lemma [simp]: "op \<in> set (com_to_operators c1 (domain c t)) \<Longrightarrow> (VN v, y) \<in> set (effect_of op)
+lemma in_set_effect: "op \<in> set (com_to_operators c1 (domain c t)) 
+  \<Longrightarrow> (VN v, y) \<in> set (effect_of op)
   \<Longrightarrow> \<exists>y'. y = EV y'"
   apply(induction c1 arbitrary: op)
       apply(auto simp: domain_def Let_def split: aexp.splits atomExp.splits if_splits)
   by (metis in_set_conv_nth length_list_update nth_list_update nth_list_update_neq 
       prod.inject variable.distinct)
 
-lemma [simp]: "op \<in> set (com_to_operators c1 (domain c t)) \<Longrightarrow> (VN v, y) \<in> set (effect_of op) 
+lemma in_set_precondition: "op \<in> set (com_to_operators c1 (domain c t)) 
+  \<Longrightarrow> (VN v, y) \<in> set (precondition_of op)
+  \<Longrightarrow> \<exists>y'. y = EV y'"
+  apply(induction c1 arbitrary: op)
+      apply(auto simp: domain_def Let_def split: aexp.splits atomExp.splits if_splits)
+  by (metis in_set_conv_nth length_list_update nth_list_update nth_list_update_neq 
+      prod.inject variable.distinct)
+
+lemma map_of_precondition_eq_Some[simp]: 
+  assumes "op \<in> set (com_to_operators c1 (domain c t))"
+   "map_of (precondition_of op) (VN v) = Some y"
+ shows "\<exists>y'. y = EV y'"
+proof -
+  have "(VN v, y) \<in> set (precondition_of op)" using assms by (auto simp: map_of_SomeD)
+  then show ?thesis using assms in_set_precondition by simp
+qed
+
+lemma "op \<in> set (com_to_operators c1 (domain c t)) 
+  \<Longrightarrow> (VN v, y) \<in> set (effect_of op) 
   \<Longrightarrow> \<exists>x. (VN v, EV x) \<in> set (effect_of op)"
   apply(induction c1 arbitrary: op)
       apply(auto simp: domain_def Let_def split: aexp.splits atomExp.splits if_splits)
@@ -230,11 +248,10 @@ lemma [simp]: "op \<in> set (com_to_operators c1 (domain c t)) \<Longrightarrow>
       fst_of_effect in_set_conv_nth length_list_update map_of_eq_Some_iff nth_list_update 
       update_preserve_distinct variable.distinct)
 
-lemma [simp]:
+lemma not_in_set_then_map_of_eq_None:
   "\<forall>y. (x, y) \<notin> set m \<Longrightarrow> (map_of m) x = None"
   apply(induction m)
   by auto
-
 
 lemma variables_in_effect[simp]: 
   assumes "op \<in> set (com_to_operators c1 (domain c t))"
@@ -243,7 +260,7 @@ proof -
   have "(\<exists>y. (VN v, y) \<in> set (effect_of op)) \<or> \<not>((\<exists>y. (VN v, y) \<in> set (effect_of op)))" by auto
   then show ?thesis
     apply(elim disjE)
-    using assms by auto
+    using assms in_set_effect apply blast using not_in_set_then_map_of_eq_None by simp
 qed
   
 lemma [simp]: 
@@ -275,17 +292,6 @@ qed auto
 definition coms_to_operators :: "com list \<Rightarrow> domain_element list \<Rightarrow> operator list" where
 "coms_to_operators cs d = concat (map (\<lambda> c. com_to_operators c d) cs)"
 
-definition sas_state_by_pc_and_vars :: 
-  "com  \<Rightarrow> (vname \<rightharpoonup> EVal) \<Rightarrow> domain_element list \<Rightarrow> sas_state" where
-"sas_state_by_pc_and_vars c vs d = (\<lambda> v. (case v of 
-  VN vn \<Rightarrow> (case vs vn of Some x \<Rightarrow> (if EV x \<in> set d then None else None) |
-                          None \<Rightarrow> None) |
-  PC \<Rightarrow> Some (PCV c)))"
-
-lemma sas_state_by_pc_and_vars_variables_in_d: 
-  "x \<noteq> PC \<Longrightarrow> (sas_state_by_pc_and_vars c vs d) x = Some y 
-  \<Longrightarrow> (y = EV \<omega> \<or> y \<in> set d)"
-  by (auto simp: sas_state_by_pc_and_vars_def split: variable.splits option.splits if_splits)
 
 definition imp_minus_minus_to_sas_plus :: 
 "com \<Rightarrow> (vname \<rightharpoonup> EVal) \<Rightarrow> (vname \<rightharpoonup> EVal) \<Rightarrow> nat \<Rightarrow> problem" where
@@ -294,10 +300,10 @@ definition imp_minus_minus_to_sas_plus ::
   initial_vs = I|`(set (enumerate_variables c)) ;
   goal_vs = G|`(set (enumerate_variables c)) ;
   pc_d = map (\<lambda> i. PCV i) cs in
-    \<lparr> variables_of = PC # (map (\<lambda> v. VN v) (enumerate_variables c)),
+    \<lparr> variables_of = PC # (map VN (enumerate_variables c)),
       operators_of = coms_to_operators cs d, 
-      initial_of = sas_state_by_pc_and_vars c initial_vs d,
-      goal_of = sas_state_by_pc_and_vars SKIP goal_vs d,
+      initial_of = imp_minus_state_to_sas_plus (c, initial_vs),
+      goal_of = imp_minus_state_to_sas_plus (SKIP, goal_vs),
       range_of = (map_of (map (\<lambda> v. (VN v, d)) (enumerate_variables c)))(PC \<mapsto> pc_d)\<rparr>)"
 
 lemma range_defined: 
@@ -378,11 +384,18 @@ proof -
     by (fastforce simp: is_valid_operator_sas_plus_def Let_def) 
 qed
 
-lemma in_range_of_restricted_then: "(f |` S) x = Some y \<Longrightarrow> x \<in> S" 
-  by (metis option.simps restrict_out)
+lemma restricted_map_eq_Some_iff[simp]: "((f |` S) x = Some y) \<longleftrightarrow> (f x = Some y \<and> x \<in> S)" 
+  by(auto simp: restrict_map_def)
 
-lemma imp_minus_minus_to_sas_plus_valid: 
-  "is_valid_problem_sas_plus_plus (imp_minus_minus_to_sas_plus c I G t)"
+lemma not_in_enumerate_variables_not_PC_then[simp]:
+  "\<forall>x \<in> set (enumerate_variables c). v \<noteq> VN x \<Longrightarrow> v \<noteq> PC 
+    \<Longrightarrow> (\<exists>x. x \<notin> set (enumerate_variables c) \<and> v = VN x)"
+  apply(cases v) by auto
+
+lemma imp_minus_minus_to_sas_plus_valid:
+  assumes "(\<forall>x y. I x = Some (Num y) \<longrightarrow> y \<le> t * max_constant c)"
+  assumes "(\<forall>x y. G x = Some (Num y) \<longrightarrow> y \<le> t * max_constant c)"
+  shows "is_valid_problem_sas_plus_plus (imp_minus_minus_to_sas_plus c I G t)"
 proof -
   let ?\<Psi> = "imp_minus_minus_to_sas_plus c I G t"
   let ?ops = "operators_of ?\<Psi>"
@@ -391,16 +404,19 @@ proof -
       and ?G = "goal_of ?\<Psi>"
       and ?D = "range_of ?\<Psi>"
   have "\<forall>x \<in> set ?ops. is_valid_operator_sas_plus ?\<Psi> x" 
-    and "\<forall>v \<in> set ?vs. length (the (?D v)) > 0" 
-    and "\<forall>v. ?I v \<noteq> None \<longrightarrow> ListMem v ?vs"
-    and "\<forall>v. ?G v \<noteq> None \<longrightarrow> ListMem v ?vs"
-    and "\<forall>v. ?I v \<noteq> None \<longrightarrow> ListMem (the (?I v)) (the (?D v))"
-    and "\<forall>v. ?G v \<noteq> None \<longrightarrow> ListMem (the (?G v)) (the (?D v))"
-    using operators_valid c_in_all_subprograms_c[where ?c = c] in_range_of_restricted_then
-      SKIP_in_enumerate_subprograms
-    by (auto simp: imp_minus_minus_to_sas_plus_def Let_def coms_to_operators_def 
-        sas_state_by_pc_and_vars_def ListMem_iff split: variable.splits option.splits)
-  then show ?thesis
+    and "\<forall>v \<in> set ?vs. length (the (?D v)) > 0"
+    using operators_valid c_in_all_subprograms_c[where ?c = c] 
+    by (auto simp: imp_minus_minus_to_sas_plus_def Let_def coms_to_operators_def)
+  moreover have  "?I v \<noteq> None \<longrightarrow> ListMem v ?vs"
+    and "?G v \<noteq> None \<longrightarrow> ListMem v ?vs"
+    and "?I v \<noteq> None \<longrightarrow> ListMem (the (?I v)) (the (?D v))"
+    and "?G v \<noteq> None \<longrightarrow> ListMem (the (?G v)) (the (?D v))" for v
+       apply(cases v)
+       using c_in_all_subprograms_c[where ?c = c] SKIP_in_enumerate_subprograms assms
+       by (auto simp: imp_minus_minus_to_sas_plus_def Let_def coms_to_operators_def 
+        imp_minus_state_to_sas_plus_def map_comp_def ListMem_iff image_def 
+        split: variable.splits option.splits EVal.splits)
+    ultimately show ?thesis
     by (auto simp: is_valid_problem_sas_plus_plus_def range_defined list_all_def)
 qed
 

@@ -23,6 +23,7 @@ definition is_serial_solution_for_problem
         ; G = sas_plus_problem.goal_of \<Psi>
         ; ops = sas_plus_problem.operators_of \<Psi>
       in (\<exists>I'. I \<subseteq>\<^sub>m I' \<and> dom I' = set ((\<Psi>)\<^sub>\<V>\<^sub>+)
+        \<and> (\<forall> v \<in> set ((\<Psi>)\<^sub>\<V>\<^sub>+). the (I' v) \<in> range_of' \<Psi> v)
         \<and> G \<subseteq>\<^sub>m execute_serial_plan_sas_plus I' \<psi> 
         \<and> list_all (\<lambda>op. ListMem op ops) \<psi>)" 
 
