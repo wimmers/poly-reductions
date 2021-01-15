@@ -2,7 +2,7 @@
 
 section "Correctness"
 
-theory Correctness imports Reduction SAS_Plus_Plus_Semantics
+theory Correctness imports Reduction SAS_Plus_Plus
 begin 
 
 lemma sas_plus_state_to_imp_minus_of_effect: 
@@ -510,7 +510,7 @@ lemma \<omega>_imp_minus_minus_to_sas_plus_plus:
    "(\<forall>v x. is1 v = Some (Num x) \<longrightarrow> x \<le> t * max_constant c)"
    "I \<subseteq>\<^sub>m is1"
   shows "(\<exists>plan.
-     is_serial_solution_for_problem (imp_minus_minus_to_sas_plus c I is2 t) plan
+     is_serial_solution_for_problem_sas_plus_plus (imp_minus_minus_to_sas_plus c I is2 t) plan
      \<and> length plan = t')"
 proof -
   let ?\<Psi> = "imp_minus_minus_to_sas_plus c I is2 t"
@@ -529,14 +529,14 @@ proof -
         range_of'_def imp_minus_state_to_sas_plus_def map_comp_def map_le_def)
         apply (auto split: option.splits variable.splits EVal.splits)
     by (metis domIff option.distinct option.inject)
-  ultimately have "is_serial_solution_for_problem ?\<Psi> plan" 
+  ultimately have "is_serial_solution_for_problem_sas_plus_plus ?\<Psi> plan" 
     using assms
-    by(auto simp: is_serial_solution_for_problem_def Let_def list_all_def ListMem_iff)
+    by(auto simp: is_serial_solution_for_problem_sas_plus_plus_def Let_def list_all_def ListMem_iff)
   then show ?thesis using plan_def by blast
 qed
 
 lemma sas_plus_plus_to_\<omega>_imp_minus_minus:
-  assumes "is_serial_solution_for_problem (imp_minus_minus_to_sas_plus c I G t) plan"
+  assumes "is_serial_solution_for_problem_sas_plus_plus (imp_minus_minus_to_sas_plus c I G t) plan"
     "length plan < t"
     "EV ` (ran I) \<subseteq> set (domain c t)"
     "EV ` (ran G) \<subseteq> set (domain c t)"
@@ -548,7 +548,7 @@ proof -
   obtain I' where I'_def: "((?\<Psi>)\<^sub>I\<^sub>+) \<subseteq>\<^sub>m I' \<and> dom I' = set ((?\<Psi>)\<^sub>\<V>\<^sub>+) 
         \<and> (\<forall>v \<in> set ((?\<Psi>)\<^sub>\<V>\<^sub>+). the (I' v) \<in> range_of' ?\<Psi> v)
         \<and> ((?\<Psi>)\<^sub>G\<^sub>+) \<subseteq>\<^sub>m execute_serial_plan_sas_plus I' plan" 
-    using assms by (auto simp: is_serial_solution_for_problem_def Let_def)
+    using assms by (auto simp: is_serial_solution_for_problem_sas_plus_plus_def Let_def)
   let ?ss2 = "execute_serial_plan_sas_plus I' plan"
   let ?is1 = "snd (sas_plus_state_to_imp_minus I')"
   let ?is2 = "snd (sas_plus_state_to_imp_minus ?ss2)"
@@ -562,7 +562,7 @@ proof -
   then obtain t' where t'_def: " t' \<le> length plan \<and> sas_plus_state_to_imp_minus I' 
     \<rightarrow>\<^bsub>t * max_constant c \<^esub>\<^bsup>t'\<^esup> sas_plus_state_to_imp_minus ?ss2"
     using sas_plus_to_imp_minus_minus assms(1) assms(2) I'_def 
-    by (auto simp: is_serial_solution_for_problem_def Let_def list_all_def ListMem_iff) blast
+    by (auto simp: is_serial_solution_for_problem_sas_plus_plus_def Let_def list_all_def ListMem_iff) blast
   moreover have "fst (sas_plus_state_to_imp_minus I') = c"
     and "fst (sas_plus_state_to_imp_minus ?ss2) = SKIP"
     using assms I'_def apply(auto simp: imp_minus_minus_to_sas_plus_def Let_def 
@@ -577,7 +577,7 @@ proof -
     using assms(2) I'_def 
     by (auto simp: imp_minus_minus_to_sas_plus_def imp_minus_state_to_sas_plus_map_le_then Let_def 
         range_of'_def)
-  ultimately show ?thesis  using I'_def t'_def by blast
+  ultimately show ?thesis using I'_def t'_def by blast
 qed
     
     

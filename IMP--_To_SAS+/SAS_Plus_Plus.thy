@@ -1,8 +1,9 @@
 (*
   Author: Mohammad Abdulaziz, Fred Kurz, Florian Keßler
 *)
-theory SAS_Plus_Plus_Representation
-imports "Verified_SAT_Based_AI_Planning.SAS_Plus_Representation"
+theory SAS_Plus_Plus
+  imports "Verified_SAT_Based_AI_Planning.SAS_Plus_Representation" 
+    "Verified_SAT_Based_AI_Planning.SAS_Plus_Semantics"
 begin
 
 section "SAS++ Representation"
@@ -54,7 +55,7 @@ proof -
     and "\<forall>v. ?G v \<noteq> None \<longrightarrow> v \<in> set ?vs"
     and nb\<^sub>3: "\<forall>v. ?G v \<noteq> None \<longrightarrow> the (?G v) \<in> set (the (?D v))"
     using assms 
-    unfolding SAS_Plus_Plus_Representation.is_valid_problem_sas_plus_plus_def Let_def 
+    unfolding SAS_Plus_Plus.is_valid_problem_sas_plus_plus_def Let_def 
       list_all_iff ListMem_iff 
     by argo+
   then have G3: "\<forall>op \<in> set ((\<Psi>)\<^sub>\<O>\<^sub>+). is_valid_operator_sas_plus \<Psi> op"
@@ -126,5 +127,40 @@ proof -
     and "\<forall>v \<in> dom ((\<Psi>)\<^sub>G\<^sub>+). the (((\<Psi>)\<^sub>G\<^sub>+) v) \<in> \<R>\<^sub>+ \<Psi> v"
     by auto
 qed
+
+section "SAS++ Semantics"
+
+subsection "Serial Execution Semantics"
+
+text \<open> Similarly, serial SAS++ solutions are defined like in SAS+, but instead of having a single
+      initial state, we assert that there exists one that conforms to the partial initial state,
+      and from which a goal state is reachable, using the SAS+ definition of executing a plan. \<close>
+
+definition is_serial_solution_for_problem_sas_plus_plus
+  :: "('variable, 'domain) sas_plus_problem \<Rightarrow> ('variable, 'domain) sas_plus_plan \<Rightarrow> bool" 
+  where "is_serial_solution_for_problem_sas_plus_plus \<Psi> \<psi>
+    \<equiv> let 
+        I = sas_plus_problem.initial_of \<Psi>
+        ; G = sas_plus_problem.goal_of \<Psi>
+        ; ops = sas_plus_problem.operators_of \<Psi>
+      in (\<exists>I'. I \<subseteq>\<^sub>m I' \<and> dom I' = set ((\<Psi>)\<^sub>\<V>\<^sub>+)
+        \<and> (\<forall> v \<in> set ((\<Psi>)\<^sub>\<V>\<^sub>+). the (I' v) \<in> range_of' \<Psi> v)
+        \<and> G \<subseteq>\<^sub>m execute_serial_plan_sas_plus I' \<psi> 
+        \<and> list_all (\<lambda>op. ListMem op ops) \<psi>)" 
+
+fun chain_applicable where
+"chain_applicable s [] = True" |
+"chain_applicable s (op # ops) = (is_operator_applicable_in s op \<and> chain_applicable (s \<then>\<^sub>+ op) ops)" 
+
+lemma chain_applicable_append[simp]: "chain_applicable s (as @ bs)
+  \<longleftrightarrow> (chain_applicable s as \<and> (chain_applicable (execute_serial_plan_sas_plus s as) bs))" 
+  apply(induction as arbitrary: s)
+  by(auto)
+
+lemma execute_serial_plan_sas_plus_append[simp]: "chain_applicable s as 
+  \<Longrightarrow> execute_serial_plan_sas_plus s (as @ bs) 
+    = execute_serial_plan_sas_plus (execute_serial_plan_sas_plus s as) bs"
+  apply(induction as arbitrary: s)
+  by auto
 
 end
