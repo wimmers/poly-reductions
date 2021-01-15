@@ -26,7 +26,6 @@ definition "is_valid_problem_sas_plus_plus \<Psi>
     \<and> (\<forall>v. G v \<noteq> None \<longrightarrow> ListMem (the (G v)) (the (D v)))" 
 
 
-(* TODO can be replaced by proof for sublocale? *)
 lemma is_valid_problem_sas_plus_plus_then:
   fixes \<Psi>::"('v,'d) sas_plus_problem"
   assumes "is_valid_problem_sas_plus_plus \<Psi>"

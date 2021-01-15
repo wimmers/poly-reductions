@@ -527,7 +527,7 @@ proof -
     using assms plan_def c_in_all_subprograms_c
     apply(auto simp: imp_minus_minus_to_sas_plus_def Let_def 
         range_of'_def imp_minus_state_to_sas_plus_def map_comp_def map_le_def)
-        apply (auto split: option.splits variable.splits EVal.splits)
+    apply (auto split: option.splits variable.splits EVal.splits)
     by (metis domIff option.distinct option.inject)
   ultimately have "is_serial_solution_for_problem_sas_plus_plus ?\<Psi> plan" 
     using assms
