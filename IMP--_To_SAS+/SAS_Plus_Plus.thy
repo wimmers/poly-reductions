@@ -151,9 +151,32 @@ fun chain_applicable where
 "chain_applicable s [] = True" |
 "chain_applicable s (op # ops) = (is_operator_applicable_in s op \<and> chain_applicable (s \<then>\<^sub>+ op) ops)" 
 
+fun chain_applicable_prefix where
+"chain_applicable_prefix s [] = []" |
+"chain_applicable_prefix s (op # ops) = (if is_operator_applicable_in s op 
+  then op # (chain_applicable_prefix (s \<then>\<^sub>+ op) ops) else [])"
+
 lemma chain_applicable_append[simp]: "chain_applicable s (as @ bs)
   \<longleftrightarrow> (chain_applicable s as \<and> (chain_applicable (execute_serial_plan_sas_plus s as) bs))" 
   apply(induction as arbitrary: s)
+  by(auto)
+
+lemma chain_applicable_prefix_chain_applicable[simp]: 
+  "chain_applicable s (chain_applicable_prefix s ops)"
+  apply(induction ops arbitrary: s)
+  by(auto)
+
+lemma execute_chain_applicable_prefix: "execute_serial_plan_sas_plus 
+  s (chain_applicable_prefix s ops) = execute_serial_plan_sas_plus s ops"
+  apply(induction ops arbitrary: s)
+  by(auto)
+
+lemma set_of_chain_applicable_prefix: "set (chain_applicable_prefix s ops) \<subseteq> set ops"
+  apply(induction ops arbitrary: s)
+  by(auto)
+
+lemma length_of_chain_applicable_prefix: "length (chain_applicable_prefix s ops) \<le> length ops"
+  apply(induction ops arbitrary: s)
   by(auto)
 
 lemma execute_serial_plan_sas_plus_append[simp]: "chain_applicable s as 
@@ -161,5 +184,24 @@ lemma execute_serial_plan_sas_plus_append[simp]: "chain_applicable s as
     = execute_serial_plan_sas_plus (execute_serial_plan_sas_plus s as) bs"
   apply(induction as arbitrary: s)
   by auto
+
+lemma dom_of_execute_serial_plan_sas_plus: "is_valid_problem_sas_plus P
+  \<Longrightarrow> \<forall>op \<in> set ops. op \<in> set ((P)\<^sub>\<O>\<^sub>+)
+  \<Longrightarrow> dom s = set ((P)\<^sub>\<V>\<^sub>+)
+  \<Longrightarrow> dom (execute_serial_plan_sas_plus s ops) = set ((P)\<^sub>\<V>\<^sub>+)" 
+proof(induction ops arbitrary: s)
+  case Nil
+  then show ?case by auto
+next
+  case (Cons op ops)
+  hence "\<forall>(v, a)\<in>set (effect_of op). v \<in> set ((P)\<^sub>\<V>\<^sub>+)"
+    apply -
+    apply(rule is_valid_operator_sas_plus_then(3))
+    by (auto simp: is_valid_problem_sas_plus_def Let_def list_all_def)
+  hence "dom (s \<then>\<^sub>+ op) = set ((P)\<^sub>\<V>\<^sub>+)" using Cons  apply(auto) 
+    using map_of_SomeD by fastforce
+  thus ?case using Cons by simp
+qed
+ 
 
 end

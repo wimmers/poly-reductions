@@ -24,9 +24,19 @@ lemma SAS_Plus_Plus_State_To_SAS_Plus_eq_iff_snd_eq[simp]:
       split: option.splits variable.splits)
   by (metis option.exhaust_sel)
 
+lemma SAS_Plus_Plus_State_To_SAS_Plus_Stage[simp]: 
+  "SAS_Plus_Plus_State_To_SAS_Plus (i, s) Stage = Some i"
+  by (auto simp: SAS_Plus_Plus_State_To_SAS_Plus_def)
+
 lemma SAS_Plus_Plus_State_To_SAS_Plus_update_stage[simp]:
   "SAS_Plus_Plus_State_To_SAS_Plus (a, s)(Stage \<mapsto> b) = SAS_Plus_Plus_State_To_SAS_Plus (b, s)"
   by (auto simp: SAS_Plus_Plus_State_To_SAS_Plus_def map_comp_def fun_eq_iff)
+
+lemma SAS_Plus_Plus_State_To_SAS_Plus_update_Var[simp]:
+  "SAS_Plus_Plus_State_To_SAS_Plus (i, s)(Var x \<mapsto> DE y) 
+    = SAS_Plus_Plus_State_To_SAS_Plus(i, s(x \<mapsto> y))"
+  by (auto simp: SAS_Plus_Plus_State_To_SAS_Plus_def map_comp_def fun_eq_iff 
+      split: option.splits variable.splits)
 
 lemma SAS_Plus_Plus_State_To_SAS_Plus_map_le[simp]: 
   "SAS_Plus_Plus_State_To_SAS_Plus (a, s) \<subseteq>\<^sub>m m 
@@ -37,6 +47,20 @@ lemma SAS_Plus_Plus_State_To_SAS_Plus_map_le[simp]:
 lemma Stage_map_le_SAS_Plus_Plus_State_To_SAS_Plus[simp]:
   "[Stage \<mapsto> i] \<subseteq>\<^sub>m SAS_Plus_Plus_State_To_SAS_Plus (i, s)"
   by(auto simp: SAS_Plus_Plus_State_To_SAS_Plus_def map_le_def)
+
+lemma Var_not_in_map_Var_iff[simp]: "Var x \<notin> Var ` S \<longleftrightarrow> x \<notin> S" by auto
+
+lemma dom_of_SAS_Plus_Plus_State_To_SAS_Plus: 
+  "dom (SAS_Plus_Plus_State_To_SAS_Plus (i, s)) = { Stage } \<union> (Var ` dom s)" 
+  by(auto simp: SAS_Plus_Plus_State_To_SAS_Plus_def map_comp_def 
+      split: option.splits variable.splits)
+
+lemma SAS_Plus_Plus_State_To_SAS_Plus_map_le_SAS_Plus_Plus_State_To_SAS_Plus[simp]:
+  "SAS_Plus_Plus_State_To_SAS_Plus (a, s1) \<subseteq>\<^sub>m SAS_Plus_Plus_State_To_SAS_Plus (b, s2)
+    \<longleftrightarrow> (a = b \<and> s1 \<subseteq>\<^sub>m s2)" 
+  apply(auto simp: map_le_def dom_of_SAS_Plus_Plus_State_To_SAS_Plus)
+   apply(auto simp: SAS_Plus_Plus_State_To_SAS_Plus_def map_comp_def split: option.splits)
+  by force+
 
 definition SAS_Plus_Plus_Operator_To_SAS_Plus_Operator:: 
   "('v, 'd) sas_plus_operator \<Rightarrow> ('v, 'd) operator" where
@@ -111,13 +135,11 @@ lemma Stage_after_initialization_operator[simp]:
 
 definition initial_state:: 
   "('v, 'd) sas_plus_problem \<Rightarrow> ('v variable, 'd domain_element) state" where
-"initial_state P = (\<lambda> v.
-  (case v of 
-    Var var \<Rightarrow> (if var \<in> set ((P)\<^sub>\<V>\<^sub>+) then Some (DE (case ((P)\<^sub>I\<^sub>+) var of 
-        (Some val) \<Rightarrow> val |
-        None \<Rightarrow> (the (range_of P var)) ! 0))
-      else None) |
-    Stage \<Rightarrow> Some Init))"
+"initial_state P = SAS_Plus_Plus_State_To_SAS_Plus (Init, (\<lambda> v.
+  (if v \<in> set ((P)\<^sub>\<V>\<^sub>+) then Some (case ((P)\<^sub>I\<^sub>+) v of 
+        Some val \<Rightarrow> val |
+        None \<Rightarrow> (the (range_of P v)) ! 0)
+   else None)))"
 
 definition SAS_Plus_Plus_To_SAS_Plus:: "('v, 'd) sas_plus_problem \<Rightarrow> ('v, 'd) problem" where
 "SAS_Plus_Plus_To_SAS_Plus P = \<lparr> variables_of = Stage # (map Var ((P)\<^sub>\<V>\<^sub>+)),
@@ -128,8 +150,6 @@ definition SAS_Plus_Plus_To_SAS_Plus:: "('v, 'd) sas_plus_problem \<Rightarrow> 
       goal_of = SAS_Plus_Plus_State_To_SAS_Plus (NonInit, ((P)\<^sub>G\<^sub>+)),
       range_of = ((\<lambda>x. Some (map DE x)) \<circ>\<^sub>m (range_of P) 
         \<circ>\<^sub>m (\<lambda>x. (case x of Var x \<Rightarrow> Some x | Stage \<Rightarrow> None)))(Stage \<mapsto> [Init, NonInit])\<rparr>"
-
-lemma Var_not_in_map_Var_iff[simp]: "Var x \<notin> Var ` S \<longleftrightarrow> x \<notin> S" by auto
 
 lemma SAS_Plus_Plus_To_SAS_Plus_valid: 
   assumes "is_valid_problem_sas_plus_plus P"
@@ -293,7 +313,7 @@ lemma SAS_plus_plan_structure:
     "execute_serial_plan_sas_plus s plan Stage = Some NonInit"
     "list_all (\<lambda>op. ListMem op ((SAS_Plus_Plus_To_SAS_Plus P)\<^sub>\<O>\<^sub>+) ) plan"
   shows "\<exists>k. k < length plan 
-    \<and> list_all (\<lambda>op. op \<in> set (initialization_operators P)) (take (k - 1) plan)
+    \<and> list_all (\<lambda>op. op \<in> set (initialization_operators P)) (take k plan)
     \<and> plan ! k = \<lparr> precondition_of = [(Stage, Init)], effect_of = [(Stage, NonInit)]\<rparr>
     \<and> list_all (\<lambda>op. op \<in> set (map SAS_Plus_Plus_Operator_To_SAS_Plus_Operator ((P)\<^sub>\<O>\<^sub>+))) 
       (drop (k + 1) plan)"
@@ -308,16 +328,10 @@ using assms proof(induction plan arbitrary: s)
     assume *: "a \<in> set (initialization_operators P)"
     hence "(s ++ map_of (effect_of a)) Stage = Some Init" using Cons by simp
     then obtain k where "k < length plan 
-      \<and> list_all (\<lambda>op. op \<in> set (initialization_operators P)) (take (k - 1) plan)
+      \<and> list_all (\<lambda>op. op \<in> set (initialization_operators P)) (take k plan)
       \<and> plan ! k = \<lparr> precondition_of = [(Stage, Init)], effect_of = [(Stage, NonInit)]\<rparr>
       \<and> list_all (\<lambda>op. op \<in> set (map SAS_Plus_Plus_Operator_To_SAS_Plus_Operator ((P)\<^sub>\<O>\<^sub>+))) 
       (drop (k + 1) plan)" using Cons apply(simp) by presburger
-    hence "k + 1 < length (a # plan) 
-      \<and> list_all (\<lambda>op. op \<in> set (initialization_operators P)) (take k (a # plan))
-      \<and> (a # plan) ! (k + 1) = \<lparr> precondition_of = [(Stage, Init)], effect_of = [(Stage, NonInit)]\<rparr>
-      \<and> list_all (\<lambda>op. op \<in> set (map SAS_Plus_Plus_Operator_To_SAS_Plus_Operator ((P)\<^sub>\<O>\<^sub>+))) 
-      (drop (k + 2) (a # plan))" using * apply(auto simp: list_all_def)
-      apply(drule in_set_take_then) by auto
     thus ?thesis using Cons * by auto
   next
     assume *: "a = \<lparr> precondition_of = [(Stage, Init)], effect_of = [(Stage, NonInit)]\<rparr>" 
@@ -329,11 +343,132 @@ using assms proof(induction plan arbitrary: s)
   qed (auto simp: SAS_Plus_Plus_Operator_To_SAS_Plus_Operator_def list_all_def map_le_def)
 qed auto
 
-lemma  SAS_Plus_To_SAS_Plus_Plus:
+lemma result_of_initialization_operator:
+  "is_valid_problem_sas_plus_plus P
+    \<Longrightarrow> op \<in> set (initialization_operators P)
+    \<Longrightarrow> ((P)\<^sub>I\<^sub>+) \<subseteq>\<^sub>m I
+    \<Longrightarrow> (\<forall>v \<in> dom I. the (I v) \<in> \<R>\<^sub>+ P v)
+    \<Longrightarrow> (\<exists>I'. (SAS_Plus_Plus_State_To_SAS_Plus (Init, I)) ++ map_of(effect_of op) 
+        = SAS_Plus_Plus_State_To_SAS_Plus (Init, I')
+      \<and> ((P)\<^sub>I\<^sub>+) \<subseteq>\<^sub>m I' \<and> (\<forall>v \<in> dom I'. the (I' v) \<in> \<R>\<^sub>+ P v))"
+  apply(auto simp: initialization_operators_def map_le_def range_of'_def dom_def ListMem_iff
+       is_valid_problem_sas_plus_plus_def Let_def list_all_def split: if_splits option.splits)
+   apply (meson domI domIff)
+  by (metis option.sel option.simps)
+
+
+lemma result_of_initialization_operators:
+  "is_valid_problem_sas_plus_plus P 
+    \<Longrightarrow> list_all (\<lambda>op. op \<in> set (initialization_operators P)) ops
+    \<Longrightarrow> ((P)\<^sub>I\<^sub>+) \<subseteq>\<^sub>m I 
+    \<Longrightarrow> (\<forall>v \<in> dom I. the (I v) \<in> \<R>\<^sub>+ P v)
+    \<Longrightarrow> (\<exists>I'. execute_serial_plan_sas_plus (SAS_Plus_Plus_State_To_SAS_Plus (Init, I)) ops 
+        = SAS_Plus_Plus_State_To_SAS_Plus (Init, I')
+      \<and> ((P)\<^sub>I\<^sub>+) \<subseteq>\<^sub>m I' \<and> (\<forall>v \<in> dom I'. the (I' v) \<in> \<R>\<^sub>+ P v))"
+proof(induction ops arbitrary: I)
+  case (Cons op ops)
+  thus ?case using result_of_initialization_operator[OF Cons(2)] by force
+qed auto
+
+lemma list_all_in_map_set_then: 
+  "\<forall>a\<in>set as. a \<in> f ` S  \<Longrightarrow> (\<exists>bs. as = map f bs \<and> (\<forall>b \<in> set bs. b \<in> S))" 
+  apply(induction as)
+   apply(auto)
+  by (metis list.simps set_ConsD)
+
+lemma result_of_initialization_operators_on_initial_state:
+  "is_valid_problem_sas_plus_plus P
+    \<Longrightarrow> list_all (\<lambda>op. op \<in> set (initialization_operators P)) ops
+    \<Longrightarrow> (\<exists>I'. execute_serial_plan_sas_plus ((SAS_Plus_Plus_To_SAS_Plus P)\<^sub>I\<^sub>+) ops 
+        = SAS_Plus_Plus_State_To_SAS_Plus (Init, I')
+      \<and> ((P)\<^sub>I\<^sub>+) \<subseteq>\<^sub>m I' \<and> (\<forall>v \<in> dom I'. the (I' v) \<in> \<R>\<^sub>+ P v))"
+  apply(simp add: SAS_Plus_Plus_To_SAS_Plus_def initial_state_def)
+  apply(rule result_of_initialization_operators)
+  apply(auto simp: list_all_def map_le_def is_valid_problem_sas_plus_plus_def Let_def ListMem_iff 
+      range_of'_def split: option.splits)
+  by auto
+
+lemma length_of_mapped: "l' = map f l \<Longrightarrow> length l' \<le> x \<Longrightarrow> length l \<le> x" by simp
+
+lemma SAS_Plus_To_SAS_Plus_Plus:
   assumes "is_valid_problem_sas_plus_plus P" 
     "is_serial_solution_for_problem (SAS_Plus_Plus_To_SAS_Plus P) plan"
   shows "\<exists>plan'. length plan' \<le> length plan
     \<and> is_serial_solution_for_problem_sas_plus_plus P plan'"
-  sorry
+proof-
+  let ?plan = "chain_applicable_prefix ((SAS_Plus_Plus_To_SAS_Plus P)\<^sub>I\<^sub>+) plan" 
+  have "\<exists>k. k < length ?plan 
+    \<and> list_all (\<lambda>op. op \<in> set (initialization_operators P)) (take k ?plan)
+    \<and> ?plan ! k = \<lparr> precondition_of = [(Stage, Init)], effect_of = [(Stage, NonInit)]\<rparr>
+    \<and> list_all (\<lambda>op. op \<in> set (map SAS_Plus_Plus_Operator_To_SAS_Plus_Operator ((P)\<^sub>\<O>\<^sub>+))) 
+      (drop (k + 1) ?plan)"
+    apply -
+    apply(rule SAS_plus_plan_structure[where ?s ="((SAS_Plus_Plus_To_SAS_Plus P)\<^sub>I\<^sub>+)"])
+    using assms set_of_chain_applicable_prefix 
+       apply(auto simp: is_serial_solution_for_problem_def list_all_def map_le_def Let_def 
+        execute_chain_applicable_prefix SAS_Plus_Plus_To_SAS_Plus_def initial_state_def ListMem_iff 
+        SAS_Plus_Plus_State_To_SAS_Plus_def)
+    by blast
+  then obtain k where k_def: "k < length ?plan 
+    \<and> list_all (\<lambda>op. op \<in> set (initialization_operators P)) (take k ?plan)
+    \<and> ?plan ! k = \<lparr> precondition_of = [(Stage, Init)], effect_of = [(Stage, NonInit)]\<rparr>
+    \<and> list_all (\<lambda>op. op \<in> set (map SAS_Plus_Plus_Operator_To_SAS_Plus_Operator ((P)\<^sub>\<O>\<^sub>+))) 
+      (drop (k + 1) ?plan)" by blast
+
+  let ?prefix = "take k ?plan" 
+  obtain I' where I'_def: "execute_serial_plan_sas_plus ((SAS_Plus_Plus_To_SAS_Plus P)\<^sub>I\<^sub>+) ?prefix 
+        = SAS_Plus_Plus_State_To_SAS_Plus (Init, I')
+      \<and> ((P)\<^sub>I\<^sub>+) \<subseteq>\<^sub>m I' \<and> (\<forall>v \<in> dom I'. the (I' v) \<in> \<R>\<^sub>+ P v)" 
+    using result_of_initialization_operators_on_initial_state assms k_def by blast
+  moreover have  "dom (execute_serial_plan_sas_plus ((SAS_Plus_Plus_To_SAS_Plus P)\<^sub>I\<^sub>+) ?prefix) 
+    = set ((SAS_Plus_Plus_To_SAS_Plus P)\<^sub>\<V>\<^sub>+)" 
+    apply(rule dom_of_execute_serial_plan_sas_plus)
+    using SAS_Plus_Plus_To_SAS_Plus_valid assms k_def 
+    by(auto simp: list_all_def SAS_Plus_Plus_To_SAS_Plus_def initial_state_def 
+        SAS_Plus_Plus_State_To_SAS_Plus_def map_comp_def split: option.splits variable.splits)
+  ultimately have dom_of_I': "dom I' = set ((P)\<^sub>\<V>\<^sub>+)" 
+    by (auto simp: dom_of_SAS_Plus_Plus_State_To_SAS_Plus SAS_Plus_Plus_To_SAS_Plus_def)
+
+  have "\<exists>plan'. drop (k + 1) ?plan = map SAS_Plus_Plus_Operator_To_SAS_Plus_Operator plan'
+    \<and> (\<forall>op \<in> set plan'. op \<in> set ((P)\<^sub>\<O>\<^sub>+))" 
+    using k_def list_all_in_map_set_then by(auto simp: list_all_def)
+  then obtain plan' where plan'_def: "map SAS_Plus_Plus_Operator_To_SAS_Plus_Operator plan'
+    = drop (k + 1) ?plan 
+    \<and> (\<forall>op \<in> set plan'. op \<in> set ((P)\<^sub>\<O>\<^sub>+))" by fastforce
+
+  have *: "?plan = ((take k ?plan) 
+    @ [\<lparr> precondition_of = [(Stage, Init)], effect_of = [(Stage, NonInit)]\<rparr>]
+    @ (drop (k + 1) ?plan))" using k_def
+    by (metis One_nat_def add.right_neutral add_Suc_right append.assoc append_take_drop_id 
+        hd_drop_conv_nth take_hd_drop)
+  hence "execute_serial_plan_sas_plus ((SAS_Plus_Plus_To_SAS_Plus P)\<^sub>I\<^sub>+) ?plan 
+    = execute_serial_plan_sas_plus ((SAS_Plus_Plus_To_SAS_Plus P)\<^sub>I\<^sub>+)
+      ((take k ?plan) @ [\<lparr> precondition_of = [(Stage, Init)], effect_of = [(Stage, NonInit)]\<rparr>]
+        @ (drop (k + 1) ?plan))" by simp
+  also have "... = execute_serial_plan_sas_plus (SAS_Plus_Plus_State_To_SAS_Plus (Init, I'))
+        ([\<lparr> precondition_of = [(Stage, Init)], effect_of = [(Stage, NonInit)]\<rparr>]
+        @ (drop (k + 1) ?plan))" using I'_def
+    by (metis * chain_applicable_append chain_applicable_prefix_chain_applicable 
+        execute_serial_plan_sas_plus_append)
+  also have "... = execute_serial_plan_sas_plus (SAS_Plus_Plus_State_To_SAS_Plus (NonInit, I'))
+    (drop (k + 1) ?plan)" by auto
+  also have "... = SAS_Plus_Plus_State_To_SAS_Plus (NonInit, execute_serial_plan_sas_plus I' plan')"
+    using plan'_def by (metis execute_SAS_Plus_Plus_ops_in_SAS_Plus)
+  ultimately have "(P)\<^sub>G\<^sub>+ \<subseteq>\<^sub>m execute_serial_plan_sas_plus I' plan'"
+    using assms(2) plan'_def 
+    by(auto simp: execute_chain_applicable_prefix is_serial_solution_for_problem_def 
+        SAS_Plus_Plus_To_SAS_Plus_def)
+  hence "(P)\<^sub>I\<^sub>+ \<subseteq>\<^sub>m I' \<and> dom I' = set ((P)\<^sub>\<V>\<^sub>+)
+        \<and> (\<forall> v \<in> set ((P)\<^sub>\<V>\<^sub>+). the (I' v) \<in> range_of' P v)
+        \<and> (P)\<^sub>G\<^sub>+ \<subseteq>\<^sub>m execute_serial_plan_sas_plus I' plan' 
+        \<and> list_all (\<lambda>op. ListMem op ((P)\<^sub>\<O>\<^sub>+)) plan'"
+    using plan'_def I'_def dom_of_I' by (auto simp: list_all_def ListMem_iff)
+  hence "length plan' \<le> length plan
+    \<and> is_serial_solution_for_problem_sas_plus_plus P plan'" using plan'_def
+    apply (auto simp: is_serial_solution_for_problem_sas_plus_plus_def)
+    using length_of_mapped length_of_chain_applicable_prefix le_add1 le_diff_conv le_trans 
+    by (metis (mono_tags, lifting) length_drop)
+  thus ?thesis by blast
+qed
 
 end
