@@ -422,6 +422,25 @@ lemma main_lemma :
                                         )
                       )"
   sorry
+lemma main_lemma_hol: 
+  fixes c pt p_cer
+  assumes "poly pt"
+  assumes "poly p_cer"
+  assumes "\<forall>s. \<exists>t. Ex (big_step_t (c, s) t) \<and> t \<le> pt (length (s ''input''))"
+  assumes "\<forall>x z. \<exists>r. \<forall>s. s ''input'' = x \<and> s ''certificate'' = z \<longrightarrow>
+                         (\<exists>t s'. (c, s) \<Rightarrow>\<^bsup> t \<^esup> s' \<and> s' ''input'' = r)"
+   shows "\<exists>imp_to_sat t_red s_red.
+         poly t_red 
+       \<and> poly s_red
+       \<and> (\<forall>x. \<exists>f.    length (encode_sat f) \<le> s_red ( length x ) \<and> imp_to_sat x = f
+                   \<and> ( sat f  \<longleftrightarrow>
+                                        (\<exists>z. length z \<le> p_cer (length x) \<and>
+                                                      (\<forall>s t s'. s ''input'' = x 
+                                                      \<and> s ''certificate'' = z 
+                                                      \<and>(c, s) \<Rightarrow>\<^bsup> t \<^esup> s' \<longrightarrow> s' ''input'' >0))
+                                        )
+                      )"
+  sorry
 lemma NP_reduces_SAT:
   assumes "L \<in> NP"
   shows "poly_reduces L IMP_SAT"
@@ -539,5 +558,5 @@ qed
 lemma cook_levin: "IMP_SAT \<in> NP_hard"
   by (simp add: NP_hard_def NP_reduces_SAT)
 end
-
+end
 
