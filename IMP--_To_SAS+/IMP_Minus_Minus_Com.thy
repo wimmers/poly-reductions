@@ -2,7 +2,7 @@
 
 section "IMP- A reduced imperative language"
 
-theory Com imports Main AExp begin
+theory IMP_Minus_Minus_Com imports Main IMP_Minus_Minus_AExp begin
 
 paragraph "Summary"
 text\<open>Syntax definition for IMP-. Based on the syntax definition of IMP\<close>

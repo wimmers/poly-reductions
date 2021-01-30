@@ -41,5 +41,4 @@ qed auto
 
 lemma rel_pow_Suc_E: "rel_pow r (Suc n) x z  \<Longrightarrow> (\<exists>y. rel_pow r n x y \<and> r y z)"
   using rel_pow_Suc_E_util by metis
-  
 end

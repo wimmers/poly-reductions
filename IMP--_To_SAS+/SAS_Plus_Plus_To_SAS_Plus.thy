@@ -433,27 +433,21 @@ proof-
     \<and> (\<forall>op \<in> set plan'. op \<in> set ((P)\<^sub>\<O>\<^sub>+))" 
     using k_def list_all_in_map_set_then by(auto simp: list_all_def)
   then obtain plan' where plan'_def: "map SAS_Plus_Plus_Operator_To_SAS_Plus_Operator plan'
-    = drop (k + 1) ?plan 
-    \<and> (\<forall>op \<in> set plan'. op \<in> set ((P)\<^sub>\<O>\<^sub>+))" by fastforce
+    = drop (k + 1) ?plan  \<and> (\<forall>op \<in> set plan'. op \<in> set ((P)\<^sub>\<O>\<^sub>+))" by fastforce
 
-  have *: "?plan = ((take k ?plan) 
+  have "?plan = ((take k ?plan) 
     @ [\<lparr> precondition_of = [(Stage, Init)], effect_of = [(Stage, NonInit)]\<rparr>]
     @ (drop (k + 1) ?plan))" using k_def
     by (metis One_nat_def add.right_neutral add_Suc_right append.assoc append_take_drop_id 
         hd_drop_conv_nth take_hd_drop)
   hence "execute_serial_plan_sas_plus ((SAS_Plus_Plus_To_SAS_Plus P)\<^sub>I\<^sub>+) ?plan 
-    = execute_serial_plan_sas_plus ((SAS_Plus_Plus_To_SAS_Plus P)\<^sub>I\<^sub>+)
-      ((take k ?plan) @ [\<lparr> precondition_of = [(Stage, Init)], effect_of = [(Stage, NonInit)]\<rparr>]
-        @ (drop (k + 1) ?plan))" by simp
-  also have "... = execute_serial_plan_sas_plus (SAS_Plus_Plus_State_To_SAS_Plus (Init, I'))
+    = execute_serial_plan_sas_plus (SAS_Plus_Plus_State_To_SAS_Plus (Init, I'))
         ([\<lparr> precondition_of = [(Stage, Init)], effect_of = [(Stage, NonInit)]\<rparr>]
         @ (drop (k + 1) ?plan))" using I'_def
-    by (metis * chain_applicable_append chain_applicable_prefix_chain_applicable 
+    by (metis chain_applicable_append chain_applicable_prefix_chain_applicable 
         execute_serial_plan_sas_plus_append)
-  also have "... = execute_serial_plan_sas_plus (SAS_Plus_Plus_State_To_SAS_Plus (NonInit, I'))
-    (drop (k + 1) ?plan)" by auto
   also have "... = SAS_Plus_Plus_State_To_SAS_Plus (NonInit, execute_serial_plan_sas_plus I' plan')"
-    using plan'_def by (metis execute_SAS_Plus_Plus_ops_in_SAS_Plus)
+    using plan'_def by auto (metis execute_SAS_Plus_Plus_ops_in_SAS_Plus)
   ultimately have "(P)\<^sub>G\<^sub>+ \<subseteq>\<^sub>m execute_serial_plan_sas_plus I' plan'"
     using assms(2) plan'_def 
     by(auto simp: execute_chain_applicable_prefix is_serial_solution_for_problem_def 

@@ -1,6 +1,6 @@
 \<^marker>\<open>creator Florian Kessler\<close>
 
-theory Omega_Small_StepT  imports Main Com "../IMP-/Rel_Pow" Subprograms begin
+theory Omega_Small_StepT  imports Main IMP_Minus_Minus_Com "../IMP-/Rel_Pow" Subprograms begin
 
 paragraph "Summary"
 text\<open>We give small step semantics with time for IMP-. 

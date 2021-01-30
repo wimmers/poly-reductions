@@ -6,7 +6,7 @@ We define non-nested arithmetic expressions on natural numbers.
 The defined operations are addition and modified subtraction. Based on the AExp theory of IMP.
 \<close>
 
-theory AExp imports Main begin
+theory IMP_Minus_Minus_AExp imports Main begin
 
 type_synonym vname = string
 type_synonym val = nat

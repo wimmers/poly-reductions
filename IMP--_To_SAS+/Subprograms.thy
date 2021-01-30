@@ -1,6 +1,6 @@
 \<^marker>\<open>creator Florian Keßler\<close>
 
-theory Subprograms imports Small_StepT Domains
+theory Subprograms imports IMP_Minus_Minus_Small_StepT Domains
 begin
 
 fun all_subprograms :: "com \<Rightarrow> com list" where

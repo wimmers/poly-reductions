@@ -2,7 +2,7 @@
 
 section "Domains"
 
-theory Domains imports Small_StepT
+theory Domains imports IMP_Minus_Minus_Small_StepT
 begin
 
 fun max_constant :: "com \<Rightarrow> nat" where
