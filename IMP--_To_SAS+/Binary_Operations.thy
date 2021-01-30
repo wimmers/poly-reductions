@@ -54,6 +54,56 @@ proof(induction n arbitrary: s)
     by(auto simp: fun_eq_iff var_to_var_bit_eq_Some_iff var_bit_to_var_eq_iff split: option.splits)
 qed (auto simp: fun_eq_iff split: option.splits)
 
+definition check_bit_non_zero:: "nat \<Rightarrow> vname \<Rightarrow> IMP_Minus_Minus_com" where
+"check_bit_non_zero i v = (IF (var_bit_to_var (v, i))\<noteq>0 THEN (''?$'' @ v) ::= A (N 1) ELSE SKIP)" 
+
+lemma result_of_check_bit_non_zero_sequence: 
+  "t_small_step_fun (4 * k)
+  (com_list_to_seq (map (\<lambda>i. check_bit_non_zero i v) [0..<k]), s)
+    = (SKIP, if (\<exists>j < k. s (var_bit_to_var (v, j)) \<noteq> 0) then (s(''?$'' @ v := 1)) else s)" 
+proof(induction k)
+  case 0
+  then show ?case by (auto simp: check_bit_non_zero_def t_small_step_fun_terminate_iff)
+next
+  case (Suc k)
+  hence "t_small_step_fun (4 * (Suc k))
+   (com_list_to_seq ((map (\<lambda>i. check_bit_non_zero i v) [0..<k]) 
+    @ [check_bit_non_zero k v]), s)
+    = (SKIP, if (\<exists>j < Suc k. s (var_bit_to_var (v, j)) \<noteq> 0) then (s(''?$'' @ v := 1)) else s)"
+     apply -
+    apply(rule t_small_step_fun_com_list_to_seq_terminates[where ?t1.0="4 * k" and ?t2.0=3])
+      apply(auto simp: seq_terminates_iff)
+      apply(auto simp only: numeral_eq_Suc exists_terminating_iff fun_eq_iff)
+    by (auto simp: check_bit_non_zero_def t_small_step_fun_terminate_iff less_Suc_eq split: if_splits)
+  thus ?case by simp
+qed
+
+definition binary_assign_constant_update_non_zero_indicator:: 
+  "nat \<Rightarrow> vname \<Rightarrow> nat \<Rightarrow> IMP_Minus_Minus_com" where
+"binary_assign_constant_update_non_zero_indicator n v x = binary_assign_constant n v x ;;
+  (''?$'' @ v) ::= A (N (if x \<noteq> 0 then 1 else 0))" 
+
+lemma result_of_binary_assign_constant_update_non_zero_indicator: 
+  assumes "n > 0" "x < 2 ^ n" 
+  shows "t_small_step_fun (10 * n) (binary_assign_constant_update_non_zero_indicator n v x, s)
+    = (SKIP, \<lambda>w. (case var_to_var_bit w of
+      Some (w', m) \<Rightarrow> (if w' = v \<and> m < n then nth_bit x m else s w) |
+      _ \<Rightarrow> if w = ''?$'' @ v then (if x \<noteq> 0 then 1 else 0) else s w))" 
+  apply(simp only: binary_assign_constant_update_non_zero_indicator_def)
+  apply(rule seq_terminates_when[where ?t1.0="3*n" and ?t2.0="1"])
+    using assms apply simp
+     apply(rule result_of_binary_assign_constant)
+    by(auto)
+
+lemma result_of_binary_assign_constant_update_non_zero_indicator_on_translated_state:
+  assumes "n > 0" "x < 2 ^ n" 
+  shows "t_small_step_fun (10 * n) (binary_assign_constant_update_non_zero_indicator n v x, 
+    IMP_Minus_State_To_IMP_Minus_Minus s n)
+    = (SKIP, IMP_Minus_State_To_IMP_Minus_Minus (s( v := x)) n)"
+  apply(subst result_of_binary_assign_constant_update_non_zero_indicator)
+  using assms apply (auto simp: fun_eq_iff IMP_Minus_State_To_IMP_Minus_Minus_def split: option.splits)
+   by (metis append.simps append_take_drop_id drop0 drop_Suc_Cons numeral_2_eq_2)+
+
 fun nth_carry:: "nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat" where
 "nth_carry 0 a b = (if (nth_bit a 0 = 1 \<and> nth_bit b 0 = 1) then 1 else 0)" | 
 "nth_carry (Suc n) a b = (if (nth_bit a (Suc n) = 1 \<and> nth_bit b (Suc n) = 1) 
@@ -75,11 +125,12 @@ lemma nth_bit_of_add: "nth_bit (a + b) (Suc n) = (let s = nth_bit a (Suc n) + nt
 lemma no_overflow_condition: "a + b < 2^n \<Longrightarrow> nth_carry (n - 1) a b = 0" 
   sorry
 
-lemma all_bits_in_sum_zero_then: "(\<forall>i \<le> k. nth_bit (a + b) i = 0) 
-  \<Longrightarrow> (a + b \<ge> 2^(k + 1) \<or> (a = 0 \<and> b = 0))"
-  sorry
 
 lemma has_bit_one_then_greater_zero: "nth_bit a j = Suc 0 \<Longrightarrow> 0 < a" 
+  sorry
+
+lemma all_bits_in_sum_zero_then: "(\<forall>i \<le> k. nth_bit (a + b) i = 0) 
+  \<Longrightarrow> (a + b \<ge> 2^(k + 1) \<or> (a = 0 \<and> b = 0))"
   sorry
 
 fun nth_carry_sub:: "nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat" where
@@ -90,7 +141,7 @@ fun nth_carry_sub:: "nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat" 
 lemma nth_carry_sub_leq_one: "nth_carry_sub n a b = x \<Longrightarrow> (x = 0 \<or> x = 1)"
   by (metis nth_carry_sub.elims)
 
-lemma nth_carry_sub__neq_one_iff[simp]: "nth_carry_sub n a b \<noteq> Suc 0 \<longleftrightarrow> nth_carry_sub n a b = 0" 
+lemma nth_carry_sub_neq_one_iff[simp]: "nth_carry_sub n a b \<noteq> Suc 0 \<longleftrightarrow> nth_carry_sub n a b = 0" 
   using nth_carry_sub_leq_one by auto
 
 lemma nth_bit_of_sub_n_no_underflow: "a \<ge> b \<Longrightarrow> 
@@ -113,6 +164,14 @@ definition var_to_operand_bit:: "vname \<Rightarrow> (char * nat) option" where
 
 lemma hd_of_operand_bit_to_var[simp]: 
   "hd (operand_bit_to_var (op, n)) = op" by (induction n) auto
+
+lemma take_2_of_operand_bit_to_var[simp]:
+  "take 2 (operand_bit_to_var (c, k)) = operand_bit_to_var (c, min k 1)" 
+  apply (cases k)
+   apply(auto)
+  using hd_of_operand_bit_to_var
+  by (metis lessI less_Suc_eq_0_disj list.discI operand_bit_to_var.simps(1) 
+      operand_bit_to_var.simps(2) take0 take_Suc)
 
 lemma length_of_operand_bit_to_var[simp]:
   "length (operand_bit_to_var (op, n)) = n + 1" by (induction n) auto  
@@ -302,30 +361,6 @@ next
   thus ?case by auto
 qed 
 
-definition check_bit_non_zero:: "nat \<Rightarrow> vname \<Rightarrow> IMP_Minus_Minus_com" where
-"check_bit_non_zero i v = (IF (var_bit_to_var (v, i))\<noteq>0 THEN (''?$'' @ v) ::= A (N 1) ELSE SKIP)" 
-
-lemma result_of_check_bit_non_zero_sequence: 
-  "t_small_step_fun (4 * k)
-  (com_list_to_seq (map (\<lambda>i. check_bit_non_zero i v) [0..<k]), s)
-    = (SKIP, if (\<exists>j < k. s (var_bit_to_var (v, j)) \<noteq> 0) then (s(''?$'' @ v := 1)) else s)" 
-proof(induction k)
-  case 0
-  then show ?case by (auto simp: check_bit_non_zero_def t_small_step_fun_terminate_iff)
-next
-  case (Suc k)
-  hence "t_small_step_fun (4 * (Suc k))
-   (com_list_to_seq ((map (\<lambda>i. check_bit_non_zero i v) [0..<k]) 
-    @ [check_bit_non_zero k v]), s)
-    = (SKIP, if (\<exists>j < Suc k. s (var_bit_to_var (v, j)) \<noteq> 0) then (s(''?$'' @ v := 1)) else s)"
-     apply -
-    apply(rule t_small_step_fun_com_list_to_seq_terminates[where ?t1.0="4 * k" and ?t2.0=3])
-      apply(auto simp: seq_terminates_iff)
-      apply(auto simp only: numeral_eq_Suc exists_terminating_iff fun_eq_iff)
-    by (auto simp: check_bit_non_zero_def t_small_step_fun_terminate_iff less_Suc_eq split: if_splits)
-  thus ?case by simp
-qed
-
 definition binary_adder:: "nat \<Rightarrow> vname \<Rightarrow> vname \<Rightarrow> vname \<Rightarrow> IMP_Minus_Minus_com" where
 "binary_adder n v a b = 
   copy_var_to_operand n (CHR ''a'') a ;;
@@ -384,6 +419,17 @@ proof -
     by(frule all_bits_in_sum_zero_then, simp)+
 qed
 
+lemma binary_adder_correct_on_translated_state: 
+  assumes "n > 0"
+    "s a + s b < 2 ^ n" 
+  shows "t_small_step_fun (50 * (n + 1)) (binary_adder n v a b, 
+    IMP_Minus_State_To_IMP_Minus_Minus s n) 
+    = (SKIP, IMP_Minus_State_To_IMP_Minus_Minus (s(v := s a + s b)) n)"
+  apply(subst binary_adder_correct[where ?a="s a" and ?b="s b"])
+  using assms apply(simp_all add: IMP_Minus_State_To_IMP_Minus_Minus_def fun_eq_iff 
+      split!: option.splits)
+  by (metis append.simps append_take_drop_id drop0 drop_Suc_Cons numeral_2_eq_2)+
+
 definition binary_adder_constant:: "nat \<Rightarrow> vname \<Rightarrow> vname \<Rightarrow> nat \<Rightarrow> IMP_Minus_Minus_com" where
 "binary_adder_constant n v a b = 
   copy_var_to_operand n (CHR ''a'') a ;;
@@ -440,6 +486,16 @@ proof -
     using k_def assms(2) assms(3) assms(4) assms(6) apply auto
     by(frule all_bits_in_sum_zero_then, simp)+
 qed
+
+lemma binary_adder_constant_correct_on_translated_state: 
+  assumes "n > 0"
+    "s va + b < 2 ^ n" 
+  shows "t_small_step_fun (50 * (n + 1)) (binary_adder_constant n v va b, 
+    IMP_Minus_State_To_IMP_Minus_Minus s n) 
+    = (SKIP, IMP_Minus_State_To_IMP_Minus_Minus (s(v := s va + b)) n)"
+  apply(subst binary_adder_constant_correct)
+  using assms apply(auto simp: IMP_Minus_State_To_IMP_Minus_Minus_def fun_eq_iff split!: option.splits)
+  by (metis append.simps append_take_drop_id drop0 drop_Suc_Cons numeral_2_eq_2)+
 
 definition assign_var_carry_sub:: 
   "nat \<Rightarrow> vname \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> IMP_Minus_Minus_com" where
@@ -540,7 +596,7 @@ lemma binary_subtractor_correct:
     "\<forall>j < n. s (operand_bit_to_var (CHR ''b'', j)) = 0"
     "\<forall>j < n. s (var_bit_to_var (va, j)) = nth_bit a j" 
     "\<forall>j < n. s (var_bit_to_var (vb, j)) = nth_bit b j"
-    "a + b < 2 ^ n" 
+    "a < 2 ^ n" "b < 2 ^ n"  
   shows "t_small_step_fun (50 * (n + 1)) (binary_subtractor n v va vb, s) 
     = (SKIP, (\<lambda>w. (case var_to_var_bit w of
       Some (w', m) \<Rightarrow> (if w' = v \<and> m < n then nth_bit (a - b) m else s w) |
@@ -548,6 +604,17 @@ lemma binary_subtractor_correct:
             else if w = ''?$'' @ v then (if a - b \<noteq> 0 then 1 else 0) 
             else s w))))"
   sorry
+
+lemma binary_subtractor_correct_on_translated_state: 
+  assumes "n > 0"
+    "s a < 2 ^ n" "s b < 2 ^ n" 
+  shows "t_small_step_fun (50 * (n + 1)) (binary_subtractor n v a b, 
+    IMP_Minus_State_To_IMP_Minus_Minus s n) 
+    = (SKIP, IMP_Minus_State_To_IMP_Minus_Minus (s(v := s a - s b)) n)"
+  apply(subst binary_subtractor_correct[where ?a="s a" and ?b="s b"])
+  using assms apply(simp_all add: IMP_Minus_State_To_IMP_Minus_Minus_def fun_eq_iff 
+      split!: option.splits)
+  by (metis append.simps append_take_drop_id drop0 drop_Suc_Cons numeral_2_eq_2)+
 
 definition binary_subtractor_constant:: "nat \<Rightarrow> vname \<Rightarrow> vname \<Rightarrow> nat \<Rightarrow> IMP_Minus_Minus_com" where
 "binary_subtractor_constant n v a b = 
@@ -565,7 +632,7 @@ lemma binary_subtractor_constant_correct:
     "\<forall>j < n. s (operand_bit_to_var (CHR ''a'', j)) = 0"
     "\<forall>j < n. s (operand_bit_to_var (CHR ''b'', j)) = 0"
     "\<forall>j < n. s (var_bit_to_var (va, j)) = nth_bit a j" 
-    "a + b < 2 ^ n" 
+    "a < 2 ^ n" "b < 2 ^ n"
   shows "t_small_step_fun (50 * (n + 1)) (binary_subtractor_constant n v va b, s) 
     = (SKIP, (\<lambda>w. (case var_to_var_bit w of
       Some (w', m) \<Rightarrow> (if w' = v \<and> m < n then nth_bit (a - b) m else s w) |
@@ -573,6 +640,17 @@ lemma binary_subtractor_constant_correct:
             else if w = ''?$'' @ v then (if a - b \<noteq> 0 then 1 else 0) 
             else s w))))"
   sorry
+
+lemma binary_subtractor_constant_correct_on_translated_state: 
+  assumes "n > 0"
+    "s a < 2 ^ n" "b < 2 ^ n"
+  shows "t_small_step_fun (50 * (n + 1)) (binary_subtractor_constant n v a b, 
+    IMP_Minus_State_To_IMP_Minus_Minus s n) 
+    = (SKIP, IMP_Minus_State_To_IMP_Minus_Minus (s(v := s a - b)) n)"
+  apply(subst binary_subtractor_constant_correct[where ?a="s a" and ?b="b"])
+  using assms apply(simp_all add: IMP_Minus_State_To_IMP_Minus_Minus_def fun_eq_iff 
+      split!: option.splits)
+  by (metis append.simps append_take_drop_id drop0 drop_Suc_Cons numeral_2_eq_2)+
 
 definition binary_subtractor_constant':: "nat \<Rightarrow> vname \<Rightarrow> nat \<Rightarrow> vname \<Rightarrow> IMP_Minus_Minus_com" where
 "binary_subtractor_constant' n v a b = 
@@ -590,7 +668,7 @@ lemma binary_subtractor_constant_correct':
     "\<forall>j < n. s (operand_bit_to_var (CHR ''a'', j)) = 0"
     "\<forall>j < n. s (operand_bit_to_var (CHR ''b'', j)) = 0"
     "\<forall>j < n. s (var_bit_to_var (vb, j)) = nth_bit b j" 
-    "a + b < 2 ^ n" 
+    "a < 2 ^ n" "b < 2 ^ n"
   shows "t_small_step_fun (50 * (n + 1)) (binary_subtractor_constant' n v a vb, s) 
     = (SKIP, (\<lambda>w. (case var_to_var_bit w of
       Some (w', m) \<Rightarrow> (if w' = v \<and> m < n then nth_bit (a - b) m else s w) |
@@ -599,5 +677,49 @@ lemma binary_subtractor_constant_correct':
             else s w))))"
   sorry
 
+lemma binary_subtractor_constant'_correct_on_translated_state: 
+  assumes "n > 0"
+    "a < 2 ^ n" "s b < 2 ^ n"
+  shows "t_small_step_fun (50 * (n + 1)) (binary_subtractor_constant' n v a b, 
+    IMP_Minus_State_To_IMP_Minus_Minus s n) 
+    = (SKIP, IMP_Minus_State_To_IMP_Minus_Minus (s(v := a - s b)) n)"
+  apply(subst binary_subtractor_constant_correct'[where ?a="a" and ?b="s b"])
+  using assms apply(simp_all add: IMP_Minus_State_To_IMP_Minus_Minus_def fun_eq_iff 
+      split!: option.splits)
+  by (metis append.simps append_take_drop_id drop0 drop_Suc_Cons numeral_2_eq_2)+
 
-end
+definition assignment_to_binary:: "nat \<Rightarrow> vname \<Rightarrow> AExp.aexp \<Rightarrow> IMP_Minus_Minus_com" where
+"assignment_to_binary n v aexp = (case aexp of
+  AExp.A (AExp.N val) \<Rightarrow> binary_assign_constant_update_non_zero_indicator n v val |
+  AExp.A (AExp.V var) \<Rightarrow> binary_adder_constant n v var 0 |
+  AExp.Plus (AExp.N a) (AExp.N b) \<Rightarrow> binary_assign_constant_update_non_zero_indicator n v (a + b) |
+  AExp.Plus (AExp.V a) (AExp.N b) \<Rightarrow> binary_adder_constant n v a b |
+  AExp.Plus (AExp.N a) (AExp.V b) \<Rightarrow> binary_adder_constant n v b a |
+  AExp.Plus (AExp.V a) (AExp.V b) \<Rightarrow> binary_adder n v a b |
+  AExp.Sub (AExp.N a) (AExp.N b) \<Rightarrow> binary_assign_constant_update_non_zero_indicator n v (a - b) |
+  AExp.Sub (AExp.V a) (AExp.N b) \<Rightarrow> binary_subtractor_constant n v a b |
+  AExp.Sub (AExp.N a) (AExp.V b) \<Rightarrow> binary_subtractor_constant' n v a b |
+  AExp.Sub (AExp.V a) (AExp.V b) \<Rightarrow> binary_subtractor n v a b)" 
+
+lemma assignment_to_binary_correct: 
+  assumes "n > 0"  "AExp.aval a s < 2 ^ n" "\<forall>v. s v < 2 ^ n" "aexp_max_constant a < 2 ^ n"
+  shows "t_small_step_fun (50 * (n + 1)) (assignment_to_binary n v a,  
+  IMP_Minus_State_To_IMP_Minus_Minus s n) 
+  = (SKIP, IMP_Minus_State_To_IMP_Minus_Minus (s(v := AExp.aval a s)) n)" 
+  apply(simp add: assignment_to_binary_def split!: AExp.aexp.splits AExp.atomExp.splits)
+           apply(rule t_small_step_fun_increase_time[where ?t="10*n"])
+  using result_of_binary_assign_constant_update_non_zero_indicator_on_translated_state 
+    binary_adder_constant_correct_on_translated_state assms 
+            apply simp_all
+        apply(rule t_small_step_fun_increase_time[where ?t="10*n"])
+  using result_of_binary_assign_constant_update_non_zero_indicator_on_translated_state
+    binary_adder_constant_correct_on_translated_state 
+    binary_adder_correct_on_translated_state assms apply (simp_all add: add.commute)
+     apply(rule t_small_step_fun_increase_time[where ?t="10*n"])
+      apply simp
+  using result_of_binary_assign_constant_update_non_zero_indicator_on_translated_state assms apply simp
+  using binary_subtractor_constant'_correct_on_translated_state 
+    binary_subtractor_constant_correct_on_translated_state
+    binary_subtractor_correct_on_translated_state assms by simp_all
+
+end 

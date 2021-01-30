@@ -101,6 +101,22 @@ lemma nth_bit_eq_zero_or_one: "nth_bit x n = y \<Longrightarrow> (y = 0 \<or> y 
 definition IMP_Minus_State_To_IMP_Minus_Minus:: "state \<Rightarrow> nat \<Rightarrow> state" where
 "IMP_Minus_State_To_IMP_Minus_Minus s n = (\<lambda>v. (case var_to_var_bit v of 
   Some (v', k) \<Rightarrow> if k < n then nth_bit (s v') k else 0 |
-  None \<Rightarrow> (if length v > 1 \<and> take 2 v = ''?$'' \<and> (s (tl v)) > 0 then 1 else 0)))"
+  None \<Rightarrow> (if length v > 1 \<and> take 2 v = ''?$'' \<and> (s (drop 2 v)) > 0 then 1 else 0)))"
+
+fun atomExp_to_constant:: "AExp.atomExp \<Rightarrow> nat" where
+"atomExp_to_constant (AExp.V var) = 0" |
+"atomExp_to_constant (AExp.N val) = val"
+
+fun aexp_max_constant:: "AExp.aexp \<Rightarrow> nat" where
+"aexp_max_constant (AExp.A a) = atomExp_to_constant a" |
+"aexp_max_constant (AExp.Plus a b) = max (atomExp_to_constant a) (atomExp_to_constant b)" |
+"aexp_max_constant (AExp.Sub a b) = max (atomExp_to_constant a) (atomExp_to_constant b)"
+
+fun max_constant :: "Com.com \<Rightarrow> nat" where
+"max_constant (Com.SKIP) = 0" |
+"max_constant (Com.Assign vname aexp) = aexp_max_constant aexp" |
+"max_constant (Com.Seq c1  c2) = max (max_constant c1) (max_constant c2)" |         
+"max_constant (Com.If  _ c1 c2) = max (max_constant c1) (max_constant c2)"  |   
+"max_constant (Com.While _ c) = max_constant c"
 
 end

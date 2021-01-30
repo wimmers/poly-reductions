@@ -19,20 +19,6 @@ fun IMP_Minus_To_IMP_Minus_Minus:: "IMP_Minus_com \<Rightarrow> nat \<Rightarrow
 "IMP_Minus_To_IMP_Minus_Minus (Com.While v c) n = (WHILE (''?$'' @ v)\<noteq>0 DO
   IMP_Minus_To_IMP_Minus_Minus c n)"
 
-fun atomExp_to_constant:: "AExp.atomExp \<Rightarrow> nat" where
-"atomExp_to_constant (AExp.V var) = 0" |
-"atomExp_to_constant (AExp.N val) = val"
-
-fun max_constant :: "IMP_Minus_com \<Rightarrow> nat" where
-"max_constant (Com.SKIP) = 0" |
-"max_constant (Com.Assign vname aexp) = (case aexp of
-  (AExp.A a) \<Rightarrow> atomExp_to_constant a |
-  (AExp.Plus a b) \<Rightarrow> max (atomExp_to_constant a) (atomExp_to_constant b) |
-  (AExp.Sub a b) \<Rightarrow> max (atomExp_to_constant a) (atomExp_to_constant b))" |
-"max_constant (Com.Seq c1  c2) = max (max_constant c1) (max_constant c2)" |         
-"max_constant (Com.If  _ c1 c2) = max (max_constant c1) (max_constant c2)"  |   
-"max_constant (Com.While _ c) = max_constant c"
-
 fun bit_length::"nat \<Rightarrow> nat" where
 "bit_length  0 = 0" | 
 "bit_length  n = 1 + bit_length (n div 2) "
