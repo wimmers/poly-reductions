@@ -93,11 +93,10 @@ proof(induction a arbitrary: c)
         zero_less_power)
 qed auto
 
-lemma power_of_two_increase_exponent_le: "(2 :: nat) ^ (a + b) * c < r \<Longrightarrow> 2 ^ a * c < r" 
-  by (meson less_le_trans mult_less_cancel2 nat_power_less_imp_less not_add_less1 
-      not_le_imp_less zero_less_numeral)
+lemma power_of_two_increase_exponent_le: "(2 :: nat) ^ (a + b) * c < r \<Longrightarrow> 2 ^ a * c < r"
+  by(auto intro: dual_order.strict_trans2)
 
-lemma move_exponent_to_rhs: "c < (2 :: nat) ^ (a - b) \<Longrightarrow> 2 ^ b * c < 2 ^ a" 
+lemma move_exponent_to_rhs: "c < (2 :: nat) ^ (a - b) \<Longrightarrow> 2 ^ b * c < 2 ^ a"
   by (smt One_nat_def diff_mult_distrib2 gr_zeroI less_Suc0 
       linordered_semidom_class.add_diff_inverse mult_eq_0_iff order.asym power.simps(1) 
       power_add power_eq_0_iff zero_less_diff zero_neq_numeral)
@@ -193,8 +192,27 @@ next
     using \<open>s1 b \<noteq> 0\<close> apply simp
     apply(rule seq_terminates_when[where ?t1.0="100 * n * (x - Suc 0) + 50" and
           ?t2.0="100 * n * (y - Suc 0) + 50"])
-      using WhileTrue apply auto apply(cases x) apply(cases y) prefer 3 apply(cases y)
+      using WhileTrue
     using bigstep_progress by(auto simp: algebra_simps)
 qed auto
-  
+
+lemma IMP_Minus_Minus_To_IMP_Minus_aux:
+  assumes "(c :: IMP_Minus_com, s1) \<Rightarrow>\<^bsup>t'\<^esup> s2"
+    "t' \<le> t" 
+    "finite (range s1)"
+    "n > t" 
+    "((2 :: nat) ^ t) * (max (Max (range s1)) (max_constant c)) < 2 ^ n"
+    "t_small_step_fun t'' 
+      (IMP_Minus_To_IMP_Minus_Minus c n, IMP_Minus_State_To_IMP_Minus_Minus s1 n)
+     = (SKIP, s2')"
+  shows 
+    "s2' = IMP_Minus_State_To_IMP_Minus_Minus s2 n"
+proof -
+  have "t_small_step_fun (100 * n * (t' - 1) + 50) 
+      (IMP_Minus_To_IMP_Minus_Minus c n, IMP_Minus_State_To_IMP_Minus_Minus s1 n)
+     = (SKIP, IMP_Minus_State_To_IMP_Minus_Minus s2 n)" 
+    using assms by(fastforce intro: IMP_Minus_To_IMP_Minus_Minus dual_order.strict_trans2)
+  thus ?thesis by(metis Pair_inject assms less_imp_le_nat not_less t_small_step_fun_increase_time)
+qed
+
 end

@@ -97,9 +97,11 @@ lemma result_of_binary_assign_constant_update_non_zero_indicator:
 
 lemma result_of_binary_assign_constant_update_non_zero_indicator_on_translated_state:
   assumes "n > 0" "x < 2 ^ n" 
-  shows "t_small_step_fun (10 * n) (binary_assign_constant_update_non_zero_indicator n v x, 
+  shows "t_small_step_fun (50 * (n + 1)) (binary_assign_constant_update_non_zero_indicator n v x, 
     IMP_Minus_State_To_IMP_Minus_Minus s n)
     = (SKIP, IMP_Minus_State_To_IMP_Minus_Minus (s( v := x)) n)"
+  apply(rule t_small_step_fun_increase_time[where ?t="10*n"])
+  apply simp
   apply(subst result_of_binary_assign_constant_update_non_zero_indicator)
   using assms apply (auto simp: fun_eq_iff IMP_Minus_State_To_IMP_Minus_Minus_def split: option.splits)
    by (metis append.simps append_take_drop_id drop0 drop_Suc_Cons numeral_2_eq_2)+
@@ -706,20 +708,11 @@ lemma assignment_to_binary_correct:
   shows "t_small_step_fun (50 * (n + 1)) (assignment_to_binary n v a,  
   IMP_Minus_State_To_IMP_Minus_Minus s n) 
   = (SKIP, IMP_Minus_State_To_IMP_Minus_Minus (s(v := AExp.aval a s)) n)" 
-  apply(simp add: assignment_to_binary_def split!: AExp.aexp.splits AExp.atomExp.splits)
-           apply(rule t_small_step_fun_increase_time[where ?t="10*n"])
-  using result_of_binary_assign_constant_update_non_zero_indicator_on_translated_state 
-    binary_adder_constant_correct_on_translated_state assms 
-            apply simp_all
-        apply(rule t_small_step_fun_increase_time[where ?t="10*n"])
-  using result_of_binary_assign_constant_update_non_zero_indicator_on_translated_state
-    binary_adder_constant_correct_on_translated_state 
-    binary_adder_correct_on_translated_state assms apply (simp_all add: add.commute)
-     apply(rule t_small_step_fun_increase_time[where ?t="10*n"])
-      apply simp
-  using result_of_binary_assign_constant_update_non_zero_indicator_on_translated_state assms apply simp
-  using binary_subtractor_constant'_correct_on_translated_state 
+   using result_of_binary_assign_constant_update_non_zero_indicator_on_translated_state 
+    binary_adder_constant_correct_on_translated_state assms binary_adder_correct_on_translated_state
+    binary_subtractor_constant'_correct_on_translated_state 
     binary_subtractor_constant_correct_on_translated_state
-    binary_subtractor_correct_on_translated_state assms by simp_all
+    binary_subtractor_correct_on_translated_state
+   by(simp add: add.commute assignment_to_binary_def split!: AExp.aexp.splits AExp.atomExp.splits)
 
 end 
