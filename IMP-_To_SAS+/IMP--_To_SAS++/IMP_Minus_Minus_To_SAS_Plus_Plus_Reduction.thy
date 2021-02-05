@@ -2,7 +2,8 @@
 
 section "Reduction"
 
-theory Reduction imports State_Translations
+theory IMP_Minus_Minus_To_SAS_Plus_Plus_Reduction 
+  imports IMP_Minus_Minus_To_SAS_Plus_Plus_State_Translations
 begin
 
 definition domain :: "com \<Rightarrow> nat \<Rightarrow> domain_element list" where

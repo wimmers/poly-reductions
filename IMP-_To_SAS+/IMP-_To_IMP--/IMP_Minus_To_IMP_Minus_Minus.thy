@@ -2,7 +2,7 @@
 
 section "IMP- to IMP--"
 
-theory IMP_Minus_To_IMP_Minus_Minus imports Binary_Operations "../IMP-/Big_StepT"
+theory IMP_Minus_To_IMP_Minus_Minus imports Binary_Operations "../../IMP-/Big_StepT"
 begin
 
 fun IMP_Minus_To_IMP_Minus_Minus:: "IMP_Minus_com \<Rightarrow> nat \<Rightarrow> IMP_Minus_Minus_com" where

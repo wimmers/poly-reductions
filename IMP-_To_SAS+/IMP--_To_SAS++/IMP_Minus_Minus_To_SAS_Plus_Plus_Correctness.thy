@@ -2,7 +2,8 @@
 
 section "Correctness"
 
-theory Correctness imports Reduction SAS_Plus_Plus
+theory IMP_Minus_Minus_To_SAS_Plus_Plus_Correctness 
+  imports IMP_Minus_Minus_To_SAS_Plus_Plus_Reduction "../SAS_Plus_Plus"
 begin 
 
 lemma sas_plus_state_to_imp_minus_of_effect: 

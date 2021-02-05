@@ -2,7 +2,7 @@
 
 section "SAS++ to SAS+"
 
-theory SAS_Plus_Plus_To_SAS_Plus imports SAS_Plus_Plus
+theory SAS_Plus_Plus_To_SAS_Plus imports "../SAS_Plus_Plus"
 begin 
 
 datatype 'v variable =  Var 'v | Stage

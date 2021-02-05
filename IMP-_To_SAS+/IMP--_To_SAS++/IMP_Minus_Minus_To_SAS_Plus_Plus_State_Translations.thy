@@ -2,7 +2,8 @@
 
 section "State Translations"
 
-theory State_Translations imports SAS_Plus_Plus Omega_Small_StepT
+theory IMP_Minus_Minus_To_SAS_Plus_Plus_State_Translations 
+  imports "../SAS_Plus_Plus" "Omega_Small_StepT"
 begin
 
 datatype domain_element = EV EVal | PCV com
