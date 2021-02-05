@@ -35,6 +35,13 @@ next
   thus ?case using ta_def Cons seq_terminates_iff by fastforce
 qed
 
+lemma com_list_to_seq_of_length_one_terminates_iff: 
+  "t_small_step_fun t (com_list_to_seq [c], s1) = (SKIP, s2) \<longleftrightarrow>
+  (t > 0 \<and> t_small_step_fun (t - 1) (c, s1) = (SKIP, s2))" 
+  apply(auto simp: seq_terminates_iff)
+  using t_small_step_fun_increase_time apply (metis One_nat_def diff_Suc_1 le_add1 less_imp_Suc_add)
+  using diff_Suc_less by blast
+
 fun binary_assign_constant:: "nat \<Rightarrow> vname \<Rightarrow> nat \<Rightarrow> IMP_Minus_Minus_com" where 
 "binary_assign_constant 0 v x = SKIP" |
 "binary_assign_constant (Suc n) v x = (var_bit_to_var (v, n)) ::= A (N (nth_bit x n)) ;;
@@ -131,8 +138,8 @@ lemma no_overflow_condition: "a + b < 2^n \<Longrightarrow> nth_carry (n - 1) a 
 lemma has_bit_one_then_greater_zero: "nth_bit a j = Suc 0 \<Longrightarrow> 0 < a" 
   sorry
 
-lemma all_bits_in_sum_zero_then: "(\<forall>i \<le> k. nth_bit (a + b) i = 0) 
-  \<Longrightarrow> (a + b \<ge> 2^(k + 1) \<or> (a = 0 \<and> b = 0))"
+lemma all_bits_in_sum_zero_then: "(\<forall>i < n. nth_bit (a + b) i = 0) 
+  \<Longrightarrow> (a + b \<ge> 2^n \<or> (a = 0 \<and> b = 0))"
   sorry
 
 fun nth_carry_sub:: "nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat" where
@@ -192,6 +199,14 @@ lemma var_to_operand_bit_eq_Some_iff: "var_to_operand_bit x = Some (op, i)
 lemma var_to_operand_bit_of_carry[simp]: "var_to_operand_bit ''carry'' = None" 
   by(simp add: var_to_operand_bit_def)
 
+lemma operand_bit_to_var_neq_carry[simp]: "operand_bit_to_var (op, k) = ''carry'' \<longleftrightarrow> False" 
+proof 
+  assume "operand_bit_to_var (op, k) = ''carry''" 
+  moreover hence "op = CHR ''c''" by (metis hd_of_operand_bit_to_var list.sel)
+  ultimately show False 
+    by (metis option.simps var_to_operand_bit_of_carry var_to_operand_bit_of_operand_bit_to_var)
+qed auto
+                                                       
 lemma set_of_operand_bit_to_var[simp]: "set (operand_bit_to_var (op, b)) = { op }" 
   by (induction b) auto
 
@@ -399,43 +414,32 @@ lemma full_adder_correct:
 lemma sequence_of_full_adders: 
   assumes 
     "s ''carry'' = 0" 
-    "\<forall>j \<le> k. s (operand_bit_to_var (CHR ''a'', j)) = nth_bit a j" 
-    "\<forall>j \<le> k. s (operand_bit_to_var (CHR ''b'', j)) = nth_bit b j"
+    "\<forall>j < k. s (operand_bit_to_var (CHR ''a'', j)) = nth_bit a j" 
+    "\<forall>j < k. s (operand_bit_to_var (CHR ''b'', j)) = nth_bit b j"
   shows
-   "t_small_step_fun (12 * (k + 1))
-                       (com_list_to_seq (map (\<lambda>i. full_adder i v) [0..<(k + 1)]), s)
+   "t_small_step_fun (12 * k) (com_list_to_seq (map (\<lambda>i. full_adder i v) [0..< k]), s)
   = (SKIP, (\<lambda>w. (case var_to_var_bit w of
-    Some (w', m) \<Rightarrow> (if w' = v \<and> m \<le> k then nth_bit (a + b) m else s w) |
-    _ \<Rightarrow> (if w = ''carry'' then nth_carry k a b  
+    Some (w', m) \<Rightarrow> (if w' = v \<and> m < k then nth_bit (a + b) m else s w) |
+    _ \<Rightarrow> (if w = ''carry'' \<and> k > 0 then nth_carry (k - 1) a b  
           else s w))))"   
   using assms
 proof(induction k)
   case 0
-  then show ?case 
-      apply(auto simp: seq_terminates_iff)
-    apply(simp_all only: numeral_eq_Suc exists_terminating_iff)
-    apply auto
-    apply(rule t_small_step_fun_increase_time[where ?t=10 and ?t'=11])
-    apply auto
-    apply (subst full_adder_correct[where ?a=a and ?b=b])
-    by(auto simp: var_to_var_bit_eq_Some_iff numeral_eq_Suc split!: option.splits)
+  then show ?case by(auto simp: fun_eq_iff split: option.splits)
 next
   case (Suc k)
-  hence "t_small_step_fun (24 + 12 * k)
-   (com_list_to_seq ((map (\<lambda>i. full_adder i v) [0..<(k + 1)]) @ [full_adder (k + 1) v]), s)
+  hence "t_small_step_fun (12 + 12 * k)
+   (com_list_to_seq ((map (\<lambda>i. full_adder i v) [0..< k]) @ [full_adder k v]), s)
     = (SKIP, (\<lambda>w. (case var_to_var_bit w of
-    Some (w', m) \<Rightarrow> (if w' = v \<and> m \<le> Suc k then nth_bit (a + b) m else s w) |
-    _ \<Rightarrow> (if w = ''carry'' then nth_carry (Suc k) a b  
+    Some (w', m) \<Rightarrow> (if w' = v \<and> m < Suc k then nth_bit (a + b) m else s w) |
+    _ \<Rightarrow> (if w = ''carry'' \<and> Suc k > 0 then nth_carry k a b  
           else s w))))"
-    apply -
-    apply(rule t_small_step_fun_com_list_to_seq_terminates[where ?t1.0="12 * (k + 1)" and ?t2.0=11])
-      apply(auto simp: seq_terminates_iff)
-      apply(auto simp only: numeral_eq_Suc exists_terminating_iff fun_eq_iff)
-     apply auto
+    apply(auto simp only: com_list_to_seq_of_length_one_terminates_iff
+        intro!: t_small_step_fun_com_list_to_seq_terminates[where ?t1.0="12 * k" and ?t2.0=11])
+    apply(auto)
     apply(subst full_adder_correct)
-        apply(simp_all)
-      apply(auto simp add: fun_eq_iff var_to_var_bit_eq_Some_iff var_bit_to_var_eq_iff split!: option.splits)
-    by(auto simp: var_bit_to_var_def)
+    by(auto simp add: fun_eq_iff var_to_var_bit_eq_Some_iff var_bit_to_var_eq_iff 
+        split!: option.splits)
   thus ?case by auto
 qed 
 
@@ -451,30 +455,16 @@ lemma add_and_update_non_zero_indicator_result:
   shows "t_small_step_fun (30 * n) (add_and_update_non_zero_indicator n v, 
     IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b s n a b) 
     = (SKIP, IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b (s(v := a + b)) n a b)"
-proof -
-  obtain k where k_def: "Suc k = n" using assms(1) gr0_implies_Suc by blast
-  hence "nth_carry k a b = 0" using assms no_overflow_condition by (metis diff_Suc_1)
-  thus ?thesis 
-    apply(simp only: add_and_update_non_zero_indicator_def)
-    apply(rule seq_terminates_when[where ?t1.0="12 * (k + 1)" and ?t2.0="17 * n"])
-    using k_def apply auto[1]
-    using k_def[symmetric] apply simp
-     apply(rule sequence_of_full_adders[simplified])
-    using assms apply(simp split: option.splits)
-    using assms apply(auto split: option.splits)[1]
-    using assms apply(auto split: option.splits)[1]
-    apply(rule seq_terminates_when[where ?t1.0="1" and ?t2.0="15 * n"])
-    using \<open>n > 0\<close> apply auto[1]
-     apply auto[1]
-    apply(rule t_small_step_fun_increase_time[where ?t="4 * n"])
-    apply(simp_all add: fun_eq_iff option.case_eq_if k_def result_of_check_bit_non_zero_sequence
-        IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b_eq_iff)
-    using k_def \<open>a + b < 2 ^ n\<close> all_bits_in_sum_zero_then[where ?k=k and ?a=a and ?b=b] 
-    apply(auto simp: IMP_Minus_State_To_IMP_Minus_Minus_def var_to_var_bit_eq_Some_iff 
-        k_def is_non_zero_indicator_iff split!: option.splits if_splits)
-    using  k_def by auto
-qed
-    
+  using \<open>n > 0\<close> apply(auto simp add: add_and_update_non_zero_indicator_def  
+      intro!: seq_terminates_when[where ?t="30 * n" and ?t1.0="12 * n" and ?t2.0="17 * n"] 
+      seq_terminates_when[where ?t="17 * n" and ?t1.0="1" and ?t2.0="15 * n"])
+  using \<open>a + b < 2 ^ n\<close> no_overflow_condition all_bits_in_sum_zero_then[where ?n=n and ?a=a and ?b=b] 
+  by(auto simp: IMP_Minus_State_To_IMP_Minus_Minus_def var_to_var_bit_eq_Some_iff 
+      is_non_zero_indicator_iff IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b_eq_iff 
+      result_of_check_bit_non_zero_sequence fun_eq_iff has_bit_one_then_greater_zero
+      split!: option.splits if_splits
+      intro!: t_small_step_fun_increase_time[where ?t="4 * n" and ?t'="15 * n"] sequence_of_full_adders)
+
 
 definition binary_adder:: "nat \<Rightarrow> vname \<Rightarrow> AExp.atomExp \<Rightarrow> AExp.atomExp \<Rightarrow> IMP_Minus_Minus_com" where
 "binary_adder n v a b = 
