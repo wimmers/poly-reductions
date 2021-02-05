@@ -245,6 +245,57 @@ proof(rule ccontr)
   thus False using set_of_operand_bit_to_var by(auto simp: var_bit_to_var_def)
 qed
 
+lemma IMP_Minus_State_To_IMP_Minus_Minus_of_operand_bit[simp]:
+  "IMP_Minus_State_To_IMP_Minus_Minus s n (operand_bit_to_var (op, x)) = 0" 
+  by(auto simp: IMP_Minus_State_To_IMP_Minus_Minus_def)
+
+definition IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b:: 
+  "state \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> state" where
+"IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b s n a b = (\<lambda>v. 
+  (case var_to_operand_bit v of 
+    Some (CHR ''a'', k) \<Rightarrow> if k < n then nth_bit a k else 0 |
+    Some (CHR ''b'', k) \<Rightarrow> if k < n then nth_bit b k else 0 | 
+    _ \<Rightarrow> IMP_Minus_State_To_IMP_Minus_Minus s n v))"
+
+lemma IMP_Minus_State_To_IMP_Minus_Minus_as_IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b:
+  "IMP_Minus_State_To_IMP_Minus_Minus s n 
+    = IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b s n 0 0"
+  by(auto simp: IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b_def fun_eq_iff 
+      var_to_operand_bit_eq_Some_iff IMP_Minus_State_To_IMP_Minus_Minus_def 
+      split: char.splits option.splits bool.splits)
+
+lemma IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b_of_carry[simp]: 
+  "IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b s k a b ''carry'' = 0"
+  by(auto simp: IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b_def)
+
+lemma IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b_of_operand_a[simp]: 
+  "j < k \<Longrightarrow> IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b s k a b 
+  (operand_bit_to_var (CHR ''a'', j)) = nth_bit a j"
+  by(auto simp: IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b_def)
+
+lemma IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b_of_operand_b[simp]: 
+  "j < k \<Longrightarrow> IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b s k a b 
+  (operand_bit_to_var (CHR ''b'', j)) = nth_bit b j"
+  by(auto simp: IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b_def)
+
+lemma IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b_of_var_bit_to_var[simp]: 
+  "IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b s k a b 
+  (var_bit_to_var (x, j)) = IMP_Minus_State_To_IMP_Minus_Minus s k (var_bit_to_var (x, j))"
+  by(auto simp: IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b_def)
+
+lemma IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b_of_non_zero_indicator[simp]: 
+  "IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b s n a b (CHR ''?'' # CHR ''$'' # v)
+    = IMP_Minus_State_To_IMP_Minus_Minus s n (CHR ''?'' # CHR ''$'' # v)"
+  by(auto simp: IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b_def)
+
+lemma IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b_eq_iff: 
+  "IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b s n a b x 
+  = IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b s' n a b x
+  \<longleftrightarrow> IMP_Minus_State_To_IMP_Minus_Minus s n x = IMP_Minus_State_To_IMP_Minus_Minus s' n x"
+  by(auto simp: IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b_def 
+      var_to_operand_bit_eq_Some_iff
+      split: char.splits option.splits bool.splits)
+
 fun copy_var_to_operand:: "nat \<Rightarrow> char \<Rightarrow> vname \<Rightarrow> IMP_Minus_Minus_com" where
 "copy_var_to_operand 0 op v = SKIP" |
 "copy_var_to_operand (Suc i) op v = 
@@ -274,6 +325,31 @@ lemma copy_const_to_operand_result:
   apply(induction n arbitrary: s)
    apply(auto simp: fun_eq_iff var_to_operand_bit_eq_Some_iff split!: option.splits if_splits)
   using less_antisym by blast
+
+definition copy_atom_to_operand:: "nat \<Rightarrow> char \<Rightarrow> AExp.atomExp \<Rightarrow> IMP_Minus_Minus_com" where
+"copy_atom_to_operand n op a = (case a of 
+  AExp.N x \<Rightarrow> copy_const_to_operand n op x |
+  AExp.V x \<Rightarrow> copy_var_to_operand n op x)" 
+
+lemma copy_atom_to_operand_a_result: 
+  assumes "op = CHR ''a''" 
+  shows  "t_small_step_fun (2 * n) (copy_atom_to_operand n op a,
+   IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b s n b c)
+  = (SKIP,  IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b s n (AExp.atomVal a s) c)"
+  using assms by(auto simp: copy_atom_to_operand_def fun_eq_iff copy_const_to_operand_result 
+      copy_var_to_operand_result IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b_def 
+      var_to_operand_bit_eq_Some_iff
+      split!: option.splits AExp.atomExp.splits char.splits bool.splits)
+
+lemma copy_atom_to_operand_b_result: 
+  assumes "op = CHR ''b''" 
+  shows  "t_small_step_fun (2 * n) (copy_atom_to_operand n op a,
+   IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b s n b c)
+  = (SKIP,  IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b s n b (AExp.atomVal a s))"
+  using assms by(auto simp: copy_atom_to_operand_def fun_eq_iff copy_const_to_operand_result 
+      copy_var_to_operand_result IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b_def 
+      var_to_operand_bit_eq_Some_iff
+      split!: option.splits AExp.atomExp.splits char.splits bool.splits) 
 
 definition assign_var_carry:: 
   "nat \<Rightarrow> vname \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> IMP_Minus_Minus_com" where
@@ -357,147 +433,86 @@ next
       apply(auto simp only: numeral_eq_Suc exists_terminating_iff fun_eq_iff)
      apply auto
     apply(subst full_adder_correct)
-    apply(simp_all)
+        apply(simp_all)
       apply(auto simp add: fun_eq_iff var_to_var_bit_eq_Some_iff var_bit_to_var_eq_iff split!: option.splits)
     by(auto simp: var_bit_to_var_def)
   thus ?case by auto
 qed 
 
-definition binary_adder:: "nat \<Rightarrow> vname \<Rightarrow> vname \<Rightarrow> vname \<Rightarrow> IMP_Minus_Minus_com" where
-"binary_adder n v a b = 
-  copy_var_to_operand n (CHR ''a'') a ;;
-  (copy_var_to_operand n (CHR ''b'') b ;;
-  (com_list_to_seq (map (\<lambda>i. full_adder i v) [0..<n]) ;; 
+definition add_and_update_non_zero_indicator:: "nat \<Rightarrow> vname \<Rightarrow> IMP_Minus_Minus_com" where
+"add_and_update_non_zero_indicator n v = 
+  com_list_to_seq (map (\<lambda>i. full_adder i v) [0..<n]) ;; 
   ((''?$'' @ v) ::= A (N 0) ;;
-  (com_list_to_seq (map (\<lambda>i. check_bit_non_zero i v) [0..<n]) ;;
-  (copy_const_to_operand n (CHR ''a'') 0 ;;
-  copy_const_to_operand n (CHR ''b'') 0)))))"
+  (com_list_to_seq (map (\<lambda>i. check_bit_non_zero i v) [0..<n])))"
+
+lemma add_and_update_non_zero_indicator_result: 
+  assumes "n > 0"
+    "a + b < 2 ^ n" 
+  shows "t_small_step_fun (30 * n) (add_and_update_non_zero_indicator n v, 
+    IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b s n a b) 
+    = (SKIP, IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b (s(v := a + b)) n a b)"
+proof -
+  obtain k where k_def: "Suc k = n" using assms(1) gr0_implies_Suc by blast
+  hence "nth_carry k a b = 0" using assms no_overflow_condition by (metis diff_Suc_1)
+  thus ?thesis 
+    apply(simp only: add_and_update_non_zero_indicator_def)
+    apply(rule seq_terminates_when[where ?t1.0="12 * (k + 1)" and ?t2.0="17 * n"])
+    using k_def apply auto[1]
+    using k_def[symmetric] apply simp
+     apply(rule sequence_of_full_adders[simplified])
+    using assms apply(simp split: option.splits)
+    using assms apply(auto split: option.splits)[1]
+    using assms apply(auto split: option.splits)[1]
+    apply(rule seq_terminates_when[where ?t1.0="1" and ?t2.0="15 * n"])
+    using \<open>n > 0\<close> apply auto[1]
+     apply auto[1]
+    apply(rule t_small_step_fun_increase_time[where ?t="4 * n"])
+    apply(simp_all add: fun_eq_iff option.case_eq_if k_def result_of_check_bit_non_zero_sequence
+        IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b_eq_iff)
+    using k_def \<open>a + b < 2 ^ n\<close> all_bits_in_sum_zero_then[where ?k=k and ?a=a and ?b=b] 
+    apply(auto simp: IMP_Minus_State_To_IMP_Minus_Minus_def var_to_var_bit_eq_Some_iff 
+        k_def is_non_zero_indicator_iff split!: option.splits if_splits)
+    using  k_def by auto
+qed
+    
+
+definition binary_adder:: "nat \<Rightarrow> vname \<Rightarrow> AExp.atomExp \<Rightarrow> AExp.atomExp \<Rightarrow> IMP_Minus_Minus_com" where
+"binary_adder n v a b = 
+  copy_atom_to_operand n (CHR ''a'') a ;;
+  (copy_atom_to_operand n (CHR ''b'') b ;;
+  (add_and_update_non_zero_indicator n v ;;
+  (copy_atom_to_operand n (CHR ''a'') (AExp.N 0) ;;
+  copy_atom_to_operand n (CHR ''b'') (AExp.N 0))))"
 
 lemma binary_adder_correct: 
-  assumes "n > 0" "s ''carry'' = 0" 
-    "\<forall>j < n. s (operand_bit_to_var (CHR ''a'', j)) = 0"
-    "\<forall>j < n. s (operand_bit_to_var (CHR ''b'', j)) = 0"
-    "\<forall>j < n. s (var_bit_to_var (va, j)) = nth_bit a j" 
-    "\<forall>j < n. s (var_bit_to_var (vb, j)) = nth_bit b j"
-    "a + b < 2 ^ n" 
-  shows "t_small_step_fun (50 * (n + 1)) (binary_adder n v va vb, s) 
-    = (SKIP, (\<lambda>w. (case var_to_var_bit w of
-      Some (w', m) \<Rightarrow> (if w' = v \<and> m < n then nth_bit (a + b) m else s w) |
-      _ \<Rightarrow> (if w = ''carry'' then 0  
-            else if w = ''?$'' @ v then (if a + b \<noteq> 0 then 1 else 0) 
-            else s w))))"
-proof -
-  obtain k where k_def: "Suc k = n" using assms(1) gr0_implies_Suc by blast
-  hence "nth_carry k a b = 0" using assms no_overflow_condition by (metis diff_Suc_1)
-  thus ?thesis apply(simp only: binary_adder_def) 
-    apply(rule seq_terminates_when[where ?t1.0="2 * n" and ?t2.0="48 * n + 49"])
-     apply(auto)[1]
-     apply(auto simp: copy_var_to_operand_result)[1]
-    apply(rule seq_terminates_when[where ?t1.0="2 * n" and ?t2.0="46 * n + 48"])
-      apply auto[1]
-     apply(auto simp: copy_var_to_operand_result)[1]
-    apply(rule seq_terminates_when[where ?t1.0="12 * (k + 1)" and ?t2.0="34 * n + 47"])
-    using k_def apply auto[1]
-    using k_def[symmetric] apply simp
-     apply(rule sequence_of_full_adders[simplified])
-    using assms apply(simp split: option.splits)
-    using assms apply(auto split: option.splits)[1]
-    using assms apply(auto split: option.splits)[1]
-    apply(rule seq_terminates_when[where ?t1.0="1" and ?t2.0="34 * n + 45"])
-      apply auto[1]
-     apply auto[1]
-    apply(rule seq_terminates_when[where ?t1.0="4 * n" and ?t2.0="30 * n + 44"])
-      apply auto[1]
-     apply(auto simp: result_of_check_bit_non_zero_sequence)[1]
-    apply(rule seq_terminates_when[where ?t1.0="2 * n" and ?t2.0="28 * n + 43"])
-     apply(auto)[1]
-     apply(auto simp: copy_const_to_operand_result)[1]
-    apply(rule t_small_step_fun_increase_time[where ?t="2*n" and ?t' = "28 * n + 43"]) 
-     apply auto[1]
-    apply(simp only: copy_const_to_operand_result)
-    apply(auto simp only: fun_eq_iff split!: option.splits)
-       apply (simp_all add: var_to_var_bit_eq_Some_iff var_to_operand_bit_eq_Some_iff)
-    using k_def assms(2) assms(3) assms(4) assms(7) apply auto
-    by(frule all_bits_in_sum_zero_then, simp)+
-qed
-
-lemma binary_adder_correct_on_translated_state: 
   assumes "n > 0"
-    "s a + s b < 2 ^ n" 
+    "AExp.atomVal a s + AExp.atomVal b s < 2 ^ n" 
   shows "t_small_step_fun (50 * (n + 1)) (binary_adder n v a b, 
     IMP_Minus_State_To_IMP_Minus_Minus s n) 
-    = (SKIP, IMP_Minus_State_To_IMP_Minus_Minus (s(v := s a + s b)) n)"
-  apply(subst binary_adder_correct[where ?a="s a" and ?b="s b"])
-  using assms apply(simp_all add: IMP_Minus_State_To_IMP_Minus_Minus_def fun_eq_iff 
-      split!: option.splits)
-  by (metis append.simps append_take_drop_id drop0 drop_Suc_Cons numeral_2_eq_2)+
-
-definition binary_adder_constant:: "nat \<Rightarrow> vname \<Rightarrow> vname \<Rightarrow> nat \<Rightarrow> IMP_Minus_Minus_com" where
-"binary_adder_constant n v a b = 
-  copy_var_to_operand n (CHR ''a'') a ;;
-  (copy_const_to_operand n (CHR ''b'') b ;;
-  (com_list_to_seq (map (\<lambda>i. full_adder i v) [0..<n]) ;; 
-  ((''?$'' @ v) ::= A (N 0) ;;
-  (com_list_to_seq (map (\<lambda>i. check_bit_non_zero i v) [0..<n]) ;;
-  (copy_const_to_operand n (CHR ''a'') 0 ;;
-  copy_const_to_operand n (CHR ''b'') 0)))))"
-
-lemma binary_adder_constant_correct: 
-  assumes "n > 0" "s ''carry'' = 0" 
-    "\<forall>j < n. s (operand_bit_to_var (CHR ''a'', j)) = 0"
-    "\<forall>j < n. s (operand_bit_to_var (CHR ''b'', j)) = 0"
-    "\<forall>j < n. s (var_bit_to_var (va, j)) = nth_bit a j" 
-    "a + b < 2 ^ n" 
-  shows "t_small_step_fun (50 * (n + 1)) (binary_adder_constant n v va b, s) 
-    = (SKIP, (\<lambda>w. (case var_to_var_bit w of
-      Some (w', m) \<Rightarrow> (if w' = v \<and> m < n then nth_bit (a + b) m else s w) |
-      _ \<Rightarrow> (if w = ''carry'' then 0  
-            else if w = ''?$'' @ v then (if a + b \<noteq> 0 then 1 else 0) 
-            else s w))))"
+    = (SKIP, IMP_Minus_State_To_IMP_Minus_Minus (s(v := AExp.atomVal a s + AExp.atomVal b s)) n)"
 proof -
   obtain k where k_def: "Suc k = n" using assms(1) gr0_implies_Suc by blast
-  hence "nth_carry k a b = 0" using assms no_overflow_condition by (metis diff_Suc_1)
-  thus ?thesis apply(simp only: binary_adder_constant_def) 
+  hence "nth_carry k (AExp.atomVal a s) (AExp.atomVal b s) = 0" 
+    using assms no_overflow_condition by (metis diff_Suc_1)
+  thus ?thesis apply(simp only: binary_adder_def) 
     apply(rule seq_terminates_when[where ?t1.0="2 * n" and ?t2.0="48 * n + 49"])
-     apply(auto)[1]
-     apply(auto simp: copy_var_to_operand_result)[1]
+      apply(auto)[1]
+     apply(auto simp: 
+        IMP_Minus_State_To_IMP_Minus_Minus_as_IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b 
+        copy_atom_to_operand_a_result)[1]
     apply(rule seq_terminates_when[where ?t1.0="2 * n" and ?t2.0="46 * n + 48"])
       apply auto[1]
-     apply(auto simp: copy_const_to_operand_result)[1]
-    apply(rule seq_terminates_when[where ?t1.0="12 * (k + 1)" and ?t2.0="34 * n + 47"])
-    using k_def apply auto[1]
-    using k_def[symmetric] apply simp
-     apply(rule sequence_of_full_adders[simplified])
-    using assms apply(simp split: option.splits)
-    using assms apply(auto split: option.splits)[1]
-    using assms apply(auto split: option.splits)[1]
-    apply(rule seq_terminates_when[where ?t1.0="1" and ?t2.0="34 * n + 45"])
-      apply auto[1]
-     apply auto[1]
-    apply(rule seq_terminates_when[where ?t1.0="4 * n" and ?t2.0="30 * n + 44"])
-      apply auto[1]
-     apply(auto simp: result_of_check_bit_non_zero_sequence)[1]
-    apply(rule seq_terminates_when[where ?t1.0="2 * n" and ?t2.0="28 * n + 43"])
-     apply(auto)[1]
-     apply(auto simp: copy_const_to_operand_result)[1]
-    apply(rule t_small_step_fun_increase_time[where ?t="2*n" and ?t' = "28 * n + 43"]) 
-     apply auto[1]
-    apply(simp only: copy_const_to_operand_result)
-    apply(auto simp only: fun_eq_iff split!: option.splits)
-       apply (simp_all add: var_to_var_bit_eq_Some_iff var_to_operand_bit_eq_Some_iff)
-    using k_def assms(2) assms(3) assms(4) assms(6) apply auto
-    by(frule all_bits_in_sum_zero_then, simp)+
+     apply(auto simp: 
+        IMP_Minus_State_To_IMP_Minus_Minus_as_IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b 
+        copy_atom_to_operand_b_result)[1]
+    apply(rule seq_terminates_when[where ?t1.0="30 * n" and ?t2.0="16 * n + 47"])
+    using assms apply(auto simp: add_and_update_non_zero_indicator_result)
+    apply(rule seq_terminates_when[where ?t1.0="2 * n" and ?t2.0="14 * n + 46"])
+    by(auto simp: 
+        IMP_Minus_State_To_IMP_Minus_Minus_as_IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b 
+        copy_atom_to_operand_a_result
+        copy_atom_to_operand_b_result intro: t_small_step_fun_increase_time[where ?t="2*n"])
 qed
-
-lemma binary_adder_constant_correct_on_translated_state: 
-  assumes "n > 0"
-    "s va + b < 2 ^ n" 
-  shows "t_small_step_fun (50 * (n + 1)) (binary_adder_constant n v va b, 
-    IMP_Minus_State_To_IMP_Minus_Minus s n) 
-    = (SKIP, IMP_Minus_State_To_IMP_Minus_Minus (s(v := s va + b)) n)"
-  apply(subst binary_adder_constant_correct)
-  using assms apply(auto simp: IMP_Minus_State_To_IMP_Minus_Minus_def fun_eq_iff split!: option.splits)
-  by (metis append.simps append_take_drop_id drop0 drop_Suc_Cons numeral_2_eq_2)+
 
 definition assign_var_carry_sub:: 
   "nat \<Rightarrow> vname \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> IMP_Minus_Minus_com" where
@@ -543,8 +558,7 @@ lemma full_subtractor_correct_no_underflow:
   apply(simp add: full_subtractor_def Let_def t_small_step_fun_terminate_iff result_of_assign_var_carry_sub)
   apply(cases i)
   apply(simp_all add: fun_eq_iff nth_bit_of_sub_n_no_underflow[simplified] Let_def)
-   apply(auto simp: mod2_eq_if)
-  by(frule nth_bit_eq_zero_or_one[where ?x="b div 2"], simp)+
+  by(auto simp: mod2_eq_if)
   
 
 lemma sequence_of_full_subtractors_no_underflow: 
@@ -692,12 +706,8 @@ lemma binary_subtractor_constant'_correct_on_translated_state:
 
 definition assignment_to_binary:: "nat \<Rightarrow> vname \<Rightarrow> AExp.aexp \<Rightarrow> IMP_Minus_Minus_com" where
 "assignment_to_binary n v aexp = (case aexp of
-  AExp.A (AExp.N val) \<Rightarrow> binary_assign_constant_update_non_zero_indicator n v val |
-  AExp.A (AExp.V var) \<Rightarrow> binary_adder_constant n v var 0 |
-  AExp.Plus (AExp.N a) (AExp.N b) \<Rightarrow> binary_assign_constant_update_non_zero_indicator n v (a + b) |
-  AExp.Plus (AExp.V a) (AExp.N b) \<Rightarrow> binary_adder_constant n v a b |
-  AExp.Plus (AExp.N a) (AExp.V b) \<Rightarrow> binary_adder_constant n v b a |
-  AExp.Plus (AExp.V a) (AExp.V b) \<Rightarrow> binary_adder n v a b |
+  AExp.A a \<Rightarrow> binary_adder n v a (AExp.N 0) |
+  AExp.Plus a b \<Rightarrow> binary_adder n v a b |
   AExp.Sub (AExp.N a) (AExp.N b) \<Rightarrow> binary_assign_constant_update_non_zero_indicator n v (a - b) |
   AExp.Sub (AExp.V a) (AExp.N b) \<Rightarrow> binary_subtractor_constant n v a b |
   AExp.Sub (AExp.N a) (AExp.V b) \<Rightarrow> binary_subtractor_constant' n v a b |
@@ -709,7 +719,7 @@ lemma assignment_to_binary_correct:
   IMP_Minus_State_To_IMP_Minus_Minus s n) 
   = (SKIP, IMP_Minus_State_To_IMP_Minus_Minus (s(v := AExp.aval a s)) n)" 
    using result_of_binary_assign_constant_update_non_zero_indicator_on_translated_state 
-    binary_adder_constant_correct_on_translated_state assms binary_adder_correct_on_translated_state
+     assms binary_adder_correct
     binary_subtractor_constant'_correct_on_translated_state 
     binary_subtractor_constant_correct_on_translated_state
     binary_subtractor_correct_on_translated_state

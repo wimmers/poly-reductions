@@ -92,6 +92,10 @@ lemma zero_le_nth_bit_then[simp]: "0 < nth_bit x n \<longleftrightarrow> nth_bit
   apply(induction n arbitrary: x)
   by auto
 
+lemma nth_bit_then_ne_one_then[simp]: "nth_bit x n \<noteq> Suc 0 \<longleftrightarrow> nth_bit x n = 0" 
+  apply(induction n arbitrary: x)
+  by auto
+
 lemma nth_bit_of_zero[simp]: "nth_bit 0 n = 0" 
   by (induction n) auto
 
@@ -107,6 +111,18 @@ lemma IMP_Minus_State_To_IMP_Minus_Minus_of_non_zero_indicator[simp]:
   "IMP_Minus_State_To_IMP_Minus_Minus s n (CHR ''?'' # CHR ''$'' # x) = (if s x \<noteq> 0 then 1
     else 0)" 
   by (auto simp: IMP_Minus_State_To_IMP_Minus_Minus_def)
+
+lemma IMP_Minus_State_To_IMP_Minus_Minus_of_non_zero_indicator_of_var_bit[simp]: 
+  "k < n \<Longrightarrow> IMP_Minus_State_To_IMP_Minus_Minus s n (var_bit_to_var (x, k)) = nth_bit (s x) k"
+  by (auto simp: IMP_Minus_State_To_IMP_Minus_Minus_def)
+
+lemma IMP_Minus_State_To_IMP_Minus_Minus_of_non_zero_indicator_of_carry[simp]: 
+  "IMP_Minus_State_To_IMP_Minus_Minus s k ''carry'' = 0"
+  by (auto simp: IMP_Minus_State_To_IMP_Minus_Minus_def)
+
+lemma is_non_zero_indicator_iff: "take 2 x = ''?$''
+  \<longleftrightarrow> x = ''?$'' @ drop 2 x" 
+  by (metis append_same_eq append_take_drop_id)
 
 fun atomExp_to_constant:: "AExp.atomExp \<Rightarrow> nat" where
 "atomExp_to_constant (AExp.V var) = 0" |
@@ -146,20 +162,14 @@ using assms proof(cases a)
 next
   case (Plus x21 x22)
   hence "2 * max (AExp.atomVal x21 s) (AExp.atomVal x22 s) < x" 
-    apply(cases x21)
-     apply(cases x22)
-      prefer 3
-    apply(cases x22)
+    apply(cases x21; cases x22)
     using assms 
     by (auto simp add: Max_range_le_then_element_le nat_mult_max_right)
   thus ?thesis using Plus by auto
 next
   case (Sub x31 x32)
   then show ?thesis 
-    apply(cases x31)
-     apply(cases x32)
-      prefer 3
-      apply(cases x32)
+    apply(cases x31 ; cases x32)
     using assms apply(auto simp add: Max_range_le_then_element_le nat_mult_max_right)
     using Max_range_le_then_element_le 
     by (metis gr_implies_not0 lessI less_imp_diff_less less_imp_le_nat less_le_trans 
