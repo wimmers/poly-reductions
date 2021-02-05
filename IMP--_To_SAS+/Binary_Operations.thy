@@ -480,29 +480,19 @@ lemma binary_adder_correct:
   shows "t_small_step_fun (50 * (n + 1)) (binary_adder n v a b, 
     IMP_Minus_State_To_IMP_Minus_Minus s n) 
     = (SKIP, IMP_Minus_State_To_IMP_Minus_Minus (s(v := AExp.atomVal a s + AExp.atomVal b s)) n)"
-proof -
-  obtain k where k_def: "Suc k = n" using assms(1) gr0_implies_Suc by blast
-  hence "nth_carry k (AExp.atomVal a s) (AExp.atomVal b s) = 0" 
-    using assms no_overflow_condition by (metis diff_Suc_1)
-  thus ?thesis apply(simp only: binary_adder_def) 
-    apply(rule seq_terminates_when[where ?t1.0="2 * n" and ?t2.0="48 * n + 49"])
-      apply(auto)[1]
-     apply(auto simp: 
-        IMP_Minus_State_To_IMP_Minus_Minus_as_IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b 
-        copy_atom_to_operand_a_result)[1]
-    apply(rule seq_terminates_when[where ?t1.0="2 * n" and ?t2.0="46 * n + 48"])
-      apply auto[1]
-     apply(auto simp: 
-        IMP_Minus_State_To_IMP_Minus_Minus_as_IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b 
-        copy_atom_to_operand_b_result)[1]
-    apply(rule seq_terminates_when[where ?t1.0="30 * n" and ?t2.0="16 * n + 47"])
-    using assms apply(auto simp: add_and_update_non_zero_indicator_result)
-    apply(rule seq_terminates_when[where ?t1.0="2 * n" and ?t2.0="14 * n + 46"])
+    using assms 
     by(auto simp: 
+        no_overflow_condition
+        binary_adder_def
+        add_and_update_non_zero_indicator_result
         IMP_Minus_State_To_IMP_Minus_Minus_as_IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b 
         copy_atom_to_operand_a_result
-        copy_atom_to_operand_b_result intro: t_small_step_fun_increase_time[where ?t="2*n"])
-qed
+        copy_atom_to_operand_b_result 
+        intro!:
+        seq_terminates_when[where ?t="50 + 50 * n" and ?t1.0="2 * n" and ?t2.0="48 * n + 49"]
+        seq_terminates_when[where ?t="48 * n + 49" and ?t1.0="2 * n" and ?t2.0="46 * n + 48"]
+        seq_terminates_when[where ?t="46 * n + 48" and ?t1.0="30 * n" and ?t2.0="16 * n + 47"]
+        seq_terminates_when[where ?t="16 * n + 47" and ?t1.0="2 * n" and ?t2.0="2 * n"])
 
 definition assign_var_carry_sub:: 
   "nat \<Rightarrow> vname \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> IMP_Minus_Minus_com" where
