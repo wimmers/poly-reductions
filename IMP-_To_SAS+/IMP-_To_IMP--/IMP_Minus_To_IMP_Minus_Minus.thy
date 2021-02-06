@@ -2,8 +2,12 @@
 
 section "IMP- to IMP--"
 
-theory IMP_Minus_To_IMP_Minus_Minus imports Binary_Operations "../../IMP-/Big_StepT"
+theory IMP_Minus_To_IMP_Minus_Minus imports Binary_Operations 
+  "../../IMP-/Big_StepT" 
+  
 begin
+
+abbreviation max_constant where "max_constant \<equiv> IMP_Minus_Max_Constant.max_constant"
 
 fun IMP_Minus_To_IMP_Minus_Minus:: "IMP_Minus_com \<Rightarrow> nat \<Rightarrow> IMP_Minus_Minus_com" where
 "IMP_Minus_To_IMP_Minus_Minus Com.SKIP n = SKIP" |
@@ -14,10 +18,6 @@ fun IMP_Minus_To_IMP_Minus_Minus:: "IMP_Minus_com \<Rightarrow> nat \<Rightarrow
   IMP_Minus_To_IMP_Minus_Minus c1 n ELSE IMP_Minus_To_IMP_Minus_Minus c2 n)" |
 "IMP_Minus_To_IMP_Minus_Minus (Com.While v c) n = (WHILE (''?$'' @ v)\<noteq>0 DO
   IMP_Minus_To_IMP_Minus_Minus c n)"
-
-fun bit_length::"nat \<Rightarrow> nat" where
-"bit_length  0 = 0" | 
-"bit_length  n = 1 + bit_length (n div 2) "
 
 lemma finite_range_stays_finite: "(c1, s1) \<Rightarrow>\<^bsup>t\<^esup> s2 \<Longrightarrow> finite (range s1)
   \<Longrightarrow> finite (range s2)"
@@ -36,7 +36,7 @@ lemma Max_insert_le_when: "finite (range (s :: vname \<Rightarrow> nat)) \<Longr
   by auto
 
 lemma IMP_Minus_space_growth: "(c1, s1) \<Rightarrow>\<^bsup>t\<^esup> s2 \<Longrightarrow> finite (range s1)
-  \<Longrightarrow> max (Max (range s1)) (max_constant c1) < 2 ^ k 
+  \<Longrightarrow> max (Max (range s1)) (IMP_Minus_Max_Constant.max_constant c1) < 2 ^ k 
   \<Longrightarrow> Max (range s2) < (2 :: nat) ^ (k + t)" 
   apply(frule finite_range_stays_finite)
   apply simp
@@ -175,7 +175,7 @@ next
     by (meson leD leI less_le_trans mult_less_cancel2)
   hence "2 ^ x * max (Max (range s1)) (max_constant c) < 2 ^ n" by (simp add: nat_mult_max_right)
   have "max (Max (range s1)) (max_constant c) < 2 ^ (n - z)" 
-    using power_of_two_minus WhileTrue by (metis max_constant.simps)
+    using power_of_two_minus WhileTrue by (metis IMP_Minus_Max_Constant.max_constant.simps)
   have "Max (range s2) < 2 ^ (n - (y + 1))" 
     using IMP_Minus_space_growth[OF \<open>(c, s1) \<Rightarrow>\<^bsup> x \<^esup> s2\<close> \<open>finite (range s1)\<close> 
         \<open>max (Max (range s1)) (max_constant c) < 2 ^ (n - z)\<close>] \<open>1 + x + y = z\<close> \<open>n > z \<close> by auto
@@ -214,5 +214,29 @@ proof -
     using assms by(fastforce intro: IMP_Minus_To_IMP_Minus_Minus dual_order.strict_trans2)
   thus ?thesis by(metis Pair_inject assms less_imp_le_nat not_less t_small_step_fun_increase_time)
 qed
+
+lemma IMP_Minus_To_IMP_Minus_Minus_variables:
+  "set (enumerate_variables (IMP_Minus_To_IMP_Minus_Minus c n)) \<subseteq> 
+    { var_bit_to_var (w, i) | w i. i < n \<and> w \<in> set (IMP_Minus_Max_Constant.all_variables c) }
+    \<union> { ''?$'' @ w  | w. w \<in> set (IMP_Minus_Max_Constant.all_variables c) }
+    \<union> { operand_bit_to_var (op, i) | op i. i < n \<and> (op = CHR ''a'' \<or> op = CHR ''b'') }
+    \<union> { ''carry'' }" 
+proof(induction c)
+  case SKIP
+  then show ?case by(auto simp: enumerate_variables_def)
+next
+  case (Assign v a) 
+  thus ?case using assignment_to_binary_variables[where ?n=n and ?v=v and ?a=a] by auto
+next
+  case (Seq c1 c2)
+  then show ?case by(auto simp: set_enumerate_variables_seq) 
+next
+  case (If x1 c1 c2)
+  then show ?case by(auto simp: set_enumerate_variables_if) 
+next
+  case (While x1 c)
+  then show ?case by(auto simp: set_enumerate_variables_while) 
+qed
+
 
 end

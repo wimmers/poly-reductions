@@ -28,6 +28,19 @@ fun all_variables :: "com \<Rightarrow> vname list" where
 definition enumerate_variables :: "com \<Rightarrow> vname list" where
 "enumerate_variables c = remdups (concat (map all_variables (enumerate_subprograms c)))"
 
+
+lemma set_enumerate_variables_seq: "set (enumerate_variables (c1 ;; c2)) = 
+  set (enumerate_variables c1) \<union> set (enumerate_variables c2)" 
+  by(auto simp: enumerate_variables_def enumerate_subprograms_def)
+
+lemma set_enumerate_variables_if: "set (enumerate_variables (IF v\<noteq>0 THEN c1 ELSE c2))
+  = { v } \<union> set (enumerate_variables c1) \<union> set (enumerate_variables c2)"
+  by(auto simp: enumerate_variables_def enumerate_subprograms_def)
+
+lemma set_enumerate_variables_while: "set (enumerate_variables (WHILE v\<noteq>0 DO c))
+  = { v } \<union> set (enumerate_variables c)"
+  by(auto simp: enumerate_variables_def enumerate_subprograms_def)
+
 declare enumerate_subprograms_def[simp] 
 
 lemma c_in_all_subprograms_c[simp]: "c \<in> set (enumerate_subprograms c)" 
