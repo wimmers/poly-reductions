@@ -292,12 +292,12 @@ lemma sas_plus_to_imp_minus_minus_single_step:
   "op \<in> set (com_to_operators c1 (domain c t))
   \<Longrightarrow> c1 \<in> set (enumerate_subprograms c) \<Longrightarrow> t > 0 
   \<Longrightarrow> is_operator_applicable_in (imp_minus_state_to_sas_plus (c1, is1)) op
-  \<Longrightarrow> (c1, is1) \<rightarrow>\<^bsub>t * max_constant c\<^esub> 
+  \<Longrightarrow> (c1, is1) \<rightarrow>\<^bsub>t * (max 1 (max_constant c))\<^esub> 
   sas_plus_state_to_imp_minus ((imp_minus_state_to_sas_plus (c1, is1)) \<then>\<^sub>+ op)"
 proof (induction c1 arbitrary: op is1)
   case (Assign x a)
   have "sas_plus_state_to_imp_minus ((imp_minus_state_to_sas_plus ((x ::= a), is1)) \<then>\<^sub>+ op)
-    = (SKIP, is1(x \<mapsto> eval a is1 (t * max_constant c)))" using Assign
+    = (SKIP, is1(x \<mapsto> eval a is1 (t * (max 1 (max_constant c)))))" using Assign
   proof (cases a)
     case (A atom)
     then show ?thesis using Assign
@@ -311,12 +311,12 @@ proof (induction c1 arbitrary: op is1)
     case (Plus var val)
     then have "precondition_of op = [(PC, PCV (x ::= a)), (VN var, EV (the (is1 var)))]"
       using Assign Plus applicable_in_imp_minus_then by auto
-    then show ?thesis using Assign Plus apply auto using num_in_domain_iff by metis
+    then show ?thesis using Assign Plus by(auto split: EVal.splits) 
   next
     case (Sub var val)
     then have "precondition_of op = [(PC, PCV (x ::= a)), (VN var, EV (the (is1 var)))]"
       using Assign Sub applicable_in_imp_minus_then by auto
-    then show ?thesis using Assign Sub apply auto using num_in_domain_iff by metis
+    then show ?thesis using Assign Sub by(auto split: EVal.splits)
   qed
   then show ?case using Assign by auto
 next
@@ -335,7 +335,7 @@ next
     have "cA \<in> set (enumerate_subprograms c)" 
       using \<open>cA;;cB \<in> set (enumerate_subprograms c)\<close> c_in_all_subprograms_c
       by (force intro!: enumerate_subprograms_transitive[where ?c2.0 = "cA;; cB"])
-    then have "(cA, is1) \<rightarrow>\<^bsub>t * max_constant c\<^esub> sas_plus_state_to_imp_minus ?ss2'"
+    then have "(cA, is1) \<rightarrow>\<^bsub>t *(max 1 (max_constant c))\<^esub> sas_plus_state_to_imp_minus ?ss2'"
       using \<open>0 < t\<close> op'_def Seq  imp_minus_state_to_sas_plus_add_effect[where ?c1.0="cA;; cB"]
       imp_minus_state_to_sas_plus_add_effect[where ?c1.0="cA"] by auto
     then show ?thesis apply(auto) using op'_def by auto
@@ -349,7 +349,7 @@ lemma sas_plus_to_imp_minus_minus:
   \<Longrightarrow> sane_sas_plus_state ss1
   \<Longrightarrow> execute_serial_plan_sas_plus ss1 ops = ss2
   \<Longrightarrow> (\<exists>t'. t' \<le> length ops 
-  \<and> sas_plus_state_to_imp_minus ss1 \<rightarrow>\<^bsub>t * max_constant c\<^esub>\<^bsup>t'\<^esup> sas_plus_state_to_imp_minus ss2)"
+  \<and> sas_plus_state_to_imp_minus ss1 \<rightarrow>\<^bsub>t * (max 1 (max_constant c))\<^esub>\<^bsup>t'\<^esup> sas_plus_state_to_imp_minus ss2)"
 proof (induction ops arbitrary: ss1)
   case (Cons op ops)
   let ?c1 = "fst (sas_plus_state_to_imp_minus ss1)"
@@ -363,7 +363,7 @@ proof (induction ops arbitrary: ss1)
     moreover then have "?c1 \<in> set (enumerate_subprograms c)" using Cons a 
       apply(auto simp: imp_minus_minus_to_sas_plus_def Let_def coms_to_operators_def)
       by (metis PC_of_precondition domain_element.simps op_in_cto_c1)
-    ultimately have c1_to_c1': "(?c1, ?is1) \<rightarrow>\<^bsub>t * max_constant c\<^esub> sas_plus_state_to_imp_minus 
+    ultimately have c1_to_c1': "(?c1, ?is1) \<rightarrow>\<^bsub>t * (max 1 (max_constant c))\<^esub> sas_plus_state_to_imp_minus 
       (imp_minus_state_to_sas_plus (?c1, ?is1) \<then>\<^sub>+ op)" 
       apply(rule sas_plus_to_imp_minus_minus_single_step)
       using Cons a op_in_cto_c1 by auto
@@ -371,7 +371,7 @@ proof (induction ops arbitrary: ss1)
       and "sane_sas_plus_state ?ss1'" 
       using Cons a op_in_cto_c1 updated_state_is_sane by auto 
     ultimately have "\<exists>t'. t' \<le> length ops \<and> sas_plus_state_to_imp_minus ?ss1' 
-      \<rightarrow>\<^bsub>t * max_constant c\<^esub>\<^bsup>t'\<^esup> sas_plus_state_to_imp_minus ss2"
+      \<rightarrow>\<^bsub>t * (max 1 (max_constant c))\<^esub>\<^bsup>t'\<^esup> sas_plus_state_to_imp_minus ss2"
       using Cons by(auto)
     moreover have "imp_minus_state_to_sas_plus (?c1, ?is1) \<then>\<^sub>+ op = ?ss1'" using Cons by auto
     ultimately show ?case using c1_to_c1' by auto
@@ -379,7 +379,7 @@ proof (induction ops arbitrary: ss1)
 qed auto
 
 lemma imp_minus_minus_to_sas_plus_single_step:
-   "(c1, is1) \<rightarrow>\<^bsub>r\<^esub> (c2, is2)  \<Longrightarrow> r = t * max_constant c 
+   "(c1, is1) \<rightarrow>\<^bsub>r\<^esub> (c2, is2) \<Longrightarrow> r = t * (max 1 (max_constant c))
   \<Longrightarrow> c1 \<in> set (enumerate_subprograms c)
   \<Longrightarrow> dom is1 = set (enumerate_variables c)
   \<Longrightarrow> (\<forall>v x. is1 v = Some (Num x) \<longrightarrow> x \<le> r)
@@ -389,9 +389,7 @@ lemma imp_minus_minus_to_sas_plus_single_step:
     \<and> is_operator_applicable_in (imp_minus_state_to_sas_plus (c1, is1)) op)"
 proof (induction c1 is1 r c2 is2 rule: \<omega>_small_step_induct)
   case (Assign x a s r)
-  let ?ss1 = "imp_minus_state_to_sas_plus (x ::= a, s)"
-  let ?ss2 = "imp_minus_state_to_sas_plus (SKIP, s(x \<mapsto> eval a s (t * max_constant c)))"
-  show ?case
+  thus ?case 
   proof (cases a)
     case (A atom)
     then show ?thesis using Assign
@@ -399,7 +397,7 @@ proof (induction c1 is1 r c2 is2 rule: \<omega>_small_step_induct)
       case (V var)
       have "var \<in> set (enumerate_variables c)" 
         using Assign A V enumerate_subprograms_enumerate_variables by fastforce
-      then show ?thesis using Assign A V by (auto split: EVal.splits) force+
+      then show ?thesis using Assign A V apply (auto split: EVal.splits) by force+
     qed auto
   next
     case (Plus var val)
@@ -459,28 +457,29 @@ next
 qed auto
 
 lemma imp_minus_minus_to_sas_plus:
-   "(c1, is1) \<rightarrow>\<^bsub>t * max_constant c \<^esub>\<^bsup>t'\<^esup> (c2, is2)
+   "(c1, is1) \<rightarrow>\<^bsub>t * (max 1 (max_constant c))\<^esub>\<^bsup>t'\<^esup> (c2, is2)
   \<Longrightarrow> t' < t
   \<Longrightarrow> c1 \<in> set (enumerate_subprograms c)
   \<Longrightarrow> dom is1 = set (enumerate_variables c)
-  \<Longrightarrow> (\<forall>v x. is1 v = Some (Num x) \<longrightarrow> x \<le> t * max_constant c)
+  \<Longrightarrow> (\<forall>v x. is1 v = Some (Num x) \<longrightarrow> x \<le> t * (max 1 (max_constant c)))
   \<Longrightarrow> (\<exists>ops. set ops \<subseteq> set ((imp_minus_minus_to_sas_plus c I G t)\<^sub>\<O>\<^sub>+)
      \<and> length ops = t'
      \<and> (execute_serial_plan_sas_plus (imp_minus_state_to_sas_plus (c1, is1)) ops)
         = imp_minus_state_to_sas_plus (c2, is2))"
 proof (induction t' arbitrary: c1 is1)
   case (Suc t')
-  then obtain c1' is1' where c1'_def: "(c1, is1) \<rightarrow>\<^bsub>t * max_constant c \<^esub> (c1', is1')
-    \<and> (c1', is1') \<rightarrow>\<^bsub>t * max_constant c \<^esub>\<^bsup>t'\<^esup> (c2, is2)" by auto
+  let ?r = "t * (max 1 (max_constant c))" 
+  obtain c1' is1' where c1'_def: "(c1, is1) \<rightarrow>\<^bsub>?r\<^esub> (c1', is1')
+    \<and> (c1', is1') \<rightarrow>\<^bsub>?r\<^esub>\<^bsup>t'\<^esup> (c2, is2)" using Suc by auto
   then obtain op where op_def: "op \<in> set (com_to_operators c1 (domain c t))
     \<and> execute_operator_sas_plus (imp_minus_state_to_sas_plus (c1, is1)) op 
         =  imp_minus_state_to_sas_plus (c1', is1')
     \<and> is_operator_applicable_in (imp_minus_state_to_sas_plus (c1, is1)) op" 
     using imp_minus_minus_to_sas_plus_single_step Suc by metis
   have "max_constant c1 \<le> max_constant c" using Suc enumerate_subprograms_max_constant by simp
-  then have "max_constant c1 \<le> t * max_constant c" using Suc(3) mult_eq_if by simp
+  then have "max_constant c1 \<le> t * (max 1 (max_constant c))" using Suc(3) mult_eq_if by simp
   then have "dom is1' = set (enumerate_variables c)" 
-    and "(\<forall>v x. is1' v = Some (Num x) \<longrightarrow> x \<le> t * max_constant c)" 
+    and "(\<forall>v x. is1' v = Some (Num x) \<longrightarrow> x \<le> t * (max 1 (max_constant c)))" 
     using \<omega>_small_step_values_cant_exceed_bound_step[where ?c2.0="c1'"] c1'_def Suc 
         step_doesnt_add_variables
      apply (auto simp: domIff)
@@ -505,16 +504,17 @@ proof (induction t' arbitrary: c1 is1)
 qed auto
 
 lemma \<omega>_imp_minus_minus_to_sas_plus_plus:
-  assumes "(c, is1) \<rightarrow>\<^bsub>t * max_constant c \<^esub>\<^bsup>t'\<^esup> (SKIP, is2)"
+  assumes "(c, is1) \<rightarrow>\<^bsub>t * (max 1 (max_constant c))\<^esub>\<^bsup>t'\<^esup> (SKIP, is2)"
    "t' < t" 
    "dom is1 = set (enumerate_variables c)"
-   "(\<forall>v x. is1 v = Some (Num x) \<longrightarrow> x \<le> t * max_constant c)"
+   "(\<forall>v x. is1 v = Some (Num x) \<longrightarrow> x \<le> t * (max 1 (max_constant c)))"
    "I \<subseteq>\<^sub>m is1"
+   "G \<subseteq>\<^sub>m is2"
   shows "(\<exists>plan.
-     is_serial_solution_for_problem_sas_plus_plus (imp_minus_minus_to_sas_plus c I is2 t) plan
+     is_serial_solution_for_problem_sas_plus_plus (imp_minus_minus_to_sas_plus c I G t) plan
      \<and> length plan = t')"
 proof -
-  let ?\<Psi> = "imp_minus_minus_to_sas_plus c I is2 t"
+  let ?\<Psi> = "imp_minus_minus_to_sas_plus c I G t"
   let ?I' = "imp_minus_state_to_sas_plus (c, is1)" 
   obtain plan where plan_def: "set plan \<subseteq> set ((?\<Psi>)\<^sub>\<O>\<^sub>+)
      \<and> length plan = t'
@@ -528,8 +528,8 @@ proof -
     using assms plan_def c_in_all_subprograms_c
     apply(auto simp: imp_minus_minus_to_sas_plus_def Let_def 
         range_of'_def imp_minus_state_to_sas_plus_def map_comp_def map_le_def)
-    apply (auto split: option.splits variable.splits EVal.splits)
-    by (metis domIff option.distinct option.inject)
+        apply (auto split: option.splits variable.splits EVal.splits)
+    by (metis domIff option.distinct option.inject)+
   ultimately have "is_serial_solution_for_problem_sas_plus_plus ?\<Psi> plan" 
     using assms
     by(auto simp: is_serial_solution_for_problem_sas_plus_plus_def Let_def list_all_def ListMem_iff)
@@ -543,7 +543,7 @@ lemma sas_plus_plus_to_\<omega>_imp_minus_minus:
     "EV ` (ran G) \<subseteq> set (domain c t)"
   shows "\<exists>is1 is2 t'. (I|` set (enumerate_variables c)) \<subseteq>\<^sub>m is1 
     \<and> (G|` set (enumerate_variables c)) \<subseteq>\<^sub>m is2 \<and> t' \<le> length plan 
-    \<and> (c, is1) \<rightarrow>\<^bsub>t * max_constant c \<^esub>\<^bsup>t'\<^esup> (SKIP, is2)" 
+    \<and> (c, is1) \<rightarrow>\<^bsub>t * (max 1 (max_constant c)) \<^esub>\<^bsup>t'\<^esup> (SKIP, is2)" 
 proof -
   let ?\<Psi> = "imp_minus_minus_to_sas_plus c I G t"
   obtain I' where I'_def: "((?\<Psi>)\<^sub>I\<^sub>+) \<subseteq>\<^sub>m I' \<and> dom I' = set ((?\<Psi>)\<^sub>\<V>\<^sub>+) 
@@ -561,7 +561,7 @@ proof -
          range_of'_def domain_def)
     by (metis domIff insertI1 option.collapse)
   then obtain t' where t'_def: " t' \<le> length plan \<and> sas_plus_state_to_imp_minus I' 
-    \<rightarrow>\<^bsub>t * max_constant c \<^esub>\<^bsup>t'\<^esup> sas_plus_state_to_imp_minus ?ss2"
+    \<rightarrow>\<^bsub>t * (max 1 (max_constant c))\<^esub>\<^bsup>t'\<^esup> sas_plus_state_to_imp_minus ?ss2"
     using sas_plus_to_imp_minus_minus assms(1) assms(2) I'_def 
     by (auto simp: is_serial_solution_for_problem_sas_plus_plus_def Let_def list_all_def ListMem_iff) blast
   moreover have "fst (sas_plus_state_to_imp_minus I') = c"
@@ -571,14 +571,14 @@ proof -
         sane_sas_plus_state_def)
     by (metis (no_types, lifting) domain_element.inject domain_element.simps option.sel 
         option.inject variable.simps)+
-  ultimately have "((c, ?is1) \<rightarrow>\<^bsub>t * max_constant c \<^esub>\<^bsup>t'\<^esup> (SKIP, ?is2))" 
+  ultimately have "((c, ?is1) \<rightarrow>\<^bsub>t * (max 1 (max_constant c))\<^esub>\<^bsup>t'\<^esup> (SKIP, ?is2))" 
     using I'_def by (metis prod.collapse)
   moreover have "(I|` set (enumerate_variables c)) \<subseteq>\<^sub>m ?is1"
     "(G|` set (enumerate_variables c)) \<subseteq>\<^sub>m ?is2"
     using assms(2) I'_def 
     by (auto simp: imp_minus_minus_to_sas_plus_def imp_minus_state_to_sas_plus_map_le_then Let_def 
         range_of'_def)
-  ultimately show ?thesis using I'_def t'_def by blast
+  ultimately show ?thesis using I'_def t'_def by auto
 qed
     
     

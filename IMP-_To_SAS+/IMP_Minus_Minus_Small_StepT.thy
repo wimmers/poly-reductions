@@ -219,6 +219,71 @@ lemma seq_terminates_when: "t1 + t2 < t \<Longrightarrow> t_small_step_fun t1 (a
   apply(auto simp: seq_terminates_iff)
   by (metis Nat.add_diff_assoc2 add_lessD1 diff_Suc_Suc diff_add_inverse le_add_same_cancel1 
       less_natE t_small_step_fun_increase_time zero_le)
+
+lemma seq_terminates_when': "t_small_step_fun t1 (a, s1) = (SKIP, s3)
+  \<Longrightarrow> t_small_step_fun t2 (b, s3) = (SKIP, s2)
+  \<Longrightarrow> t1 + t2 < t
+  \<Longrightarrow> t_small_step_fun t (a ;; b, s1) = (SKIP, s2)" 
+  apply(auto simp: seq_terminates_iff)
+  by (metis Nat.add_diff_assoc2 add_lessD1 diff_Suc_Suc diff_add_inverse le_add_same_cancel1 
+      less_natE t_small_step_fun_increase_time zero_le)
    
-  
+
+lemma small_step_fun_small_step: "c1 \<noteq> SKIP \<Longrightarrow> small_step_fun (c1, s1) = (c2, s2) 
+  \<longleftrightarrow> (c1, s1) \<rightarrow> (c2, s2)" 
+  apply(induction c1 arbitrary: s1 c2 s2) 
+    apply auto
+  apply fastforce 
+  by (metis SeqE fstI eq_snd_iff)+
+
+lemma small_step_fun_small_step': "c1 \<noteq> SKIP \<Longrightarrow>  
+   (c1, s1) \<rightarrow> small_step_fun (c1, s1)" 
+  apply(induction c1 arbitrary: s1) 
+  by auto
+
+lemma t_small_step_fun_t_small_step_equivalence: "(t_small_step_fun t (c1, s1) = (SKIP, s2))
+  \<longleftrightarrow> (\<exists>t' \<le> t. (c1, s1) \<rightarrow>\<^bsup>t'\<^esup> (SKIP, s2))"  
+proof(induction t arbitrary: c1 s1 rule: nat_less_induct)
+  case (1 n)
+  hence IH: "t'' < n
+     \<Longrightarrow> (t_small_step_fun t'' (c1, s1) = (SKIP, s2)) \<longleftrightarrow> (\<exists>t'\<le>t''. (c1, s1) \<rightarrow>\<^bsup>t'\<^esup> (SKIP, s2))"
+    for t'' c1 s1 by simp
+  show ?case
+  proof(cases n)
+    case (Suc t)
+    have "c1 = SKIP \<or> c1 \<noteq> SKIP" by auto 
+    thus ?thesis 
+    proof(elim disjE)
+      assume "c1 \<noteq> SKIP" 
+      show ?thesis
+      proof
+        assume "t_small_step_fun n (c1, s1) = (SKIP, s2)" 
+        hence "(c1, s1) \<rightarrow> small_step_fun (c1, s1) 
+          \<and> (\<exists>t' \<le> t. small_step_fun (c1, s1) \<rightarrow>\<^bsup>t'\<^esup> (SKIP, s2))" 
+          using IH[where ?c1.0="fst (small_step_fun (c1, s1))" 
+              and ?s1.0="snd (small_step_fun (c1, s1))" and ?t''=t] 
+          \<open>c1 \<noteq> SKIP\<close> small_step_fun_small_step' Suc by auto 
+        thus "\<exists>t' \<le> n. (c1, s1) \<rightarrow>\<^bsup>t'\<^esup> (SKIP, s2)" using Suc by auto
+      next
+        assume "\<exists>t' \<le> n. (c1, s1) \<rightarrow>\<^bsup>t'\<^esup> (SKIP, s2)"
+        then obtain t' where t'_def: "t' \<le> n \<and> (c1, s1) \<rightarrow>\<^bsup>t'\<^esup> (SKIP, s2)" by blast
+        then obtain t'' where t''_def: "t' = Suc t''" using \<open>c1 \<noteq> SKIP\<close> by (metis prod.inject rel_pow.cases)
+        then obtain c3 s3 where "(c1, s1) \<rightarrow> (c3, s3) \<and> (c3, s3) \<rightarrow>\<^bsup>t''\<^esup> (SKIP, s2)" 
+          using t'_def by auto
+        hence "small_step_fun (c1, s1) = (c3, s3) \<and> t_small_step_fun t'' (c3, s3) = (SKIP, s2)" 
+          using IH[where ?c1.0=c3 and ?s1.0=s3 and ?t''=t''] small_step_fun_small_step \<open>c1 \<noteq> SKIP\<close> 
+            t'_def t''_def by auto
+        hence "t_small_step_fun (Suc t'') (c1, s1) = (SKIP, s2)" by simp
+        thus "t_small_step_fun n (c1, s1) = (SKIP, s2)" using t'_def t''_def 
+           t_small_step_fun_increase_time by blast
+      qed
+    next 
+      assume "c1 = SKIP" 
+      thus ?thesis using rel_pow.cases by fastforce
+    qed
+  qed auto
+qed 
+
+
+
 end

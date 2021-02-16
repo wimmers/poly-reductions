@@ -7,7 +7,7 @@ theory IMP_Minus_Minus_To_SAS_Plus_Plus_Reduction
 begin
 
 definition domain :: "com \<Rightarrow> nat \<Rightarrow> domain_element list" where
-"domain c t = (let m = max_constant c in map (\<lambda>i. EV (Num i))  [0 ..<(t * m + 1)]) @ [EV \<omega>]"
+"domain c t = (let m = max 1 (max_constant c) in map (\<lambda>i. EV (Num i))  [0 ..<(t * m + 1)]) @ [EV \<omega>]"
 
 lemma zero_in_domain[simp]: "ListMem (EV (Num 0)) (domain c t)"
   by (auto simp: domain_def Let_def ListMem_iff)
@@ -18,7 +18,7 @@ lemma omega_in_domain[simp]: "ListMem (EV \<omega>) (domain c t)"
 lemma [simp]: "(EV \<omega>) \<in> set (domain c t)"
   by (auto simp: domain_def Let_def ListMem_iff)
 
-lemma num_in_domain_iff[simp]: "EV (Num x) \<in> set (domain c t) = (x \<le> t * (max_constant c))"
+lemma num_in_domain_iff[simp]: "EV (Num x) \<in> set (domain c t) = (x \<le> t * (max 1 (max_constant c)))"
   by (auto simp: domain_def Let_def)
 
 lemma [simp]: "((PCV i) \<in> set (domain c t)) = False" 
@@ -30,7 +30,8 @@ lemma [simp]: "domain c t \<noteq> []"
 lemma [simp]: "y \<in> set (domain c t) \<Longrightarrow> EV (case y of EV y' \<Rightarrow> y') = y"
   by (auto simp: domain_def Let_def)
 
-lemma [simp]: "EV y \<in> set (domain c t) \<longleftrightarrow> (case y of Num x \<Rightarrow> x \<le> t * max_constant c | \<omega> \<Rightarrow> True)"
+lemma [simp]: "EV y \<in> set (domain c t) 
+  \<longleftrightarrow> (case y of Num x \<Rightarrow> x \<le> t * (max 1 (max_constant c)) | \<omega> \<Rightarrow> True)"
   by (cases y) (auto simp: domain_def Let_def)
 
 type_synonym operator = "(variable, domain_element) sas_plus_operator"
@@ -394,8 +395,8 @@ lemma not_in_enumerate_variables_not_PC_then[simp]:
   apply(cases v) by auto
 
 lemma imp_minus_minus_to_sas_plus_valid:
-  assumes "(\<forall>x y. I x = Some (Num y) \<longrightarrow> y \<le> t * max_constant c)"
-  assumes "(\<forall>x y. G x = Some (Num y) \<longrightarrow> y \<le> t * max_constant c)"
+  assumes "(\<forall>x y. I x = Some (Num y) \<longrightarrow> y \<le> t * (max 1 (max_constant c)))"
+  assumes "(\<forall>x y. G x = Some (Num y) \<longrightarrow> y \<le> t * (max 1 (max_constant c)))"
   shows "is_valid_problem_sas_plus_plus (imp_minus_minus_to_sas_plus c I G t)"
 proof -
   let ?\<Psi> = "imp_minus_minus_to_sas_plus c I G t"

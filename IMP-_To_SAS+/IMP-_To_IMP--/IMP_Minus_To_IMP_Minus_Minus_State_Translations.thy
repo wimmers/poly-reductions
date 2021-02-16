@@ -85,6 +85,9 @@ lemma var_bit_to_var_neq_carry[simp]: "''carry'' \<noteq> var_bit_to_var (x, y) 
 lemma var_bit_to_var_neq_carry'[simp]: "var_bit_to_var (x, y) = ''carry'' \<longleftrightarrow> False"
   by(auto simp: var_bit_to_var_def)
 
+lemma take_2_var_bit_to_var[simp]: "take 2 (var_bit_to_var (x, y)) = ''?$'' \<longleftrightarrow> False" 
+  by(auto simp: var_bit_to_var_def)
+
 fun nth_bit:: "nat \<Rightarrow> nat \<Rightarrow> nat" where
 "nth_bit x 0 = x mod 2" |
 "nth_bit x (Suc n) = nth_bit (x div 2) n"
@@ -103,10 +106,24 @@ lemma nth_bit_of_zero[simp]: "nth_bit 0 n = 0"
 lemma nth_bit_eq_zero_or_one: "nth_bit x n = y \<Longrightarrow> (y = 0 \<or> y = 1)" 
   by (induction n arbitrary: x) auto
 
+lemma nth_bit_le_intro: "y \<ge> 1 \<Longrightarrow> nth_bit x n \<le> y" 
+  using nth_bit_eq_zero_or_one by (metis le0)
+
+lemma less_nth_bit_iff: "x < nth_bit y n \<longleftrightarrow> (x = 0 \<and> nth_bit y n = 1)" 
+  apply(cases "nth_bit y n")
+  using nth_bit_eq_zero_or_one by(auto)
+
 definition IMP_Minus_State_To_IMP_Minus_Minus:: "state \<Rightarrow> nat \<Rightarrow> state" where
 "IMP_Minus_State_To_IMP_Minus_Minus s n = (\<lambda>v. (case var_to_var_bit v of 
   Some (v', k) \<Rightarrow> if k < n then nth_bit (s v') k else 0 |
   None \<Rightarrow> (if length v > 1 \<and> take 2 v = ''?$'' \<and> (s (drop 2 v)) > 0 then 1 else 0)))"
+
+definition IMP_Minus_State_To_IMP_Minus_Minus_partial:: 
+  "(vname \<rightharpoonup> nat) \<Rightarrow> nat \<Rightarrow> (vname \<rightharpoonup> nat)" where
+"IMP_Minus_State_To_IMP_Minus_Minus_partial s n = (\<lambda>v. (case var_to_var_bit v of 
+  Some (v', k) \<Rightarrow> if k < n then ((\<lambda>x. Some (nth_bit x k)) \<circ>\<^sub>m s) v' else None |
+  None \<Rightarrow> (if length v > 1 \<and> take 2 v = ''?$'' \<and> (s (drop 2 v)) \<noteq> None \<and> (s (drop 2 v)) \<noteq> Some 0 
+    then Some 1 else None)))"
 
 lemma IMP_Minus_State_To_IMP_Minus_Minus_of_non_zero_indicator[simp]: 
   "IMP_Minus_State_To_IMP_Minus_Minus s n (CHR ''?'' # CHR ''$'' # x) = (if s x \<noteq> 0 then 1
@@ -124,5 +141,9 @@ lemma IMP_Minus_State_To_IMP_Minus_Minus_of_non_zero_indicator_of_carry[simp]:
 lemma is_non_zero_indicator_iff: "take 2 x = ''?$''
   \<longleftrightarrow> x = ''?$'' @ drop 2 x" 
   by (metis append_same_eq append_take_drop_id)
+
+lemma IMP_Minus_State_To_IMP_Minus_Minus_bounded: 
+  "Suc 0 < IMP_Minus_State_To_IMP_Minus_Minus s n v \<longleftrightarrow> False"
+  by(auto simp: IMP_Minus_State_To_IMP_Minus_Minus_def less_nth_bit_iff split: option.splits)
 
 end

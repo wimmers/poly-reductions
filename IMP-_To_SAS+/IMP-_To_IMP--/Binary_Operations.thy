@@ -50,6 +50,11 @@ lemma com_list_to_seq_variables: "set (enumerate_variables (com_list_to_seq cs))
    apply(auto simp: set_enumerate_variables_seq)
   by(simp add: enumerate_variables_def)
 
+lemma com_list_to_seq_max_constant: "max_constant (com_list_to_seq cs)
+  = (if length cs = 0 then 0 else Max (max_constant ` set cs))"
+  apply(induction cs)
+  by auto 
+
 fun binary_assign_constant:: "nat \<Rightarrow> vname \<Rightarrow> nat \<Rightarrow> IMP_Minus_Minus_com" where 
 "binary_assign_constant 0 v x = SKIP" |
 "binary_assign_constant (Suc n) v x = (var_bit_to_var (v, n)) ::= A (N (nth_bit x n)) ;;
@@ -74,6 +79,11 @@ lemma binary_assign_constant_variables: "set (enumerate_variables (binary_assign
   apply(induction n)
    apply(auto simp: set_enumerate_variables_seq)
   by(auto simp: enumerate_variables_def)
+
+lemma binary_assign_constant_max_constant: "max_constant (binary_assign_constant n v x) \<le> 1" 
+  apply(induction n)
+   apply auto
+  by (metis eq_imp_le le_SucI nth_bit_then_ne_one_then)
 
 definition check_bit_non_zero:: "nat \<Rightarrow> vname \<Rightarrow> IMP_Minus_Minus_com" where
 "check_bit_non_zero i v = (IF (var_bit_to_var (v, i))\<noteq>0 THEN (''?$'' @ v) ::= A (N 1) ELSE SKIP)" 
@@ -389,7 +399,13 @@ lemma copy_atom_to_operand_variables:
   apply(cases a)
    apply (auto simp: copy_atom_to_operand_def set_enumerate_variables_seq)
   by(auto simp: enumerate_variables_def var_bit_to_var_neq_operand_bit_to_var[symmetric]) 
-  
+
+lemma copy_atom_to_operand_max_constant:
+  "IMP_Minus_Minus_Domains.max_constant (copy_atom_to_operand n op a) \<le> 1"
+  apply(induction n)
+   apply(cases a, auto simp: copy_atom_to_operand_def)
+  apply(cases a, auto simp: copy_atom_to_operand_def) 
+  by (metis eq_refl le_SucI nth_bit_then_ne_one_then)
 
 definition assign_var_carry:: 
   "nat \<Rightarrow> vname \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> IMP_Minus_Minus_com" where
@@ -440,6 +456,9 @@ lemma full_adder_variables: "set (enumerate_variables (full_adder i v)) =
     ''carry''}" 
   apply (auto simp: full_adder_def Let_def)
   by(simp_all add: enumerate_variables_def assign_var_carry_def split: if_splits) 
+
+lemma full_adder_max_constant: "max_constant (full_adder i v) = 1" 
+  by(auto simp: full_adder_def Let_def assign_var_carry_def)
 
 lemma sequence_of_full_adders: 
   assumes 
@@ -522,8 +541,7 @@ lemma binary_adder_correct:
   using seq_terminates_when'[OF copy_atom_to_operand_a_result[where ?n=n]
       seq_terminates_when'[OF copy_atom_to_operand_b_result
       seq_terminates_when'[OF add_and_update_non_zero_indicator_result
-      seq_terminates_when'[OF copy_atom_to_operand_a_result 
-        copy_atom_to_operand_b_result]]]] 
+      seq_terminates_when'[OF copy_atom_to_operand_a_result copy_atom_to_operand_b_result]]]] 
   assms 
   by(fastforce simp: binary_adder_def 
       IMP_Minus_State_To_IMP_Minus_Minus_as_IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b)

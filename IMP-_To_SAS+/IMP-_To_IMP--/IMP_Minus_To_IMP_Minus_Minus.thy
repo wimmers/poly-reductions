@@ -238,5 +238,32 @@ next
   then show ?case by(auto simp: set_enumerate_variables_while) 
 qed
 
+(*todo: how to deal with set comprehensions *)
+lemma IMP_Minus_To_IMP_Minus_Minus_variables_length:
+  "length (enumerate_variables (IMP_Minus_To_IMP_Minus_Minus c n)) \<le>
+    (n + 1) * (IMP_Minus_Max_Constant.num_variables c) + 2 * n + 1" 
+proof - 
+  have *: "finite 
+    ({ var_bit_to_var (w, i) | w i. i < n \<and> w \<in> set (IMP_Minus_Max_Constant.all_variables c) }
+    \<union> { ''?$'' @ w  | w. w \<in> set (IMP_Minus_Max_Constant.all_variables c) }
+    \<union> { operand_bit_to_var (op, i) | op i. i < n \<and> (op = CHR ''a'' \<or> op = CHR ''b'') }
+    \<union> { ''carry'' })" apply auto sorry
+  have "card (set (enumerate_variables (IMP_Minus_To_IMP_Minus_Minus c n)))
+    \<le> (n + 1) * length (IMP_Minus_Max_Constant.all_variables c) + 2 * n + 1"
+    using card_mono[OF * IMP_Minus_To_IMP_Minus_Minus_variables] sorry
+  thus ?thesis sorry
+qed
+
+lemma IMP_Minus_To_IMP_Minus_Minus_max_constant: 
+  "IMP_Minus_Minus_Domains.max_constant (IMP_Minus_To_IMP_Minus_Minus c n) \<le> 1" 
+  apply(induction c)
+  by(auto simp: assignment_to_binary_def binary_adder_def 
+      copy_atom_to_operand_max_constant[simplified]
+      add_and_update_non_zero_indicator_def com_list_to_seq_max_constant full_adder_max_constant
+      check_bit_non_zero_def binary_subtractor_def 
+      subtract_handle_overflow_and_update_non_zero_indicator_def
+      full_subtractor_def underflow_handler_def Let_def assign_var_carry_sub_def 
+      binary_assign_constant_max_constant[simplified]
+      split: AExp.aexp.splits AExp.atomExp.splits)
 
 end

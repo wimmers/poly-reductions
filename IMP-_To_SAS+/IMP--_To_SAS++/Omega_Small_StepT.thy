@@ -187,6 +187,18 @@ proof -
   then show ?thesis using assms by (auto simp: \<omega>_equivalent_def)
 qed
 
+definition canonical_\<omega>_state:: "nat \<Rightarrow> com \<Rightarrow> state \<Rightarrow> EState" where
+"canonical_\<omega>_state r c s = (\<lambda>v. if v \<in> set (enumerate_variables c) then
+  (if s v \<le> r then Some (Num (s v)) else Some \<omega>)
+  else None)" 
+
+lemma canonical_\<omega>_state_\<omega>_equivalent: "\<omega>_equivalent r s (canonical_\<omega>_state r c s)" 
+  by(auto simp: \<omega>_equivalent_def canonical_\<omega>_state_def)
+
+lemma canonical_\<omega>_state_eq_Some_iff: "Some y = canonical_\<omega>_state r c s x 
+  \<longleftrightarrow> (x \<in> set (enumerate_variables c) \<and> y = (if s x \<le> r then Num (s x) else \<omega>))"
+  by(auto simp: canonical_\<omega>_state_def)
+
 lemma small_step_omega_equivalence_step: "(c1, s1) \<rightarrow> (c2, s2)
   \<Longrightarrow> c1 \<in> set (enumerate_subprograms c) \<Longrightarrow> dom s1' = set (enumerate_variables c) 
   \<Longrightarrow> \<omega>_equivalent r' s1 s1' \<Longrightarrow> r \<ge> r' 
