@@ -361,21 +361,19 @@ definition copy_atom_to_operand:: "nat \<Rightarrow> char \<Rightarrow> AExp.ato
   AExp.V x \<Rightarrow> copy_var_to_operand n op x)" 
 
 lemma copy_atom_to_operand_a_result: 
-  assumes "op = CHR ''a''" 
-  shows  "t_small_step_fun (2 * n) (copy_atom_to_operand n op a,
+  "t_small_step_fun (2 * n) (copy_atom_to_operand n (CHR ''a'') a,
    IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b s n b c)
   = (SKIP,  IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b s n (AExp.atomVal a s) c)"
-  using assms by(auto simp: copy_atom_to_operand_def fun_eq_iff copy_const_to_operand_result 
+  by(auto simp: copy_atom_to_operand_def fun_eq_iff copy_const_to_operand_result 
       copy_var_to_operand_result IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b_def 
       var_to_operand_bit_eq_Some_iff
       split!: option.splits AExp.atomExp.splits char.splits bool.splits)
 
 lemma copy_atom_to_operand_b_result: 
-  assumes "op = CHR ''b''" 
-  shows  "t_small_step_fun (2 * n) (copy_atom_to_operand n op a,
+  "t_small_step_fun (2 * n) (copy_atom_to_operand n (CHR ''b'') a,
    IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b s n b c)
   = (SKIP,  IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b s n b (AExp.atomVal a s))"
-  using assms by(auto simp: copy_atom_to_operand_def fun_eq_iff copy_const_to_operand_result 
+  by(auto simp: copy_atom_to_operand_def fun_eq_iff copy_const_to_operand_result 
       copy_var_to_operand_result IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b_def 
       var_to_operand_bit_eq_Some_iff
       split!: option.splits AExp.atomExp.splits char.splits bool.splits) 
@@ -514,25 +512,21 @@ definition binary_adder:: "nat \<Rightarrow> vname \<Rightarrow> AExp.atomExp \<
   (copy_atom_to_operand n (CHR ''a'') (AExp.N 0) ;;
   copy_atom_to_operand n (CHR ''b'') (AExp.N 0))))"
 
+(* todo use dest (drule / frule to debug) *)
 lemma binary_adder_correct: 
   assumes "n > 0"
     "AExp.atomVal a s + AExp.atomVal b s < 2 ^ n" 
   shows "t_small_step_fun (50 * (n + 1)) (binary_adder n v a b, 
     IMP_Minus_State_To_IMP_Minus_Minus s n) 
     = (SKIP, IMP_Minus_State_To_IMP_Minus_Minus (s(v := AExp.atomVal a s + AExp.atomVal b s)) n)"
-    using assms 
-    by(auto simp: 
-        no_overflow_condition
-        binary_adder_def
-        add_and_update_non_zero_indicator_result
-        IMP_Minus_State_To_IMP_Minus_Minus_as_IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b 
-        copy_atom_to_operand_a_result
-        copy_atom_to_operand_b_result 
-        intro!:
-        seq_terminates_when[where ?t="50 + 50 * n" and ?t1.0="2 * n" and ?t2.0="48 * n + 49"]
-        seq_terminates_when[where ?t="48 * n + 49" and ?t1.0="2 * n" and ?t2.0="46 * n + 48"]
-        seq_terminates_when[where ?t="46 * n + 48" and ?t1.0="30 * n" and ?t2.0="16 * n + 47"]
-        seq_terminates_when[where ?t="16 * n + 47" and ?t1.0="2 * n" and ?t2.0="2 * n"])
+  using seq_terminates_when'[OF copy_atom_to_operand_a_result[where ?n=n]
+      seq_terminates_when'[OF copy_atom_to_operand_b_result
+      seq_terminates_when'[OF add_and_update_non_zero_indicator_result
+      seq_terminates_when'[OF copy_atom_to_operand_a_result 
+        copy_atom_to_operand_b_result]]]] 
+  assms 
+  by(fastforce simp: binary_adder_def 
+      IMP_Minus_State_To_IMP_Minus_Minus_as_IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b)
 
 definition assign_var_carry_sub:: 
   "nat \<Rightarrow> vname \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> IMP_Minus_Minus_com" where
