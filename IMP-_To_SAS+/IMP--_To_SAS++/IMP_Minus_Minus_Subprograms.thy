@@ -28,6 +28,8 @@ fun all_variables :: "com \<Rightarrow> vname list" where
 definition enumerate_variables :: "com \<Rightarrow> vname list" where
 "enumerate_variables c = remdups (concat (map all_variables (enumerate_subprograms c)))"
 
+lemma enumerate_variables_distinct: "distinct (enumerate_variables c)" 
+  by (auto simp: enumerate_variables_def)
 
 lemma set_enumerate_variables_seq: "set (enumerate_variables (c1 ;; c2)) = 
   set (enumerate_variables c1) \<union> set (enumerate_variables c2)" 

@@ -238,20 +238,65 @@ next
   then show ?case by(auto simp: set_enumerate_variables_while) 
 qed
 
-(*todo: how to deal with set comprehensions *)
+lemma card_of_set_comprehension_of_set_list: "card { f x |x. x \<in> set l} \<le> length (remdups l)" 
+proof(induction l)
+  case (Cons a l)
+  have "{ f x |x. x \<in> set (a # l)} = { f a } \<union> { f x |x. x \<in> set l}" by auto
+  thus ?case using Cons apply auto
+     apply (metis (mono_tags, lifting) card.infinite card_insert_if finite_insert mem_Collect_eq)
+    by (metis (no_types, lifting) Suc_le_mono card_infinite card_insert_disjoint finite_insert 
+        insert_absorb le_SucI)
+qed auto
+
+lemma card_union_le: "card U \<le> a \<Longrightarrow> card W \<le> b \<Longrightarrow> card (U \<union> W) \<le> (a + b)"  
+  using card_Un_le[where ?A=U and ?B=W] by simp
+
+lemma card_union_le_intro: "card U \<le> a \<Longrightarrow> card W \<le> b \<Longrightarrow> c \<ge> a + b \<Longrightarrow> card (U \<union> W) \<le> c"  
+  using card_Un_le[where ?A=U and ?B=W] by simp
+
 lemma IMP_Minus_To_IMP_Minus_Minus_variables_length:
   "length (enumerate_variables (IMP_Minus_To_IMP_Minus_Minus c n)) \<le>
     (n + 1) * (IMP_Minus_Max_Constant.num_variables c) + 2 * n + 1" 
 proof - 
-  have *: "finite 
-    ({ var_bit_to_var (w, i) | w i. i < n \<and> w \<in> set (IMP_Minus_Max_Constant.all_variables c) }
+  have "finite { var_bit_to_var (w, i) | w i. i < n \<and> w \<in> set (IMP_Minus_Max_Constant.all_variables c) } 
+    \<and> card { var_bit_to_var (w, i) | w i. i < n \<and> w \<in> set (IMP_Minus_Max_Constant.all_variables c) }
+    \<le> n * (IMP_Minus_Max_Constant.num_variables c)"
+  proof(induction n)
+    case (Suc n)
+    have "{var_bit_to_var (w, i) |w i. i < Suc n \<and> w \<in> set (IMP_Minus_Max_Constant.all_variables c)}
+      = {var_bit_to_var (w, i) |w i. i < n \<and> w \<in> set (IMP_Minus_Max_Constant.all_variables c)}
+        \<union> { var_bit_to_var (w, n) |w. w \<in> set (IMP_Minus_Max_Constant.all_variables c) }"
+      by auto
+    moreover have "card {var_bit_to_var (w, n) |w. w \<in> set (IMP_Minus_Max_Constant.all_variables c)}
+      \<le> num_variables c" 
+      using card_of_set_comprehension_of_set_list num_variables_def by fastforce
+    ultimately show ?case using Suc by (simp add: card_union_le sup_commute)
+  qed auto
+  moreover have "card {CHR ''?'' # CHR ''$'' # w |w. w \<in> set (IMP_Minus_Max_Constant.all_variables c)}
+    \<le> num_variables c" using card_of_set_comprehension_of_set_list num_variables_def by fastforce
+  moreover have "finite {operand_bit_to_var (op, i) |op i. i < n \<and> (op = CHR ''a'' \<or> op = CHR ''b'')}
+    \<and> card { operand_bit_to_var (op, i) |op i. i < n \<and> (op = CHR ''a'' \<or> op = CHR ''b'') } \<le> 2 * n"
+  proof (induction n)
+    case (Suc n)
+    have "{operand_bit_to_var (op, i) |op i. i < Suc n \<and> (op = CHR ''a'' \<or> op = CHR ''b'')}
+      = { operand_bit_to_var (op, i) |op i. i < n \<and> (op = CHR ''a'' \<or> op = CHR ''b'') }
+        \<union> { operand_bit_to_var (CHR ''a'', n), operand_bit_to_var (CHR ''b'', n)}" by auto
+    thus ?case using Suc by(auto intro!: card_insert_le_m1)
+  qed auto
+  ultimately have 
+    f: "finite ({ var_bit_to_var (w, i) | w i. i < n \<and> w \<in> set (IMP_Minus_Max_Constant.all_variables c) }
     \<union> { ''?$'' @ w  | w. w \<in> set (IMP_Minus_Max_Constant.all_variables c) }
     \<union> { operand_bit_to_var (op, i) | op i. i < n \<and> (op = CHR ''a'' \<or> op = CHR ''b'') }
-    \<union> { ''carry'' })" apply auto sorry
-  have "card (set (enumerate_variables (IMP_Minus_To_IMP_Minus_Minus c n)))
-    \<le> (n + 1) * length (IMP_Minus_Max_Constant.all_variables c) + 2 * n + 1"
-    using card_mono[OF * IMP_Minus_To_IMP_Minus_Minus_variables] sorry
-  thus ?thesis sorry
+    \<union> { ''carry'' })" and
+    "card ({ var_bit_to_var (w, i) | w i. i < n \<and> w \<in> set (IMP_Minus_Max_Constant.all_variables c) }
+    \<union> { ''?$'' @ w  | w. w \<in> set (IMP_Minus_Max_Constant.all_variables c) }
+    \<union> { operand_bit_to_var (op, i) | op i. i < n \<and> (op = CHR ''a'' \<or> op = CHR ''b'') }
+    \<union> { ''carry'' }) \<le> (n + 1) * (num_variables c) + 2 * n + 1"
+    by(auto simp: card_union_le intro!: card_insert_le_m1 card_union_le_intro)
+  hence "card (set (enumerate_variables (IMP_Minus_To_IMP_Minus_Minus c n)))
+    \<le> (n + 1) * (num_variables c) + 2 * n + 1"
+    using card_mono[OF f IMP_Minus_To_IMP_Minus_Minus_variables] by simp
+  thus ?thesis by(simp add:  distinct_card[OF enumerate_variables_distinct])
 qed
 
 lemma IMP_Minus_To_IMP_Minus_Minus_max_constant: 
