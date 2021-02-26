@@ -531,8 +531,7 @@ definition binary_adder:: "nat \<Rightarrow> vname \<Rightarrow> AExp.atomExp \<
   (copy_atom_to_operand n (CHR ''a'') (AExp.N 0) ;;
   copy_atom_to_operand n (CHR ''b'') (AExp.N 0))))"
 
-(* todo use dest (drule / frule to debug) *)
-lemma binary_adder_correct: 
+lemma binary_adder_correct:
   assumes "n > 0"
     "AExp.atomVal a s + AExp.atomVal b s < 2 ^ n" 
   shows "t_small_step_fun (50 * (n + 1)) (binary_adder n v a b, 

@@ -27,13 +27,13 @@ definition IMP_Minus_to_SAS_Plus:: "IMP_Minus_com \<Rightarrow> (vname \<rightha
   \<Rightarrow>  nat \<Rightarrow> SAS_problem" where
 "IMP_Minus_to_SAS_Plus c I r G t = (let 
   n = t + max_input_bits c I r + 1;
-  t' = (100 * n * (t - 1) + 51) in
-  (let c' = IMP_Minus_To_IMP_Minus_Minus c n in
-  (let I' = ((\<lambda>x. Some (Num x)) \<circ>\<^sub>m (IMP_Minus_State_To_IMP_Minus_Minus_partial I n)) 
+  t' = (100 * n * (t - 1) + 51);
+  c' = IMP_Minus_To_IMP_Minus_Minus c n;
+  I' = ((\<lambda>x. Some (Num x)) \<circ>\<^sub>m (IMP_Minus_State_To_IMP_Minus_Minus_partial I n)) 
     |` (set (enumerate_variables c')) ;
   G' = ((\<lambda>x. Some (Num x)) \<circ>\<^sub>m (IMP_Minus_State_To_IMP_Minus_Minus_partial G n))
     |` (set (enumerate_variables c')) in 
-  SAS_Plus_Plus_To_SAS_Plus (imp_minus_minus_to_sas_plus c' I' G' t'))))"
+  SAS_Plus_Plus_To_SAS_Plus (imp_minus_minus_to_sas_plus c' I' G' t'))"
 
 lemma le_mul_intro: "0 < b \<Longrightarrow> a \<le> b \<Longrightarrow> (1 :: nat) < c \<Longrightarrow> a < c * b" 
   by (metis One_nat_def dual_order.strict_trans le_neq_implies_less n_less_m_mult_n)

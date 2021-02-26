@@ -397,23 +397,16 @@ lemma SAS_Plus_To_SAS_Plus_Plus:
     \<and> is_serial_solution_for_problem_sas_plus_plus P plan'"
 proof-
   let ?plan = "chain_applicable_prefix ((SAS_Plus_Plus_To_SAS_Plus P)\<^sub>I\<^sub>+) plan" 
-  have "\<exists>k. k < length ?plan 
+  obtain k where k_def: "k < length ?plan 
     \<and> list_all (\<lambda>op. op \<in> set (initialization_operators P)) (take k ?plan)
     \<and> ?plan ! k = \<lparr> precondition_of = [(Stage, Init)], effect_of = [(Stage, NonInit)]\<rparr>
     \<and> list_all (\<lambda>op. op \<in> set (map SAS_Plus_Plus_Operator_To_SAS_Plus_Operator ((P)\<^sub>\<O>\<^sub>+))) 
       (drop (k + 1) ?plan)"
-    apply -
-    apply(rule SAS_plus_plan_structure[where ?s ="((SAS_Plus_Plus_To_SAS_Plus P)\<^sub>I\<^sub>+)"])
-    using assms set_of_chain_applicable_prefix 
-       apply(auto simp: is_serial_solution_for_problem_def list_all_def map_le_def Let_def 
+    using exE[OF SAS_plus_plan_structure[where ?s ="((SAS_Plus_Plus_To_SAS_Plus P)\<^sub>I\<^sub>+)" 
+            and ?P = P and ?plan = ?plan]] assms set_of_chain_applicable_prefix 
+    by(force simp: is_serial_solution_for_problem_def list_all_def map_le_def Let_def 
         execute_chain_applicable_prefix SAS_Plus_Plus_To_SAS_Plus_def initial_state_def ListMem_iff 
-        SAS_Plus_Plus_State_To_SAS_Plus_def)
-    by blast
-  then obtain k where k_def: "k < length ?plan 
-    \<and> list_all (\<lambda>op. op \<in> set (initialization_operators P)) (take k ?plan)
-    \<and> ?plan ! k = \<lparr> precondition_of = [(Stage, Init)], effect_of = [(Stage, NonInit)]\<rparr>
-    \<and> list_all (\<lambda>op. op \<in> set (map SAS_Plus_Plus_Operator_To_SAS_Plus_Operator ((P)\<^sub>\<O>\<^sub>+))) 
-      (drop (k + 1) ?plan)" by blast
+        SAS_Plus_Plus_State_To_SAS_Plus_def)+
 
   let ?prefix = "take k ?plan" 
   obtain I' where I'_def: "execute_serial_plan_sas_plus ((SAS_Plus_Plus_To_SAS_Plus P)\<^sub>I\<^sub>+) ?prefix 
