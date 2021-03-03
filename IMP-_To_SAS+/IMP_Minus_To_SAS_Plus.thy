@@ -27,13 +27,10 @@ definition IMP_Minus_to_SAS_Plus:: "IMP_Minus_com \<Rightarrow> (vname \<rightha
   \<Rightarrow>  nat \<Rightarrow> SAS_problem" where
 "IMP_Minus_to_SAS_Plus c I r G t = (let 
   n = t + max_input_bits c I r + 1;
-  t' = (100 * n * (t - 1) + 51);
   c' = IMP_Minus_To_IMP_Minus_Minus c n;
-  I' = ((\<lambda>x. Some (Num x)) \<circ>\<^sub>m (IMP_Minus_State_To_IMP_Minus_Minus_partial I n)) 
-    |` (set (enumerate_variables c')) ;
-  G' = ((\<lambda>x. Some (Num x)) \<circ>\<^sub>m (IMP_Minus_State_To_IMP_Minus_Minus_partial G n))
-    |` (set (enumerate_variables c')) in 
-  SAS_Plus_Plus_To_SAS_Plus (imp_minus_minus_to_sas_plus c' I' G' t'))"
+  I' = (IMP_Minus_State_To_IMP_Minus_Minus_partial I n) |` (set (enumerate_variables c')) ;
+  G' = (IMP_Minus_State_To_IMP_Minus_Minus_partial G n) |` (set (enumerate_variables c')) in 
+  SAS_Plus_Plus_To_SAS_Plus (imp_minus_minus_to_sas_plus c' I' G'))"
 
 lemma le_mul_intro: "0 < b \<Longrightarrow> a \<le> b \<Longrightarrow> (1 :: nat) < c \<Longrightarrow> a < c * b" 
   by (metis One_nat_def dual_order.strict_trans le_neq_implies_less n_less_m_mult_n)
@@ -51,15 +48,13 @@ lemma IMP_Minus_to_SAS_Plus_correctness:
 proof -
   let ?n = "t + max_input_bits c I r + 1"
   let ?c' = "IMP_Minus_To_IMP_Minus_Minus c ?n"
-  let ?s1' = "IMP_Minus_State_To_IMP_Minus_Minus s1 ?n"
-  let ?s2' = "IMP_Minus_State_To_IMP_Minus_Minus s2 ?n"
-  let ?I = "((\<lambda>x. Some (Num x)) \<circ>\<^sub>m (IMP_Minus_State_To_IMP_Minus_Minus_partial I ?n))
-    |` (set (enumerate_variables ?c'))"
-  let ?G = "((\<lambda>x. Some (Num x)) \<circ>\<^sub>m (IMP_Minus_State_To_IMP_Minus_Minus_partial G ?n))
-    |` (set (enumerate_variables ?c'))"
+  let ?s1' = "IMP_Minus_State_To_IMP_Minus_Minus s1 ?n |` (set (enumerate_variables ?c'))"
+  let ?s2' = "IMP_Minus_State_To_IMP_Minus_Minus s2 ?n |` (set (enumerate_variables ?c'))"
+  let ?I = "(IMP_Minus_State_To_IMP_Minus_Minus_partial I ?n) |` (set (enumerate_variables ?c'))"
+  let ?G = "(IMP_Minus_State_To_IMP_Minus_Minus_partial G ?n) |` (set (enumerate_variables ?c'))"
   let ?t = "100 * ?n * (t - 1) + 51"
   let ?sas_plus_plus_problem 
-    = "imp_minus_minus_to_sas_plus (IMP_Minus_To_IMP_Minus_Minus c ?n) ?I ?G ?t"
+    = "imp_minus_minus_to_sas_plus (IMP_Minus_To_IMP_Minus_Minus c ?n) ?I ?G"
 
   have "t_small_step_fun (100 * ?n * (t - 1) + 50) 
       (IMP_Minus_To_IMP_Minus_Minus c ?n, IMP_Minus_State_To_IMP_Minus_Minus s1 ?n)
@@ -69,63 +64,36 @@ proof -
         power_add intro!: le_mul_intro le_two_to_the_bit_length_intro) 
     by (metis less_imp_le_nat max.coboundedI1 max.commute)
 
+  then have "\<exists>t' \<le> 100 * ?n * (t - 1) + 50. (?c', ?s1') \<rightarrow>\<^bsup>t'\<^esup> (SKIP, ?s2')" 
+    apply -  apply(rule iffD1[OF t_small_step_fun_t_small_step_equivalence])
+    by(auto simp: t_small_step_fun_restrict_variables)
   then obtain t' where t'_def: "t' \<le> 100 * ?n * (t - 1) + 50" "(?c', ?s1') \<rightarrow>\<^bsup>t'\<^esup> (SKIP, ?s2')" 
-    using t_small_step_fun_t_small_step_equivalence by auto
+    by blast
 
-  let ?s1'' = "canonical_\<omega>_state (t' + 1) ?c' ?s1'"
-  have "\<exists>s2''. ((?c', ?s1'') \<rightarrow>\<^bsub>?t\<^esub>\<^bsup>t'\<^esup> (SKIP, s2'')) 
-    \<and> dom s2'' = set (enumerate_variables ?c') 
-    \<and> \<omega>_equivalent ((t' + 1) - t' * IMP_Minus_Minus_Domains.max_constant ?c') ?s2' s2''"
-    using  t'_def c_in_all_subprograms_c  IMP_Minus_To_IMP_Minus_Minus_max_constant
-    apply(auto simp: canonical_\<omega>_state_\<omega>_equivalent le_imp_less_Suc 
-        intro!: small_step_omega_equivalence)
-    by(auto simp: canonical_\<omega>_state_def split: if_splits)
-  then obtain s2'' where s2''_def: "((?c', ?s1'') \<rightarrow>\<^bsub>?t\<^esub>\<^bsup>t'\<^esup> (SKIP, s2'')) "
-    "dom s2'' = set (enumerate_variables ?c')"
-    "\<omega>_equivalent ((t' + 1) - t' * IMP_Minus_Minus_Domains.max_constant ?c') ?s2' s2''" by blast
-  hence "\<omega>_equivalent 1 ?s2' s2''" 
-    apply - apply(rule \<omega>_equivalent_increasing') 
-    using IMP_Minus_To_IMP_Minus_Minus_max_constant apply auto
-    by (metis Nat.le_add_diff One_nat_def add.commute nat_mult_1_right nat_mult_le_cancel_disj 
-        plus_1_eq_Suc)
-  hence "?G v = Some y \<Longrightarrow> s2'' v = Some y" for v y
-  proof-
-    assume "?G v = Some y"
-    then obtain y' where "y = Num y'" by(auto simp: map_comp_Some_iff)
-    hence "?s2' v = y'" using \<open>?G v = Some y\<close> \<open>G \<subseteq>\<^sub>m Some \<circ> s2\<close> 
-      by(auto simp: map_le_def map_comp_Some_iff IMP_Minus_State_To_IMP_Minus_Minus_partial_def 
-        IMP_Minus_State_To_IMP_Minus_Minus_def dom_def var_to_var_bit_eq_Some_iff
-          split: option.splits if_splits)+
-    moreover have "v \<in> dom s2''" using \<open>?G v = Some y\<close> \<open>dom s2'' = set (enumerate_variables ?c')\<close>
-      by auto
-    ultimately show "s2'' v = Some y" using \<open>\<omega>_equivalent 1 ?s2' s2''\<close> \<open>y = Num y'\<close>
-      by(auto simp: \<omega>_equivalent_def less_nth_bit_iff
-            dom_def var_to_var_bit_eq_Some_iff IMP_Minus_State_To_IMP_Minus_Minus_bounded
-            split: option.splits if_splits)
-  qed
-  hence "?G \<subseteq>\<^sub>m s2''" by (auto simp: map_le_def)
+  hence "?G v = Some y \<Longrightarrow> ?s2' v = Some y" for v y
+    using \<open>G \<subseteq>\<^sub>m Some \<circ> s2\<close> 
+      by(auto simp: IMP_Minus_State_To_IMP_Minus_Minus_def  
+          IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b_def 
+           IMP_Minus_State_To_IMP_Minus_Minus_partial_def map_le_def map_comp_def dom_def
+           split!: option.splits if_splits char.splits bool.splits)
+  hence "?G \<subseteq>\<^sub>m ?s2'" by (auto simp: map_le_def)
 
-  let ?ss1'' = "imp_minus_state_to_sas_plus (?c', ?s1'')" 
-  let ?ss2'' = "imp_minus_state_to_sas_plus (SKIP, s2'')" 
-  have "max 1 (IMP_Minus_Minus_Domains.max_constant ?c') = 1" 
-    using IMP_Minus_To_IMP_Minus_Minus_max_constant by (simp add: max.absorb1)
-  hence "\<exists>plan. is_serial_solution_for_problem_sas_plus_plus ?sas_plus_plus_problem plan
-     \<and> length plan = t'"
-    using s2''_def t'_def 
-    apply(auto simp: canonical_\<omega>_state_def IMP_Minus_State_To_IMP_Minus_Minus_def 
-      IMP_Minus_To_IMP_Minus_Minus_variables split: if_splits option.splits 
-      intro!: \<omega>_imp_minus_minus_to_sas_plus_plus[where ?is1.0="?s1''"] nth_bit_le_intro)
-     using \<open>I \<subseteq>\<^sub>m Some \<circ> s1\<close> 
-      apply(fastforce simp: map_le_def canonical_\<omega>_state_eq_Some_iff 
-        IMP_Minus_State_To_IMP_Minus_Minus_def
-        map_comp_def IMP_Minus_State_To_IMP_Minus_Minus_partial_def dom_def nth_bit_le_intro
-        IMP_Minus_To_IMP_Minus_Minus_variables
-        elim!: set_mp[OF IMP_Minus_To_IMP_Minus_Minus_variables]
-        split!: option.splits if_splits)
-     using \<open>?G \<subseteq>\<^sub>m s2''\<close> by auto
-   then obtain plan where plan_def: 
+  let ?ss1'' = "imp_minus_state_to_sas_plus (?c', ?s1')" 
+  let ?ss2'' = "imp_minus_state_to_sas_plus (SKIP, ?s2')" 
+  obtain plan where plan_def: 
      "is_serial_solution_for_problem_sas_plus_plus ?sas_plus_plus_problem plan"
-      "length plan = t'" by blast
+     "length plan = t'"
+    apply- apply(rule exE[OF imp_minus_minus_to_sas_plus_plus[OF \<open>(?c', ?s1') \<rightarrow>\<^bsup>t'\<^esup> (SKIP, ?s2')\<close>,
+            where ?I="?I" and ?G="?G"]])
+       apply auto
+      apply(drule set_mp[OF IMP_Minus_To_IMP_Minus_Minus_variables])
+      apply(auto simp: IMP_Minus_State_To_IMP_Minus_Minus_def 
+        IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b_def)[1]
+     apply(auto simp: map_le_def)[1]
+     apply(drule set_mp[OF IMP_Minus_To_IMP_Minus_Minus_variables])
+    using \<open>I \<subseteq>\<^sub>m Some \<circ> s1\<close> \<open>?G \<subseteq>\<^sub>m ?s2'\<close> by(auto simp:  IMP_Minus_State_To_IMP_Minus_Minus_def 
+        IMP_Minus_State_To_IMP_Minus_Minus_partial_def map_comp_Some_iff map_le_def dom_def
+        IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b_def)+
 
    hence "\<exists>prefix. length prefix \<le> length ((?sas_plus_plus_problem)\<^sub>\<V>\<^sub>+) + 1 
     \<and> is_serial_solution_for_problem (SAS_Plus_Plus_To_SAS_Plus ?sas_plus_plus_problem) 
@@ -133,7 +101,7 @@ proof -
      apply -
      apply(rule SAS_Plus_Plus_To_SAS_Plus)
      apply(rule imp_minus_minus_to_sas_plus_valid)
-     by(auto simp: IMP_Minus_State_To_IMP_Minus_Minus_partial_def map_comp_def nth_bit_le_intro
+     by(auto simp: IMP_Minus_State_To_IMP_Minus_Minus_partial_def map_comp_def 
          split: option.splits)
    then obtain prefix where prefix_def: "length prefix \<le> length ((?sas_plus_plus_problem)\<^sub>\<V>\<^sub>+) + 1 
     \<and> is_serial_solution_for_problem (SAS_Plus_Plus_To_SAS_Plus ?sas_plus_plus_problem) 

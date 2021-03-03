@@ -50,28 +50,23 @@ lemma com_list_to_seq_variables: "set (enumerate_variables (com_list_to_seq cs))
    apply(auto simp: set_enumerate_variables_seq)
   by(simp add: enumerate_variables_def)
 
-lemma com_list_to_seq_max_constant: "max_constant (com_list_to_seq cs)
-  = (if length cs = 0 then 0 else Max (max_constant ` set cs))"
-  apply(induction cs)
-  by auto 
-
 fun binary_assign_constant:: "nat \<Rightarrow> vname \<Rightarrow> nat \<Rightarrow> IMP_Minus_Minus_com" where 
 "binary_assign_constant 0 v x = SKIP" |
-"binary_assign_constant (Suc n) v x = (var_bit_to_var (v, n)) ::= A (N (nth_bit x n)) ;;
+"binary_assign_constant (Suc n) v x = (var_bit_to_var (v, n)) ::= nth_bit x n ;;
   binary_assign_constant n v x" 
 
 lemma result_of_binary_assign_constant: "t_small_step_fun (3 * n) 
   (binary_assign_constant n v x, s) 
   = (SKIP, \<lambda>w. (case var_to_var_bit w of
-      Some (w', m) \<Rightarrow> (if w' = v \<and> m < n then nth_bit x m else s w) |
+      Some (w', m) \<Rightarrow> (if w' = v \<and> m < n then Some (nth_bit x m) else s w) |
       _ \<Rightarrow> s w))"
 proof(induction n arbitrary: s)
   case (Suc n)
   thus ?case 
     apply auto
     apply(rule seq_terminates_when[where ?t1.0=1 and ?t2.0="3*n" and 
-          ?s3.0="s(var_bit_to_var (v, n) := nth_bit x n)"])
-    by(auto simp: fun_eq_iff var_to_var_bit_eq_Some_iff var_bit_to_var_eq_iff split: option.splits)
+          ?s3.0="s(var_bit_to_var (v, n) \<mapsto> nth_bit x n)"])
+    by(auto simp: fun_eq_iff var_to_var_bit_eq_Some_iff  split: option.splits)
 qed (auto simp: fun_eq_iff split: option.splits)
 
 lemma binary_assign_constant_variables: "set (enumerate_variables (binary_assign_constant n v x))
@@ -80,290 +75,127 @@ lemma binary_assign_constant_variables: "set (enumerate_variables (binary_assign
    apply(auto simp: set_enumerate_variables_seq)
   by(auto simp: enumerate_variables_def)
 
-lemma binary_assign_constant_max_constant: "max_constant (binary_assign_constant n v x) \<le> 1" 
-  apply(induction n)
-   apply auto
-  by (metis eq_imp_le le_SucI nth_bit_then_ne_one_then)
-
-definition check_bit_non_zero:: "nat \<Rightarrow> vname \<Rightarrow> IMP_Minus_Minus_com" where
-"check_bit_non_zero i v = (IF (var_bit_to_var (v, i))\<noteq>0 THEN (''?$'' @ v) ::= A (N 1) ELSE SKIP)" 
-
-lemma result_of_check_bit_non_zero_sequence: 
-  "t_small_step_fun (4 * k)
-  (com_list_to_seq (map (\<lambda>i. check_bit_non_zero i v) [0..<k]), s)
-    = (SKIP, if (\<exists>j < k. s (var_bit_to_var (v, j)) \<noteq> 0) then (s(''?$'' @ v := 1)) else s)" 
-proof(induction k)
-  case 0
-  then show ?case by (auto simp: check_bit_non_zero_def t_small_step_fun_terminate_iff)
-next
-  case (Suc k)
-  hence "t_small_step_fun (4 * (Suc k))
-   (com_list_to_seq ((map (\<lambda>i. check_bit_non_zero i v) [0..<k]) 
-    @ [check_bit_non_zero k v]), s)
-    = (SKIP, if (\<exists>j < Suc k. s (var_bit_to_var (v, j)) \<noteq> 0) then (s(''?$'' @ v := 1)) else s)"
-     apply -
-    apply(rule t_small_step_fun_com_list_to_seq_terminates[where ?t1.0="4 * k" and ?t2.0=3])
-      apply(auto simp: seq_terminates_iff)
-      apply(auto simp only: numeral_eq_Suc exists_terminating_iff fun_eq_iff)
-    by (auto simp: check_bit_non_zero_def t_small_step_fun_terminate_iff less_Suc_eq split: if_splits)
-  thus ?case by simp
-qed
-
-definition binary_assign_constant_update_non_zero_indicator:: 
-  "nat \<Rightarrow> vname \<Rightarrow> nat \<Rightarrow> IMP_Minus_Minus_com" where
-"binary_assign_constant_update_non_zero_indicator n v x = binary_assign_constant n v x ;;
-  (''?$'' @ v) ::= A (N (if x \<noteq> 0 then 1 else 0))" 
-
-lemma result_of_binary_assign_constant_update_non_zero_indicator: 
+lemma result_of_binary_assign_constant_on_translated_state:
   assumes "n > 0" "x < 2 ^ n" 
-  shows "t_small_step_fun (10 * n) (binary_assign_constant_update_non_zero_indicator n v x, s)
-    = (SKIP, \<lambda>w. (case var_to_var_bit w of
-      Some (w', m) \<Rightarrow> (if w' = v \<and> m < n then nth_bit x m else s w) |
-      _ \<Rightarrow> if w = ''?$'' @ v then (if x \<noteq> 0 then 1 else 0) else s w))" 
-  apply(simp only: binary_assign_constant_update_non_zero_indicator_def)
-  apply(rule seq_terminates_when[where ?t1.0="3*n" and ?t2.0="1"])
-    using assms apply simp
-     apply(rule result_of_binary_assign_constant)
-    by(auto)
-
-lemma result_of_binary_assign_constant_update_non_zero_indicator_on_translated_state:
-  assumes "n > 0" "x < 2 ^ n" 
-  shows "t_small_step_fun (50 * (n + 1)) (binary_assign_constant_update_non_zero_indicator n v x, 
+  shows "t_small_step_fun (50 * (n + 1)) (binary_assign_constant n v x, 
     IMP_Minus_State_To_IMP_Minus_Minus s n)
-    = (SKIP, IMP_Minus_State_To_IMP_Minus_Minus (s( v := x)) n)"
-  apply(rule t_small_step_fun_increase_time[where ?t="10*n"])
+    = (SKIP, IMP_Minus_State_To_IMP_Minus_Minus (s(v := x)) n)"
+  apply(rule t_small_step_fun_increase_time[where ?t="3*n"])
   apply simp
-  apply(subst result_of_binary_assign_constant_update_non_zero_indicator)
-  using assms apply (auto simp: fun_eq_iff IMP_Minus_State_To_IMP_Minus_Minus_def split: option.splits)
-   by (metis append.simps append_take_drop_id drop0 drop_Suc_Cons numeral_2_eq_2)+
+  apply(subst result_of_binary_assign_constant)
+  using assms 
+  by (auto simp: fun_eq_iff IMP_Minus_State_To_IMP_Minus_Minus_def 
+      IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b_def split: option.splits)
 
-fun nth_carry:: "nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat" where
-"nth_carry 0 a b = (if (nth_bit a 0 = 1 \<and> nth_bit b 0 = 1) then 1 else 0)" | 
-"nth_carry (Suc n) a b = (if (nth_bit a (Suc n) = 1 \<and> nth_bit b (Suc n) = 1) 
-  \<or> ((nth_bit a (Suc n) = 1 \<or> nth_bit b (Suc n) = 1) \<and> nth_carry n a b = 1) then 1 else 0)"
+fun nth_carry:: "nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> bit" where
+"nth_carry 0 a b = (if (nth_bit a 0 = One \<and> nth_bit b 0 = One) then One else Zero)" | 
+"nth_carry (Suc n) a b = (if (nth_bit a (Suc n) = One \<and> nth_bit b (Suc n) = One) 
+  \<or> ((nth_bit a (Suc n) = One \<or> nth_bit b (Suc n) = One) \<and> nth_carry n a b = One) 
+  then One else Zero)"
 
-lemma zero_le_nth_carry_then[simp]: "0 < nth_carry n a b \<longleftrightarrow> nth_carry n a b = 1" 
-  apply(cases n)
-  by(auto split: if_splits)
+lemma first_bit_of_add: "nth_bit (a + b) 0 
+  = (if nth_bit a 0 = One then if nth_bit b 0 = One then Zero else One 
+     else if nth_bit b 0 = One then One else Zero)" 
+  sorry
 
-lemma first_bit_of_add: "nth_bit (a + b) 0 = (if nth_bit a 0 + nth_bit b 0 = 1 then 1 else 0)" 
-  apply(induction a)
-   apply(auto split: if_splits)
+lemma nth_bit_of_add: "nth_bit (a + b) (Suc n) = (let u = nth_bit a (Suc n); 
+  v = nth_bit b (Suc n); w = nth_carry n a b in 
+  (if u = One then 
+    if v = One then
+     if w = One then One else Zero
+    else
+     if w = One then Zero else One
+   else
+    if v = One then
+     if w = One then Zero else One
+    else
+     if w = One then One else Zero))"
+  sorry
+
+lemma no_overflow_condition: "a + b < 2^n \<Longrightarrow> nth_carry (n - 1) a b = Zero" 
+  sorry
+
+lemma has_bit_one_then_greater_zero: "nth_bit a j = One \<Longrightarrow> 0 < a" 
+  sorry
+
+lemma greater_zero_then_has_bit_one: "x > 0 \<Longrightarrow> x < 2 ^ n \<Longrightarrow> \<exists>b \<in> {0..<n}. nth_bit x b = One" 
+  sorry
+
+fun nth_carry_sub:: "nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> bit" where
+"nth_carry_sub 0 a b = (if (nth_bit a 0 = Zero \<and> nth_bit b 0 = One) then One else Zero)" | 
+"nth_carry_sub (Suc n) a b = 
+  (if (nth_bit a (Suc n) = Zero \<and> ( nth_bit b (Suc n) = One \<or> nth_carry_sub n a b = One))
+    \<or> (nth_bit a (Suc n) = One \<and> (nth_bit b (Suc n)) = One \<and> nth_carry_sub n a b = One) then One
+  else Zero)"
+
+lemma first_bit_of_sub_n_no_underflow: "a \<ge> b \<Longrightarrow> nth_bit (a - b) 0 = (if nth_bit a 0 = One then
+  (if nth_bit b 0 = One then Zero else One)
+  else (if nth_bit b 0 = One then One else Zero))" 
+  apply(auto simp: nth_bit_def nat_to_bit_eq_One_iff nat_to_bit_eq_Zero_iff)
   by presburger+
-
-lemma nth_bit_of_add: "nth_bit (a + b) (Suc n) = (let s = nth_bit a (Suc n) + nth_bit b (Suc n) 
-  + nth_carry n a b in (if s = 1 \<or> s = 3 then 1 else 0))" 
-  sorry
-
-lemma no_overflow_condition: "a + b < 2^n \<Longrightarrow> nth_carry (n - 1) a b = 0" 
-  sorry
-
-
-lemma has_bit_one_then_greater_zero: "nth_bit a j = Suc 0 \<Longrightarrow> 0 < a" 
-  sorry
-
-lemma all_bits_in_sum_zero_then: "(\<forall>i < n. nth_bit (a + b) i = 0) 
-  \<Longrightarrow> (a + b \<ge> 2^n \<or> (a = 0 \<and> b = 0))"
-  sorry
-
-fun nth_carry_sub:: "nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat" where
-"nth_carry_sub 0 a b = (if (nth_bit a 0 = 0 \<and> nth_bit b 0 = 1) then 1 else 0)" | 
-"nth_carry_sub (Suc n) a b = (if nth_bit a (Suc n) < nth_bit b (Suc n) + nth_carry_sub n a b then 1
-  else 0)"
-
-lemma nth_carry_sub_leq_one: "nth_carry_sub n a b = x \<Longrightarrow> (x = 0 \<or> x = 1)"
-  by (metis nth_carry_sub.elims)
-
-lemma nth_carry_sub_neq_one_iff[simp]: "nth_carry_sub n a b \<noteq> Suc 0 \<longleftrightarrow> nth_carry_sub n a b = 0" 
-  using nth_carry_sub_leq_one by auto
 
 lemma nth_bit_of_sub_n_no_underflow: "a \<ge> b \<Longrightarrow> 
   nth_bit (a - b) (Suc n) = (let an = nth_bit a (Suc n); bn = nth_bit b (Suc n);
-  c = nth_carry_sub n a b in (if  bn + c = 0 \<or> bn + c = 2 then an 
-    else (if bn + c = 1 \<and> an = 0 then 1 else 0)))" 
+  c = nth_carry_sub n a b in (if (bn = Zero \<and> c = Zero) \<or> (bn = One \<and> c = One) then an 
+    else (if (bn = One \<or> c = One) \<and> an = Zero then One else Zero)))" 
   sorry
 
 lemma nth_bit_of_sub_n_underflow: "a < b \<Longrightarrow> 
-  nth_bit (a - b) (Suc n) = 0" 
+  nth_bit (a - b) (Suc n) = Zero" 
   by simp
-
-fun operand_bit_to_var:: "(char * nat) \<Rightarrow> vname" where 
-"operand_bit_to_var (c, 0) = [c]" |
-"operand_bit_to_var (c, (Suc n)) = c # operand_bit_to_var (c, n)"
-
-definition var_to_operand_bit:: "vname \<Rightarrow> (char * nat) option" where
-"var_to_operand_bit v = (if v \<noteq> [] \<and> v = (operand_bit_to_var (hd v, length v - 1)) 
-  then Some (hd v, length v - 1) else None)" 
-
-lemma hd_of_operand_bit_to_var[simp]: 
-  "hd (operand_bit_to_var (op, n)) = op" by (induction n) auto
-
-lemma take_2_of_operand_bit_to_var[simp]:
-  "take 2 (operand_bit_to_var (c, k)) = operand_bit_to_var (c, min k 1)" 
-  apply (cases k)
-   apply(auto)
-  using hd_of_operand_bit_to_var
-  by (metis lessI less_Suc_eq_0_disj list.discI operand_bit_to_var.simps(1) 
-      operand_bit_to_var.simps(2) take0 take_Suc)
-
-lemma length_of_operand_bit_to_var[simp]:
-  "length (operand_bit_to_var (op, n)) = n + 1" by (induction n) auto  
-
-lemma var_to_operand_bit_of_operand_bit_to_var[simp]: 
-  "var_to_operand_bit (operand_bit_to_var (op, n)) = Some (op, n)"
-  apply(induction n)
-  by(auto simp: var_to_operand_bit_def)
-
-lemma var_to_operand_bit_eq_Some_iff: "var_to_operand_bit x = Some (op, i) 
-  \<longleftrightarrow> x = operand_bit_to_var (op, i)" 
-  apply(auto simp: var_to_operand_bit_def)
-  apply(cases i)
-  by auto
-
-lemma var_to_operand_bit_of_carry[simp]: "var_to_operand_bit ''carry'' = None" 
-  by(simp add: var_to_operand_bit_def)
-
-lemma operand_bit_to_var_neq_carry[simp]: "operand_bit_to_var (op, k) = ''carry'' \<longleftrightarrow> False" 
-proof 
-  assume "operand_bit_to_var (op, k) = ''carry''" 
-  moreover hence "op = CHR ''c''" by (metis hd_of_operand_bit_to_var list.sel)
-  ultimately show False 
-    by (metis option.simps var_to_operand_bit_of_carry var_to_operand_bit_of_operand_bit_to_var)
-qed auto
-                                                       
-lemma set_of_operand_bit_to_var[simp]: "set (operand_bit_to_var (op, b)) = { op }" 
-  by (induction b) auto
-
-lemma var_to_operand_bit_var_bit_to_var[simp]: "var_to_operand_bit (var_bit_to_var (a, b)) = None" 
-  apply(simp add: var_to_operand_bit_def var_bit_to_var_def)
-  apply(rule ccontr)
-  apply simp
-  apply(drule arg_cong[where ?f=set])
-  by simp
-
-lemma var_to_var_bit_operand_bit_to_var[simp]: "var_to_var_bit (operand_bit_to_var (c, k)) = None" 
-  by (simp add: var_to_var_bit_def)
-
-lemma var_to_operand_bit_non_zero_indicator[simp]: 
-  "var_to_operand_bit (CHR ''?'' # CHR ''$'' # v) = None"
-  apply(auto simp: var_to_operand_bit_def)
-  apply(rule ccontr)
-  apply simp
-  apply(drule arg_cong[where ?f=set])
-  by simp
-
-lemma operand_bit_to_var_ne_non_zero_indicator[simp]: 
-  "operand_bit_to_var (c, k) \<noteq> CHR ''?'' # CHR ''$'' # v" 
-  apply(induction k)
-   apply auto
-proof -
-  fix ka :: nat
-  assume "operand_bit_to_var (CHR ''?'', ka) = CHR ''$'' # v"
-  then have "CHR ''?'' = CHR ''$''" by (metis hd_of_operand_bit_to_var list.sel(1))
-  then show False by force
-qed
-
-lemma operand_bit_to_var_non_empty: "operand_bit_to_var (op, n) \<noteq> []"
-  by (induction n) auto
-
-lemma operand_bit_to_var_eq_operand_bit_to_var_iff[simp]: 
-  "operand_bit_to_var (op, a) = operand_bit_to_var (op', b) 
-  \<longleftrightarrow> (op = op' \<and> a = b)" 
-proof 
-  assume "operand_bit_to_var (op, a) = operand_bit_to_var (op', b)" 
-  hence "length (operand_bit_to_var (op, a)) = length (operand_bit_to_var (op', b))
-    \<and> set (operand_bit_to_var (op, a)) = set (operand_bit_to_var (op', b))" by simp
-  thus "op = op' \<and> a = b" by auto
-qed auto
-
-lemma var_bit_to_var_neq_operand_bit_to_var[simp]: 
-  "var_bit_to_var (v, a) \<noteq> operand_bit_to_var (op, b)"
-proof(rule ccontr)
-  assume "\<not> (var_bit_to_var (v, a) \<noteq> operand_bit_to_var (op, b))" 
-  hence "set (var_bit_to_var (v, a)) = set (operand_bit_to_var (op, b))" by simp
-  thus False using set_of_operand_bit_to_var by(auto simp: var_bit_to_var_def)
-qed
-
-lemma IMP_Minus_State_To_IMP_Minus_Minus_of_operand_bit[simp]:
-  "IMP_Minus_State_To_IMP_Minus_Minus s n (operand_bit_to_var (op, x)) = 0" 
-  by(auto simp: IMP_Minus_State_To_IMP_Minus_Minus_def)
-
-definition IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b:: 
-  "state \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> state" where
-"IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b s n a b = (\<lambda>v. 
-  (case var_to_operand_bit v of 
-    Some (CHR ''a'', k) \<Rightarrow> if k < n then nth_bit a k else 0 |
-    Some (CHR ''b'', k) \<Rightarrow> if k < n then nth_bit b k else 0 | 
-    _ \<Rightarrow> IMP_Minus_State_To_IMP_Minus_Minus s n v))"
-
-lemma IMP_Minus_State_To_IMP_Minus_Minus_as_IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b:
-  "IMP_Minus_State_To_IMP_Minus_Minus s n 
-    = IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b s n 0 0"
-  by(auto simp: IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b_def fun_eq_iff 
-      var_to_operand_bit_eq_Some_iff IMP_Minus_State_To_IMP_Minus_Minus_def 
-      split: char.splits option.splits bool.splits)
-
-lemma IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b_of_carry[simp]: 
-  "IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b s k a b ''carry'' = 0"
-  by(auto simp: IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b_def)
-
-lemma IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b_of_operand_a[simp]: 
-  "j < k \<Longrightarrow> IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b s k a b 
-  (operand_bit_to_var (CHR ''a'', j)) = nth_bit a j"
-  by(auto simp: IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b_def)
-
-lemma IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b_of_operand_b[simp]: 
-  "j < k \<Longrightarrow> IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b s k a b 
-  (operand_bit_to_var (CHR ''b'', j)) = nth_bit b j"
-  by(auto simp: IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b_def)
-
-lemma IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b_of_var_bit_to_var[simp]: 
-  "IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b s k a b 
-  (var_bit_to_var (x, j)) = IMP_Minus_State_To_IMP_Minus_Minus s k (var_bit_to_var (x, j))"
-  by(auto simp: IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b_def)
-
-lemma IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b_of_non_zero_indicator[simp]: 
-  "IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b s n a b (CHR ''?'' # CHR ''$'' # v)
-    = IMP_Minus_State_To_IMP_Minus_Minus s n (CHR ''?'' # CHR ''$'' # v)"
-  by(auto simp: IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b_def)
-
-lemma IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b_eq_iff: 
-  "IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b s n a b x 
-  = IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b s' n a b x
-  \<longleftrightarrow> IMP_Minus_State_To_IMP_Minus_Minus s n x = IMP_Minus_State_To_IMP_Minus_Minus s' n x"
-  by(auto simp: IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b_def 
-      var_to_operand_bit_eq_Some_iff
-      split: char.splits option.splits bool.splits)
 
 fun copy_var_to_operand:: "nat \<Rightarrow> char \<Rightarrow> vname \<Rightarrow> IMP_Minus_Minus_com" where
 "copy_var_to_operand 0 op v = SKIP" |
 "copy_var_to_operand (Suc i) op v = 
-   (operand_bit_to_var (op, i)) ::= A (V (var_bit_to_var (v, i))) ;;
+   (IF [var_bit_to_var (v, i)] \<noteq>0 THEN 
+   (operand_bit_to_var (op, i)) ::= One 
+    ELSE 
+    (operand_bit_to_var (op, i)) ::= Zero) ;;
     copy_var_to_operand i op v " 
 
 lemma copy_var_to_operand_result:
-  "t_small_step_fun (2 * n) (copy_var_to_operand n op v, s)
+  "t_small_step_fun (4 * n) (copy_var_to_operand n op v, s)
   = (SKIP, \<lambda>w. (case var_to_operand_bit w of
-    Some (op', i) \<Rightarrow> (if op' = op \<and> i < n then s (var_bit_to_var (v, i)) else s w) |
+    Some (op', i) \<Rightarrow> (if op' = op \<and> i < n 
+  then (case s (var_bit_to_var (v, i)) of Some x \<Rightarrow> Some x | None \<Rightarrow> Some One)
+  else s w) |
     _ \<Rightarrow> s w))" 
-  apply(induction n arbitrary: s)
-   apply(auto simp: fun_eq_iff var_to_operand_bit_eq_Some_iff split!: option.splits if_splits)
-  using less_antisym by blast
+proof(induction n arbitrary: s)
+  case 0
+  then show ?case by (auto simp: fun_eq_iff split: option.splits)
+next
+  case (Suc n)
+  let ?s' = "s(operand_bit_to_var (op, n) 
+    \<mapsto> (case s (var_bit_to_var (v, n)) of Some x \<Rightarrow> x | None \<Rightarrow> One))"
+  show ?case using Suc
+    by(auto simp: fun_eq_iff var_to_operand_bit_eq_Some_iff numeral_3_eq_3 less_Suc_eq_le
+      split!: option.splits if_splits
+      intro!: seq_terminates_when[where ?t1.0=3 and ?t2.0="4 * n" and ?s3.0="?s'"])    
+qed
 
 fun copy_const_to_operand:: "nat \<Rightarrow> char \<Rightarrow> nat \<Rightarrow> IMP_Minus_Minus_com" where
 "copy_const_to_operand 0 op x = SKIP" |
 "copy_const_to_operand (Suc i) op x = 
-   (operand_bit_to_var (op, i)) ::= A (N (nth_bit x i)) ;;
+   (operand_bit_to_var (op, i)) ::= (nth_bit x i) ;;
     copy_const_to_operand i op x " 
 
 lemma copy_const_to_operand_result:
-  "t_small_step_fun (2 * n) (copy_const_to_operand n op x, s)
+  "t_small_step_fun (4 * n) (copy_const_to_operand n op x, s)
   = (SKIP, \<lambda>w. (case var_to_operand_bit w of
-    Some (op', i) \<Rightarrow> (if op' = op \<and> i < n then nth_bit x i else s w) |
+    Some (op', i) \<Rightarrow> (if op' = op \<and> i < n then Some (nth_bit x i) else s w) |
     _ \<Rightarrow> s w))" 
-  apply(induction n arbitrary: s)
-   apply(auto simp: fun_eq_iff var_to_operand_bit_eq_Some_iff split!: option.splits if_splits)
+proof(induction n arbitrary: s)
+  case 0
+  then show ?case by (simp add: fun_eq_iff split: option.splits)
+next
+  case (Suc n)
+  let ?s' = "s(operand_bit_to_var (op, n) \<mapsto> nth_bit x n)"
+  show ?case using Suc 
+    apply(auto simp: fun_eq_iff var_to_operand_bit_eq_Some_iff split!: option.splits if_splits
+      intro!: seq_terminates_when[where ?t1.0=1 and ?t2.0 ="4*n" and ?s3.0="?s'"])
   using less_antisym by blast
+qed
+  
 
 definition copy_atom_to_operand:: "nat \<Rightarrow> char \<Rightarrow> AExp.atomExp \<Rightarrow> IMP_Minus_Minus_com" where
 "copy_atom_to_operand n op a = (case a of 
@@ -371,7 +203,7 @@ definition copy_atom_to_operand:: "nat \<Rightarrow> char \<Rightarrow> AExp.ato
   AExp.V x \<Rightarrow> copy_var_to_operand n op x)" 
 
 lemma copy_atom_to_operand_a_result: 
-  "t_small_step_fun (2 * n) (copy_atom_to_operand n (CHR ''a'') a,
+  "t_small_step_fun (4 * n) (copy_atom_to_operand n (CHR ''a'') a,
    IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b s n b c)
   = (SKIP,  IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b s n (AExp.atomVal a s) c)"
   by(auto simp: copy_atom_to_operand_def fun_eq_iff copy_const_to_operand_result 
@@ -380,7 +212,7 @@ lemma copy_atom_to_operand_a_result:
       split!: option.splits AExp.atomExp.splits char.splits bool.splits)
 
 lemma copy_atom_to_operand_b_result: 
-  "t_small_step_fun (2 * n) (copy_atom_to_operand n (CHR ''b'') a,
+  "t_small_step_fun (4 * n) (copy_atom_to_operand n (CHR ''b'') a,
    IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b s n b c)
   = (SKIP,  IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b s n b (AExp.atomVal a s))"
   by(auto simp: copy_atom_to_operand_def fun_eq_iff copy_const_to_operand_result 
@@ -400,56 +232,47 @@ lemma copy_atom_to_operand_variables:
    apply (auto simp: copy_atom_to_operand_def set_enumerate_variables_seq)
   by(auto simp: enumerate_variables_def var_bit_to_var_neq_operand_bit_to_var[symmetric]) 
 
-lemma copy_atom_to_operand_max_constant:
-  "IMP_Minus_Minus_Domains.max_constant (copy_atom_to_operand n op a) \<le> 1"
-  apply(induction n)
-   apply(cases a, auto simp: copy_atom_to_operand_def)
-  apply(cases a, auto simp: copy_atom_to_operand_def) 
-  by (metis eq_refl le_SucI nth_bit_then_ne_one_then)
-
 definition assign_var_carry:: 
   "nat \<Rightarrow> vname \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> IMP_Minus_Minus_com" where
 "assign_var_carry i v a b c = 
-  (var_bit_to_var (v, i)) ::= A (N (if a + b + c = 1 \<or> a + b + c = 3 then 1 else 0)) ;; 
-  ''carry'' ::= A (N (if a + b + c \<ge> 2 then 1 else 0))"
+  (var_bit_to_var (v, i)) ::= (if a + b + c = 1 \<or> a + b + c = 3 then One else Zero) ;; 
+  ''carry'' ::= (if a + b + c \<ge> 2 then One else Zero)"
 
 lemma result_of_assign_var_carry:  
   "t_small_step_fun 7 (assign_var_carry i v a b c, s)
-    = (SKIP, s(var_bit_to_var (v, i) := (if a + b + c = 1 \<or> a + b + c = 3 then 1 else 0),
-     ''carry'' :=  (if a + b + c \<ge> 2 then 1 else 0)))"
+    = (SKIP, s(var_bit_to_var (v, i) \<mapsto> (if a + b + c = 1 \<or> a + b + c = 3 then One else Zero),
+     ''carry'' \<mapsto> (if a + b + c \<ge> 2 then One else Zero)))"
   by(auto simp: assign_var_carry_def t_small_step_fun_terminate_iff)
 
 definition full_adder:: "nat \<Rightarrow> vname \<Rightarrow> IMP_Minus_Minus_com" where
 "full_adder i v  = (let assign = assign_var_carry i v; op_a = operand_bit_to_var (CHR ''a'', i);
   op_b = operand_bit_to_var (CHR ''b'', i) in 
-  IF op_a\<noteq>0 THEN 
-    IF ''carry''\<noteq>0 THEN
-      IF op_b\<noteq>0 THEN assign 1 1 1 
+  IF [op_a]\<noteq>0 THEN 
+    IF [''carry'']\<noteq>0 THEN
+      IF [op_b]\<noteq>0 THEN assign 1 1 1 
       ELSE assign 1 1 0
     ELSE 
-      IF op_b\<noteq>0 THEN assign 1 0 1
+      IF [op_b]\<noteq>0 THEN assign 1 0 1
       ELSE assign 1 0 0
   ELSE 
-    IF ''carry''\<noteq>0 THEN
-      IF op_b\<noteq>0 THEN assign 0 1 1
+    IF [''carry'']\<noteq>0 THEN
+      IF [op_b]\<noteq>0 THEN assign 0 1 1
       ELSE assign 0 1 0
     ELSE 
-      IF op_b\<noteq>0 THEN assign 0 0 1
+      IF [op_b]\<noteq>0 THEN assign 0 0 1
       ELSE assign 0 0 0)"
 
 lemma full_adder_correct: 
-  assumes "i = 0 \<longrightarrow> s ''carry'' = 0" 
-    "i > 0 \<longrightarrow> s ''carry'' = nth_carry (i - 1) a b"
-    "s (operand_bit_to_var (CHR ''a'', i)) = nth_bit a i" 
-    "s (operand_bit_to_var (CHR ''b'', i)) = nth_bit b i"
+  assumes "i = 0 \<longrightarrow> s ''carry'' = Some Zero" 
+    "i > 0 \<longrightarrow> s ''carry'' = Some (nth_carry (i - 1) a b)"
+    "s (operand_bit_to_var (CHR ''a'', i)) = Some (nth_bit a i)" 
+    "s (operand_bit_to_var (CHR ''b'', i)) = Some (nth_bit b i)"
   shows "t_small_step_fun 10 (full_adder i v, s) = (SKIP, 
-    s(var_bit_to_var (v, i) := nth_bit (a + b) i, ''carry'' := nth_carry i a b))" 
+    s(var_bit_to_var (v, i) \<mapsto> nth_bit (a + b) i, ''carry'' \<mapsto> nth_carry i a b))" 
   using assms 
   apply(simp add: full_adder_def Let_def t_small_step_fun_terminate_iff result_of_assign_var_carry)
   apply(cases i)
-  apply(simp_all add: fun_eq_iff nth_bit_of_add[simplified])
-   apply(auto)
-  by (meson dvd_imp_mod_0 even_add not_mod2_eq_Suc_0_eq_0)
+  by(simp_all add: fun_eq_iff first_bit_of_add nth_bit_of_add)
 
 lemma full_adder_variables: "set (enumerate_variables (full_adder i v)) = 
   { operand_bit_to_var (CHR ''a'', i), operand_bit_to_var (CHR ''b'', i), var_bit_to_var (v, i),
@@ -457,19 +280,16 @@ lemma full_adder_variables: "set (enumerate_variables (full_adder i v)) =
   apply (auto simp: full_adder_def Let_def)
   by(simp_all add: enumerate_variables_def assign_var_carry_def split: if_splits) 
 
-lemma full_adder_max_constant: "max_constant (full_adder i v) = 1" 
-  by(auto simp: full_adder_def Let_def assign_var_carry_def)
-
 lemma sequence_of_full_adders: 
   assumes 
-    "s ''carry'' = 0" 
-    "\<forall>j < k. s (operand_bit_to_var (CHR ''a'', j)) = nth_bit a j" 
-    "\<forall>j < k. s (operand_bit_to_var (CHR ''b'', j)) = nth_bit b j"
+    "s ''carry'' = Some Zero" 
+    "\<forall>j < k. s (operand_bit_to_var (CHR ''a'', j)) = Some (nth_bit a j)" 
+    "\<forall>j < k. s (operand_bit_to_var (CHR ''b'', j)) = Some (nth_bit b j)"
   shows
    "t_small_step_fun (12 * k) (com_list_to_seq (map (\<lambda>i. full_adder i v) [0..< k]), s)
   = (SKIP, (\<lambda>w. (case var_to_var_bit w of
-    Some (w', m) \<Rightarrow> (if w' = v \<and> m < k then nth_bit (a + b) m else s w) |
-    _ \<Rightarrow> (if w = ''carry'' \<and> k > 0 then nth_carry (k - 1) a b  
+    Some (w', m) \<Rightarrow> (if w' = v \<and> m < k then Some (nth_bit (a + b) m) else s w) |
+    _ \<Rightarrow> (if w = ''carry'' \<and> k > 0 then Some (nth_carry (k - 1) a b)  
           else s w))))"   
   using assms
 proof(induction k)
@@ -480,54 +300,37 @@ next
   hence "t_small_step_fun (12 + 12 * k)
    (com_list_to_seq ((map (\<lambda>i. full_adder i v) [0..< k]) @ [full_adder k v]), s)
     = (SKIP, (\<lambda>w. (case var_to_var_bit w of
-    Some (w', m) \<Rightarrow> (if w' = v \<and> m < Suc k then nth_bit (a + b) m else s w) |
-    _ \<Rightarrow> (if w = ''carry'' \<and> Suc k > 0 then nth_carry k a b  
+    Some (w', m) \<Rightarrow> (if w' = v \<and> m < Suc k then Some (nth_bit (a + b) m) else s w) |
+    _ \<Rightarrow> (if w = ''carry'' \<and> Suc k > 0 then Some (nth_carry k a b)  
           else s w))))"
     apply(auto simp only: com_list_to_seq_of_length_one_terminates_iff 
         intro!: t_small_step_fun_com_list_to_seq_terminates[where ?t1.0="12 * k" and ?t2.0=11])
     apply(auto)
     apply(subst full_adder_correct)
-    by(auto simp add: fun_eq_iff var_to_var_bit_eq_Some_iff var_bit_to_var_eq_iff 
-        split!: option.splits)
+    by(auto simp add: fun_eq_iff var_to_var_bit_eq_Some_iff split!: option.splits)
   thus ?case by auto
-qed 
+qed
 
-definition add_and_update_non_zero_indicator:: "nat \<Rightarrow> vname \<Rightarrow> IMP_Minus_Minus_com" where
-"add_and_update_non_zero_indicator n v = 
-  com_list_to_seq (map (\<lambda>i. full_adder i v) [0..<n]) ;; 
-  ((''?$'' @ v) ::= A (N 0) ;;
-  (com_list_to_seq (map (\<lambda>i. check_bit_non_zero i v) [0..<n])))"
+definition adder:: "nat \<Rightarrow> vname \<Rightarrow> IMP_Minus_Minus_com" where
+"adder n v = com_list_to_seq (map (\<lambda>i. full_adder i v) [0..< n]) ;;
+  ''carry'' ::= Zero" 
 
-lemma add_and_update_non_zero_indicator_result: 
-  assumes "n > 0"
-    "a + b < 2 ^ n" 
-  shows "t_small_step_fun (30 * n) (add_and_update_non_zero_indicator n v, 
+lemma result_of_adder: 
+  assumes "a + b < 2 ^ n" 
+  shows "t_small_step_fun (12 * n + 2) (adder n v, 
     IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b s n a b) 
     = (SKIP, IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b (s(v := a + b)) n a b)"
-  using \<open>n > 0\<close> apply(auto simp add: add_and_update_non_zero_indicator_def  
-      intro!: seq_terminates_when[where ?t="30 * n" and ?t1.0="12 * n" and ?t2.0="17 * n"] 
-      seq_terminates_when[where ?t="17 * n" and ?t1.0="1" and ?t2.0="15 * n"])
-  using \<open>a + b < 2 ^ n\<close> no_overflow_condition all_bits_in_sum_zero_then[where ?n=n and ?a=a and ?b=b] 
-  by(auto simp: IMP_Minus_State_To_IMP_Minus_Minus_def var_to_var_bit_eq_Some_iff 
-      is_non_zero_indicator_iff IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b_eq_iff 
-      result_of_check_bit_non_zero_sequence fun_eq_iff has_bit_one_then_greater_zero
-      split!: option.splits if_splits
-      intro!: t_small_step_fun_increase_time[where ?t="4 * n" and ?t'="15 * n"] sequence_of_full_adders)
-
-lemma add_and_update_non_zero_indicator_variables: 
-  "set (enumerate_variables (add_and_update_non_zero_indicator n v)) 
-  = { operand_bit_to_var (op, i) | i op. i < n \<and> (op = CHR ''a'' \<or> op = CHR ''b'') } 
-    \<union> { var_bit_to_var (v, i) | i. i < n }
-    \<union> (if n > 0 then { ''carry'', ''?$'' @ v } else { ''?$'' @ v })"
-  apply(auto simp: add_and_update_non_zero_indicator_def set_enumerate_variables_seq 
-      full_adder_variables com_list_to_seq_variables Let_def check_bit_non_zero_def)
-  by(auto simp: enumerate_variables_def split!: if_splits)
+  apply(simp only: adder_def)
+  apply(rule seq_terminates_when[OF _  sequence_of_full_adders,
+        where ?t2.0="1" and ?b="''carry'' ::= Zero"])
+  by(auto simp: fun_eq_iff IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b_def 
+      split: option.splits)
 
 definition binary_adder:: "nat \<Rightarrow> vname \<Rightarrow> AExp.atomExp \<Rightarrow> AExp.atomExp \<Rightarrow> IMP_Minus_Minus_com" where
 "binary_adder n v a b = 
   copy_atom_to_operand n (CHR ''a'') a ;;
   (copy_atom_to_operand n (CHR ''b'') b ;;
-  (add_and_update_non_zero_indicator n v ;;
+  (adder n v ;;
   (copy_atom_to_operand n (CHR ''a'') (AExp.N 0) ;;
   copy_atom_to_operand n (CHR ''b'') (AExp.N 0))))"
 
@@ -539,7 +342,7 @@ lemma binary_adder_correct:
     = (SKIP, IMP_Minus_State_To_IMP_Minus_Minus (s(v := AExp.atomVal a s + AExp.atomVal b s)) n)"
   using seq_terminates_when'[OF copy_atom_to_operand_a_result[where ?n=n]
       seq_terminates_when'[OF copy_atom_to_operand_b_result
-      seq_terminates_when'[OF add_and_update_non_zero_indicator_result
+      seq_terminates_when'[OF result_of_adder
       seq_terminates_when'[OF copy_atom_to_operand_a_result copy_atom_to_operand_b_result]]]] 
   assms 
   by(fastforce simp: binary_adder_def 
@@ -548,29 +351,30 @@ lemma binary_adder_correct:
 definition assign_var_carry_sub:: 
   "nat \<Rightarrow> vname \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> IMP_Minus_Minus_com" where
 "assign_var_carry_sub i v a b c = 
-  (var_bit_to_var (v, i)) ::= A (N (if b + c = 0 \<or> b + c = 2 then a 
-    else (if b + c = 1 \<and> a = 0 then 1 else 0))) ;; 
-  ''carry'' ::= A (N (if a < b + c then 1 else 0))"
+  (var_bit_to_var (v, i)) ::= (if b + c = 0 \<or> b + c = 2 then (if a = 1 then One else Zero)
+    else (if b + c = 1 \<and> a = 0 then One else Zero)) ;; 
+  ''carry'' ::= (if a < b + c then One else Zero)"
 
 lemma result_of_assign_var_carry_sub:  
   "t_small_step_fun 7 (assign_var_carry_sub i v a b c, s)
-    = (SKIP, s(var_bit_to_var (v, i) := (if b + c = 0 \<or> b + c = 2 then a 
-    else (if b + c = 1 \<and> a = 0 then 1 else 0)),
-     ''carry'' :=  (if a < b + c then 1 else 0)))"
+    = (SKIP, s(var_bit_to_var (v, i) \<mapsto> (if b + c = 0 \<or> b + c = 2 then (if a = 1 then One else Zero)
+    else (if b + c = 1 \<and> a = 0 then One else Zero)),
+     ''carry'' \<mapsto>  (if a < b + c then One else Zero)))"
   by(auto simp: assign_var_carry_sub_def t_small_step_fun_terminate_iff)
 
 definition full_subtractor:: "nat \<Rightarrow> vname \<Rightarrow> IMP_Minus_Minus_com" where
-"full_subtractor i v  = (let assign = assign_var_carry_sub i v; op_a = operand_bit_to_var (CHR ''a'', i);
-  op_b = operand_bit_to_var (CHR ''b'', i) in 
+"full_subtractor i v  = (let assign = assign_var_carry_sub i v; 
+  op_a = [operand_bit_to_var (CHR ''a'', i)];
+  op_b = [operand_bit_to_var (CHR ''b'', i)] in 
   IF op_a\<noteq>0 THEN 
-    IF ''carry''\<noteq>0 THEN
+    IF [''carry'']\<noteq>0 THEN
       IF op_b\<noteq>0 THEN assign 1 1 1 
       ELSE assign 1 1 0
     ELSE 
       IF op_b\<noteq>0 THEN assign 1 0 1
       ELSE assign 1 0 0
   ELSE 
-    IF ''carry''\<noteq>0 THEN
+    IF [''carry'']\<noteq>0 THEN
       IF op_b\<noteq>0 THEN assign 0 1 1
       ELSE assign 0 1 0
     ELSE 
@@ -579,17 +383,17 @@ definition full_subtractor:: "nat \<Rightarrow> vname \<Rightarrow> IMP_Minus_Mi
 
 lemma full_subtractor_correct_no_underflow: 
   assumes "a \<ge> b"
-    "i = 0 \<longrightarrow> s ''carry'' = 0" 
-    "i > 0 \<longrightarrow> s ''carry'' = nth_carry_sub (i - 1) a b"
-    "s (operand_bit_to_var (CHR ''a'', i)) = nth_bit a i" 
-    "s (operand_bit_to_var (CHR ''b'', i)) = nth_bit b i"
+    "i = 0 \<longrightarrow> s ''carry'' = Some Zero" 
+    "i > 0 \<longrightarrow> s ''carry'' = Some (nth_carry_sub (i - 1) a b)"
+    "s (operand_bit_to_var (CHR ''a'', i)) = Some (nth_bit a i)" 
+    "s (operand_bit_to_var (CHR ''b'', i)) = Some (nth_bit b i)"
   shows "t_small_step_fun 10 (full_subtractor i v, s) = (SKIP, 
-    s(var_bit_to_var (v, i) := nth_bit (a - b) i, ''carry'' := nth_carry_sub i a b))" 
+    s(var_bit_to_var (v, i) \<mapsto> nth_bit (a - b) i, ''carry'' \<mapsto> nth_carry_sub i a b))" 
   using assms 
-  apply(simp add: full_subtractor_def Let_def t_small_step_fun_terminate_iff result_of_assign_var_carry_sub)
+  apply(simp add: full_subtractor_def Let_def t_small_step_fun_terminate_iff 
+      result_of_assign_var_carry_sub)
   apply(cases i)
-  apply(simp_all add: fun_eq_iff nth_bit_of_sub_n_no_underflow[simplified] Let_def)
-  by(auto simp: mod2_eq_if)
+  by(simp_all add: fun_eq_iff first_bit_of_sub_n_no_underflow nth_bit_of_sub_n_no_underflow Let_def)
 
 lemma full_subtractor_variables: "set (enumerate_variables (full_subtractor i v)) = 
   { operand_bit_to_var (CHR ''a'', i), operand_bit_to_var (CHR ''b'', i), var_bit_to_var (v, i),
@@ -599,63 +403,60 @@ lemma full_subtractor_variables: "set (enumerate_variables (full_subtractor i v)
 
 lemma sequence_of_full_subtractors_no_underflow: 
   assumes "a \<ge> b"
-    "s ''carry'' = 0" 
-    "\<forall>j \<le> k. s (operand_bit_to_var (CHR ''a'', j)) = nth_bit a j" 
-    "\<forall>j \<le> k. s (operand_bit_to_var (CHR ''b'', j)) = nth_bit b j"
+    "s ''carry'' = Some Zero" 
+    "\<forall>j \<le> k. s (operand_bit_to_var (CHR ''a'', j)) = Some (nth_bit a j)" 
+    "\<forall>j \<le> k. s (operand_bit_to_var (CHR ''b'', j)) = Some (nth_bit b j)"
   shows
-   "t_small_step_fun (12 * (k + 1))
-                       (com_list_to_seq (map (\<lambda>i. full_subtractor i v) [0..<(k + 1)]), s)
+   "t_small_step_fun (12 * n)
+                       (com_list_to_seq (map (\<lambda>i. full_subtractor i v) [0..< n]), s)
   = (SKIP, (\<lambda>w. (case var_to_var_bit w of
-    Some (w', m) \<Rightarrow> (if w' = v \<and> m \<le> k then nth_bit (a - b) m else s w) |
-    _ \<Rightarrow> (if w = ''carry'' then nth_carry_sub k a b  
+    Some (w', m) \<Rightarrow> (if w' = v \<and> m \<le> k then Some (nth_bit (a - b) m) else s w) |
+    _ \<Rightarrow> (if w = ''carry'' then Some (nth_carry_sub k a b)  
           else s w))))"   
   sorry
 
 lemma sequence_of_full_subtractors_with_underflow: 
   assumes "a < b"
-    "a < 2^(k + 2)" "b < 2^(k+2)" 
-    "s ''carry'' = 0" 
-    "\<forall>j \<le> k. s (operand_bit_to_var (CHR ''a'', j)) = nth_bit a j" 
-    "\<forall>j \<le> k. s (operand_bit_to_var (CHR ''b'', j)) = nth_bit b j"
+    "a < 2^(n)" "b < 2^(n)" 
+    "s ''carry'' = Some Zero" 
+    "\<forall>j \<le> k. s (operand_bit_to_var (CHR ''a'', j)) = Some (nth_bit a j)" 
+    "\<forall>j \<le> k. s (operand_bit_to_var (CHR ''b'', j)) = Some (nth_bit b j)"
   shows
-   "t_small_step_fun (12 * (k + 1))
-                       (com_list_to_seq (map (\<lambda>i. full_subtractor i v) [0..<(k + 1)]), s)
+   "t_small_step_fun (12 * n)
+                       (com_list_to_seq (map (\<lambda>i. full_subtractor i v) [0..< n]), s)
   = (SKIP, (\<lambda>w. (case var_to_var_bit w of
-    Some (w', m) \<Rightarrow> (if w' = v \<and> m \<le> k then nth_bit (2^(k+2) + a - b) m else s w) |
-    _ \<Rightarrow> (if w = ''carry'' then 1
+    Some (w', m) \<Rightarrow> (if w' = v \<and> m \<le> k then Some (nth_bit (2^(k+2) + a - b) m) else s w) |
+    _ \<Rightarrow> (if w = ''carry'' then Some One
           else s w))))"   
   sorry
 
 definition underflow_handler:: "nat \<Rightarrow> vname \<Rightarrow> IMP_Minus_Minus_com" where
-"underflow_handler n v = (IF ''carry''\<noteq>0 THEN (''carry'' ::= A (N 0) ;;
+"underflow_handler n v = (IF [''carry'']\<noteq>0 THEN (''carry'' ::= Zero ;;
   binary_assign_constant n v 0)
   ELSE SKIP)" 
 
-definition subtract_handle_overflow_and_update_non_zero_indicator:: 
+definition subtract_handle_overflow:: 
   "nat \<Rightarrow> vname \<Rightarrow> IMP_Minus_Minus_com" where
-"subtract_handle_overflow_and_update_non_zero_indicator n v = 
+"subtract_handle_overflow n v = 
   com_list_to_seq (map (\<lambda>i. full_subtractor i v) [0..<n]) ;; 
-  underflow_handler n v ;;
-  ((''?$'' @ v) ::= A (N 0) ;;
-  (com_list_to_seq (map (\<lambda>i. check_bit_non_zero i v) [0..<n])))"
+  underflow_handler n v"
 
 
-lemma subtract_handle_overflow_and_update_non_zero_indicator_variables:
-  "set (enumerate_variables (subtract_handle_overflow_and_update_non_zero_indicator n v)) 
+lemma subtract_handle_overflow_variables:
+  "set (enumerate_variables (subtract_handle_overflow n v)) 
   = { operand_bit_to_var (op, i) | i op. i < n \<and> (op = CHR ''a'' \<or> op = CHR ''b'') } 
     \<union> { var_bit_to_var (v, i) | i. i < n }
-    \<union> { ''carry'', ''?$'' @ v }"
-  apply(auto simp: subtract_handle_overflow_and_update_non_zero_indicator_def 
+    \<union> { ''carry'' }"
+  apply(auto simp: subtract_handle_overflow_def 
       set_enumerate_variables_seq com_list_to_seq_variables full_subtractor_variables
-      set_enumerate_variables_if underflow_handler_def binary_assign_constant_variables
-      check_bit_non_zero_def)
+      set_enumerate_variables_if underflow_handler_def binary_assign_constant_variables)
   by(auto simp: underflow_handler_def enumerate_variables_def split: if_splits)
 
 definition binary_subtractor:: "nat \<Rightarrow> vname \<Rightarrow> AExp.atomExp \<Rightarrow> AExp.atomExp \<Rightarrow> IMP_Minus_Minus_com" where
 "binary_subtractor n v a b = 
   copy_atom_to_operand n (CHR ''a'') a ;;
   (copy_atom_to_operand n (CHR ''b'') b ;;
-  (subtract_handle_overflow_and_update_non_zero_indicator n v ;;
+  (subtract_handle_overflow n v ;;
   (copy_atom_to_operand n (CHR ''a'') (AExp.N 0) ;;
   copy_atom_to_operand n (CHR ''b'') (AExp.N 0))))"
 
@@ -690,10 +491,10 @@ lemma assignment_to_binary_variables:
   "set (enumerate_variables (assignment_to_binary n v a)) \<subseteq> 
     { var_bit_to_var (w, i) | w i. i < n \<and> (w = v \<or> w \<in> set (aexp_vars a)) }
     \<union> { operand_bit_to_var (op, i) | op i. i < n \<and> (op = CHR ''a'' \<or> op = CHR ''b'') }
-    \<union> { ''carry'', ''?$'' @ v }" 
+    \<union> { ''carry'' }" 
   apply(cases a)
   by(auto simp: assignment_to_binary_def binary_adder_def set_enumerate_variables_seq 
-      copy_atom_to_operand_variables add_and_update_non_zero_indicator_variables
-      binary_subtractor_def subtract_handle_overflow_and_update_non_zero_indicator_variables)
+      copy_atom_to_operand_variables adder_def com_list_to_seq_variables full_adder_variables
+      binary_subtractor_def subtract_handle_overflow_variables)
 
 end 

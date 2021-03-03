@@ -4,7 +4,10 @@ section "IMP- to IMP-- State Translations"
 
 theory IMP_Minus_To_IMP_Minus_Minus_State_Translations 
   imports "../../IMP-/Small_StepT" "../IMP_Minus_Minus_Small_StepT"
-begin 
+begin
+
+type_synonym state = AExp.state
+type_synonym bit_state = IMP_Minus_Minus_Small_StepT.state
 
 definition var_to_var_bit:: "vname \<Rightarrow> (vname * nat) option" where
 "var_to_var_bit v = (if length v > 0 then (if hd v = CHR ''#'' 
@@ -88,62 +91,154 @@ lemma var_bit_to_var_neq_carry'[simp]: "var_bit_to_var (x, y) = ''carry'' \<long
 lemma take_2_var_bit_to_var[simp]: "take 2 (var_bit_to_var (x, y)) = ''?$'' \<longleftrightarrow> False" 
   by(auto simp: var_bit_to_var_def)
 
-fun nth_bit:: "nat \<Rightarrow> nat \<Rightarrow> nat" where
-"nth_bit x 0 = x mod 2" |
-"nth_bit x (Suc n) = nth_bit (x div 2) n"
+fun nth_bit_nat:: "nat \<Rightarrow> nat \<Rightarrow> nat" where
+"nth_bit_nat x 0 = x mod 2" |
+"nth_bit_nat x (Suc n) = nth_bit_nat (x div 2) n"
 
-lemma zero_le_nth_bit_then[simp]: "0 < nth_bit x n \<longleftrightarrow> nth_bit x n = 1" 
-  apply(induction n arbitrary: x)
+definition nth_bit:: "nat \<Rightarrow> nat \<Rightarrow> bit" where
+"nth_bit x n = nat_to_bit (nth_bit_nat x n)" 
+
+lemma nth_bit_of_zero[simp]: "nth_bit 0 n = Zero" 
+  by (induction n) (auto simp: nth_bit_def)
+
+fun operand_bit_to_var:: "(char * nat) \<Rightarrow> vname" where 
+"operand_bit_to_var (c, 0) = [c]" |
+"operand_bit_to_var (c, (Suc n)) = c # operand_bit_to_var (c, n)"
+
+definition var_to_operand_bit:: "vname \<Rightarrow> (char * nat) option" where
+"var_to_operand_bit v = (if v \<noteq> [] \<and> v = (operand_bit_to_var (hd v, length v - 1)) 
+  then Some (hd v, length v - 1) else None)" 
+
+lemma hd_of_operand_bit_to_var[simp]: 
+  "hd (operand_bit_to_var (op, n)) = op" by (induction n) auto
+
+lemma take_2_of_operand_bit_to_var[simp]:
+  "take 2 (operand_bit_to_var (c, k)) = operand_bit_to_var (c, min k 1)" 
+  apply (cases k)
+   apply(auto)
+  using hd_of_operand_bit_to_var
+  by (metis lessI less_Suc_eq_0_disj list.discI operand_bit_to_var.simps(1) 
+      operand_bit_to_var.simps(2) take0 take_Suc)
+
+lemma length_of_operand_bit_to_var[simp]:
+  "length (operand_bit_to_var (op, n)) = n + 1" by (induction n) auto  
+
+lemma var_to_operand_bit_of_operand_bit_to_var[simp]: 
+  "var_to_operand_bit (operand_bit_to_var (op, n)) = Some (op, n)"
+  apply(induction n)
+  by(auto simp: var_to_operand_bit_def)
+
+lemma var_to_operand_bit_eq_Some_iff: "var_to_operand_bit x = Some (op, i) 
+  \<longleftrightarrow> x = operand_bit_to_var (op, i)" 
+  apply(auto simp: var_to_operand_bit_def)
+  apply(cases i)
   by auto
 
-lemma nth_bit_then_ne_one_then[simp]: "nth_bit x n \<noteq> Suc 0 \<longleftrightarrow> nth_bit x n = 0" 
-  apply(induction n arbitrary: x)
-  by auto
+lemma var_to_operand_bit_of_carry[simp]: "var_to_operand_bit ''carry'' = None" 
+  by(simp add: var_to_operand_bit_def)
 
-lemma nth_bit_of_zero[simp]: "nth_bit 0 n = 0" 
+lemma operand_bit_to_var_neq_carry[simp]: "operand_bit_to_var (op, k) = ''carry'' \<longleftrightarrow> False" 
+proof 
+  assume "operand_bit_to_var (op, k) = ''carry''" 
+  moreover hence "op = CHR ''c''" by (metis hd_of_operand_bit_to_var list.sel)
+  ultimately show False 
+    by (metis option.simps var_to_operand_bit_of_carry var_to_operand_bit_of_operand_bit_to_var)
+qed auto
+                                                       
+lemma set_of_operand_bit_to_var[simp]: "set (operand_bit_to_var (op, b)) = { op }" 
+  by (induction b) auto
+
+lemma var_to_operand_bit_var_bit_to_var[simp]: "var_to_operand_bit (var_bit_to_var (a, b)) = None" 
+  apply(simp add: var_to_operand_bit_def var_bit_to_var_def)
+  apply(rule ccontr)
+  apply simp
+  apply(drule arg_cong[where ?f=set])
+  by simp
+
+lemma var_to_var_bit_operand_bit_to_var[simp]: "var_to_var_bit (operand_bit_to_var (c, k)) = None" 
+  by (simp add: var_to_var_bit_def)
+
+lemma var_to_operand_bit_non_zero_indicator[simp]: 
+  "var_to_operand_bit (CHR ''?'' # CHR ''$'' # v) = None"
+  apply(auto simp: var_to_operand_bit_def)
+  apply(rule ccontr)
+  apply simp
+  apply(drule arg_cong[where ?f=set])
+  by simp
+
+lemma operand_bit_to_var_ne_non_zero_indicator[simp]: 
+  "operand_bit_to_var (c, k) \<noteq> CHR ''?'' # CHR ''$'' # v" 
+  apply(induction k)
+   apply auto
+proof -
+  fix ka :: nat
+  assume "operand_bit_to_var (CHR ''?'', ka) = CHR ''$'' # v"
+  then have "CHR ''?'' = CHR ''$''" by (metis hd_of_operand_bit_to_var list.sel(1))
+  then show False by force
+qed
+
+lemma operand_bit_to_var_non_empty: "operand_bit_to_var (op, n) \<noteq> []"
   by (induction n) auto
 
-lemma nth_bit_eq_zero_or_one: "nth_bit x n = y \<Longrightarrow> (y = 0 \<or> y = 1)" 
-  by (induction n arbitrary: x) auto
+lemma operand_bit_to_var_eq_operand_bit_to_var_iff[simp]: 
+  "operand_bit_to_var (op, a) = operand_bit_to_var (op', b) 
+  \<longleftrightarrow> (op = op' \<and> a = b)" 
+proof 
+  assume "operand_bit_to_var (op, a) = operand_bit_to_var (op', b)" 
+  hence "length (operand_bit_to_var (op, a)) = length (operand_bit_to_var (op', b))
+    \<and> set (operand_bit_to_var (op, a)) = set (operand_bit_to_var (op', b))" by simp
+  thus "op = op' \<and> a = b" by auto
+qed auto
 
-lemma nth_bit_le_intro: "y \<ge> 1 \<Longrightarrow> nth_bit x n \<le> y" 
-  using nth_bit_eq_zero_or_one by (metis le0)
+lemma var_bit_to_var_neq_operand_bit_to_var[simp]: 
+  "var_bit_to_var (v, a) \<noteq> operand_bit_to_var (op, b)"
+proof(rule ccontr)
+  assume "\<not> (var_bit_to_var (v, a) \<noteq> operand_bit_to_var (op, b))" 
+  hence "set (var_bit_to_var (v, a)) = set (operand_bit_to_var (op, b))" by simp
+  thus False using set_of_operand_bit_to_var by(auto simp: var_bit_to_var_def)
+qed
 
-lemma less_nth_bit_iff: "x < nth_bit y n \<longleftrightarrow> (x = 0 \<and> nth_bit y n = 1)" 
-  apply(cases "nth_bit y n")
-  using nth_bit_eq_zero_or_one by(auto)
+definition IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b:: 
+  "state \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> bit_state" where
+"IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b s n a b = (\<lambda>v. 
+  (case var_to_var_bit v of 
+  Some (v', k) \<Rightarrow> if k < n then Some (nth_bit (s v') k) else None |
+  None \<Rightarrow> (case var_to_operand_bit v of 
+    Some (CHR ''a'', k) \<Rightarrow> if k < n then Some (nth_bit a k) else None |
+    Some (CHR ''b'', k) \<Rightarrow> if k < n then Some (nth_bit b k) else None | 
+    _ \<Rightarrow> (if v = ''carry'' then Some Zero else None))))"
 
-definition IMP_Minus_State_To_IMP_Minus_Minus:: "state \<Rightarrow> nat \<Rightarrow> state" where
-"IMP_Minus_State_To_IMP_Minus_Minus s n = (\<lambda>v. (case var_to_var_bit v of 
-  Some (v', k) \<Rightarrow> if k < n then nth_bit (s v') k else 0 |
-  None \<Rightarrow> (if length v > 1 \<and> take 2 v = ''?$'' \<and> (s (drop 2 v)) > 0 then 1 else 0)))"
+definition IMP_Minus_State_To_IMP_Minus_Minus:: "state \<Rightarrow> nat \<Rightarrow> bit_state" where
+"IMP_Minus_State_To_IMP_Minus_Minus s n 
+  = IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b s n 0 0 "
 
 definition IMP_Minus_State_To_IMP_Minus_Minus_partial:: 
-  "(vname \<rightharpoonup> nat) \<Rightarrow> nat \<Rightarrow> (vname \<rightharpoonup> nat)" where
+  "(vname \<rightharpoonup> nat) \<Rightarrow> nat \<Rightarrow> bit_state" where
 "IMP_Minus_State_To_IMP_Minus_Minus_partial s n = (\<lambda>v. (case var_to_var_bit v of 
   Some (v', k) \<Rightarrow> if k < n then ((\<lambda>x. Some (nth_bit x k)) \<circ>\<^sub>m s) v' else None |
-  None \<Rightarrow> (if length v > 1 \<and> take 2 v = ''?$'' \<and> (s (drop 2 v)) \<noteq> None \<and> (s (drop 2 v)) \<noteq> Some 0 
-    then Some 1 else None)))"
+  None \<Rightarrow> (case var_to_operand_bit v of 
+    Some (CHR ''a'', k) \<Rightarrow> if k < n then Some Zero else None |
+    Some (CHR ''b'', k) \<Rightarrow> if k < n then Some Zero else None | 
+    _ \<Rightarrow> (if v = ''carry'' then Some Zero else None))))"
 
-lemma IMP_Minus_State_To_IMP_Minus_Minus_of_non_zero_indicator[simp]: 
-  "IMP_Minus_State_To_IMP_Minus_Minus s n (CHR ''?'' # CHR ''$'' # x) = (if s x \<noteq> 0 then 1
-    else 0)" 
-  by (auto simp: IMP_Minus_State_To_IMP_Minus_Minus_def)
+lemma IMP_Minus_State_To_IMP_Minus_Minus_as_IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b:
+  "IMP_Minus_State_To_IMP_Minus_Minus s n 
+    = IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b s n 0 0"
+  by(auto simp: IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b_def fun_eq_iff 
+      var_to_operand_bit_eq_Some_iff IMP_Minus_State_To_IMP_Minus_Minus_def 
+      split: char.splits option.splits bool.splits)
 
-lemma IMP_Minus_State_To_IMP_Minus_Minus_of_non_zero_indicator_of_var_bit[simp]: 
-  "k < n \<Longrightarrow> IMP_Minus_State_To_IMP_Minus_Minus s n (var_bit_to_var (x, k)) = nth_bit (s x) k"
-  by (auto simp: IMP_Minus_State_To_IMP_Minus_Minus_def)
+lemma IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b_of_carry[simp]: 
+  "IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b s k a b ''carry'' = Some Zero"
+  by(auto simp: IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b_def)
 
-lemma IMP_Minus_State_To_IMP_Minus_Minus_of_non_zero_indicator_of_carry[simp]: 
-  "IMP_Minus_State_To_IMP_Minus_Minus s k ''carry'' = 0"
-  by (auto simp: IMP_Minus_State_To_IMP_Minus_Minus_def)
+lemma IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b_of_operand_a[simp]: 
+  "j < k \<Longrightarrow> IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b s k a b 
+  (operand_bit_to_var (CHR ''a'', j)) = Some (nth_bit a j)"
+  by(auto simp: IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b_def)
 
-lemma is_non_zero_indicator_iff: "take 2 x = ''?$''
-  \<longleftrightarrow> x = ''?$'' @ drop 2 x" 
-  by (metis append_same_eq append_take_drop_id)
-
-lemma IMP_Minus_State_To_IMP_Minus_Minus_bounded: 
-  "Suc 0 < IMP_Minus_State_To_IMP_Minus_Minus s n v \<longleftrightarrow> False"
-  by(auto simp: IMP_Minus_State_To_IMP_Minus_Minus_def less_nth_bit_iff split: option.splits)
-
+lemma IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b_of_operand_b[simp]: 
+  "j < k \<Longrightarrow> IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b s k a b 
+  (operand_bit_to_var (CHR ''b'', j)) = Some (nth_bit b j)"
+  by(auto simp: IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b_def)
 end

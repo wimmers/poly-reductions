@@ -1,11 +1,11 @@
 \<^marker>\<open>creator Florian Keßler\<close>
 
-theory IMP_Minus_Minus_Subprograms imports "../IMP_Minus_Minus_Small_StepT" IMP_Minus_Minus_Domains
+theory IMP_Minus_Minus_Subprograms imports "../IMP_Minus_Minus_Small_StepT"
 begin
 
 fun all_subprograms :: "com \<Rightarrow> com list" where
 "all_subprograms (SKIP) = [SKIP]" |
-"all_subprograms (Assign v aexp) = [(Assign v aexp), SKIP]" |
+"all_subprograms (Assign v b) = [(Assign v b), SKIP]" |
 "all_subprograms (c1 ;; c2) = (map (\<lambda> c. c ;; c2) (all_subprograms c1)) @ all_subprograms c1 
   @ all_subprograms c2" |
 "all_subprograms (If v c1 c2) = [(If v c1 c2)] @ all_subprograms c1 @ all_subprograms c2" |
@@ -17,13 +17,10 @@ definition enumerate_subprograms :: "com \<Rightarrow> com list" where
 
 fun all_variables :: "com \<Rightarrow> vname list" where
 "all_variables (SKIP) = []" |
-"all_variables (Assign v aexp) = [ v ] @ (case aexp of 
-  A a \<Rightarrow> (case a of V v2 \<Rightarrow> [ v2 ] | N _ \<Rightarrow> []) |
-  Plus a b \<Rightarrow> [ a ] |
-  Sub a b \<Rightarrow> [ a ])" |
+"all_variables (Assign v _) = [ v ]" |
 "all_variables (c1 ;; c2) = []" |
-"all_variables (If v c1 c2) = [ v ]" |
-"all_variables (While v c) = [ v ]"
+"all_variables (If vs c1 c2) = vs" |
+"all_variables (While vs c) = vs"
 
 definition enumerate_variables :: "com \<Rightarrow> vname list" where
 "enumerate_variables c = remdups (concat (map all_variables (enumerate_subprograms c)))"
@@ -35,13 +32,16 @@ lemma set_enumerate_variables_seq: "set (enumerate_variables (c1 ;; c2)) =
   set (enumerate_variables c1) \<union> set (enumerate_variables c2)" 
   by(auto simp: enumerate_variables_def enumerate_subprograms_def)
 
-lemma set_enumerate_variables_if: "set (enumerate_variables (IF v\<noteq>0 THEN c1 ELSE c2))
-  = { v } \<union> set (enumerate_variables c1) \<union> set (enumerate_variables c2)"
+lemma set_enumerate_variables_if: "set (enumerate_variables (IF vs\<noteq>0 THEN c1 ELSE c2))
+  = set vs \<union> set (enumerate_variables c1) \<union> set (enumerate_variables c2)"
   by(auto simp: enumerate_variables_def enumerate_subprograms_def)
 
-lemma set_enumerate_variables_while: "set (enumerate_variables (WHILE v\<noteq>0 DO c))
-  = { v } \<union> set (enumerate_variables c)"
+lemma set_enumerate_variables_while: "set (enumerate_variables (WHILE vs\<noteq>0 DO c))
+  = set vs \<union> set (enumerate_variables c)"
   by(auto simp: enumerate_variables_def enumerate_subprograms_def)
+
+lemma enumerate_variables_assign[simp]: "enumerate_variables (x1 ::= x2) = [x1]"
+  by(auto simp: enumerate_variables_def enumerate_subprograms_def)                  
 
 declare enumerate_subprograms_def[simp] 
 
@@ -134,10 +134,43 @@ lemma enumerate_subprograms_enumerate_variables: "c' \<in> set (enumerate_subpro
  by (auto simp: enumerate_variables_def) 
      (metis enumerate_subprograms_def enumerate_subprograms_transitive set_remdups)
 
+lemma step_doesnt_add_variables: "(c1, s1) \<rightarrow> (c2, s2) \<Longrightarrow> c1 \<in> set (enumerate_subprograms c)
+  \<Longrightarrow> dom s1 = set (enumerate_variables c)
+  \<Longrightarrow> dom s2 = set (enumerate_variables c)"
+proof (induction c1 s1  c2 s2 rule: small_step_induct)
+  case (Assign x a s)
+  have "x \<in> set (enumerate_variables (x ::= a))" by simp
+  then have "x \<in> set (enumerate_variables c)" 
+    using Assign enumerate_subprograms_enumerate_variables by fastforce
+  thus ?case using Assign by(auto simp: dom_def)
+next
+  case (Seq2 c\<^sub>1 s c\<^sub>1' s' c\<^sub>2)
+  have "c\<^sub>1 \<in> set (enumerate_subprograms (c\<^sub>1 ;; c\<^sub>2))" using c_in_all_subprograms_c by simp
+  then have "c\<^sub>1 \<in> set (enumerate_subprograms c)" 
+    using Assign Seq2 enumerate_subprograms_transitive by blast
+  then show ?case using Seq2 by auto
+qed auto
 
-lemma enumerate_subprograms_max_constant: "c' \<in> set (enumerate_subprograms c)
-  \<Longrightarrow> max_constant c' \<le> max_constant c"
-  by (induction c arbitrary: c' rule: all_subprograms.induct)
-       (fastforce  split: if_splits)+
+
+lemma small_step_fun_restrict_variables: 
+  "set (enumerate_variables c1) \<subseteq> S \<Longrightarrow> small_step_fun (c1, s1 |` S) 
+    = (fst (small_step_fun (c1, s1)), snd (small_step_fun (c1, s1)) |` S)" 
+  apply(induction c1 arbitrary: S)
+  using subsetD by(fastforce simp: set_enumerate_variables_seq 
+      set_enumerate_variables_if set_enumerate_variables_while)+
+
+lemma small_step_fun_doesnt_add_variables:
+  "set (enumerate_variables c1) \<subseteq> S 
+  \<Longrightarrow> set (enumerate_variables (fst (small_step_fun (c1, s1)))) \<subseteq> S"
+  apply(induction c1)
+  apply(auto simp: set_enumerate_variables_seq 
+      set_enumerate_variables_if set_enumerate_variables_while)
+  by(auto simp: enumerate_variables_def)
+
+lemma t_small_step_fun_restrict_variables: 
+  "set (enumerate_variables c1) \<subseteq> S \<Longrightarrow> t_small_step_fun t (c1, s1 |` S) 
+    = (fst (t_small_step_fun t (c1, s1)), snd (t_small_step_fun t (c1, s1)) |` S)" 
+  apply(induction t arbitrary: c1 s1)
+  by(auto simp: small_step_fun_restrict_variables small_step_fun_doesnt_add_variables)
 
 end

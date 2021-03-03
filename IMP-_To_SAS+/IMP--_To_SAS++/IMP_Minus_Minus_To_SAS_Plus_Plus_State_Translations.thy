@@ -3,15 +3,15 @@
 section "State Translations"
 
 theory IMP_Minus_Minus_To_SAS_Plus_Plus_State_Translations 
-  imports "../SAS_Plus_Plus" "Omega_Small_StepT"
+  imports "../SAS_Plus_Plus" "../IMP_Minus_Minus_Small_StepT"
 begin
 
-datatype domain_element = EV EVal | PCV com
+datatype domain_element = EV bit | PCV com
 
 datatype variable = VN vname | PC
 
 type_synonym sas_state = "(variable, domain_element) State_Variable_Representation.state"
-type_synonym imp_state = EState
+type_synonym imp_state = state
 
 definition imp_minus_state_to_sas_plus :: "(com \<times> imp_state) \<Rightarrow> sas_state" where
 "imp_minus_state_to_sas_plus ci = ((\<lambda>x. Some (EV x)) \<circ>\<^sub>m (snd ci)
@@ -93,5 +93,17 @@ lemma imp_minus_state_to_sas_plus_map_le_then: "imp_minus_state_to_sas_plus (c, 
    apply (metis domI domain_element.inject option.inject option.simps variable.distinct variable.simps)
   by (metis (mono_tags, lifting) domI domain_element.distinct option.inject option.simps 
       variable.distinct variable.simps)
+
+
+lemma map_of_map_VN_EV: "map_of (map (\<lambda>v. (VN v, EV y)) vs) (VN a) = 
+  map_option EV (map_of (map (\<lambda>v. (v, y)) vs) a)"
+  apply(induction vs) by auto
+
+lemma map_leq_imp_minus_state_to_sas_plus_iff: 
+  "map_of (map (\<lambda>v. (VN v, EV y)) vs)(PC \<mapsto> PCV c) \<subseteq>\<^sub>m imp_minus_state_to_sas_plus (c, is)
+  \<longleftrightarrow> map_of (map (\<lambda>v. (v, y)) vs) \<subseteq>\<^sub>m is"
+  by(auto simp: imp_minus_state_to_sas_plus_def map_le_def map_comp_def map_of_SomeD 
+      dom_map_of_conv_image_fst map_of_map_VN_EV split: option.splits)
+  
 
 end

@@ -2,17 +2,34 @@
 
 section "IMP- A reduced imperative language"
 
-theory IMP_Minus_Minus_Com imports Main IMP_Minus_Minus_AExp begin
+theory IMP_Minus_Minus_Com imports Main begin
 
 paragraph "Summary"
 text\<open>Syntax definition for IMP-. Based on the syntax definition of IMP\<close>
 
+datatype bit = Zero | One
+
+fun nat_to_bit:: "nat \<Rightarrow> bit" where
+"nat_to_bit 0 = Zero" |
+"nat_to_bit _ = One" 
+
+lemma bit_neq_zero_iff[simp]: "x \<noteq> Zero \<longleftrightarrow> x = One" by (cases x) auto
+lemma bit_neq_one_iff[simp]: "x \<noteq> One \<longleftrightarrow> x = Zero" by (cases x) auto
+
+lemma nat_to_bit_eq_One_iff: "nat_to_bit x = One \<longleftrightarrow> x > 0" 
+  by (cases x) auto
+
+lemma nat_to_bit_eq_Zero_iff: "nat_to_bit x = Zero \<longleftrightarrow> x = 0" 
+  by (cases x) auto
+
+type_synonym vname = string
+
 datatype
   com = SKIP
-      | Assign vname aexp      
-      | Seq    com  com         
-      | If     vname com com     
-      | While  vname com         
+  | Assign vname bit
+  | Seq com com         
+  | If "(vname list)" com com     
+  | While "(vname list)" com         
 
 bundle com_syntax
 begin

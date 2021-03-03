@@ -9,26 +9,28 @@ paragraph "Summary"
 text\<open>We give small step semantics with time for IMP-. 
 Based on the small step semantics definition time for IMP\<close>
 
+type_synonym state = "vname \<rightharpoonup> bit"
+
 inductive
-  small_step :: "com * state \<Rightarrow> com * state \<Rightarrow> bool"  (infix "\<rightarrow>" 55)
-where
-Assign:  "(x ::= a, s) \<rightarrow> (SKIP, s(x := aval a s))" |
+  small_step :: "com * state  \<Rightarrow> com * state \<Rightarrow> bool"  ("_ \<rightarrow> _" 55)
+  where
+Assign:  "(x ::= v, s) \<rightarrow> (SKIP, s(x \<mapsto> v))" |
 
 Seq1:    "(SKIP;;c\<^sub>2,s) \<rightarrow> (c\<^sub>2,s)" |
 Seq2:    "(c\<^sub>1,s) \<rightarrow> (c\<^sub>1',s') \<Longrightarrow> (c\<^sub>1;;c\<^sub>2,s) \<rightarrow> (c\<^sub>1';;c\<^sub>2,s')" |
 
-IfTrue:  "s b \<noteq> 0 \<Longrightarrow> (IF b \<noteq>0 THEN c\<^sub>1 ELSE c\<^sub>2,s) \<rightarrow> (c\<^sub>1,s)" |
-IfFalse: "s b = 0 \<Longrightarrow> (IF b \<noteq>0  THEN c\<^sub>1 ELSE c\<^sub>2,s) \<rightarrow> (c\<^sub>2,s)" |
+IfTrue:  "\<exists>b \<in> set bs. s b \<noteq> Some Zero \<Longrightarrow> (IF bs \<noteq>0 THEN c\<^sub>1 ELSE c\<^sub>2,s) \<rightarrow> (c\<^sub>1,s)" |
+IfFalse: "\<forall>b \<in> set bs. s b = Some Zero \<Longrightarrow> (IF bs \<noteq>0  THEN c\<^sub>1 ELSE c\<^sub>2,s) \<rightarrow> (c\<^sub>2,s)" |
 
-WhileTrue:   "s b \<noteq> 0 \<Longrightarrow> (WHILE b\<noteq>0 DO c,s) \<rightarrow>
-            (c ;; (WHILE b \<noteq>0 DO c), s)" |
-WhileFalse:   "s b = 0 \<Longrightarrow> (WHILE b\<noteq>0 DO c,s) \<rightarrow>
+WhileTrue:   "(\<exists>b \<in> set bs. s b \<noteq> Some Zero) \<Longrightarrow> (WHILE bs \<noteq>0 DO c,s) \<rightarrow>
+            (c ;; (WHILE bs \<noteq>0 DO c), s)" |
+WhileFalse:   "(\<forall>b \<in> set bs. s b = Some Zero) \<Longrightarrow> (WHILE bs \<noteq>0 DO c,s) \<rightarrow>
             (SKIP,s)"
 
 subsection "Transitive Closure"
 abbreviation
   small_step_pow :: "com * state \<Rightarrow> nat \<Rightarrow> com * state \<Rightarrow> bool" ("_ \<rightarrow>\<^bsup>_\<^esup> _" 55)
-  where "x \<rightarrow>\<^bsup>t\<^esup> y == (rel_pow  small_step t)  x y"
+  where "x \<rightarrow>\<^bsup>t\<^esup> y == (rel_pow small_step t) x y"
 
 bundle small_step_syntax
 begin
@@ -65,7 +67,7 @@ declare small_step.intros[simp,intro]
 text\<open>Rule inversion:\<close>
 
 inductive_cases SkipE[elim!]: "(SKIP,s) \<rightarrow> ct"
-inductive_cases AssignE[elim!]: "(x::=a,s) \<rightarrow> ct"
+inductive_cases Assign[elim!]: "(x ::= v,s) \<rightarrow> ct"
 inductive_cases SeqE[elim]: "(c1;;c2,s) \<rightarrow> ct"
 inductive_cases IfE[elim!]: "(IF b\<noteq>0 THEN c1 ELSE c2,s) \<rightarrow> ct"
 inductive_cases WhileE[elim]: "(WHILE b\<noteq>0 DO c, s) \<rightarrow> ct"
@@ -77,9 +79,7 @@ text\<open>A simple property:\<close>
 lemma deterministic:
   "cs \<rightarrow> cs' \<Longrightarrow> cs \<rightarrow> cs'' \<Longrightarrow> cs'' = cs'"
 apply(induction arbitrary: cs'' rule: small_step.induct)
-      apply blast+
-  apply auto
-done
+  by blast+
 
 text "sequence property"
 lemma star_seq2: "(c1,s) \<rightarrow>\<^bsup>t\<^esup> (c1',s') \<Longrightarrow> (c1;;c2,s) \<rightarrow>\<^bsup> t \<^esup> (c1';;c2,s')"
@@ -92,13 +92,48 @@ proof(induction t arbitrary: c1 c1' s s')
 qed auto
 
 
+lemma if_trueI[intro]: 
+  "is1 v = Some One \<Longrightarrow> v \<in> set x1 \<Longrightarrow> (IF x1\<noteq>0 THEN c11 ELSE c12, is1) \<rightarrow> (c11, is1)"
+  by force
+
+lemma if_falseI[intro]:
+  "map_of (map (\<lambda>v. (v, Zero)) (remdups x1)) \<subseteq>\<^sub>m is1 
+    \<Longrightarrow> (IF x1\<noteq>0 THEN c11 ELSE c12, is1) \<rightarrow> (c12, is1)"
+proof -
+  assume "map_of (map (\<lambda>v. (v, Zero)) (remdups x1)) \<subseteq>\<^sub>m is1"
+  have "v \<in> set (remdups x1) \<Longrightarrow> map_of (map (\<lambda>v. (v, Zero)) (remdups x1)) v = Some Zero" for v
+    by(induction x1) (auto split: if_splits)
+  hence "\<forall>v \<in> set x1. is1 v = Some Zero" 
+    apply(auto simp: map_le_def dom_map_of_conv_image_fst)
+    by (metis (mono_tags, lifting) \<open>map_of (map (\<lambda>v. (v, Zero)) (remdups x1)) \<subseteq>\<^sub>m is1\<close> domI map_le_def)
+  thus ?thesis by simp
+qed
+
+lemma while_trueI[intro]: 
+  "is1 v = Some One \<Longrightarrow> v \<in> set x1 \<Longrightarrow> (WHILE x1\<noteq>0 DO c1, is1) \<rightarrow> (c1 ;; WHILE x1\<noteq>0 DO c1, is1)"
+  by force
+
+lemma while_falseI[intro]:
+  "map_of (map (\<lambda>v. (v, Zero)) (remdups x1)) \<subseteq>\<^sub>m is1 
+    \<Longrightarrow> (WHILE x1\<noteq>0 DO c1, is1) \<rightarrow> (SKIP, is1)"
+proof -
+  assume "map_of (map (\<lambda>v. (v, Zero)) (remdups x1)) \<subseteq>\<^sub>m is1"
+  have "v \<in> set (remdups x1) \<Longrightarrow> map_of (map (\<lambda>v. (v, Zero)) (remdups x1)) v = Some Zero" for v
+    by(induction x1) (auto split: if_splits)
+  hence "\<forall>v \<in> set x1. is1 v = Some Zero" 
+    apply(auto simp: map_le_def dom_map_of_conv_image_fst)
+    by (metis (mono_tags, lifting) \<open>map_of (map (\<lambda>v. (v, Zero)) (remdups x1)) \<subseteq>\<^sub>m is1\<close> domI map_le_def)
+  thus ?thesis by simp
+qed
+
 fun small_step_fun:: "com * state \<Rightarrow> com * state" where
 "small_step_fun (SKIP, s) = (SKIP, s)" |
-"small_step_fun (x ::= a, s) = (SKIP, s(x := aval a s))" |
+"small_step_fun (x ::= v, s) = (SKIP, s(x \<mapsto> v))" |
 "small_step_fun (c\<^sub>1;;c\<^sub>2,s) = (if c\<^sub>1 = SKIP then (c\<^sub>2,s) 
   else  (fst (small_step_fun (c\<^sub>1, s)) ;;c\<^sub>2, snd (small_step_fun (c\<^sub>1, s))))" |
-"small_step_fun (IF b \<noteq>0 THEN c\<^sub>1 ELSE c\<^sub>2,s) = (if s b \<noteq> 0 then (c\<^sub>1,s) else (c\<^sub>2,s))" |
-"small_step_fun (WHILE b\<noteq>0 DO c,s) = (if s b \<noteq> 0 then (c ;; (WHILE b \<noteq>0 DO c), s) else (SKIP,s))" 
+"small_step_fun (IF bs \<noteq>0 THEN c\<^sub>1 ELSE c\<^sub>2,s) = (if \<exists>b \<in> set bs. s b \<noteq> Some Zero then (c\<^sub>1,s) else (c\<^sub>2,s))" |
+"small_step_fun (WHILE bs \<noteq>0 DO c,s) = (if  \<exists>b \<in> set bs. s b \<noteq> Some Zero 
+  then (c ;; (WHILE bs \<noteq>0 DO c), s) else (SKIP,s))" 
 
 fun t_small_step_fun:: "nat \<Rightarrow> com * state \<Rightarrow> com * state" where
 "t_small_step_fun 0 = id" |
@@ -283,7 +318,5 @@ proof(induction t arbitrary: c1 s1 rule: nat_less_induct)
     qed
   qed auto
 qed 
-
-
 
 end

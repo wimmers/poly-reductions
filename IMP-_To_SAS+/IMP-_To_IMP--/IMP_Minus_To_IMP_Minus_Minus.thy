@@ -9,14 +9,26 @@ begin
 
 abbreviation max_constant where "max_constant \<equiv> IMP_Minus_Max_Constant.max_constant"
 
+definition var_bit_list:: "nat \<Rightarrow> vname \<Rightarrow> vname list" where
+"var_bit_list n v = map (\<lambda>i. var_bit_to_var (v, i)) [0..<n]"
+
+lemma exists_non_zero_in_var_bit_list_iff:
+  assumes "finite (range s)" "Max (range s) < 2 ^ n" 
+  shows "(\<exists>b\<in>set (var_bit_list n v). IMP_Minus_State_To_IMP_Minus_Minus s n b \<noteq> Some Zero)
+      \<longleftrightarrow> s v > 0" 
+  using assms 
+  by(auto simp: var_bit_list_def IMP_Minus_State_To_IMP_Minus_Minus_def 
+      IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b_def has_bit_one_then_greater_zero
+      greater_zero_then_has_bit_one)
+
 fun IMP_Minus_To_IMP_Minus_Minus:: "IMP_Minus_com \<Rightarrow> nat \<Rightarrow> IMP_Minus_Minus_com" where
 "IMP_Minus_To_IMP_Minus_Minus Com.SKIP n = SKIP" |
 "IMP_Minus_To_IMP_Minus_Minus (Com.Assign v aexp) n = assignment_to_binary n v aexp" |
 "IMP_Minus_To_IMP_Minus_Minus (Com.Seq c1 c2) n = 
   (IMP_Minus_To_IMP_Minus_Minus c1 n ;; IMP_Minus_To_IMP_Minus_Minus c2 n )" |
-"IMP_Minus_To_IMP_Minus_Minus (Com.If v c1 c2) n = (IF (''?$'' @ v)\<noteq>0 THEN
+"IMP_Minus_To_IMP_Minus_Minus (Com.If v c1 c2) n = (IF (var_bit_list n v)\<noteq>0 THEN
   IMP_Minus_To_IMP_Minus_Minus c1 n ELSE IMP_Minus_To_IMP_Minus_Minus c2 n)" |
-"IMP_Minus_To_IMP_Minus_Minus (Com.While v c) n = (WHILE (''?$'' @ v)\<noteq>0 DO
+"IMP_Minus_To_IMP_Minus_Minus (Com.While v c) n = (WHILE (var_bit_list n v)\<noteq>0 DO
   IMP_Minus_To_IMP_Minus_Minus c n)"
 
 lemma finite_range_stays_finite: "(c1, s1) \<Rightarrow>\<^bsup>t\<^esup> s2 \<Longrightarrow> finite (range s1)
@@ -152,24 +164,38 @@ next
     using bigstep_progress by(auto simp: algebra_simps)
 next
   case (IfTrue s b c1 x t y c2)
-  show ?case apply(simp only: t_small_step_fun_terminate_iff) 
-    using IfTrue apply(simp add: t_small_step_fun_small_step_fun)
+  hence "(2 ^ y) * Max (range s) < 2 ^ n" 
+    by (meson le_less_trans max.cobounded1 move_exponent_to_rhs power_of_two_minus)
+  hence "Max (range s) < 2 ^ n" by(auto intro: le_less_trans[OF _ \<open>2 ^ y * Max (range s) < 2 ^ n\<close>])
+  thus ?case apply(simp only: t_small_step_fun_terminate_iff) 
+    using IfTrue apply(simp add: t_small_step_fun_small_step_fun exists_non_zero_in_var_bit_list_iff)
     apply(rule t_small_step_fun_increase_time[where ?t="100 * n * (x - 1) + 50"])
      apply(cases x) using bigstep_progress apply (auto simp: algebra_simps)
-    using IfTrue.IH by(auto simp: nat_mult_max_right)
+    using IfTrue.IH bigstep_progress by(fastforce simp: nat_mult_max_right)+
 next
   case (IfFalse s b c2 x t y c1)
+  hence "(2 ^ y) * Max (range s) < 2 ^ n" 
+    by (meson le_less_trans max.cobounded1 move_exponent_to_rhs power_of_two_minus)
+  hence "Max (range s) < 2 ^ n" by(auto intro: le_less_trans[OF _ \<open>2 ^ y * Max (range s) < 2 ^ n\<close>])
   then show ?case apply(simp only: t_small_step_fun_terminate_iff) 
-    using IfFalse apply(simp add: t_small_step_fun_small_step_fun)
+    using IfFalse apply(simp add: t_small_step_fun_small_step_fun exists_non_zero_in_var_bit_list_iff)
     apply(rule t_small_step_fun_increase_time[where ?t="100 * n * (x - 1) + 50"])
      apply(cases x) using bigstep_progress apply (auto simp: algebra_simps)
-    using IfFalse.IH by(auto simp: nat_mult_max_right)
+    using IfFalse.IH bigstep_progress by(fastforce simp: nat_mult_max_right)+
 next
   case (WhileFalse s b c)
-  then show ?case by(simp add: t_small_step_fun_terminate_iff)  
+  hence "(2 ^ Suc (Suc 0)) * Max (range s) < 2 ^ n" 
+    by (meson le_less_trans max.cobounded1 move_exponent_to_rhs power_of_two_minus)
+  hence "Max (range s) < 2 ^ n" 
+    by(auto intro: le_less_trans[OF _ \<open>(2 ^ Suc (Suc 0)) * Max (range s) < 2 ^ n\<close>])
+  then show ?case using WhileFalse  
+    by(simp add: t_small_step_fun_terminate_iff exists_non_zero_in_var_bit_list_iff)  
 next
   case (WhileTrue s1 b c x s2 y s3 z)
-  hence "(2 :: nat) ^ x \<le> 2 ^ z" by simp
+  hence "(2 ^ z) * Max (range s1) < 2 ^ n" 
+    by (meson le_less_trans max.cobounded1 move_exponent_to_rhs power_of_two_minus)
+  hence "Max (range s1) < 2 ^ n" by(auto intro: le_less_trans[OF _ \<open>2 ^ z * Max (range s1) < 2 ^ n\<close>])
+  have "(2 :: nat) ^ x \<le> 2 ^ z" using WhileTrue by simp
   hence "((2 :: nat) ^ x) * max (Max (range s1)) (max_constant (WHILE b\<noteq>0 DO c)) < 2 ^ n" 
     using \<open>2 ^ z * max (Max (range s1)) (max_constant (WHILE b\<noteq>0 DO c)) < 2 ^ n\<close>
     by (meson leD leI less_le_trans mult_less_cancel2)
@@ -189,7 +215,8 @@ next
   moreover have "finite (range s2)" using finite_range_stays_finite WhileTrue by simp
   ultimately show ?case using Seq \<open>2 ^ x * max (Max (range s1)) (max_constant c) < 2 ^ n\<close> 
     apply(simp only: t_small_step_fun_terminate_iff) 
-    using \<open>s1 b \<noteq> 0\<close> apply simp
+    using \<open>s1 b \<noteq> 0\<close> \<open>finite (range s1)\<close> \<open>Max (range s1) < 2 ^ n\<close> 
+    apply(simp add: exists_non_zero_in_var_bit_list_iff)
     apply(rule seq_terminates_when[where ?t1.0="100 * n * (x - Suc 0) + 50" and
           ?t2.0="100 * n * (y - Suc 0) + 50"])
       using WhileTrue
@@ -218,7 +245,6 @@ qed
 lemma IMP_Minus_To_IMP_Minus_Minus_variables:
   "set (enumerate_variables (IMP_Minus_To_IMP_Minus_Minus c n)) \<subseteq> 
     { var_bit_to_var (w, i) | w i. i < n \<and> w \<in> set (IMP_Minus_Max_Constant.all_variables c) }
-    \<union> { ''?$'' @ w  | w. w \<in> set (IMP_Minus_Max_Constant.all_variables c) }
     \<union> { operand_bit_to_var (op, i) | op i. i < n \<and> (op = CHR ''a'' \<or> op = CHR ''b'') }
     \<union> { ''carry'' }" 
 proof(induction c)
@@ -232,10 +258,10 @@ next
   then show ?case by(auto simp: set_enumerate_variables_seq) 
 next
   case (If x1 c1 c2)
-  then show ?case by(auto simp: set_enumerate_variables_if) 
+  then show ?case by(auto simp: set_enumerate_variables_if var_bit_list_def) 
 next
   case (While x1 c)
-  then show ?case by(auto simp: set_enumerate_variables_while) 
+  then show ?case by(auto simp: set_enumerate_variables_while var_bit_list_def) 
 qed
 
 lemma card_of_set_comprehension_of_set_list: "card { f x |x. x \<in> set l} \<le> length (remdups l)" 
@@ -285,11 +311,9 @@ proof -
   qed auto
   ultimately have 
     f: "finite ({ var_bit_to_var (w, i) | w i. i < n \<and> w \<in> set (IMP_Minus_Max_Constant.all_variables c) }
-    \<union> { ''?$'' @ w  | w. w \<in> set (IMP_Minus_Max_Constant.all_variables c) }
     \<union> { operand_bit_to_var (op, i) | op i. i < n \<and> (op = CHR ''a'' \<or> op = CHR ''b'') }
     \<union> { ''carry'' })" and
     "card ({ var_bit_to_var (w, i) | w i. i < n \<and> w \<in> set (IMP_Minus_Max_Constant.all_variables c) }
-    \<union> { ''?$'' @ w  | w. w \<in> set (IMP_Minus_Max_Constant.all_variables c) }
     \<union> { operand_bit_to_var (op, i) | op i. i < n \<and> (op = CHR ''a'' \<or> op = CHR ''b'') }
     \<union> { ''carry'' }) \<le> (n + 1) * (num_variables c) + 2 * n + 1"
     by(auto simp: card_union_le intro!: card_insert_le_m1 card_union_le_intro)
@@ -298,17 +322,5 @@ proof -
     using card_mono[OF f IMP_Minus_To_IMP_Minus_Minus_variables] by simp
   thus ?thesis by(simp add:  distinct_card[OF enumerate_variables_distinct])
 qed
-
-lemma IMP_Minus_To_IMP_Minus_Minus_max_constant: 
-  "IMP_Minus_Minus_Domains.max_constant (IMP_Minus_To_IMP_Minus_Minus c n) \<le> 1" 
-  apply(induction c)
-  by(auto simp: assignment_to_binary_def binary_adder_def 
-      copy_atom_to_operand_max_constant[simplified]
-      add_and_update_non_zero_indicator_def com_list_to_seq_max_constant full_adder_max_constant
-      check_bit_non_zero_def binary_subtractor_def 
-      subtract_handle_overflow_and_update_non_zero_indicator_def
-      full_subtractor_def underflow_handler_def Let_def assign_var_carry_sub_def 
-      binary_assign_constant_max_constant[simplified]
-      split: AExp.aexp.splits AExp.atomExp.splits)
 
 end
