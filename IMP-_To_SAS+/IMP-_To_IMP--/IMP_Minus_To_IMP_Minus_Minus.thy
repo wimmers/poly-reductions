@@ -3,7 +3,7 @@
 section "IMP- to IMP--"
 
 theory IMP_Minus_To_IMP_Minus_Minus imports Binary_Operations 
-  "../../IMP-/Big_StepT" 
+  "../../IMP-/Big_StepT" "../IMP_Minus_Max_Constant"
   
 begin
 
@@ -49,7 +49,7 @@ lemma Max_insert_le_when: "finite (range (s :: vname \<Rightarrow> nat)) \<Longr
 
 lemma IMP_Minus_space_growth: "(c1, s1) \<Rightarrow>\<^bsup>t\<^esup> s2 \<Longrightarrow> finite (range s1)
   \<Longrightarrow> max (Max (range s1)) (IMP_Minus_Max_Constant.max_constant c1) < 2 ^ k 
-  \<Longrightarrow> Max (range s2) < (2 :: nat) ^ (k + t)" 
+  \<Longrightarrow> (finite (range s2) \<and> Max (range s2) < (2 :: nat) ^ (k + t))" 
   apply(frule finite_range_stays_finite)
   apply simp
 proof(induction c1 s1 t s2 arbitrary: k rule: big_step_t_induct)
@@ -61,13 +61,14 @@ next
   case (Assign x a s)
   hence "AExp.aval a s < 2 * 2 ^ k"
     apply - apply(rule aval_le_when) by auto 
-  thus ?case
+  hence "Max (range (s(x := aval a s))) < 2 ^ (k + Suc (Suc 0))"
     apply -
     apply(rule Max_insert_le_when)
     using Assign apply auto 
     by (smt Assign.prems Max_ge Suc_lessI add_lessD1 le_less_trans max.strict_boundedE 
         n_less_m_mult_n nat_zero_less_power_iff not_le_imp_less numeral_1_eq_Suc_0 numeral_eq_iff 
         order.asym range_eqI semiring_norm(85) zero_less_numeral)
+  thus ?case using Assign by simp
 next
   case (Seq c1 s1 x s2 c2 y s3 z)
   hence "finite (range s2)" using finite_range_stays_finite by blast
@@ -322,5 +323,19 @@ proof -
     using card_mono[OF f IMP_Minus_To_IMP_Minus_Minus_variables] by simp
   thus ?thesis by(simp add:  distinct_card[OF enumerate_variables_distinct])
 qed
+
+lemma var_bit_in_IMP_Minus_Minus_variables_then_bit_less_n: "var_bit_to_var (a, b)
+           \<in> set (enumerate_variables (IMP_Minus_To_IMP_Minus_Minus c n)) \<Longrightarrow> b < n" 
+  apply(frule set_mp[OF IMP_Minus_To_IMP_Minus_Minus_variables])
+  by simp
+
+lemma var_bit_in_IMP_Minus_Minus_variables: "v \<in> set (IMP_Minus_Max_Constant.all_variables c)
+  \<Longrightarrow> i < n \<Longrightarrow> var_bit_to_var (v, i) \<in>  set (enumerate_variables (IMP_Minus_To_IMP_Minus_Minus c n))"
+  apply(induction c)
+  by(auto simp: assignment_to_binary_def binary_adder_def set_enumerate_variables_seq 
+      copy_atom_to_operand_variables adder_def com_list_to_seq_variables full_adder_variables
+      binary_subtractor_def subtract_handle_overflow_variables set_enumerate_variables_if
+      var_bit_list_def set_enumerate_variables_while
+      split: aexp.splits)
 
 end

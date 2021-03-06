@@ -213,13 +213,19 @@ definition IMP_Minus_State_To_IMP_Minus_Minus:: "state \<Rightarrow> nat \<Right
   = IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b s n 0 0 "
 
 definition IMP_Minus_State_To_IMP_Minus_Minus_partial:: 
-  "(vname \<rightharpoonup> nat) \<Rightarrow> nat \<Rightarrow> bit_state" where
-"IMP_Minus_State_To_IMP_Minus_Minus_partial s n = (\<lambda>v. (case var_to_var_bit v of 
-  Some (v', k) \<Rightarrow> if k < n then ((\<lambda>x. Some (nth_bit x k)) \<circ>\<^sub>m s) v' else None |
+  "(vname \<rightharpoonup> nat) \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> bit_state" where
+"IMP_Minus_State_To_IMP_Minus_Minus_partial s n r = (\<lambda>v. (case var_to_var_bit v of 
+  Some (v', k) \<Rightarrow> if k \<ge> r then Some Zero else 
+  (if k < n then ((\<lambda>x. Some (nth_bit x k)) \<circ>\<^sub>m s) v' else None) |
   None \<Rightarrow> (case var_to_operand_bit v of 
     Some (CHR ''a'', k) \<Rightarrow> if k < n then Some Zero else None |
     Some (CHR ''b'', k) \<Rightarrow> if k < n then Some Zero else None | 
     _ \<Rightarrow> (if v = ''carry'' then Some Zero else None))))"
+
+lemma IMP_Minus_State_To_IMP_Minus_Minus_partial_of_operand_bit_to_var: 
+  "IMP_Minus_State_To_IMP_Minus_Minus_partial s n r (operand_bit_to_var (op, k)) = 
+    (if (op = CHR ''a'' \<or> op = CHR ''b'') \<and> k < n then Some Zero else None)" 
+  by(auto simp: IMP_Minus_State_To_IMP_Minus_Minus_partial_def split!: char.splits bool.splits)
 
 lemma IMP_Minus_State_To_IMP_Minus_Minus_as_IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b:
   "IMP_Minus_State_To_IMP_Minus_Minus s n 
@@ -241,4 +247,56 @@ lemma IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b_of_operand_b[simp]:
   "j < k \<Longrightarrow> IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b s k a b 
   (operand_bit_to_var (CHR ''b'', j)) = Some (nth_bit b j)"
   by(auto simp: IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b_def)
+
+fun bit_list_to_nat:: "bit list \<Rightarrow> nat" where
+"bit_list_to_nat [] = 0" |
+"bit_list_to_nat (x # xs) = (case x of Zero \<Rightarrow> 2 * bit_list_to_nat xs |
+  One \<Rightarrow> 1 + 2 * bit_list_to_nat xs)" 
+
+lemma nth_bit_of_bit_list_to_nat[simp]: "nth_bit (bit_list_to_nat l) k 
+  = (if k < length l then l ! k else Zero)" 
+  sorry
+
+lemma bit_list_to_nat_geq_two_to_the_k_then: "bit_list_to_nat l \<ge> 2 ^ k
+  \<Longrightarrow> (\<exists>i. k \<le> i \<and> i < length l \<and> l ! i = One)" 
+  sorry
+
+lemma bit_list_to_nat_eq_nat_iff: "bit_list_to_nat l = y \<longleftrightarrow> (y < 2 ^ length l \<and>
+  (\<forall>i < length l. l ! i = nth_bit y i))"
+  sorry
+
+definition IMP_Minus_Minus_State_To_IMP_Minus:: "bit_state \<Rightarrow> nat \<Rightarrow> state" where
+"IMP_Minus_Minus_State_To_IMP_Minus s n = (\<lambda>v.
+  bit_list_to_nat (map (\<lambda>i. case s (var_bit_to_var (v, i)) of (Some b) \<Rightarrow>  b |
+  None \<Rightarrow> Zero) [0..<n]))"
+
+lemma nth_bit_of_IMP_Minus_Minus_State_To_IMP_Minus: 
+  "nth_bit (IMP_Minus_Minus_State_To_IMP_Minus s1 n v) k = (if k < n then 
+    (case s1 (var_bit_to_var (v, k)) of (Some b) \<Rightarrow> b |
+                   None \<Rightarrow> Zero)
+    else Zero)"
+  by(auto simp: IMP_Minus_Minus_State_To_IMP_Minus_def split: option.splits)
+
+lemma all_bits_geq_k_Zero_then_IMP_Minus_Minus_State_To_IMP_Minus_range_limited: 
+  assumes "\<forall>i v. i \<ge> k \<longrightarrow> s (var_bit_to_var (v, i)) \<noteq> Some One" 
+  shows "finite (range (IMP_Minus_Minus_State_To_IMP_Minus s n))" 
+    "Max (range (IMP_Minus_Minus_State_To_IMP_Minus s n)) < 2 ^ k" 
+proof -
+  have "\<forall>v. (IMP_Minus_Minus_State_To_IMP_Minus s n) v < 2 ^ k" 
+  proof (rule ccontr)
+    assume "\<not> (\<forall>v. IMP_Minus_Minus_State_To_IMP_Minus s n v < 2 ^ k)" 
+    then obtain v where "IMP_Minus_Minus_State_To_IMP_Minus s n v \<ge> 2 ^ k" using leI by blast
+    hence "bit_list_to_nat (map (\<lambda>i. case s (var_bit_to_var (v, i)) of (Some b) \<Rightarrow> b |
+      None \<Rightarrow> Zero) [0..<n]) \<ge> 2 ^ k" by (auto simp: IMP_Minus_Minus_State_To_IMP_Minus_def)
+    then obtain i where "i \<ge> k \<and> i < n \<and> 
+      (map (\<lambda>i. case s (var_bit_to_var (v, i)) of (Some b) \<Rightarrow> b | None \<Rightarrow> Zero) [0..<n]) ! i = One" 
+      using bit_list_to_nat_geq_two_to_the_k_then by fastforce
+    moreover hence "s (var_bit_to_var (v, i)) \<noteq> Some One" 
+      using \<open>\<forall>i v. i \<ge> k \<longrightarrow> s (var_bit_to_var (v, i)) \<noteq> Some One\<close> by simp
+    ultimately show False apply(cases "s (var_bit_to_var (v, i))") by auto
+  qed
+  thus  "finite (range (IMP_Minus_Minus_State_To_IMP_Minus s n))"  
+    "Max (range (IMP_Minus_Minus_State_To_IMP_Minus s n)) < 2 ^ k" 
+    using bounded_nat_set_is_finite by auto
+qed
 end

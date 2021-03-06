@@ -104,6 +104,12 @@ lemma map_leq_imp_minus_state_to_sas_plus_iff:
   \<longleftrightarrow> map_of (map (\<lambda>v. (v, y)) vs) \<subseteq>\<^sub>m is"
   by(auto simp: imp_minus_state_to_sas_plus_def map_le_def map_comp_def map_of_SomeD 
       dom_map_of_conv_image_fst map_of_map_VN_EV split: option.splits)
+
+lemma dom_snd_sas_plus_state_to_imp_minus:  "sane_sas_plus_state ss 
+  \<Longrightarrow> dom (snd (sas_plus_state_to_imp_minus ss)) 
+  = { v |v. VN v \<in> dom ss }" 
+  by(fastforce simp: sane_sas_plus_state_def sas_plus_state_to_imp_minus_def map_comp_Some_iff 
+      split: option.splits)
   
 
 end

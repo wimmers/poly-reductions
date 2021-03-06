@@ -486,7 +486,7 @@ lemma sas_plus_plus_to_imp_minus_minus:
   assumes "is_serial_solution_for_problem_sas_plus_plus (imp_minus_minus_to_sas_plus c I G) plan"
     "EV ` (ran I) \<subseteq> set domain"
     "EV ` (ran G) \<subseteq> set domain"
-  shows "\<exists>is1 is2 t. (I|` set (enumerate_variables c)) \<subseteq>\<^sub>m is1 
+  shows "\<exists>is1 is2 t. (I|` set (enumerate_variables c)) \<subseteq>\<^sub>m is1 \<and> dom is1 = set (enumerate_variables c)
     \<and> (G|` set (enumerate_variables c)) \<subseteq>\<^sub>m is2 \<and> t \<le> length plan 
     \<and> (c, is1) \<rightarrow>\<^bsup>t\<^esup> (SKIP, is2)" 
 proof -
@@ -525,6 +525,9 @@ proof -
     using assms(2) I'_def 
     by (auto simp: imp_minus_minus_to_sas_plus_def imp_minus_state_to_sas_plus_map_le_then Let_def 
         range_of'_def)
+  moreover have "dom ?is1 = set (enumerate_variables c)"
+    using \<open>sane_sas_plus_state I'\<close> I'_def by(auto simp: imp_minus_minus_to_sas_plus_def 
+        dom_snd_sas_plus_state_to_imp_minus Let_def)
   ultimately show ?thesis using I'_def t_def by auto
 qed
     
