@@ -404,16 +404,35 @@ lemma full_subtractor_variables: "set (enumerate_variables (full_subtractor i v)
 lemma sequence_of_full_subtractors_no_underflow: 
   assumes "a \<ge> b"
     "s ''carry'' = Some Zero" 
-    "\<forall>j \<le> k. s (operand_bit_to_var (CHR ''a'', j)) = Some (nth_bit a j)" 
-    "\<forall>j \<le> k. s (operand_bit_to_var (CHR ''b'', j)) = Some (nth_bit b j)"
+    "\<forall>j \<le> n. s (operand_bit_to_var (CHR ''a'', j)) = Some (nth_bit a j)" 
+    "\<forall>j \<le> n. s (operand_bit_to_var (CHR ''b'', j)) = Some (nth_bit b j)"
   shows
    "t_small_step_fun (12 * n)
                        (com_list_to_seq (map (\<lambda>i. full_subtractor i v) [0..< n]), s)
   = (SKIP, (\<lambda>w. (case var_to_var_bit w of
-    Some (w', m) \<Rightarrow> (if w' = v \<and> m \<le> k then Some (nth_bit (a - b) m) else s w) |
-    _ \<Rightarrow> (if w = ''carry'' then Some (nth_carry_sub k a b)  
-          else s w))))"   
-  sorry
+    Some (w', m) \<Rightarrow> (if w' = v \<and> m < n then Some (nth_bit (a - b) m) else s w) |
+    _ \<Rightarrow> (if w = ''carry'' \<and> n > 0 then Some (nth_carry_sub (n - 1) a b)  
+          else s w))))"
+  using assms
+proof(induction n)
+  case 0
+  then show ?case by(auto simp: fun_eq_iff split: option.splits)
+next
+  case (Suc n)
+  have "t_small_step_fun (12 + 12 * n)
+   (com_list_to_seq ((map (\<lambda>i. full_subtractor i v) [0..< n]) @ [full_subtractor n v]), s)
+    = (SKIP, (\<lambda>w. (case var_to_var_bit w of
+    Some (w', m) \<Rightarrow> (if w' = v \<and> m < Suc n then Some (nth_bit (a - b) m) else s w) |
+    _ \<Rightarrow> (if w = ''carry'' \<and> Suc n > 0 then Some (nth_carry_sub n a b)  
+          else s w))))"
+    apply(rule t_small_step_fun_com_list_to_seq_terminates[OF _ Suc.IH 
+          iffD2[OF com_list_to_seq_of_length_one_terminates_iff[where ?t="11"]]])
+    using Suc  apply(auto)
+    apply(subst full_subtractor_correct_no_underflow)
+    using Suc
+    by(auto simp add: fun_eq_iff var_to_var_bit_eq_Some_iff split!: option.splits)
+  thus ?case by auto
+qed
 
 lemma sequence_of_full_subtractors_with_underflow: 
   assumes "a < b"
