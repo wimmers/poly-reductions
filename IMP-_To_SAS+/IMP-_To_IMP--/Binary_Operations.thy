@@ -87,63 +87,6 @@ lemma result_of_binary_assign_constant_on_translated_state:
   by (auto simp: fun_eq_iff IMP_Minus_State_To_IMP_Minus_Minus_def 
       IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b_def split: option.splits)
 
-fun nth_carry:: "nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> bit" where
-"nth_carry 0 a b = (if (nth_bit a 0 = One \<and> nth_bit b 0 = One) then One else Zero)" | 
-"nth_carry (Suc n) a b = (if (nth_bit a (Suc n) = One \<and> nth_bit b (Suc n) = One) 
-  \<or> ((nth_bit a (Suc n) = One \<or> nth_bit b (Suc n) = One) \<and> nth_carry n a b = One) 
-  then One else Zero)"
-
-lemma first_bit_of_add: "nth_bit (a + b) 0 
-  = (if nth_bit a 0 = One then if nth_bit b 0 = One then Zero else One 
-     else if nth_bit b 0 = One then One else Zero)" 
-  sorry
-
-lemma nth_bit_of_add: "nth_bit (a + b) (Suc n) = (let u = nth_bit a (Suc n); 
-  v = nth_bit b (Suc n); w = nth_carry n a b in 
-  (if u = One then 
-    if v = One then
-     if w = One then One else Zero
-    else
-     if w = One then Zero else One
-   else
-    if v = One then
-     if w = One then Zero else One
-    else
-     if w = One then One else Zero))"
-  sorry
-
-lemma no_overflow_condition: "a + b < 2^n \<Longrightarrow> nth_carry (n - 1) a b = Zero" 
-  sorry
-
-lemma has_bit_one_then_greater_zero: "nth_bit a j = One \<Longrightarrow> 0 < a" 
-  sorry
-
-lemma greater_zero_then_has_bit_one: "x > 0 \<Longrightarrow> x < 2 ^ n \<Longrightarrow> \<exists>b \<in> {0..<n}. nth_bit x b = One" 
-  sorry
-
-fun nth_carry_sub:: "nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> bit" where
-"nth_carry_sub 0 a b = (if (nth_bit a 0 = Zero \<and> nth_bit b 0 = One) then One else Zero)" | 
-"nth_carry_sub (Suc n) a b = 
-  (if (nth_bit a (Suc n) = Zero \<and> ( nth_bit b (Suc n) = One \<or> nth_carry_sub n a b = One))
-    \<or> (nth_bit a (Suc n) = One \<and> (nth_bit b (Suc n)) = One \<and> nth_carry_sub n a b = One) then One
-  else Zero)"
-
-lemma first_bit_of_sub_n_no_underflow: "a \<ge> b \<Longrightarrow> nth_bit (a - b) 0 = (if nth_bit a 0 = One then
-  (if nth_bit b 0 = One then Zero else One)
-  else (if nth_bit b 0 = One then One else Zero))" 
-  apply(auto simp: nth_bit_def nat_to_bit_eq_One_iff nat_to_bit_eq_Zero_iff)
-  by presburger+
-
-lemma nth_bit_of_sub_n_no_underflow: "a \<ge> b \<Longrightarrow> 
-  nth_bit (a - b) (Suc n) = (let an = nth_bit a (Suc n); bn = nth_bit b (Suc n);
-  c = nth_carry_sub n a b in (if (bn = Zero \<and> c = Zero) \<or> (bn = One \<and> c = One) then an 
-    else (if (bn = One \<or> c = One) \<and> an = Zero then One else Zero)))" 
-  sorry
-
-lemma nth_bit_of_sub_n_underflow: "a < b \<Longrightarrow> 
-  nth_bit (a - b) (Suc n) = Zero" 
-  by simp
-
 fun copy_var_to_operand:: "nat \<Rightarrow> char \<Rightarrow> vname \<Rightarrow> IMP_Minus_Minus_com" where
 "copy_var_to_operand 0 op v = SKIP" |
 "copy_var_to_operand (Suc i) op v = 
@@ -404,8 +347,8 @@ lemma full_subtractor_variables: "set (enumerate_variables (full_subtractor i v)
 lemma sequence_of_full_subtractors_no_underflow: 
   assumes "a \<ge> b"
     "s ''carry'' = Some Zero" 
-    "\<forall>j \<le> n. s (operand_bit_to_var (CHR ''a'', j)) = Some (nth_bit a j)" 
-    "\<forall>j \<le> n. s (operand_bit_to_var (CHR ''b'', j)) = Some (nth_bit b j)"
+    "\<forall>j < n. s (operand_bit_to_var (CHR ''a'', j)) = Some (nth_bit a j)" 
+    "\<forall>j < n. s (operand_bit_to_var (CHR ''b'', j)) = Some (nth_bit b j)"
   shows
    "t_small_step_fun (12 * n)
                        (com_list_to_seq (map (\<lambda>i. full_subtractor i v) [0..< n]), s)
@@ -436,37 +379,80 @@ qed
 
 lemma sequence_of_full_subtractors_with_underflow: 
   assumes "a < b"
-    "a < 2^(n)" "b < 2^(n)" 
+    "a < 2^n" "b < 2^n" 
     "s ''carry'' = Some Zero" 
-    "\<forall>j \<le> k. s (operand_bit_to_var (CHR ''a'', j)) = Some (nth_bit a j)" 
-    "\<forall>j \<le> k. s (operand_bit_to_var (CHR ''b'', j)) = Some (nth_bit b j)"
+    "\<forall>j < n. s (operand_bit_to_var (CHR ''a'', j)) = Some (nth_bit a j)" 
+    "\<forall>j < n. s (operand_bit_to_var (CHR ''b'', j)) = Some (nth_bit b j)"
   shows
    "t_small_step_fun (12 * n)
                        (com_list_to_seq (map (\<lambda>i. full_subtractor i v) [0..< n]), s)
   = (SKIP, (\<lambda>w. (case var_to_var_bit w of
-    Some (w', m) \<Rightarrow> (if w' = v \<and> m \<le> k then Some (nth_bit (2^(k+2) + a - b) m) else s w) |
-    _ \<Rightarrow> (if w = ''carry'' then Some One
+    Some (w', m) \<Rightarrow> (if w' = v \<and> m < n then Some (nth_bit (2^n + a - b) m) else s w) |
+    _ \<Rightarrow> (if w = ''carry'' \<and> n > 0 then Some One
           else s w))))"   
-  sorry
-
+proof -
+  have "\<forall>j < n. s (operand_bit_to_var (CHR ''a'', j)) = Some (nth_bit (2 ^ n + a) j)"
+    using nth_bit_add_out_of_range[OF \<open>a < 2^n\<close>] 
+      \<open>\<forall>j < n. s (operand_bit_to_var (CHR ''a'', j)) = Some (nth_bit a j)\<close> by simp
+  moreover have "2 ^ n + a > b" using \<open>b < 2^n\<close> by simp
+  ultimately have "t_small_step_fun (12 * n)
+                       (com_list_to_seq (map (\<lambda>i. full_subtractor i v) [0..< n]), s)
+  = (SKIP, (\<lambda>w. (case var_to_var_bit w of
+    Some (w', m) \<Rightarrow> (if w' = v \<and> m < n then Some (nth_bit (2^n + a - b) m) else s w) |
+    _ \<Rightarrow> (if w = ''carry'' \<and> n > 0 then Some (nth_carry_sub (n - 1) (2^n + a) b)
+          else s w))))"
+    using sequence_of_full_subtractors_no_underflow[where ?a="2^n + a" and ?b=b] assms 
+    by(auto simp: fun_eq_iff)
+  thus ?thesis using assms nth_carry_sub_underflow by auto
+qed
+    
 definition underflow_handler:: "nat \<Rightarrow> vname \<Rightarrow> IMP_Minus_Minus_com" where
 "underflow_handler n v = (IF [''carry'']\<noteq>0 THEN (''carry'' ::= Zero ;;
   binary_assign_constant n v 0)
   ELSE SKIP)" 
 
-definition subtract_handle_overflow:: 
+definition subtract_handle_underflow:: 
   "nat \<Rightarrow> vname \<Rightarrow> IMP_Minus_Minus_com" where
-"subtract_handle_overflow n v = 
+"subtract_handle_underflow n v = 
   com_list_to_seq (map (\<lambda>i. full_subtractor i v) [0..<n]) ;; 
   underflow_handler n v"
 
+lemma result_of_subtract_handle_underflow: 
+  assumes "n > 0" "a < 2 ^ n" "b < 2 ^ n" 
+  shows "t_small_step_fun (15 * n + 4) (subtract_handle_underflow n v, 
+    IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b s n a b) 
+    = (SKIP, IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b (s(v := a - b)) n a b)"
+proof(cases "a < b")
+  case True
+  then show ?thesis
+    apply(simp only: subtract_handle_underflow_def)
+    apply(rule seq_terminates_when[OF _  sequence_of_full_subtractors_with_underflow[where ?a=a and ?b=b],
+          where ?t2.0="3 * n + 3"])
+    using assms apply(auto simp add: underflow_handler_def t_small_step_fun_terminate_iff)
+     apply(auto simp add: t_small_step_fun_small_step_fun result_of_binary_assign_constant fun_eq_iff)
+    by(auto simp:  IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b_of_changed_s_neq_iff 
+        var_to_var_bit_eq_Some_iff split!: option.splits if_splits)
+next
+  case False
+  then show ?thesis
+    apply(simp only: subtract_handle_underflow_def)
+    apply(rule seq_terminates_when[OF _  sequence_of_full_subtractors_no_underflow[where ?a=a and ?b=b],
+          where ?t2.0="3 * n + 3"])
+    using assms apply(auto simp add: underflow_handler_def t_small_step_fun_terminate_iff)
+       apply(auto simp add: t_small_step_fun_small_step_fun result_of_binary_assign_constant fun_eq_iff)
+    using nth_carry_sub_no_underflow[OF _ \<open>a < 2 ^ n\<close> \<open>b < 2 ^ n\<close>]
+    apply(auto simp:  IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b_of_changed_s_neq_iff 
+        var_to_var_bit_eq_Some_iff  
+        split!: option.splits if_splits)
+    by(auto simp: IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b_def)
+qed
 
-lemma subtract_handle_overflow_variables:
-  "set (enumerate_variables (subtract_handle_overflow n v)) 
+lemma subtract_handle_underflow_variables:
+  "set (enumerate_variables (subtract_handle_underflow n v)) 
   = { operand_bit_to_var (op, i) | i op. i < n \<and> (op = CHR ''a'' \<or> op = CHR ''b'') } 
     \<union> { var_bit_to_var (v, i) | i. i < n }
     \<union> { ''carry'' }"
-  apply(auto simp: subtract_handle_overflow_def 
+  apply(auto simp: subtract_handle_underflow_def 
       set_enumerate_variables_seq com_list_to_seq_variables full_subtractor_variables
       set_enumerate_variables_if underflow_handler_def binary_assign_constant_variables)
   by(auto simp: underflow_handler_def enumerate_variables_def split: if_splits)
@@ -475,7 +461,7 @@ definition binary_subtractor:: "nat \<Rightarrow> vname \<Rightarrow> AExp.atomE
 "binary_subtractor n v a b = 
   copy_atom_to_operand n (CHR ''a'') a ;;
   (copy_atom_to_operand n (CHR ''b'') b ;;
-  (subtract_handle_overflow n v ;;
+  (subtract_handle_underflow n v ;;
   (copy_atom_to_operand n (CHR ''a'') (AExp.N 0) ;;
   copy_atom_to_operand n (CHR ''b'') (AExp.N 0))))"
 

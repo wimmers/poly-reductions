@@ -1,9 +1,9 @@
 \<^marker>\<open>creator Florian Keßler\<close>
 
 section "IMP- to IMP-- State Translations"
-
+                                    
 theory IMP_Minus_To_IMP_Minus_Minus_State_Translations 
-  imports "../../IMP-/Small_StepT" "../IMP_Minus_Minus_Small_StepT"
+  imports "../../IMP-/Small_StepT" Binary_Arithmetic
 begin
 
 type_synonym state = AExp.state
@@ -90,16 +90,6 @@ lemma var_bit_to_var_neq_carry'[simp]: "var_bit_to_var (x, y) = ''carry'' \<long
 
 lemma take_2_var_bit_to_var[simp]: "take 2 (var_bit_to_var (x, y)) = ''?$'' \<longleftrightarrow> False" 
   by(auto simp: var_bit_to_var_def)
-
-fun nth_bit_nat:: "nat \<Rightarrow> nat \<Rightarrow> nat" where
-"nth_bit_nat x 0 = x mod 2" |
-"nth_bit_nat x (Suc n) = nth_bit_nat (x div 2) n"
-
-definition nth_bit:: "nat \<Rightarrow> nat \<Rightarrow> bit" where
-"nth_bit x n = nat_to_bit (nth_bit_nat x n)" 
-
-lemma nth_bit_of_zero[simp]: "nth_bit 0 n = Zero" 
-  by (induction n) (auto simp: nth_bit_def)
 
 fun operand_bit_to_var:: "(char * nat) \<Rightarrow> vname" where 
 "operand_bit_to_var (c, 0) = [c]" |
@@ -227,13 +217,6 @@ lemma IMP_Minus_State_To_IMP_Minus_Minus_partial_of_operand_bit_to_var:
     (if (op = CHR ''a'' \<or> op = CHR ''b'') \<and> k < n then Some Zero else None)" 
   by(auto simp: IMP_Minus_State_To_IMP_Minus_Minus_partial_def split!: char.splits bool.splits)
 
-lemma IMP_Minus_State_To_IMP_Minus_Minus_as_IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b:
-  "IMP_Minus_State_To_IMP_Minus_Minus s n 
-    = IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b s n 0 0"
-  by(auto simp: IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b_def fun_eq_iff 
-      var_to_operand_bit_eq_Some_iff IMP_Minus_State_To_IMP_Minus_Minus_def 
-      split: char.splits option.splits bool.splits)
-
 lemma IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b_of_carry[simp]: 
   "IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b s k a b ''carry'' = Some Zero"
   by(auto simp: IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b_def)
@@ -248,22 +231,16 @@ lemma IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b_of_operand_b[simp]:
   (operand_bit_to_var (CHR ''b'', j)) = Some (nth_bit b j)"
   by(auto simp: IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b_def)
 
-fun bit_list_to_nat:: "bit list \<Rightarrow> nat" where
-"bit_list_to_nat [] = 0" |
-"bit_list_to_nat (x # xs) = (case x of Zero \<Rightarrow> 2 * bit_list_to_nat xs |
-  One \<Rightarrow> 1 + 2 * bit_list_to_nat xs)" 
+lemma IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b_of_var_bit_to_var[simp]: 
+  "IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b s n a b (var_bit_to_var (v, i))
+    = (if i < n then Some (nth_bit (s v) i) else None)"
+  by(auto simp: IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b_def)
 
-lemma nth_bit_of_bit_list_to_nat[simp]: "nth_bit (bit_list_to_nat l) k 
-  = (if k < length l then l ! k else Zero)" 
-  sorry
-
-lemma bit_list_to_nat_geq_two_to_the_k_then: "bit_list_to_nat l \<ge> 2 ^ k
-  \<Longrightarrow> (\<exists>i. k \<le> i \<and> i < length l \<and> l ! i = One)" 
-  sorry
-
-lemma bit_list_to_nat_eq_nat_iff: "bit_list_to_nat l = y \<longleftrightarrow> (y < 2 ^ length l \<and>
-  (\<forall>i < length l. l ! i = nth_bit y i))"
-  sorry
+lemma IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b_of_changed_s_neq_iff: 
+  "IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b s n a b x \<noteq>
+       IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b (s(v := y)) n a b x
+  \<longleftrightarrow> (\<exists>i < n. var_to_var_bit x = Some (v, i) \<and> nth_bit(s v) i \<noteq> nth_bit y i)"
+  by(auto simp: IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b_def split: option.splits)
 
 definition IMP_Minus_Minus_State_To_IMP_Minus:: "bit_state \<Rightarrow> nat \<Rightarrow> state" where
 "IMP_Minus_Minus_State_To_IMP_Minus s n = (\<lambda>v.
