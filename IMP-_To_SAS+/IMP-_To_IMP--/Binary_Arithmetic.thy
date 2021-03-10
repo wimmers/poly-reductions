@@ -102,4 +102,8 @@ lemma bit_list_to_nat_eq_nat_iff: "bit_list_to_nat l = y \<longleftrightarrow> (
   (\<forall>i < length l. l ! i = nth_bit y i))"
   sorry
 
+lemma all_bits_equal_then_equal: "x < 2 ^ n \<Longrightarrow> y < 2 ^ n \<Longrightarrow> (\<forall>i < n. nth_bit x i = nth_bit y i) 
+  \<Longrightarrow> x = y" sorry
+
+
 end

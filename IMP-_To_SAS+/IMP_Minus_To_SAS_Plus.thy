@@ -10,6 +10,9 @@ theory IMP_Minus_To_SAS_Plus
     "HOL-Library.Discrete"
 begin
 
+text \<open> We combine our reduction steps from IMP- to IMP--, then from IMP-- to SAS++ and finally 
+  from SAS++ to SAS+ to give a reduction IMP- to SAS+ \<close> 
+
 type_synonym SAS_problem = "(IMP_Minus_Minus_To_SAS_Plus_Plus_State_Translations.variable, 
   IMP_Minus_Minus_To_SAS_Plus_Plus_State_Translations.domain_element) problem" 
 
@@ -68,6 +71,13 @@ definition IMP_Minus_to_SAS_Plus:: "IMP_Minus_com \<Rightarrow> (vname \<rightha
 
 lemma le_mul_intro: "0 < b \<Longrightarrow> a \<le> b \<Longrightarrow> (1 :: nat) < c \<Longrightarrow> a < c * b" 
   by (metis One_nat_def dual_order.strict_trans le_neq_implies_less n_less_m_mult_n)
+
+text \<open> First direction of the correctness proof for the IMP- to SAS+ reduction, showing that when
+       the IMP- program terminates in some state, then in SAS+ there is a plan that will reach any
+      goal state that matches the end state of the IMP- program, such that the plan is polynomially
+      longer than the execution in IMP-. The constants used to bound the length of the plan have
+      no significance, rather they are just derived by adding up the various constants that we
+      used in the correctness proofs for the different parts of the reduction. \<close> 
 
 lemma IMP_Minus_to_SAS_Plus_correctness:
   assumes
@@ -168,8 +178,11 @@ qed
 
 lemma not_in_superset_of_dom_then_None: "dom s \<subseteq> S \<Longrightarrow> x \<notin> S \<Longrightarrow> s x = None" by auto
 
-lemma all_bits_equal_then_equal: "x < 2 ^ n \<Longrightarrow> y < 2 ^ n \<Longrightarrow> (\<forall>i < n. nth_bit x i = nth_bit y i) 
-  \<Longrightarrow> x = y" sorry
+text \<open> Second direction of the correctness proof. We show that for an IMP- program that will
+      terminate after at most t steps on any input, if there is a solution in the reduced 
+      SAS+ problem, then there is an IMP- state which matches the initial state of the SAS+ problem,
+      such that when the IMP- program is run starting from that state, it reaches a terminating 
+      state matching the goal state of the SAS+ problem. \<close>
 
 lemma SAS_Plus_to_IMP_Minus_correctness: 
   assumes 
