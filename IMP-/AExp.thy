@@ -21,12 +21,19 @@ fun atomVal :: "atomExp \<Rightarrow> state \<Rightarrow> val" where
 "atomVal (N number) _ = number"
 
 text "Defining arithmetic operators and general form of expressions: "
-datatype aexp =  A atomExp | Plus atomExp atomExp | Sub atomExp atomExp
+datatype aexp =  A atomExp            |
+                 Plus atomExp atomExp |
+                 Sub atomExp atomExp  | 
+                 Parity atomExp       |
+                 RightShift atomExp
+
 
 fun aval :: "aexp \<Rightarrow> state \<Rightarrow> val" where
-"aval (A atomExp) s = atomVal atomExp s"|
+"aval (A atomExp) s = atomVal atomExp s"        |
 "aval (Plus a b) s = atomVal a s  + atomVal b s"|
-"aval (Sub a b) s = atomVal a s - atomVal b s"
+"aval (Sub a b) s = atomVal a s - atomVal b s"  |
+"aval (Parity a) s = atomVal a s  mod 2"        |
+"aval (RightShift a) s = atomVal a s div 2"
 
 text "evaluation examples:"
 value "aval (Plus (V ''x'') (N 5)) (\<lambda>x. if x = ''x'' then 7 else 0)"
