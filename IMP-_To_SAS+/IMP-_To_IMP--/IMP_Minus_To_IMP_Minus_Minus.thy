@@ -334,7 +334,7 @@ lemma var_bit_in_IMP_Minus_Minus_variables: "v \<in> set (IMP_Minus_Max_Constant
   apply(induction c)
   by(auto simp: assignment_to_binary_def binary_adder_def set_enumerate_variables_seq 
       copy_atom_to_operand_variables adder_def com_list_to_seq_variables full_adder_variables
-      binary_subtractor_def subtract_handle_overflow_variables set_enumerate_variables_if
+      binary_subtractor_def subtract_handle_underflow_variables set_enumerate_variables_if
       var_bit_list_def set_enumerate_variables_while
       split: aexp.splits)
 

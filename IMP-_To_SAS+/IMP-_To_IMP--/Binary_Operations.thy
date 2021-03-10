@@ -288,8 +288,7 @@ lemma binary_adder_correct:
       seq_terminates_when'[OF result_of_adder
       seq_terminates_when'[OF copy_atom_to_operand_a_result copy_atom_to_operand_b_result]]]] 
   assms 
-  by(fastforce simp: binary_adder_def 
-      IMP_Minus_State_To_IMP_Minus_Minus_as_IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b)
+  by(fastforce simp: binary_adder_def IMP_Minus_State_To_IMP_Minus_Minus_def)
 
 definition assign_var_carry_sub:: 
   "nat \<Rightarrow> vname \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> IMP_Minus_Minus_com" where
@@ -471,7 +470,12 @@ lemma binary_subtractor_correct:
   shows "t_small_step_fun (50 * (n + 1)) (binary_subtractor n v a b, 
     IMP_Minus_State_To_IMP_Minus_Minus s n) 
     = (SKIP, IMP_Minus_State_To_IMP_Minus_Minus (s(v := AExp.atomVal a s - AExp.atomVal b s)) n)"
-  sorry
+  using seq_terminates_when'[OF copy_atom_to_operand_a_result[where ?n=n]
+      seq_terminates_when'[OF copy_atom_to_operand_b_result
+      seq_terminates_when'[OF result_of_subtract_handle_underflow
+      seq_terminates_when'[OF copy_atom_to_operand_a_result copy_atom_to_operand_b_result]]]] 
+  assms 
+  by(fastforce simp: binary_subtractor_def IMP_Minus_State_To_IMP_Minus_Minus_def)
 
 definition assignment_to_binary:: "nat \<Rightarrow> vname \<Rightarrow> AExp.aexp \<Rightarrow> IMP_Minus_Minus_com" where
 "assignment_to_binary n v aexp = (case aexp of
@@ -500,6 +504,6 @@ lemma assignment_to_binary_variables:
   apply(cases a)
   by(auto simp: assignment_to_binary_def binary_adder_def set_enumerate_variables_seq 
       copy_atom_to_operand_variables adder_def com_list_to_seq_variables full_adder_variables
-      binary_subtractor_def subtract_handle_overflow_variables)
+    binary_subtractor_def subtract_handle_underflow_variables)
 
 end 
