@@ -6,6 +6,15 @@ theory IMP_Minus_To_IMP_Minus_Minus_State_Translations
   imports "../../IMP-/Small_StepT" Binary_Arithmetic
 begin
 
+text \<open> We define a translation between IMP- states, which map registers to natural numbers, and
+       IMP-- state where a register can only hold a single bit. Fixing a number of bits n that
+       are assumed to be sufficient to represent each natural number in the IMP- states, a register
+       ''x'' in IMP- is represented by n registers in IMP--: ''#$x'', ''##$x'', ... ''#...#$x'', 
+        where the IMP-- register starting with k hashes represents the k- 1th bit of the 
+       IMP- register. Furthermore, the IMP-- states contain special registers ''carry'' and
+        operands ''a'' and ''b'' with n bits respectively, which we will use when replacing 
+        arithmetic expressions by binary operations when translating IMP- to IMP-- programs. \<close>
+
 type_synonym state = AExp.state
 type_synonym bit_state = IMP_Minus_Minus_Small_StepT.state
 
@@ -69,16 +78,6 @@ lemma var_bit_to_var_eq_iff[simp]: "var_bit_to_var (a, b) = var_bit_to_var (c, d
    apply (metis dropWhile_n_hashes list.inject)
   by (metis length_takeWhile_n_hashes)
 
-lemma var_to_var_bit_of_non_zero_indicator[simp]: "var_to_var_bit (CHR ''?'' # CHR ''$'' # v) = None" 
-  by(auto simp: var_to_var_bit_def)
-
-lemma var_bit_to_var_neq_non_zero_indicator[simp]: "(''?$'' @ x \<noteq> var_bit_to_var (v, y))"
-  by(auto simp: var_bit_to_var_def)
-
-lemma var_bit_to_var_neq_non_zero_indicator'[simp]: "(var_bit_to_var (a, b) = CHR ''?'' # CHR ''$'' # v) 
-  \<longleftrightarrow> False"
-  by(auto simp: var_bit_to_var_def)
-
 lemma var_to_var_bit_of_carry[simp]: "var_to_var_bit ''carry'' = None"
   by(auto simp: var_to_var_bit_def)
 
@@ -86,9 +85,6 @@ lemma var_bit_to_var_neq_carry[simp]: "''carry'' \<noteq> var_bit_to_var (x, y) 
   by(auto simp: var_bit_to_var_def)
 
 lemma var_bit_to_var_neq_carry'[simp]: "var_bit_to_var (x, y) = ''carry'' \<longleftrightarrow> False"
-  by(auto simp: var_bit_to_var_def)
-
-lemma take_2_var_bit_to_var[simp]: "take 2 (var_bit_to_var (x, y)) = ''?$'' \<longleftrightarrow> False" 
   by(auto simp: var_bit_to_var_def)
 
 fun operand_bit_to_var:: "(char * nat) \<Rightarrow> vname" where 

@@ -6,6 +6,9 @@ theory Binary_Arithmetic
   imports Main "../IMP_Minus_Minus_Small_StepT"
 begin 
 
+text \<open> In this theory, we introduce functions to access bits out of nats, and Lemmas that relate 
+        the bits in the result of addition and subtraction to the bits of the original numbers. \<close>
+
 fun nth_bit_nat:: "nat \<Rightarrow> nat \<Rightarrow> nat" where
 "nth_bit_nat x 0 = x mod 2" |
 "nth_bit_nat x (Suc n) = nth_bit_nat (x div 2) n"

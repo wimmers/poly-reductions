@@ -7,6 +7,10 @@ theory Binary_Operations
     "../IMP--_To_SAS++/IMP_Minus_Minus_Subprograms"
 begin 
 
+text \<open> We give programs in IMP-- that work on states translated from IMP- to IMP-- and simulate 
+       the arithmetic expressions of IMP-. They work by first loading the operands into some special
+       operand registers, and then performing standard binary addition / subtraction. \<close>
+
 type_synonym IMP_Minus_com = Com.com
 type_synonym IMP_Minus_Minus_com = com
 

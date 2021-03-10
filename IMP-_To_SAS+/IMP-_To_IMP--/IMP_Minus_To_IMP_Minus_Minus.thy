@@ -7,7 +7,11 @@ theory IMP_Minus_To_IMP_Minus_Minus imports Binary_Operations
   
 begin
 
-abbreviation max_constant where "max_constant \<equiv> IMP_Minus_Max_Constant.max_constant"
+text \<open> We give a reduction from IMP- to IMP--. The reduction works by bit blasting each register
+       of IMP- into several registers in IMP-- each holding a single bit. Arithmetic operations
+       and assignment in IMP- are replaced by the binary operations defined in the Binary Operations
+       theory. For WHILE and IF, we replace the condition of a single register's content being 
+       non-zero by checking whether any of the bits in the translated state is non-zero. \<close>
 
 definition var_bit_list:: "nat \<Rightarrow> vname \<Rightarrow> vname list" where
 "var_bit_list n v = map (\<lambda>i. var_bit_to_var (v, i)) [0..<n]"

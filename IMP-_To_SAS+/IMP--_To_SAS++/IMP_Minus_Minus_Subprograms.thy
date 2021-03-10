@@ -1,7 +1,16 @@
 \<^marker>\<open>creator Florian Keßler\<close>
 
+section \<open>IMP-- Subprograms\<close>
+
 theory IMP_Minus_Minus_Subprograms imports "../IMP_Minus_Minus_Small_StepT"
 begin
+
+text \<open>We give functions that enumerate all subprograms of an IMP-- program, that is, all 
+  computations that could be reached during the execution of an IMP-- program. Note that this is 
+  a purely syntactical definition, i.e. we also take into account executions that are actually 
+  impossible to reach due to the semantics of IMP--. We show completeness of this definition,
+  i.e. if a IMP-- program can reach a certain computation, than that computation is contained in
+  our definition. \<close>
 
 fun all_subprograms :: "com \<Rightarrow> com list" where
 "all_subprograms (SKIP) = [SKIP]" |

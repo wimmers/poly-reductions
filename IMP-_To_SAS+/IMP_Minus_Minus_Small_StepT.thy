@@ -1,13 +1,13 @@
 \<^marker>\<open>creator Bilel Ghorbel, Florian Kessler\<close>
 
-section "Small step semantics of IMP- "
+section "Small step semantics of IMP-- "
 
-subsection "Small step semantics definition"
+subsection "IMP-- Small step semantics definition"
 theory IMP_Minus_Minus_Small_StepT  imports Main IMP_Minus_Minus_Com "../IMP-/Rel_Pow" begin
 
 paragraph "Summary"
-text\<open>We give small step semantics with time for IMP-. 
-Based on the small step semantics definition time for IMP\<close>
+text\<open>We give small step semantics with time for IMP--. 
+Based on the small step semantics definition time for IMP-\<close>
 
 type_synonym state = "vname \<rightharpoonup> bit"
 
@@ -125,6 +125,12 @@ proof -
     by (metis (mono_tags, lifting) \<open>map_of (map (\<lambda>v. (v, Zero)) (remdups x1)) \<subseteq>\<^sub>m is1\<close> domI map_le_def)
   thus ?thesis by simp
 qed
+
+subsection \<open>Functional definition\<close>
+
+text \<open>We also give a definition of small step semantics as a function rather than as a relation. 
+    We show the equivalence between the two definitions. We also give some useful Lemmas to show
+    that IMP-- terminates in some state. \<close>
 
 fun small_step_fun:: "com * state \<Rightarrow> com * state" where
 "small_step_fun (SKIP, s) = (SKIP, s)" |
