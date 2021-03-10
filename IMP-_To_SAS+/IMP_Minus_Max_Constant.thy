@@ -1,10 +1,13 @@
 \<^marker>\<open>creator Florian Keßler\<close>
 
-section "IMP- max constant"
+section "IMP- Max Constant"
 
 theory IMP_Minus_Max_Constant 
   imports "../IMP-/Small_StepT" 
-begin 
+begin
+
+text \<open>We define functions to derive the constant with the highest value and enumerate all variables 
+  in IMP- programs. \<close>
 
 fun atomExp_to_constant:: "atomExp \<Rightarrow> nat" where
 "atomExp_to_constant (V var) = 0" |

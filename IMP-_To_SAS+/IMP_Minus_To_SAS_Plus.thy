@@ -11,7 +11,9 @@ theory IMP_Minus_To_SAS_Plus
 begin
 
 text \<open> We combine our reduction steps from IMP- to IMP--, then from IMP-- to SAS++ and finally 
-  from SAS++ to SAS+ to give a reduction IMP- to SAS+ \<close> 
+  from SAS++ to SAS+ to give a reduction IMP- to SAS+. We then proceed to show the correctness of
+  this reduction, by combining the correctness results we have derived for the individual parts
+  of the reduction. \<close> 
 
 type_synonym SAS_problem = "(IMP_Minus_Minus_To_SAS_Plus_Plus_State_Translations.variable, 
   IMP_Minus_Minus_To_SAS_Plus_Plus_State_Translations.domain_element) problem" 

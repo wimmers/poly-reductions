@@ -1,11 +1,14 @@
 \<^marker>\<open>creator Bilel Ghorbel, Florian Kessler\<close>
 
-section "IMP- A reduced imperative language"
+section "IMP-- An even more reduced imperative language"
 
 theory IMP_Minus_Minus_Com imports Main begin
 
 paragraph "Summary"
-text\<open>Syntax definition for IMP-. Based on the syntax definition of IMP\<close>
+text\<open>Syntax definition for IMP--. Based on the syntax definition of IMP-. Compared to IMP-, 
+  we get rid of arithmetic expressions. Instead, we can only assign bit values to registers. 
+  For the IF and WHILE conditions, we add the possibility to specify a list of registers, such that
+  the condition is considered True if at least one of the registers is non-zero. \<close>
 
 datatype bit = Zero | One
 
