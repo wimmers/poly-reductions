@@ -1,15 +1,63 @@
+\<^marker>\<open>creator Bilel Ghorbel\<close>
+chapter \<open>Abstractions over IMP-\<close>
+paragraph \<open>Summary\<close>
+text \<open>We define an abstraction layer over our computation model 
+      to be able to define complexity classes easily.
+
+The theory contains definitions of e.g. computing, verifying w.r.t IMP- 
+\<close>
 theory Abstractions
   imports  "../IMP-/Big_StepT"
 begin
+paragraph \<open>Definitions\<close>
+text \<open>
+\<bullet> Formal Languages
+\<bullet> Computing a certain result for a certain input
+\<bullet> Verifying a certain certificate for a certain value with a specific result
+\<bullet> Conserving a certificate
+\<bullet> Decider program for a language
+\<bullet> Verifier program for a language
+\<close>
+paragraph \<open>Formal Languages\<close>
+text \<open>In IMP- we work on natural numbers.
+      Hence words are actually natural numbers instead of sequences of symbols
+      and formal languages as sets of them
+      This is admissible due to the existence of bijections 
+      between natural numbers and symbol sequences \<close>
 type_synonym lang = "nat set"
 
+paragraph \<open>Register conventions\<close>
+text \<open>
+\<bullet> The input for a program (indepentently of its purpose e.g: 
+computing a function, decision, verification) is expected to be in the register called ''input''
+\<bullet> The certificate (if needed) is expected to be found in the register ''certificate''
+\<bullet> The output/result/main result is expected to be found in the same register as the input.
+This allows to easily compose to obtain computing code of the composition of computable functions
+just by sequencing their computing codes
+\<close>
+paragraph \<open>Certificate conserving\<close>
+text \<open>The code always terminates with a final state that 
+has the same certificate register content as the initial state.\<close> 
 definition cons_certif :: "com \<Rightarrow> bool" where
 "cons_certif c = (\<forall>s t s'. (c,s) \<Rightarrow>\<^bsup> t \<^esup> s' \<longrightarrow> s ''certificate'' = s' ''certificate'')"
+
+subsection \<open>Computing\<close>
+paragraph \<open>Definition\<close>
+text \<open>A code c computes for an input x a result r if it always terminates with the result r 
+given the initial input is x.\<close>
 
 definition comp :: "com \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> bool" where
 "comp c x r \<equiv> (\<forall>s. s ''input'' = x \<longrightarrow> (\<exists>t s'. (c,s) \<Rightarrow>\<^bsup>t\<^esup> s' \<and> s' ''input'' = r ))"
 
+text \<open>Using computation, every code defines a binary relation between inputs and results\<close>
 
+
+paragraph \<open>Computing determinism\<close>
+text \<open>Thanks to the determinism of IMP-, computing relations are deterministic.
+i.e. every code c computes for every input x either exactly one result, or no result
+
+You can think also of it as, that the computing relation for every fixed code c,
+is a partial function\<close>
 lemma comp_det: "\<lbrakk>comp c x r ; comp c x r'\<rbrakk> \<Longrightarrow> r= r'"
 proof -
   assume asm1:"comp c x r"
