@@ -49,14 +49,16 @@ given the initial input is x.\<close>
 definition comp :: "com \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> bool" where
 "comp c x r \<equiv> (\<forall>s. s ''input'' = x \<longrightarrow> (\<exists>t s'. (c,s) \<Rightarrow>\<^bsup>t\<^esup> s' \<and> s' ''input'' = r ))"
 
-text \<open>Using computation, every code defines a binary relation between inputs and results\<close>
+text \<open>Using computation, every code defines a binary relation between inputs and results.
+We could say that `comp c` is the computed relation of the code c.
+\<close>
 
 
 paragraph \<open>Computing determinism\<close>
-text \<open>Thanks to the determinism of IMP-, computing relations are deterministic.
+text \<open>Thanks to the determinism of IMP-, computed relations are deterministic.
 i.e. every code c computes for every input x either exactly one result, or no result
 
-You can think also of it as, that the computing relation for every fixed code c,
+You can think also of it as, that, comp c, the computed relation for every fixed code c,
 is a partial function\<close>
 lemma comp_det: "\<lbrakk>comp c x r ; comp c x r'\<rbrakk> \<Longrightarrow> r= r'"
 proof -
@@ -71,8 +73,8 @@ proof -
   thus "r=r'" using s1_def s2_def by simp
 qed
 
-definition computedFun :: "com \<Rightarrow> nat \<Rightarrow> nat" where 
-"computedFun c x \<equiv> THE r. comp c x r "
+paragraph \<open>Computing: composition and sequencing\<close>
+text \<open> By sequencing two codes, we compose the computed partial functions.\<close>
 lemma comp_comp:
   assumes "comp f x y" "comp g y z"
   shows "comp (f;;g) x z"
@@ -91,16 +93,55 @@ lemma comp_comp:
   qed
 qed
 
+text \<open>The property is uni-directional. i.e: comp g o comp f \<subseteq> comp (f;;g) \<close>
+(*We could prove it actually! How does relation composition work*)
 
+subsection \<open>Decision problems\<close>
+paragraph \<open>Convention\<close>
+text \<open>Decision programs are programs that compute a boolean logical result 
+(hence a decision) given an input.
+IMP- does only support natural number values. But we can make our own interpretation of the result
+r::nat as a boolean value. 
+
+Theoretically, every predicate in HOL over the result r is an admissible interpretation.
+Yet we choose the following convention from now on:
+\<bullet> the result r is interpreted as True iff. r = 0
+
+This convention goes in sync with our semantics that check for equality to 0 exclusively 
+for branching conditions.
+
+Generally programming languages tend to interpret non-zero values as True rather than zero.
+Yet this a design choice since the negation could be implemented using a constant time program.
+To avoid complications for proving Cook-Levin, we use 0 for True and non-zero values for False 
+\<close>
+
+paragraph \<open>Deciding a language: definition\<close>
+text \<open>A decider for a language L should for every input x, compute a unique result (otherwise 
+it is depending on other variables).
+
+The result/decision is True iff x \<in> L .\<close>
 definition decides :: "com \<Rightarrow> lang \<Rightarrow> bool"
   where "decides c L  \<equiv> (\<forall>x. \<exists>r. comp c x r \<and> ( x\<in>L \<longleftrightarrow> r = 0))" 
 
+subsection \<open>Verification\<close>
+paragraph \<open>Definition\<close>
+text \<open>In contrast to computing, verifying is about checking the correspondence 
+of a certificate to some input and returns some result.
+
+Differently to some literature, we do not restrict the result to a 2-value domain.
+A result of a verification could be any value (to be interpreted as Boolean as mentioned before
+if needed).
+Hence a verification could be regarded as a 2-parameter computation.
+ i.e. a computation returning a result depending on both input and certificate, not just input.
+The formal definition is totally analogous.
+Every code forms a ternary relation.\<close>
 definition verif :: "com \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> bool" where
 "verif c x z r \<equiv> (\<forall>s. s ''input'' = x \<and> s ''certificate'' = z \<longrightarrow>
                   (\<exists>t s'. (c,s)\<Rightarrow>\<^bsup>t\<^esup> s' \<and> s' ''input'' = r ))"
-definition rev_verif:: "com \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> bool" where 
-"rev_verif c x z r \<equiv>  (\<forall>s. s ''input'' = r \<longrightarrow> 
-                   (\<exists>t s'.(c,s)\<Rightarrow>\<^bsup>t\<^esup> s' \<and> s' ''input'' = x \<and> s' ''certificate''= z ))"
+
+
+paragraph \<open>Verification determinism\<close>
+text \<open>Analogously to computing, verifying is determinstic\<close>
 lemma verif_det:
   assumes "verif f x z r" "verif f x z r'"
   shows "r = r'"
@@ -114,6 +155,10 @@ proof -
   ultimately show  "r=r'"  using big_step_t_determ2 by blast   
 qed
 
+paragraph \<open>Sequencing computation and verification\<close>
+text \<open>Sequencing a computation and verification gives a verification.
+Analogously to composing two compuations, the composition of a computation's and a verification's 
+relation is a subset of the relation of their sequenced codes.\<close>
 lemma comp_verif:
   assumes "comp f x y" "verif g y z r" "cons_certif f"
   shows "verif (f;;g) x z r"
@@ -150,8 +195,58 @@ proof
       using assms(2) comp_def by blast
     show "\<exists>t s'. (v;; f, s) \<Rightarrow>\<^bsup> t \<^esup> s' \<and> s' ''input'' = r'" using def1 def2 by blast
   qed
-  qed
- 
+qed
+subsection \<open>Verifier programs\<close>
+paragraph \<open>Definition\<close>
+text \<open>After defining verification on the word/natural number level. We define verification on 
+the language level.
+
+A verifier for a language L should return a unique verification result/decision r 
+for every combination of input x and certificate z.
+This result should say whether this certificate z 
+is valid for that input x.(result is to be interpreted as a boolean)
+
+Every input x has at least one corresponding valid certificate iff. x \<in> L\<close>
+
+
+definition is_verif :: "com \<Rightarrow> lang \<Rightarrow> bool" where
+"is_verif c L  \<equiv> (\<forall>x z. \<exists>r. verif c x z r) \<and> (\<forall>x. (x\<in>L \<longleftrightarrow> (\<exists>z. verif c x z 0))) "
+
+
+subsection \<open>Reverse verification\<close>
+
+paragraph \<open>Motivation\<close>
+text \<open>Although not a common term in computation theory. Reverse modification is useful later 
+to define NP using P.
+\<close>
+
+paragraph \<open>Definition\<close>
+text \<open>In reverse verification, rev_verif c x z r means that code c will always return
+ x in input and z in certificate if fed r in input.
+
+ Since it is generally used simultaneously to verif. We kept the same order of the arguments\<close>
+
+definition rev_verif:: "com \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> bool" where 
+"rev_verif c x z r \<equiv>  (\<forall>s. s ''input'' = r \<longrightarrow> 
+                   (\<exists>t s'.(c,s)\<Rightarrow>\<^bsup>t\<^esup> s' \<and> s' ''input'' = x \<and> s' ''certificate''= z ))"
+
+paragraph \<open>Determinism\<close>
+text \<open>Same as before\<close>
+lemma rev_verif_det: 
+  assumes "rev_verif c x z r" 
+  assumes "rev_verif c x' z' r"
+  shows "x=x' \<and> z=z'"
+proof -
+  obtain s where "s = <''input'' := r>" by auto
+  hence r_def: "s ''input'' = r" by auto
+  obtain s1 where s1_def:"\<exists>t. (c,s) \<Rightarrow>\<^bsup> t \<^esup> s1" "s1 ''input'' = x" "s1 ''certificate'' = z"
+    using assms(1) rev_verif_def r_def by blast
+  obtain s2 where s2_def:"\<exists>t. (c,s) \<Rightarrow>\<^bsup> t \<^esup> s2" "s2 ''input'' = x'" "s2 ''certificate'' = z'" 
+    using assms(2)rev_verif_def r_def by blast
+  from s1_def s2_def Big_StepT.big_step_t_determ2 show "x=x' \<and> z=z'" by blast
+qed
+
+paragraph \<open>Compostion properties\<close>
 lemma verif_rev_verif:
   assumes "rev_verif c1 x z r0"
   assumes "verif c2 x z r"
@@ -167,22 +262,6 @@ proof (auto simp add:comp_def verif_def rev_verif_def)
   then show  "\<exists>t s'. (c1;; c2, s) \<Rightarrow>\<^bsup> t \<^esup> s' \<and> s' ''input'' = r" using def2(2) by blast
 qed 
 
-lemma rev_verif_det: 
-  assumes "rev_verif c x z r" 
-  assumes "rev_verif c x' z' r"
-  shows "x=x' \<and> z=z'"
-proof -
-  obtain s where "s = <''input'' := r>" by auto
-  hence r_def: "s ''input'' = r" by auto
-  obtain s1 where s1_def:"\<exists>t. (c,s) \<Rightarrow>\<^bsup> t \<^esup> s1" "s1 ''input'' = x" "s1 ''certificate'' = z"
-    using assms(1) rev_verif_def r_def by blast
-  obtain s2 where s2_def:"\<exists>t. (c,s) \<Rightarrow>\<^bsup> t \<^esup> s2" "s2 ''input'' = x'" "s2 ''certificate'' = z'" 
-    using assms(2)rev_verif_def r_def by blast
-  from s1_def s2_def Big_StepT.big_step_t_determ2 show "x=x' \<and> z=z'" by blast
-qed
-
-definition is_verif :: "com \<Rightarrow> lang \<Rightarrow> bool" where
-"is_verif c L  \<equiv> (\<forall>x z. \<exists>r. verif c x z r) \<and> (\<forall>x. (x\<in>L \<longleftrightarrow> (\<exists>z r. verif c x z r \<and> r = 0))) "
   
 
 end
