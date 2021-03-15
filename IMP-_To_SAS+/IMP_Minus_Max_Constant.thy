@@ -16,7 +16,10 @@ fun atomExp_to_constant:: "atomExp \<Rightarrow> nat" where
 fun aexp_max_constant:: "AExp.aexp \<Rightarrow> nat" where
 "aexp_max_constant (A a) = atomExp_to_constant a" |
 "aexp_max_constant (Plus a b) = max (atomExp_to_constant a) (atomExp_to_constant b)" |
-"aexp_max_constant (Sub a b) = max (atomExp_to_constant a) (atomExp_to_constant b)"
+"aexp_max_constant (Sub a b) = max (atomExp_to_constant a) (atomExp_to_constant b)" |
+"aexp_max_constant (Parity a) = atomExp_to_constant a" | 
+"aexp_max_constant (RightShift a) = atomExp_to_constant a"
+
 
 fun max_constant :: "com \<Rightarrow> nat" where
 "max_constant (SKIP) = 0" |
@@ -59,6 +62,21 @@ next
     using Max_range_le_then_element_le 
     by (metis gr_implies_not0 lessI less_imp_diff_less less_imp_le_nat less_le_trans 
         linorder_neqE_nat n_less_m_mult_n numeral_2_eq_2)+
+next
+  case (Parity x4)
+  then show ?thesis apply(cases x4) 
+    using assms Max_range_le_then_element_le[OF \<open>finite (range s)\<close>, where ?x=x] 
+    apply(auto simp: algebra_simps)
+    by (metis One_nat_def Suc_lessI less_Suc_eq less_one mod_mult_self1_is_0 mult_eq_0_iff
+        neq0_conv not_mod_2_eq_0_eq_1 numeral_2_eq_2)
+next
+  case (RightShift x5)
+  then show ?thesis 
+    apply(cases x5) 
+    using assms Max_range_le_then_element_le[OF \<open>finite (range s)\<close>, where ?x=x] 
+    apply(auto simp: algebra_simps)
+    by (metis less_mult_imp_div_less max.strict_coboundedI1 max_0_1 max_less_iff_conj 
+        mult_numeral_1_right nat_mult_max_right one_eq_numeral_iff)
 qed
 
 fun atomExp_var:: "atomExp \<Rightarrow> vname list" where

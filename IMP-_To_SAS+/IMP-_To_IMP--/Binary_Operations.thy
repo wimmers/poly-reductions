@@ -79,17 +79,25 @@ lemma binary_assign_constant_variables: "set (enumerate_variables (binary_assign
    apply(auto simp: set_enumerate_variables_seq)
   by(auto simp: enumerate_variables_def)
 
+lemma result_of_binary_assign_constant_on_translated_state_aux:
+  assumes "n > 0"
+  shows "t_small_step_fun (3 * n) (binary_assign_constant n v x, 
+    IMP_Minus_State_To_IMP_Minus_Minus s n)
+    = (SKIP, IMP_Minus_State_To_IMP_Minus_Minus (s(v := x)) n)"
+  apply(subst result_of_binary_assign_constant)
+  using assms 
+  by (auto simp: fun_eq_iff IMP_Minus_State_To_IMP_Minus_Minus_def 
+      IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b_def split: option.splits)
+
 lemma result_of_binary_assign_constant_on_translated_state:
-  assumes "n > 0" "x < 2 ^ n" 
+  assumes "n > 0"
   shows "t_small_step_fun (50 * (n + 1)) (binary_assign_constant n v x, 
     IMP_Minus_State_To_IMP_Minus_Minus s n)
     = (SKIP, IMP_Minus_State_To_IMP_Minus_Minus (s(v := x)) n)"
   apply(rule t_small_step_fun_increase_time[where ?t="3*n"])
   apply simp
-  apply(subst result_of_binary_assign_constant)
-  using assms 
-  by (auto simp: fun_eq_iff IMP_Minus_State_To_IMP_Minus_Minus_def 
-      IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b_def split: option.splits)
+  apply(subst result_of_binary_assign_constant_on_translated_state_aux)
+  using assms by auto
 
 fun copy_var_to_operand:: "nat \<Rightarrow> char \<Rightarrow> vname \<Rightarrow> IMP_Minus_Minus_com" where
 "copy_var_to_operand 0 op v = SKIP" |
@@ -480,6 +488,28 @@ lemma binary_subtractor_correct:
       seq_terminates_when'[OF copy_atom_to_operand_a_result copy_atom_to_operand_b_result]]]] 
   assms 
   by(fastforce simp: binary_subtractor_def IMP_Minus_State_To_IMP_Minus_Minus_def)
+
+fun binary_parity:: "nat \<Rightarrow> vname \<Rightarrow> AExp.atomExp \<Rightarrow> IMP_Minus_Minus_com" where
+"binary_parity n v (N a) = binary_assign_constant n v (a mod 2)" |
+"binary_parity n v (V a) = IF [var_bit_to_var (a, 0)]\<noteq>0 THEN
+    binary_assign_constant n v 1
+  ELSE
+    binary_assign_constant n v 0"
+
+lemma binary_parity_correct:
+  assumes "n > 0"
+  shows "t_small_step_fun (50 * (n + 1)) (binary_parity n v a, 
+    IMP_Minus_State_To_IMP_Minus_Minus s n) 
+    = (SKIP, IMP_Minus_State_To_IMP_Minus_Minus (s(v := atomVal a s mod 2)) n)"
+  apply(cases a)
+   apply simp
+   apply(rule result_of_binary_assign_constant_on_translated_state[OF \<open>n > 0\<close>, simplified])
+  apply(auto simp: t_small_step_fun_terminate_iff)
+     apply(auto simp: t_small_step_fun_small_step_fun)
+  using t_small_step_fun_increase_time
+    [OF _ result_of_binary_assign_constant_on_translated_state_aux[OF \<open>n > 0\<close>]]
+  by(auto simp: IMP_Minus_State_To_IMP_Minus_Minus_def nth_bit_def nat_to_bit_eq_One_iff 
+      nat_to_bit_eq_Zero_iff split: if_splits)
 
 definition assignment_to_binary:: "nat \<Rightarrow> vname \<Rightarrow> AExp.aexp \<Rightarrow> IMP_Minus_Minus_com" where
 "assignment_to_binary n v aexp = (case aexp of
