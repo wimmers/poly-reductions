@@ -52,6 +52,9 @@ lemma set_enumerate_variables_while: "set (enumerate_variables (WHILE vs\<noteq>
 lemma enumerate_variables_assign[simp]: "enumerate_variables (x1 ::= x2) = [x1]"
   by(auto simp: enumerate_variables_def enumerate_subprograms_def)                  
 
+lemma enumerate_variables_SKIP[simp]: "enumerate_variables SKIP = []"
+  by(auto simp: enumerate_variables_def enumerate_subprograms_def)                  
+
 declare enumerate_subprograms_def[simp] 
 
 lemma c_in_all_subprograms_c[simp]: "c \<in> set (enumerate_subprograms c)" 
@@ -172,9 +175,8 @@ lemma small_step_fun_doesnt_add_variables:
   "set (enumerate_variables c1) \<subseteq> S 
   \<Longrightarrow> set (enumerate_variables (fst (small_step_fun (c1, s1)))) \<subseteq> S"
   apply(induction c1)
-  apply(auto simp: set_enumerate_variables_seq 
+  by(auto simp: set_enumerate_variables_seq 
       set_enumerate_variables_if set_enumerate_variables_while)
-  by(auto simp: enumerate_variables_def)
 
 lemma t_small_step_fun_restrict_variables: 
   "set (enumerate_variables c1) \<subseteq> S \<Longrightarrow> t_small_step_fun t (c1, s1 |` S) 

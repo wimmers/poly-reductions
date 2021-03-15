@@ -86,7 +86,9 @@ fun atomExp_var:: "atomExp \<Rightarrow> vname list" where
 fun aexp_vars:: "AExp.aexp \<Rightarrow> vname list" where
 "aexp_vars (A a) = atomExp_var a" |
 "aexp_vars (Plus a b) = (atomExp_var a) @ (atomExp_var b)" |
-"aexp_vars (Sub a b) = (atomExp_var a) @ (atomExp_var b)"
+"aexp_vars (Sub a b) = (atomExp_var a) @ (atomExp_var b)" |
+"aexp_vars (Parity a) = atomExp_var a" |
+"aexp_vars (RightShift a) = atomExp_var a"
 
 fun all_variables :: "com \<Rightarrow> vname list" where
 "all_variables (SKIP) = []" |

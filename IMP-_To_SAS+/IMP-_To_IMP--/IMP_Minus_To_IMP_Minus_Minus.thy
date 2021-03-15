@@ -264,7 +264,7 @@ subsection \<open>Variables\<close>
 text \<open>We give a few lemmas that specify what variables appear in translated IMP-- programs. \<close>
 
 lemma IMP_Minus_To_IMP_Minus_Minus_variables:
-  "set (enumerate_variables (IMP_Minus_To_IMP_Minus_Minus c n)) \<subseteq> 
+  "n > 0 \<Longrightarrow> set (enumerate_variables (IMP_Minus_To_IMP_Minus_Minus c n)) \<subseteq> 
     { var_bit_to_var (w, i) | w i. i < n \<and> w \<in> set (IMP_Minus_Max_Constant.all_variables c) }
     \<union> { operand_bit_to_var (op, i) | op i. i < n \<and> (op = CHR ''a'' \<or> op = CHR ''b'') }
     \<union> { ''carry'' }" 
@@ -302,7 +302,8 @@ lemma card_union_le_intro: "card U \<le> a \<Longrightarrow> card W \<le> b \<Lo
   using card_Un_le[where ?A=U and ?B=W] by simp
 
 lemma IMP_Minus_To_IMP_Minus_Minus_variables_length:
-  "length (enumerate_variables (IMP_Minus_To_IMP_Minus_Minus c n)) \<le>
+  assumes "n > 0"
+  shows "length (enumerate_variables (IMP_Minus_To_IMP_Minus_Minus c n)) \<le>
     (n + 1) * (IMP_Minus_Max_Constant.num_variables c) + 2 * n + 1" 
 proof - 
   have "finite { var_bit_to_var (w, i) | w i. i < n \<and> w \<in> set (IMP_Minus_Max_Constant.all_variables c) } 
@@ -340,14 +341,14 @@ proof -
     by(auto simp: card_union_le intro!: card_insert_le_m1 card_union_le_intro)
   hence "card (set (enumerate_variables (IMP_Minus_To_IMP_Minus_Minus c n)))
     \<le> (n + 1) * (num_variables c) + 2 * n + 1"
-    using card_mono[OF f IMP_Minus_To_IMP_Minus_Minus_variables] by simp
+    using card_mono[OF f IMP_Minus_To_IMP_Minus_Minus_variables[OF \<open>n > 0\<close>]] by simp
   thus ?thesis by(simp add:  distinct_card[OF enumerate_variables_distinct])
 qed
 
-lemma var_bit_in_IMP_Minus_Minus_variables_then_bit_less_n: "var_bit_to_var (a, b)
+lemma var_bit_in_IMP_Minus_Minus_variables_then_bit_less_n: "n > 0 \<Longrightarrow> var_bit_to_var (a, b)
            \<in> set (enumerate_variables (IMP_Minus_To_IMP_Minus_Minus c n)) \<Longrightarrow> b < n" 
   apply(frule set_mp[OF IMP_Minus_To_IMP_Minus_Minus_variables])
-  by simp
+  by auto
 
 lemma var_bit_in_IMP_Minus_Minus_variables: "v \<in> set (IMP_Minus_Max_Constant.all_variables c)
   \<Longrightarrow> i < n \<Longrightarrow> var_bit_to_var (v, i) \<in>  set (enumerate_variables (IMP_Minus_To_IMP_Minus_Minus c n))"
@@ -355,7 +356,9 @@ lemma var_bit_in_IMP_Minus_Minus_variables: "v \<in> set (IMP_Minus_Max_Constant
   by(auto simp: assignment_to_binary_def binary_adder_def set_enumerate_variables_seq 
       copy_atom_to_operand_variables adder_def com_list_to_seq_variables full_adder_variables
       binary_subtractor_def subtract_handle_underflow_variables set_enumerate_variables_if
-      var_bit_list_def set_enumerate_variables_while
-      split: aexp.splits)
+      var_bit_list_def set_enumerate_variables_while binary_parity_variables
+      binary_right_shift_def assign_shifted_bits_and_zero_most_significant_def
+      assign_shifted_bits_variables
+      split: aexp.splits atomExp.splits)
 
 end

@@ -144,25 +144,6 @@ lemma var_to_operand_bit_var_bit_to_var[simp]: "var_to_operand_bit (var_bit_to_v
 lemma var_to_var_bit_operand_bit_to_var[simp]: "var_to_var_bit (operand_bit_to_var (c, k)) = None" 
   by (simp add: var_to_var_bit_def)
 
-lemma var_to_operand_bit_non_zero_indicator[simp]: 
-  "var_to_operand_bit (CHR ''?'' # CHR ''$'' # v) = None"
-  apply(auto simp: var_to_operand_bit_def)
-  apply(rule ccontr)
-  apply simp
-  apply(drule arg_cong[where ?f=set])
-  by simp
-
-lemma operand_bit_to_var_ne_non_zero_indicator[simp]: 
-  "operand_bit_to_var (c, k) \<noteq> CHR ''?'' # CHR ''$'' # v" 
-  apply(induction k)
-   apply auto
-proof -
-  fix ka :: nat
-  assume "operand_bit_to_var (CHR ''?'', ka) = CHR ''$'' # v"
-  then have "CHR ''?'' = CHR ''$''" by (metis hd_of_operand_bit_to_var list.sel(1))
-  then show False by force
-qed
-
 lemma operand_bit_to_var_non_empty: "operand_bit_to_var (op, n) \<noteq> []"
   by (induction n) auto
 
@@ -175,6 +156,14 @@ proof
     \<and> set (operand_bit_to_var (op, a)) = set (operand_bit_to_var (op', b))" by simp
   thus "op = op' \<and> a = b" by auto
 qed auto
+
+lemma operand_bit_to_var_eq_operand_bit_to_var_iff'[simp]:
+  "op # operand_bit_to_var (op, i) = operand_bit_to_var (op', j)
+    \<longleftrightarrow> (op = op' \<and> i + 1 = j)" 
+proof -
+  have "op # operand_bit_to_var (op, i) =  operand_bit_to_var (op, i + 1)" by simp
+  thus ?thesis using operand_bit_to_var_eq_operand_bit_to_var_iff by presburger
+qed
 
 lemma var_bit_to_var_neq_operand_bit_to_var[simp]: 
   "var_bit_to_var (v, a) \<noteq> operand_bit_to_var (op, b)"
@@ -221,6 +210,17 @@ lemma IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b_of_operand_a[simp]:
   "j < k \<Longrightarrow> IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b s k a b 
   (operand_bit_to_var (CHR ''a'', j)) = Some (nth_bit a j)"
   by(auto simp: IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b_def)
+
+lemma IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b_of_operand_a'[simp]: 
+  "j + 1 < k \<Longrightarrow> IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b s k a b 
+  (CHR ''a'' # operand_bit_to_var (CHR ''a'', j)) = Some (nth_bit a (j + 1))"
+proof-
+  assume "j + 1 < k"
+  moreover have "CHR ''a'' # operand_bit_to_var (CHR ''a'', j) = operand_bit_to_var (CHR ''a'', j + 1)" 
+    by simp
+  ultimately show ?thesis 
+    using IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b_of_operand_a by presburger
+qed
 
 lemma IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b_of_operand_b[simp]: 
   "j < k \<Longrightarrow> IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b s k a b 

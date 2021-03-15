@@ -105,6 +105,8 @@ proof -
   let ?sas_plus_plus_problem 
     = "imp_minus_minus_to_sas_plus (IMP_Minus_To_IMP_Minus_Minus c ?n) ?I ?G"
 
+  have "?n > 0" by simp
+
   have "t_small_step_fun (100 * ?n * (t - 1) + 50) 
       (IMP_Minus_To_IMP_Minus_Minus c ?n, IMP_Minus_State_To_IMP_Minus_Minus s1 ?n)
      = (SKIP, IMP_Minus_State_To_IMP_Minus_Minus s2 ?n)" 
@@ -125,13 +127,13 @@ proof -
           IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b_def 
            IMP_Minus_State_To_IMP_Minus_Minus_partial_def map_le_def map_comp_def dom_def
            split!: option.splits if_splits char.splits bool.splits)
-    apply(frule var_bit_in_IMP_Minus_Minus_variables_then_bit_less_n)
+    apply(frule var_bit_in_IMP_Minus_Minus_variables_then_bit_less_n[OF \<open>?n > 0\<close>, simplified])
     by simp
   hence "?G \<subseteq>\<^sub>m ?s2'" by (auto simp: map_le_def)
 
   have "?I v = Some y \<Longrightarrow> ?s1' v = Some y" for v y
     apply auto
-    apply(drule set_mp[OF IMP_Minus_To_IMP_Minus_Minus_variables])
+    apply(drule set_mp[OF IMP_Minus_To_IMP_Minus_Minus_variables[OF \<open>?n > 0\<close>, simplified]])
     apply(cases "v = ''carry''")
     using \<open>I \<subseteq>\<^sub>m Some \<circ> s1\<close>
      apply(auto simp: IMP_Minus_State_To_IMP_Minus_Minus_partial_def 
@@ -151,7 +153,7 @@ proof -
     apply- apply(rule exE[OF imp_minus_minus_to_sas_plus_plus[OF \<open>(?c', ?s1') \<rightarrow>\<^bsup>t'\<^esup> (SKIP, ?s2')\<close>,
             where ?I="?I" and ?G="?G"]])
        apply auto
-      apply(drule set_mp[OF IMP_Minus_To_IMP_Minus_Minus_variables])
+      apply(drule set_mp[OF IMP_Minus_To_IMP_Minus_Minus_variables[OF \<open>?n > 0\<close>, simplified]])
       using \<open>?I  \<subseteq>\<^sub>m ?s1'\<close> \<open>?G \<subseteq>\<^sub>m ?s2'\<close> by(auto simp: IMP_Minus_State_To_IMP_Minus_Minus_def 
         IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b_def)
 
@@ -206,7 +208,9 @@ proof -
     using \<open>dom I \<subseteq> set (IMP_Minus_Max_Constant.all_variables c)\<close> 
       \<open>dom G \<subseteq> set (IMP_Minus_Max_Constant.all_variables c)\<close>
     finite_set by(auto simp: finite_subset intro!: finite_ran)
-  
+
+  have "?n > 0" by simp 
+
   obtain plan' where "length plan' \<le> length plan
     \<and> is_serial_solution_for_problem_sas_plus_plus (imp_minus_minus_to_sas_plus ?c' ?I ?G) plan'" 
     using SAS_Plus_To_SAS_Plus_Plus 
@@ -242,7 +246,8 @@ proof -
         using \<open>v \<in> dom ?I\<close> by(auto simp: map_comp_def IMP_Minus_initial_to_IMP_Minus_Minus_def 
             IMP_Minus_State_To_IMP_Minus_Minus_partial_def
             IMP_Minus_State_To_IMP_Minus_Minus_partial_of_operand_bit_to_var 
-            dest!: set_mp[OF IMP_Minus_To_IMP_Minus_Minus_variables] 
+            var_bit_to_var_neq_operand_bit_to_var[symmetric]
+            dest!: set_mp[OF IMP_Minus_To_IMP_Minus_Minus_variables[OF \<open>?n > 0\<close>, simplified]] 
             split: option.splits char.splits bool.splits)
     next
       case False

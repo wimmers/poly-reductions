@@ -19,6 +19,9 @@ definition nth_bit:: "nat \<Rightarrow> nat \<Rightarrow> bit" where
 lemma nth_bit_of_zero[simp]: "nth_bit 0 n = Zero" 
   by (induction n) (auto simp: nth_bit_def)
 
+lemma le_2_to_the_n_then_nth_bit_zero: "x < 2 ^ n \<Longrightarrow> nth_bit x n = Zero" 
+  sorry
+
 fun nth_carry:: "nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> bit" where
 "nth_carry 0 a b = (if (nth_bit a 0 = One \<and> nth_bit b 0 = One) then One else Zero)" | 
 "nth_carry (Suc n) a b = (if (nth_bit a (Suc n) = One \<and> nth_bit b (Suc n) = One) 
@@ -87,6 +90,9 @@ lemma nth_carry_sub_no_underflow: "a \<ge> b \<Longrightarrow> a < 2 ^ n \<Longr
 
 lemma nth_bit_add_out_of_range: "a < 2 ^ n \<Longrightarrow> j < n \<Longrightarrow> nth_bit (2 ^ n + a) j = nth_bit a j" 
   sorry
+
+lemma div2_is_right_shift: "nth_bit (x div 2) n = nth_bit x (Suc n)" 
+  by(auto simp: nth_bit_def)
 
 fun bit_list_to_nat:: "bit list \<Rightarrow> nat" where
 "bit_list_to_nat [] = 0" |
