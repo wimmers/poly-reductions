@@ -118,6 +118,14 @@ lemma move_exponent_to_rhs: "c < (2 :: nat) ^ (a - b) \<Longrightarrow> 2 ^ b * 
       linordered_semidom_class.add_diff_inverse mult_eq_0_iff order.asym power.simps(1) 
       power_add power_eq_0_iff zero_less_diff zero_neq_numeral)
 
+subsection \<open>Correctness\<close>
+
+text \<open>First direction of the correctness statement. We show that when an IMP- program run from a 
+      state where all values are bounded terminates in some state, then the translated IMP-- program 
+      started on the translated initial state will terminate in the translated final state, after 
+      a number of steps that is polynomially bigger than the number of steps the IMP- program run 
+      for. The constants appearing in the polynomial bound have no significance.  \<close>
+
 lemma IMP_Minus_To_IMP_Minus_Minus: 
   assumes 
     "(c1 :: IMP_Minus_com, s1) \<Rightarrow>\<^bsup>t\<^esup> s2"
@@ -130,7 +138,7 @@ lemma IMP_Minus_To_IMP_Minus_Minus:
      = (SKIP, IMP_Minus_State_To_IMP_Minus_Minus s2 n)"
 using assms proof(induction c1 s1 t s2 rule: big_step_t_induct)
   case (Assign x a s)
-  moreover hence "s v < (2 :: nat) ^ n" for all v
+  moreover hence "s v < (2 :: nat) ^ n" for v
     using Max_range_le_then_element_le[where ?s=s and ?x="2^n" and ?y=v] by fastforce
   ultimately show ?case
     apply(subst t_small_step_fun_increase_time[where ?t="50 * (n + 1)"])
@@ -228,6 +236,10 @@ next
     using bigstep_progress by(auto simp: algebra_simps)
 qed auto
 
+text \<open>The other direction. Observe that we assume that the IMP- program terminates after a limited
+      number of steps, that is, we don't show that termination of the IMP- program follows from
+      termination of the translated IMP-- program \<close>
+
 lemma IMP_Minus_Minus_To_IMP_Minus_aux:
   assumes "(c :: IMP_Minus_com, s1) \<Rightarrow>\<^bsup>t'\<^esup> s2"
     "t' \<le> t" 
@@ -246,6 +258,10 @@ proof -
     using assms by(fastforce intro: IMP_Minus_To_IMP_Minus_Minus dual_order.strict_trans2)
   thus ?thesis by(metis Pair_inject assms less_imp_le_nat not_less t_small_step_fun_increase_time)
 qed
+
+subsection \<open>Variables\<close>
+
+text \<open>We give a few lemmas that specify what variables appear in translated IMP-- programs. \<close>
 
 lemma IMP_Minus_To_IMP_Minus_Minus_variables:
   "set (enumerate_variables (IMP_Minus_To_IMP_Minus_Minus c n)) \<subseteq> 

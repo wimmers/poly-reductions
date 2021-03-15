@@ -5,6 +5,13 @@ section "SAS++ to SAS+"
 theory SAS_Plus_Plus_To_SAS_Plus imports "../SAS_Plus_Plus"
 begin 
 
+text \<open> We give a reduction from SAS++ to SAS+. The challenge here is to replace the semantics of 
+       SAS++ that permit initial states with some variables unspecified to be guessed by the solver,
+       by SAS+, where initial states need to specify all variables. We do this by constructing 
+       SAS+ problems where every solution plan is divided into two phases, first one where 
+       unspecified variables in the initial state are guessed, and the one where the SAS++ problem
+       is simulated. \<close>
+
 datatype 'v variable =  Var 'v | Stage
 datatype 'd domain_element = DE 'd | Init | NonInit
                                                                
@@ -92,7 +99,7 @@ lemma SAS_Plus_Plus_Operator_To_SAS_Plus_Operator_applicable[simp]:
       SAS_Plus_Plus_Operator_To_SAS_Plus_Operator_def)
     apply(simp_all add: map_le_def)
    apply(auto split: option.splits variable.splits)
-  apply(frule map_of_SomeD)
+    apply(frule map_of_SomeD)
     apply auto
   by (metis domI weak_map_of_SomeI)+
 
@@ -102,8 +109,8 @@ lemma SAS_Plus_Plus_Operator_To_SAS_Plus_Operator_execute[simp]:
   using map_of_SomeD
   apply(auto simp: SAS_Plus_Plus_State_To_SAS_Plus_def map_comp_def fun_eq_iff map_add_def 
       SAS_Plus_Plus_Operator_To_SAS_Plus_Operator_def split: option.splits variable.splits)
-  apply force+
-  prefer 9 using map_of_SomeD apply fastforce
+            apply force+
+          prefer 9 using map_of_SomeD apply fastforce
   using map_of_map_eq_None_iff map_of_map_eq_Some_iff
   by (metis (mono_tags, lifting) map_of_eq_None_iff map_of_map_eq_Some_iff option.simps 
       option.distinct domI  domIff option.simps)+
@@ -240,6 +247,8 @@ lemma length_concat_map[simp]:
   "length (concat (map (\<lambda>v. case m v of None \<Rightarrow> [f v] | Some _ \<Rightarrow> []) (remdups l))) \<le> length l"
   apply(induction l)
   by(auto split: option.splits)
+
+subsection \<open>Correctness\<close>
 
 lemma SAS_Plus_Plus_To_SAS_Plus:
   assumes "is_valid_problem_sas_plus_plus P" 

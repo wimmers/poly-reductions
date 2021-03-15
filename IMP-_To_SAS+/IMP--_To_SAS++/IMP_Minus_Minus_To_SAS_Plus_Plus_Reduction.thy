@@ -1,10 +1,14 @@
 \<^marker>\<open>creator Florian Keßler\<close>
 
-section "Reduction"
+section "IMP-- to SAS++ Reduction"
 
 theory IMP_Minus_Minus_To_SAS_Plus_Plus_Reduction 
   imports IMP_Minus_Minus_To_SAS_Plus_Plus_State_Translations IMP_Minus_Minus_Subprograms
 begin
+
+text \<open> We define a reduction from IMP-- to SAS++. The reduction is pretty straightforward, 
+      simulating a single step in IMP-- with a single operation in SAS++ in the obvious way,
+      given the translation of states from IMP-- to SAS++ defined earlier. \<close>
 
 definition domain :: "domain_element list" where
 "domain = [EV Zero, EV One]"
@@ -218,15 +222,6 @@ proof -
   then show ?thesis using assms in_set_precondition by simp
 qed
 
-lemma "op \<in> set (com_to_operators c1) 
-  \<Longrightarrow> (VN v, y) \<in> set (effect_of op) 
-  \<Longrightarrow> \<exists>x. (VN v, EV x) \<in> set (effect_of op)"
-  apply(induction c1 arbitrary: op)
-      apply(auto simp: domain_def Let_def split: if_splits)
-  by (metis (no_types, lifting) Pair_inject com_to_operators_variables_distinct effect_nonempty 
-      fst_of_effect in_set_conv_nth length_list_update map_of_eq_Some_iff nth_list_update 
-      update_preserve_distinct variable.distinct)
-
 lemma not_in_set_then_map_of_eq_None:
   "\<forall>y. (x, y) \<notin> set m \<Longrightarrow> (map_of m) x = None"
   apply(induction m)
@@ -330,8 +325,6 @@ proof -
   then show ?thesis
     by (metis (no_types, lifting) case_prodI2 list.pred_set)
 qed 
-
-lemma [simp]: "PCV x \<in> PCV ` y \<longleftrightarrow> x \<in> y" by auto
 
 lemma operators_valid: 
   assumes "cs = enumerate_subprograms c" and "c1 \<in> set cs"

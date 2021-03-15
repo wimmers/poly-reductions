@@ -1,10 +1,12 @@
 \<^marker>\<open>creator Florian Keßler\<close>
 
-section "Correctness"
+section "IMP-- to SAS++ Correctness"
 
 theory IMP_Minus_Minus_To_SAS_Plus_Plus_Correctness 
   imports IMP_Minus_Minus_To_SAS_Plus_Plus_Reduction "../SAS_Plus_Plus"
 begin 
+
+text \<open> We show correctness for the IMP-- to SAS++ reduction. \<close>
 
 lemma sas_plus_state_to_imp_minus_of_effect: 
   assumes "op \<in> set (com_to_operators c1)"
@@ -30,27 +32,26 @@ proof -
   ultimately show ?thesis using assms by (metis prod.collapse)
 qed
 
-lemma [simp]: "(imp_minus_state_to_sas_plus (c1, is1))(PC \<mapsto> PCV c2) 
+lemma imp_minus_state_to_sas_plus_update_PC[simp]: 
+  "(imp_minus_state_to_sas_plus (c1, is1))(PC \<mapsto> PCV c2) 
   = imp_minus_state_to_sas_plus (c2, is1)"
   by(auto simp: imp_minus_state_to_sas_plus_def option.case_eq_if)
 
-lemma [simp]: "sas_plus_state_to_imp_minus
+lemma sas_plus_state_to_imp_minus_of_lambda_PC[simp]: "sas_plus_state_to_imp_minus
   (\<lambda>a. if a = PC then Some (PCV c1)
        else ss a)
   = (c1, snd (sas_plus_state_to_imp_minus ss))"
   by (auto simp: imp_minus_state_to_sas_plus_def sas_plus_state_to_imp_minus_def map_comp_def)
 
-lemma [simp]: "sas_plus_state_to_imp_minus (ss(PC \<mapsto> PCV c)) 
+lemma sas_plus_state_to_imp_minus_of_PC_updated[simp]: 
+  "sas_plus_state_to_imp_minus (ss(PC \<mapsto> PCV c)) 
   = (c, snd (sas_plus_state_to_imp_minus ss))"
   by (auto simp: sas_plus_state_to_imp_minus_def map_comp_def)
 
-lemma [simp]: "(imp_minus_state_to_sas_plus (c, s) (VN x) = Some y) 
+lemma imp_minus_state_to_sas_plus_VN_eq_Some_Iff[simp]: 
+  "(imp_minus_state_to_sas_plus (c, s) (VN x) = Some y) 
   \<longleftrightarrow> ((map_option EV (s x)) = Some y)"
   by (simp add: imp_minus_state_to_sas_plus_def map_comp_Some_iff)
-
-lemma [simp]: "op \<in> set (com_to_operators c) 
-  \<Longrightarrow> (s ++ map_of (effect_of op)) (PC \<mapsto> PCV (pc_to_com (effect_of op))) = s ++ map_of (effect_of op)"
-  by (simp add: com_to_operators_variables_distinct fun_upd_idem)
 
 lemma imp_minus_state_to_sas_plus_add_effect: 
   assumes "op \<in> set (com_to_operators c)"
@@ -128,30 +129,7 @@ proof -
     using in_set_effect by blast
 qed
 
-lemma [simp]: "(\<lambda>a. if a = PC then Some (PCV c2) 
-   else (imp_minus_state_to_sas_plus (c1, is1)) a) 
-    = imp_minus_state_to_sas_plus (c2, is1)"
-proof -
-  have "(if a = PC then Some (PCV c2) else ((imp_minus_state_to_sas_plus (c1, is1)) a))
-    = (imp_minus_state_to_sas_plus (c2, is1)) a" for a
-    by (auto simp: imp_minus_state_to_sas_plus_def split: variable.splits)
-  then show ?thesis by auto
-qed
-
-lemma [simp]: 
-  assumes "y \<in> set domain" 
-  shows "imp_minus_state_to_sas_plus (c1, s)(VN x \<mapsto> y, PC \<mapsto> PCV z) =
-  imp_minus_state_to_sas_plus (z, s(x := (case y of EV y' \<Rightarrow> Some y' | _ \<Rightarrow> None)))"
-proof-
-  have "(imp_minus_state_to_sas_plus (c1, s)(VN x \<mapsto> y, PC \<mapsto> PCV z)) a =
-  imp_minus_state_to_sas_plus (z, s(x := (case y of EV y' \<Rightarrow> Some y' | _ \<Rightarrow> None))) a" for a
-    using assms apply(auto simp: imp_minus_state_to_sas_plus_def domain_def Let_def map_comp_def 
-          split: option.splits domain_element.splits)
-    by (metis option.inject variable.exhaust variable.simps)+
-  then show ?thesis by auto
-qed
-
-lemma [simp]: "(\<lambda>a. if a = PC then Some (PCV c2) 
+lemma imp_minus_state_to_sas_plus_update_VN[simp]: "(\<lambda>a. if a = PC then Some (PCV c2) 
    else (imp_minus_state_to_sas_plus (c1, is1)(VN x \<mapsto> EV y)) a) 
     = imp_minus_state_to_sas_plus (c2, is1(x \<mapsto> y))"
 proof -
@@ -161,41 +139,11 @@ proof -
   then show ?thesis by auto
 qed
 
-lemma [simp]: 
-  assumes "y \<in> set domain"
-  shows "sas_plus_state_to_imp_minus (imp_minus_state_to_sas_plus 
-  (x ::= A (V var), is1)(VN x \<mapsto> y, PC \<mapsto> PCV z)) =
-          (z, is1(x \<mapsto> (case y of EV y' \<Rightarrow> y')))"
-proof -
-  have "(snd (sas_plus_state_to_imp_minus (imp_minus_state_to_sas_plus
-  (x ::= A (V var), is1)(VN x \<mapsto> y, PC \<mapsto> PCV z)))) a =
-           (is1(x \<mapsto> (case y of EV y' \<Rightarrow> y'))) a" for a using assms
-    by (auto simp: imp_minus_state_to_sas_plus_def sas_plus_state_to_imp_minus_def option.case_eq_if
-        domain_def Let_def map_comp_def split: variable.splits)
-  then show ?thesis 
-    using assms by (auto simp: imp_minus_state_to_sas_plus_def sas_plus_state_to_imp_minus_def)
-qed
-
-lemma [simp]: " s(x := case z of EV z' \<Rightarrow> Some z' | _ \<Rightarrow> None) = (\<lambda>a. if a = x then Some y else s a)
-  \<longleftrightarrow> (z = EV y)"
-  apply(cases z)
-   apply(auto)
-   apply(smt fun_upd_same option.inject)
-  by (smt fun_upd_apply option.distinct)
-
-lemma [simp]: "(s(x \<mapsto> y) = (\<lambda>a. if a = x then Some z else s a))
-  \<longleftrightarrow> (y = z)"
-  apply(auto)
-  by (meson map_upd_Some_unfold)
-
-lemma [simp]: "[VN v \<mapsto> y, PC \<mapsto> x] \<subseteq>\<^sub>m s = (s PC = Some x \<and> s (VN v) = Some y)"
-  by (auto simp: map_le_def)
-
-lemma [simp]: "[VN v \<mapsto> y, PC \<mapsto> x] \<subseteq>\<^sub>m (imp_minus_state_to_sas_plus (c1, is)) 
+lemma VN_PC_map_le_iff[simp]: "[VN v \<mapsto> y, PC \<mapsto> x] \<subseteq>\<^sub>m (imp_minus_state_to_sas_plus (c1, is)) 
   = (x = PCV c1 \<and> map_option EV (is v) = Some y)"
   by (auto simp: map_le_def imp_minus_state_to_sas_plus_def option.case_eq_if map_comp_def)
 
-lemma [simp]: "op \<in> set (com_to_operators c1) \<Longrightarrow> 
+lemma operator_with_PC_updated_applicable_iff[simp]: "op \<in> set (com_to_operators c1) \<Longrightarrow> 
   map_of (precondition_of op)(PC \<mapsto> PCV c2) \<subseteq>\<^sub>m imp_minus_state_to_sas_plus (c2, s)
   \<longleftrightarrow>  map_of (precondition_of op) \<subseteq>\<^sub>m imp_minus_state_to_sas_plus (c1, s)"
   by(auto simp: imp_minus_state_to_sas_plus_def map_le_def)
@@ -221,10 +169,7 @@ proof -
     by (simp add: \<open>op \<in> set (com_to_operators x)\<close>)
 qed
 
-lemma [simp]: "[PC \<mapsto> x] \<subseteq>\<^sub>m s \<longleftrightarrow> (s PC = Some x)" 
-  by (auto simp: map_le_def)
-
-lemma [simp]: "[PC \<mapsto> x] \<subseteq>\<^sub>m (imp_minus_state_to_sas_plus (c1, is)) 
+lemma PC_map_le_iff[simp]: "[PC \<mapsto> x] \<subseteq>\<^sub>m (imp_minus_state_to_sas_plus (c1, is)) 
   = (x = PCV c1)"
   by (auto simp: map_le_def imp_minus_state_to_sas_plus_def)
 
@@ -232,7 +177,7 @@ lemma map_of_list_update: "distinct (map fst l) \<Longrightarrow> length l > 0 \
   \<Longrightarrow> map_of (list_update l 0 (x, y)) z = map_of l z"
   by (induction l) auto
 
-lemma [simp]: assumes "op \<in> set (com_to_operators c)"
+lemma map_of_update_PC_in_effect_of_op[simp]: assumes "op \<in> set (com_to_operators c)"
   shows "map_of (list_update (effect_of op) 0 (PC, y)) = (map_of (effect_of op))(PC \<mapsto> y)"
 proof -
   have "map_of (list_update (effect_of op) 0 (PC, y)) x = ((map_of (effect_of op))(PC \<mapsto> y)) x" for x
@@ -243,7 +188,7 @@ proof -
   then show ?thesis by auto
 qed
 
-lemma [simp]: assumes "op \<in> set (com_to_operators c)"
+lemma map_of_update_PC_in_precondition_of_op[simp]: assumes "op \<in> set (com_to_operators c)"
   shows "map_of (list_update (precondition_of op) 0 (PC, y)) = (map_of (precondition_of op))(PC \<mapsto> y)"
 proof -
   have "map_of (list_update (precondition_of op) 0 (PC, y)) x = ((map_of (precondition_of op))(PC \<mapsto> y)) x" for x
@@ -280,15 +225,9 @@ qed
 lemma applicable_in_PC_updated: "m \<subseteq>\<^sub>m s(PC \<mapsto> y) \<Longrightarrow> s PC = Some x \<Longrightarrow> m(PC \<mapsto> x) \<subseteq>\<^sub>m s"
   by (simp add: map_le_def)
 
-lemma [simp]: "(s(PC \<mapsto> y) ++ (map_of m))(PC \<mapsto> x) = (s ++ (map_of m))(PC \<mapsto> x)"
-proof -
-  have "((s(PC \<mapsto> y) ++ (map_of m))(PC \<mapsto> x)) z = ((s ++ (map_of m))(PC \<mapsto> x)) z" for z
-    by (simp add: fun_upd_def map_add_def)
-  then show ?thesis by auto
-qed
+text \<open> We first show that every operation in SAS++ corresponds to a single step in IMP-- \<close>
 
-
-lemma sas_plus_to_imp_minus_minus_single_step:
+lemma sas_plus_plus_to_imp_minus_minus_single_step:
   "op \<in> set (com_to_operators c1)
   \<Longrightarrow> c1 \<in> set (enumerate_subprograms c) \<Longrightarrow> t > 0 
   \<Longrightarrow> is_operator_applicable_in (imp_minus_state_to_sas_plus (c1, is1)) op
@@ -312,13 +251,16 @@ proof (induction c1 arbitrary: op is1)
       by (force intro!: enumerate_subprograms_transitive[where ?c2.0 = "cA;; cB"])
     then have "(cA, is1) \<rightarrow> sas_plus_state_to_imp_minus ?ss2'"
       using \<open>0 < t\<close> op'_def Seq  imp_minus_state_to_sas_plus_add_effect[where ?c1.0="cA;; cB"]
-      imp_minus_state_to_sas_plus_add_effect[where ?c1.0="cA"] by auto
-    then show ?thesis apply(auto) using op'_def by auto
+      imp_minus_state_to_sas_plus_add_effect[where ?c1.0="cA"] 
+      by(auto simp: com_to_operators_variables_distinct fun_upd_idem)
+    then show ?thesis using op'_def by auto
   qed auto
 qed(auto simp: Let_def map_leq_imp_minus_state_to_sas_plus_iff)
 
 
-lemma sas_plus_to_imp_minus_minus:
+text \<open> Next, we show that a plan in SAS++ corresponds to executing several steps in IMP-- \<close>
+
+lemma sas_plus_plus_to_imp_minus_minus_aux:
   "set ops \<subseteq> set ((imp_minus_minus_to_sas_plus c I G)\<^sub>\<O>\<^sub>+) 
   \<Longrightarrow> sane_sas_plus_state ss1
   \<Longrightarrow> execute_serial_plan_sas_plus ss1 ops = ss2
@@ -339,7 +281,7 @@ proof (induction ops arbitrary: ss1)
       by (metis PC_of_precondition domain_element.simps op_in_cto_c1)
     ultimately have c1_to_c1': "(?c1, ?is1) \<rightarrow> sas_plus_state_to_imp_minus 
       (imp_minus_state_to_sas_plus (?c1, ?is1) \<then>\<^sub>+ op)" 
-      apply(rule sas_plus_to_imp_minus_minus_single_step)
+      apply(rule sas_plus_plus_to_imp_minus_minus_single_step)
       using Cons a op_in_cto_c1 by auto
     moreover then have "execute_serial_plan_sas_plus ?ss1' ops = ss2"
       and "sane_sas_plus_state ?ss1'" 
@@ -357,7 +299,10 @@ lemma all_zero_than_zero_map_le: "\<forall>b\<in>set bs. s b = Some Zero
   apply(induction bs) 
   by(auto simp: map_le_def)
 
-lemma imp_minus_minus_to_sas_plus_single_step:
+text \<open> For the other direction, we again first show that a single step in IMP-- always 
+      corresponds to applying one operation in SAS++ \<close>
+
+lemma imp_minus_minus_to_sas_plus_plus_single_step:
    "(c1, is1) \<rightarrow> (c2, is2) 
   \<Longrightarrow> c1 \<in> set (enumerate_subprograms c)
   \<Longrightarrow> dom is1 = set (enumerate_variables c)
@@ -412,7 +357,10 @@ next
     by(force simp: Let_def map_leq_imp_minus_state_to_sas_plus_iff all_zero_than_zero_map_le)
 qed auto
 
-lemma imp_minus_minus_to_sas_plus:
+text \<open> Next, we show that taking multiple steps in IMP-- corresponds to executing multiple
+      operations in SAS++ \<close>
+
+lemma imp_minus_minus_to_sas_plus_plus_aux:
    "(c1, is1) \<rightarrow>\<^bsup>t\<^esup> (c2, is2)
   \<Longrightarrow> c1 \<in> set (enumerate_subprograms c)
   \<Longrightarrow> dom is1 = set (enumerate_variables c)
@@ -428,7 +376,7 @@ proof (induction t arbitrary: c1 is1)
     \<and> execute_operator_sas_plus (imp_minus_state_to_sas_plus (c1, is1)) op 
         =  imp_minus_state_to_sas_plus (c1', is1')
     \<and> is_operator_applicable_in (imp_minus_state_to_sas_plus (c1, is1)) op" 
-    using imp_minus_minus_to_sas_plus_single_step Suc by metis
+    using imp_minus_minus_to_sas_plus_plus_single_step Suc by metis
   then have "dom is1' = set (enumerate_variables c)" 
     using c1'_def Suc step_doesnt_add_variables
      apply (auto simp: domIff)
@@ -451,6 +399,11 @@ proof (induction t arbitrary: c1 is1)
   then show ?case by blast
 qed auto
 
+text \<open> In the previous correctness lemmas, we formulated the statements as to permit arbitrary
+       initial and final states that could occur sometime during the execution. We now proceed 
+       to reformulate them in simpler terms, using the initial initial and final states as specified
+       in the SAS++ problem translated from IMP--. \<close>
+
 lemma imp_minus_minus_to_sas_plus_plus:
   assumes "(c, is1) \<rightarrow>\<^bsup>t\<^esup> (SKIP, is2)"
    "dom is1 = set (enumerate_variables c)"
@@ -466,7 +419,7 @@ proof -
      \<and> length plan = t
      \<and> (execute_serial_plan_sas_plus ?I' plan)
         = imp_minus_state_to_sas_plus (SKIP, is2)"
-    using imp_minus_minus_to_sas_plus[OF assms(1)] assms c_in_all_subprograms_c by blast
+    using imp_minus_minus_to_sas_plus_plus_aux[OF assms(1)] assms c_in_all_subprograms_c by blast
   moreover then have "(?\<Psi>)\<^sub>G\<^sub>+ \<subseteq>\<^sub>m execute_serial_plan_sas_plus ?I' plan"
     and "dom ?I' = set (((?\<Psi>))\<^sub>\<V>\<^sub>+)"
     and "(\<forall> v \<in> set ((?\<Psi>)\<^sub>\<V>\<^sub>+). the (?I' v) \<in> range_of' ?\<Psi> v)"
@@ -507,7 +460,7 @@ proof -
     by (metis domIff insertI1 option.collapse)
   then obtain t where t_def: "t \<le> length plan \<and> sas_plus_state_to_imp_minus I' 
     \<rightarrow>\<^bsup>t\<^esup> sas_plus_state_to_imp_minus ?ss2"
-    apply - apply(rule exE[OF sas_plus_to_imp_minus_minus[where ?ops=plan]])
+    apply - apply(rule exE[OF sas_plus_plus_to_imp_minus_minus_aux[where ?ops=plan]])
     using assms I'_def  
     by(auto simp: is_serial_solution_for_problem_sas_plus_plus_def Let_def list_all_def ListMem_iff)
     

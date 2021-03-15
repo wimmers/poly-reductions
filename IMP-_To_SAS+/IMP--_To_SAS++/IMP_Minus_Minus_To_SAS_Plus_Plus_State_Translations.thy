@@ -1,10 +1,16 @@
 \<^marker>\<open>creator Florian Keßler\<close>
 
-section "State Translations"
+section "IMP-- to SAS++ State Translations"
 
 theory IMP_Minus_Minus_To_SAS_Plus_Plus_State_Translations 
   imports "../SAS_Plus_Plus" "../IMP_Minus_Minus_Small_StepT"
 begin
+
+text \<open> We define a translation between IMP-- states and SAS++ states. For this purpose, it is useful
+      to think of IMP-- states as not only a map from registers to bits, but rather a pair of a 
+      computation and such a map. The translated SAS++ states is a map assigning the computation
+      to the special variable PC, and otherwise mapping register names to the bit values they
+      had in the original IMP-- state. \<close>
 
 datatype domain_element = EV bit | PCV com
 
@@ -26,7 +32,8 @@ definition sane_sas_plus_state:: "sas_state \<Rightarrow> bool" where
 "sane_sas_plus_state ss \<equiv> (\<exists>x. ss PC = Some (PCV x)) \<and> 
   (\<forall>v. VN v \<in> dom ss \<longrightarrow> (\<exists>x. ss (VN v) = Some (EV x)))"
 
-lemma [simp]: "sas_plus_state_to_imp_minus (imp_minus_state_to_sas_plus (c, is)) = (c, is)" 
+lemma sas_plus_state_to_imp_minus_imp_minus_state_to_sas_plus[simp]:
+  "sas_plus_state_to_imp_minus (imp_minus_state_to_sas_plus (c, is)) = (c, is)" 
 proof -
   have "(snd (sas_plus_state_to_imp_minus (imp_minus_state_to_sas_plus (c, is)))) x = is x" for x
     by (auto simp: imp_minus_state_to_sas_plus_def sas_plus_state_to_imp_minus_def 
@@ -35,7 +42,7 @@ proof -
     by (auto simp: imp_minus_state_to_sas_plus_def sas_plus_state_to_imp_minus_def)
 qed
 
-lemma [simp]: 
+lemma imp_minus_state_to_sas_plus_sas_plus_state_to_imp_minus[simp]: 
   assumes "sane_sas_plus_state ss "
   shows "imp_minus_state_to_sas_plus (sas_plus_state_to_imp_minus ss) = ss" 
 proof -
@@ -45,13 +52,8 @@ proof -
   then show ?thesis by (auto simp: imp_minus_state_to_sas_plus_def sas_plus_state_to_imp_minus_def)
 qed
 
-lemma [simp]: "sas_plus_state_to_imp_minus 
-  ((imp_minus_state_to_sas_plus (c, is))(VN x \<mapsto> EV y, PC \<mapsto> PCV z)) 
-  = (z, (is(x \<mapsto> y)))"
-  by (auto simp: imp_minus_state_to_sas_plus_def sas_plus_state_to_imp_minus_def option.case_eq_if 
-      map_comp_def)
-
-lemma [simp]: "(imp_minus_state_to_sas_plus (c, s1) = imp_minus_state_to_sas_plus (c, s2))
+lemma imp_minus_state_to_sas_plus_of_same_c_eq_iff[simp]: 
+  "(imp_minus_state_to_sas_plus (c, s1) = imp_minus_state_to_sas_plus (c, s2))
   \<longleftrightarrow> s1 = s2" 
 proof
   assume a: "imp_minus_state_to_sas_plus (c, s1) = imp_minus_state_to_sas_plus (c, s2)"
@@ -66,21 +68,24 @@ proof
   then show "s1 = s2" by auto
 qed auto
 
-lemma [simp]: 
+lemma snd_sas_plus_state_to_imp_minus_updated[simp]: 
   "snd (sas_plus_state_to_imp_minus
                 (imp_minus_state_to_sas_plus (c, is)(VN x \<mapsto> y))) 
     = is(x := (case y of EV y' \<Rightarrow> Some y' | _ \<Rightarrow> None))"
   by (auto simp: imp_minus_state_to_sas_plus_def sas_plus_state_to_imp_minus_def 
        Let_def map_comp_def option.case_eq_if)
 
-lemma [simp]: "(imp_minus_state_to_sas_plus (c1, is)) PC = Some (PCV c1)" 
+lemma imp_minus_state_to_sas_plus_PC[simp]: 
+  "(imp_minus_state_to_sas_plus (c1, is)) PC = Some (PCV c1)" 
   by (simp add: imp_minus_state_to_sas_plus_def)
 
-lemma [simp]: "(imp_minus_state_to_sas_plus (c, is) (VN x) = Some (EV y)) 
+lemma imp_minus_state_to_sas_plus_VN_Some_iff[simp]: 
+  "(imp_minus_state_to_sas_plus (c, is) (VN x) = Some (EV y)) 
   \<longleftrightarrow> (is x = Some y)"
   by(auto simp: imp_minus_state_to_sas_plus_def map_comp_Some_iff)
 
-lemma [simp]: "imp_minus_state_to_sas_plus (c, is) (VN x) = Some y \<Longrightarrow>
+lemma imp_minus_state_to_sas_plus_eq_Some_non_zero_iff[simp]: 
+  "imp_minus_state_to_sas_plus (c, is) (VN x) = Some y \<Longrightarrow>
        (y \<noteq> EV (Num 0)) \<longleftrightarrow> (is x \<noteq> Some (Num 0))"
   by(auto simp: imp_minus_state_to_sas_plus_def map_comp_Some_iff)
 
