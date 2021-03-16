@@ -1,3 +1,13 @@
+\<^marker>\<open>creator Bilel Ghorbel\<close>
+chapter \<open>The mighty Cook-Levin Theorem\<close>
+paragraph \<open>Summary\<close>
+text \<open>Stating the Cook-Levin theorem based on a homomorphism of SAT formulas.
+
+Since IMP- works on natural numbers. We prove that the set of encoded satisfiable formulae 
+is NP-Hard.
+
+The homomorphism in HOL should be polynomially bounded in time. Th statement cannot be formalized ? 
+\<close>
 theory Cook_Levin
   imports P
 begin
@@ -9,7 +19,10 @@ begin
 begin
 definition IMP_SAT :: "nat set" where 
 "IMP_SAT == encode_sat ` {n. sat n}"
-
+paragraph \<open>Main lemma\<close>
+text \<open>This is the most important part while proving Cook-Levin.
+We have to prove that for every verifier, that is polynomially bounded, we could find a reduction
+that says for every input whether there exists an accepting certificate up to a certain limit.\<close>
 lemma main_lemma : 
   fixes c pt p_cer
   assumes "poly pt"
@@ -33,6 +46,8 @@ lemma main_lemma :
                                         )
                       )"
   sorry
+paragraph \<open>Main Lemma on HOL level \<close>
+text \<open>Same lemma but we assume that the reduction is written in HOL \<close>
 lemma main_lemma_hol: 
   fixes c pt p_cer
   assumes "poly pt"
@@ -53,6 +68,9 @@ lemma main_lemma_hol:
                                         )
                       )"
   sorry
+text \<open>Prove for every NP program that it can be reduced to IMP_SAT using 
+the reduction of main lemma \<close>
+
 lemma NP_reduces_SAT:
   assumes "L \<in> NP"
   shows "poly_reduces L IMP_SAT"
@@ -166,6 +184,8 @@ proof -
   done
 ultimately show ?thesis by (auto simp add:poly_reduces_def is_polyreduction_def)
 qed
+
+text\<open>Stating cook-levin \<close>
 
 lemma cook_levin: "IMP_SAT \<in> NP_hard"
   by (simp add: NP_hard_def NP_reduces_SAT)

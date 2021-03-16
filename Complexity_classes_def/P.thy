@@ -1,28 +1,49 @@
-theory P 
-  imports "../IMP-/Big_StepT"  
+\<^marker>\<open>creator Bilel Ghorbel\<close>
+chapter \<open>Complexity classes definitions\<close>
+paragraph \<open>Summary\<close>
+text \<open>
+
+\<bullet> Stating definitions of P AND NP based on the defined abstractions AND bounds.
+\<bullet> Sanity checks: Proving that problems having polyreductions to P/NP problems are P/NP
+\<bullet> Stating definitions of NP-Hard AND NP-complete using polyreductions
+\<close>
+theory P
+  imports   
     "../Polynomial_Growth_Functions"
     "../Three_Sat_To_Set_Cover"  Bounds Abstractions  "IMP-_Reductions"
 
 begin
+paragraph \<open>Conventions\<close>
+text \<open>
+We consider natural numbers sets as our languages.
+A Complexity class is a set containing languages hence a set containing natural numbers sets.
 
-type_synonym lang = "nat set"
-type_synonym bound_fun = "nat \<Rightarrow> nat"
-
-
+hence we are only interested with decision problems over natural numbers.
+\<close>
+subsection \<open>P\<close>
+paragraph \<open>Definition\<close>
+text \<open>A language is \<in> P iff. it can be decided by a program that is polynomially time bounded.\<close>
 definition P :: "lang set" where
 "P \<equiv> {L. \<exists>c. poly_time_bounded c \<and> decides c L}"
 
-
+subsection \<open>NP\<close>
+paragraph \<open>Polyverifiers\<close>
+text \<open>A polyverifier c of a language L is a verifier of that language that has following bounds:
+\<bullet> polynomial time bound respectively to the input AND certificate size.
+\<bullet> polynomial valid-certificate bound
+ \<close>
 definition is_poly_verif :: "com \<Rightarrow> lang \<Rightarrow> bool" where
 "is_poly_verif c L \<equiv> is_verif c L \<and> poly_verif_time_bounded c \<and> poly_certif_bounded c"
 
+paragraph \<open>NP definition\<close>
+text \<open>NP is the set of languages having a polyverifier\<close>
 definition NP :: "lang set" where
 "NP \<equiv> {L. \<exists>c. is_poly_verif c L}"
 
 
 
 
-
+subsection \<open>Sanity checks: reduction to a P/NP problem\<close>
 lemma p_sanity:
   assumes "D' \<in> P" "poly_reduces D D'"
   shows "D \<in> P"
@@ -62,8 +83,7 @@ proof -
   ultimately show  ?thesis using NP_def is_poly_verif_def  by auto
 qed
 
-lemma "poly_time_bounded c \<Longrightarrow> poly_result_bounded c" oops
-
+subsection \<open>NP-Hard AND NP-Complete Definitions\<close>
 definition NP_hard :: "lang set" where 
 "NP_hard \<equiv> {L'. \<forall>L\<in>NP. poly_reduces L L'}"
 

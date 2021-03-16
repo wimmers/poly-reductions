@@ -1,14 +1,39 @@
+\<^marker>\<open>creator Bilel Ghorbel\<close>
+chapter \<open>Bounds for IMP- programs\<close>
+paragraph \<open>Summary\<close>
+text \<open>We define the necessary bounds for complexity theory.
+There exists several types of bounds in the theory:
+
+\<bullet> Time bounded programs
+\<bullet> result bounded programs
+\<bullet> valid certificate bounded programs
+\<close>
 theory Bounds
   imports Bit_Length Abstractions "../IMP-/Big_StepT"  "../Polynomial_Growth_Functions"
 begin
+
+paragraph \<open>Bounding functions\<close>
+text \<open> We restrict/over-approximate the behaviour of our programs by defining
+ an upper bound to the execution time/result etc. depending on the input size.
+The upper bound function is hence nothing but a function over natural numbers (input size)
+to natural numbers (time steps/result size/ certificate size)\<close>
 type_synonym bound_fun = "nat \<Rightarrow> nat" 
 
- definition time_bounded :: "com \<Rightarrow> bound_fun \<Rightarrow> bool" where
+subsection \<open>Time bounded programs\<close>
+paragraph \<open>Definition\<close>
+text \<open>We are only interested in programs that always terminate.
+A program c is bounded by a function p, if it does always terminate AND the termination time t is 
+always less than p(l). l being the input size.\<close>
+definition time_bounded :: "com \<Rightarrow> bound_fun \<Rightarrow> bool" where
 "time_bounded c p \<equiv> (\<forall>s. \<exists>t s'. (c,s) \<Rightarrow>\<^bsup>t\<^esup> s' \<and> t \<le> p (bit_length (s ''input'')))"
 
 definition poly_time_bounded :: "com \<Rightarrow> bool" where
 "poly_time_bounded c \<equiv> \<exists>p. poly p \<and> time_bounded c p"
 
+
+paragraph \<open>verif_time_bounded ?\<close>
+text \<open>An alternative where the input size depends on the size of both 
+''input'' AND ''certificate'' registers.\<close>
 definition verif_time_bounded :: "com \<Rightarrow> bound_fun \<Rightarrow> bool" where 
 "verif_time_bounded v p \<equiv> (\<forall>s. \<exists>t s'. (v,s) \<Rightarrow>\<^bsup>t\<^esup> s' \<and> t \<le>
                          p (bit_length (s ''input'')+ bit_length (s ''certificate'')))"
@@ -16,18 +41,58 @@ definition verif_time_bounded :: "com \<Rightarrow> bound_fun \<Rightarrow> bool
 definition poly_verif_time_bounded :: "com \<Rightarrow> bool" where 
 "poly_verif_time_bounded v \<equiv> \<exists>p. poly p \<and> verif_time_bounded v p"
 
+subsection \<open>Result bounded programs \<close>
+paragraph \<open>Definition\<close>
+text \<open>We restrict our definition to programs whose output depend only on the ''input'' register.
+That output/result is bounded by p(l) , l being the bitsize of the input.\<close>
 definition result_bounded :: "com \<Rightarrow> bound_fun \<Rightarrow> bool" where
 "result_bounded c p \<equiv> \<forall>x. \<exists>r. comp c x r \<and> bit_length r \<le> p (bit_length x)"
 
 definition poly_result_bounded :: "com \<Rightarrow> bool" where
 "poly_result_bounded c \<equiv> \<exists>p. poly p \<and> result_bounded c p"
 
+paragraph \<open>2-register result\<close>
+text \<open>The definition below is analogous to the previous one, with the exception that the
+result of our program is distributed over 2 registers. Hence the result size is their combined
+bit-sizes. \<close>
 definition rev_verif_result_bounded :: "com \<Rightarrow> bound_fun \<Rightarrow> bool" where 
 "rev_verif_result_bounded c p\<equiv> \<forall>r. \<exists>x z. rev_verif c x z r 
                             \<and> bit_length x + bit_length z \<le> p (bit_length r)"
 definition poly_rev_verif_result_bounded :: "com \<Rightarrow> bool" where 
 "poly_rev_verif_result_bounded c \<equiv> \<exists>p. poly p \<and> rev_verif_result_bounded c p"
 
+subsection \<open>Bounded programs properties\<close>
+
+
+paragraph \<open>From strict to less-strict \<close>
+lemma comp_to_verif:
+  assumes "poly_time_bounded c"
+  shows "poly_verif_time_bounded c"
+proof (auto simp add:poly_verif_time_bounded_def verif_time_bounded_def)
+  obtain p where p_def: "poly p" "time_bounded c p" using assms poly_time_bounded_def by auto
+  hence "poly (make_mono p)" using poly_make_mono_iff by simp
+  moreover have "\<forall>s. \<exists>t. (\<exists>s'. (c, s) \<Rightarrow>\<^bsup> t \<^esup> s') \<and>
+                 t \<le> make_mono p (bit_length (s ''input'') + bit_length (s ''certificate''))"
+  proof
+    fix s::state
+    let ?x = "s ''input''"
+    let ?z = "s ''certificate''"
+    obtain s' t where defs: "(c, s) \<Rightarrow>\<^bsup> t \<^esup> s'" "t \<le> p (bit_length ?x) " 
+      using p_def(2) time_bounded_def by metis
+    hence " t\<le> make_mono p (bit_length ?x + bit_length ?z)" using mono_make_mono
+      by (meson incseq_def le_add1 le_make_mono le_trans)
+    thus "\<exists>t. (\<exists>s'. (c, s) \<Rightarrow>\<^bsup> t \<^esup> s') \<and>
+                 t \<le> make_mono p (bit_length ?x  + bit_length ?z )" using defs(1)  by blast
+  qed
+  ultimately show "\<exists>p. poly p \<and>
+        (\<forall>s. \<exists>t. (\<exists>s'. (c, s) \<Rightarrow>\<^bsup> t \<^esup> s') \<and>
+                 t \<le> p (bit_length (s ''input'') + bit_length (s ''certificate'')))"
+    by blast
+qed
+
+paragraph \<open>Sequencing two polynomialy time-bounded programs \<close>
+text \<open>The lemmas are self-explanatory. They will be used to prove propertied on P, NP AND 
+polynomial reductions\<close>
 lemma reduction_poly:
   assumes "poly_time_bounded f" "poly_time_bounded g"  "poly_result_bounded f"
   shows "poly_time_bounded (f;;g)"
@@ -164,6 +229,15 @@ proof (auto simp add:poly_time_bounded_def time_bounded_def)
     by blast
 qed
 
+
+subsection \<open>Valid certificate bounds\<close>
+paragraph \<open>Definition\<close>
+text \<open>
+Given a program c AND an input x, a valid certificate z is a certificate for which the verifier c,
+will return 0.
+p is valid-certificate-bounded iff for every input x that has a corresponding valid certificate,
+there EXISTS a valid certificate limited by p(l), l being the input size (''input'' register)
+\<close>
 definition certif_bounded :: "com \<Rightarrow> bound_fun \<Rightarrow> bool" where 
 "certif_bounded c p \<equiv> \<forall>x. (\<exists>z. verif c x z 0)
                              \<longrightarrow> (\<exists>z. verif c x z 0 \<and> bit_length z \<le> p (bit_length x))"
@@ -171,7 +245,8 @@ definition certif_bounded :: "com \<Rightarrow> bound_fun \<Rightarrow> bool" wh
 definition poly_certif_bounded :: "com \<Rightarrow> bool" where 
 "poly_certif_bounded c \<equiv> \<exists>p. poly p \<and> certif_bounded c p "
 
-
+subsection \<open>Properties: Effects of sequencing over certifcate- AND result-bounded programs\<close>
+paragraph \<open>Sequencing two valid-certificate-bounded programs\<close>
 lemma result_bounded_certif_bounded : 
   assumes "result_bounded f q" "cons_certif f" "certif_bounded g p" "\<forall>y z. \<exists>r. verif g y z r "
   shows "certif_bounded (f;;g) (make_mono p o q)"  
@@ -194,7 +269,27 @@ proof (auto simp add: certif_bounded_def)
     using z'r'_def(2) by blast
 qed
 
+lemma poly_result_bounded_poly_certif_bounded:
+  assumes "poly_result_bounded f" "cons_certif f" "poly_certif_bounded g" "\<forall>y z. \<exists>r. verif g y z r "
+  shows "poly_certif_bounded (f;;g)"
+proof (auto simp add: poly_certif_bounded_def)
+  
+  show "\<exists>p. poly p \<and> certif_bounded (f;; g) p "
+  proof - 
+    from assms(1) obtain q where q_def: "poly q" "result_bounded f q" using poly_result_bounded_def
+      by blast
+    from  assms(3) obtain p where p_def: "poly p" "certif_bounded g p" using poly_certif_bounded_def
+      by meson
+    let ?p = "make_mono p o q"
+    from q_def(1) p_def(1) have "poly ?p" 
+      by (simp add: poly_compose poly_make_mono_iff)
+    moreover have "certif_bounded (f;;g) ?p" using q_def(2) p_def(2) assms(2) assms(4) 
+     result_bounded_certif_bounded by simp
+    ultimately show ?thesis by blast
+  qed
+qed
 
+paragraph \<open>Sequencing two result-bounded programs\<close>
 lemma result_bounded_compose:
   assumes "result_bounded f pf" "result_bounded g pg"
   shows "result_bounded (f;;g) (make_mono pg o pf)"
@@ -225,48 +320,4 @@ lemma poly_result_compose :
     ultimately show ?thesis by (auto simp add:poly_result_bounded_def)
   qed
 
-lemma poly_result_bounded_poly_certif_bounded:
-  assumes "poly_result_bounded f" "cons_certif f" "poly_certif_bounded g" "\<forall>y z. \<exists>r. verif g y z r "
-  shows "poly_certif_bounded (f;;g)"
-proof (auto simp add: poly_certif_bounded_def)
-  
-  show "\<exists>p. poly p \<and> certif_bounded (f;; g) p "
-  proof - 
-    from assms(1) obtain q where q_def: "poly q" "result_bounded f q" using poly_result_bounded_def
-      by blast
-    from  assms(3) obtain p where p_def: "poly p" "certif_bounded g p" using poly_certif_bounded_def
-      by meson
-    let ?p = "make_mono p o q"
-    from q_def(1) p_def(1) have "poly ?p" 
-      by (simp add: poly_compose poly_make_mono_iff)
-    moreover have "certif_bounded (f;;g) ?p" using q_def(2) p_def(2) assms(2) assms(4) 
-     result_bounded_certif_bounded by simp
-    ultimately show ?thesis by blast
-  qed
-qed
-
-lemma comp_to_verif:
-  assumes "poly_time_bounded c"
-  shows "poly_verif_time_bounded c"
-proof (auto simp add:poly_verif_time_bounded_def verif_time_bounded_def)
-  obtain p where p_def: "poly p" "time_bounded c p" using assms poly_time_bounded_def by auto
-  hence "poly (make_mono p)" using poly_make_mono_iff by simp
-  moreover have "\<forall>s. \<exists>t. (\<exists>s'. (c, s) \<Rightarrow>\<^bsup> t \<^esup> s') \<and>
-                 t \<le> make_mono p (bit_length (s ''input'') + bit_length (s ''certificate''))"
-  proof
-    fix s::state
-    let ?x = "s ''input''"
-    let ?z = "s ''certificate''"
-    obtain s' t where defs: "(c, s) \<Rightarrow>\<^bsup> t \<^esup> s'" "t \<le> p (bit_length ?x) " 
-      using p_def(2) time_bounded_def by metis
-    hence " t\<le> make_mono p (bit_length ?x + bit_length ?z)" using mono_make_mono
-      by (meson incseq_def le_add1 le_make_mono le_trans)
-    thus "\<exists>t. (\<exists>s'. (c, s) \<Rightarrow>\<^bsup> t \<^esup> s') \<and>
-                 t \<le> make_mono p (bit_length ?x  + bit_length ?z )" using defs(1)  by blast
-  qed
-  ultimately show "\<exists>p. poly p \<and>
-        (\<forall>s. \<exists>t. (\<exists>s'. (c, s) \<Rightarrow>\<^bsup> t \<^esup> s') \<and>
-                 t \<le> p (bit_length (s ''input'') + bit_length (s ''certificate'')))"
-    by blast
-qed
 end
