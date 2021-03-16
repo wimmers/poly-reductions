@@ -90,29 +90,67 @@ definition NP_hard :: "lang set" where
 definition NP_complete :: "lang set" where
 "NP_complete \<equiv> NP_hard \<inter> NP"
 
+subsection \<open>Defining NP using P\<close>
+paragraph \<open>Idea AND Intuition\<close>
+text \<open>
+Disclaimer: This is not a proof of P = NP.
+
+Verifiers AND deciders are a lot a like. While within P, it's about the existence of polynomially 
+bounded decider, within NP it's about polynomially bounded verifiers. 
+Hence if we encode the input AND certificate in one value. We could do the work of a verifier 
+using a decider who's able to decode them. 
+\<close>
+
+paragraph \<open>Assumptions\<close>
+text \<open>
+For this definition we will need an encoding/entupling AND decoding/detupling programs that convert
+couples of natural numbers into one natural number AND vice versa.
+
+Since we don't care what the programs are as long they satisfy some assumptions/properties
+we just state them AND assume them IN a local context.
+
+A next step could be proving that the cantor pairing function satifies them.
+
+The assumptions are:
+\<bullet> the entupling happens in polynomial time.
+\<bullet> the detupling happens in polynomial time AND produces a couple that's polynomially bounded w.r.t
+the bitsize of the encoded couple.
+\<bullet> The entupling AND detupling are both total and computable. The computation always gives a result 
+that is depending only the input. 
+\<bullet> entupling AND detupling are inverse operations.
+\<close>
 locale NP_using_P =
   fixes entuple::com
-  fixes detuple::com
+  fixes detuple::com 
   assumes en_bound:"poly_verif_time_bounded entuple" "poly_verif_result_bounded entuple"
   assumes de_bound:"poly_time_bounded detuple" "poly_rev_verif_result_bounded detuple"
   assumes total_en:"\<forall>x z. \<exists>r. verif entuple x z r"
   assumes total_de:"\<forall>r. \<exists>x z. rev_verif detuple x z r"
   assumes equiv_en_de:"verif entuple x z r \<longleftrightarrow> rev_verif detuple x z r "
 begin
-definition sc  :: "com \<Rightarrow> nat \<Rightarrow> nat" where 
-"sc c x \<equiv> Min {z. \<exists>r.  verif c x z r \<and> r > 0}"
 
+paragraph \<open>Certificate language of a verifier\<close>
+text \<open>This is in the heart of the alternative definition.
+
+The certificate language of a verifier v is the set of encoded couples of input AND certificate that 
+are accepted by v.
+\<close>
 definition cert_lang_of :: "com \<Rightarrow> lang" where 
 "cert_lang_of v \<equiv> {tuple. \<exists>x z. verif entuple x z tuple \<and> verif v x z 0 }"
 
 
+
+text \<open>Helping lemma\<close>
 lemma verif_entuple_det:
   assumes "verif entuple x z r"
   assumes "verif entuple x' z' r"
   shows "x=x' \<and> z=z'"
   using assms equiv_en_de rev_verif_det by auto
 
+text \<open>Proving that the certificate language of a polyverifier is decidable in polynomial time,
+we would obtain that an alternative definition for NP.\<close>
 
+paragraph \<open>Helping lemmas \<close>
 lemma NP_to_P:"is_verif v L \<Longrightarrow> decides (detuple;;v) (cert_lang_of v)"
 proof (auto simp add: decides_def)
   fix tu
@@ -166,7 +204,8 @@ next
   thus  "x\<in>L" using tu_def assms(2) by blast
 qed
 
-lemma "L \<in> NP \<longleftrightarrow> (\<exists>L' p. L' \<in> P \<and> poly p \<and> 
+lemma NP_alter_def:
+      "L \<in> NP \<longleftrightarrow> (\<exists>L' p. L' \<in> P \<and> poly p \<and> 
                   (\<forall>tu x z . tu \<in> L' \<and> verif entuple x z tu \<longrightarrow>
                     (\<exists>tu' z'. tu' \<in> L' \<and> verif entuple x z' tu' \<and> 
                               bit_length z' \<le> p (bit_length x))) \<and> 
@@ -213,7 +252,8 @@ proof
     obtain tu'' where tu''_def: "verif entuple x z'' tu''" using total_en by fast
     moreover have "tu'' \<in> cert_lang_of v " 
       using def''(1) def''(2) tu''_def cert_lang_of_def by blast
-    ultimately show " \<exists>tu'. tu' \<in> cert_lang_of v \<and> (\<exists>z'. verif entuple x z' tu' \<and> bit_length z' \<le> p (bit_length x))"
+    ultimately 
+show " \<exists>tu'. tu' \<in> cert_lang_of v \<and> (\<exists>z'. verif entuple x z' tu' \<and> bit_length z' \<le> p (bit_length x))"
       using def''(2) def''(2) by blast
     qed
   ultimately show "\<exists>L' p. L' \<in> P \<and> poly p \<and> (\<forall>tu x z.
@@ -237,9 +277,8 @@ next
     by blast
   then obtain c where c_def:"decides c L'" "poly_time_bounded c" using P_def by blast
   from L'_def(3) c_def(1) P_to_NP have "is_verif (entuple;;c) L" by presburger
-  moreover have "poly_time_bounded (entuple;;c)"
-    using c_def(2) en_bound reduction_poly by metis
-  hence "poly_verif_time_bounded (entuple;;c)" using comp_to_verif by simp
+  moreover have  "poly_verif_time_bounded (entuple;;c)"
+    using c_def(2) en_bound verif_time_time by simp
   moreover have "poly_certif_bounded (entuple;;c)"
   proof (auto simp add: poly_certif_bounded_def certif_bounded_def)
     have "(\<forall>x. (\<exists>z r. verif (entuple;; c) x z 0) \<longrightarrow>

@@ -1,10 +1,29 @@
+\<^marker>\<open>creator Bilel Ghorbel\<close>
+chapter \<open>defining reductions using IMP- programs\<close>
+paragraph \<open>Summary\<close>
+text \<open>
+Reductions could be informally seen as transitions from a decision problem to another.
+
+Although some existing theory makes a general definition of reductions using functions,
+we do restrict our definition to computable reductions AND hence use IMP- programs instead 
+of functions
+\<close>
 theory "IMP-_Reductions"
   imports Abstractions Bounds 
 begin
 
+subsection \<open>Definition\<close>
+paragraph \<open>Defining computable reductions using IMP-\<close>
+text \<open>A reduction is a program that always computes a result based uniquely on the input.
+Hence computing a total function.
+for a reduction c from D to D',  an input x AND a result r we have: x \<in> D iff r \<in>D'.
+
+As a convention, the reduction should conserve the certificate. 
+This convention is necessary while working on verifiers.\<close>
 definition is_reduction :: "com \<Rightarrow> lang \<Rightarrow> lang \<Rightarrow> bool" where
 "is_reduction c D D' \<equiv> cons_certif c \<and>( \<forall>x. \<exists>r. comp c x r \<and>( x \<in> D \<longleftrightarrow> r \<in> D'))   "
 
+subsection \<open>Reductions composed with deciders/verifiers/other reductions\<close>
 
 lemma reduction_decision_correct: 
   assumes "is_reduction f D D'" "decides g D'"
@@ -48,12 +67,50 @@ next
   qed
 qed
 
+
+lemma is_reduction_compose:
+  assumes "is_reduction f D D'" "is_reduction g D' D''"
+  shows "is_reduction (f;;g) D D''"
+  apply(auto simp add: is_reduction_def)
+  using assms apply(simp add: cons_certif_def is_reduction_def) apply fastforce
+proof -
+  fix x
+   obtain y where y_def: "comp f x y" "(x\<in>D) =(y\<in>D')"
+     using assms(1) by (auto simp add:is_reduction_def)
+   obtain z where z_def: "comp g y z" "(y\<in>D') =(z\<in>D'')"
+     using assms(2) by (auto simp add:is_reduction_def)    
+   have  "comp (f;; g) x z  \<and> (x \<in> D) = (z \<in> D'')"
+     using y_def z_def comp_comp by simp
+   thus  "\<exists>r. comp (f;; g) x r \<and> (x \<in> D) = (r \<in> D'')" by blast
+ qed
+
+subsection \<open>Polynomial reductions\<close>
+paragraph \<open>Definition\<close>
+text \<open>
+A polyreduction is a reduction that is also polynomially bounded in time (in most literature)
+
+A necessary condition also for polyreduction is to be polynomially result-bounded
+(otherwise polyreduction would not be transitive)
+Yet, this condition is generally omitted in most literature, as TM is the commonly used model
+of computation, where the limitation in time implies a limitation in space. 
+As it is not the case in our model, we choose to add explicitly this condition.
+
+It is yet worth the mention, that given that program is a reduction hence
+depends on only one register. the time bound would imply a result bound.
+This yet would involve a bit of digging into the semantics to be proven.
+This could be done as a future step in the project.
+\<close>
+
 definition is_polyreduction :: "com \<Rightarrow> lang \<Rightarrow> lang  \<Rightarrow> bool" where
 "is_polyreduction c D D' \<equiv> poly_time_bounded c \<and> is_reduction c D D' \<and> poly_result_bounded c "
+
+paragraph \<open>poly-reductions as a binary relation over languages\<close>
 
 definition poly_reduces :: "lang \<Rightarrow> lang \<Rightarrow> bool" where
 "poly_reduces D D' \<equiv> \<exists>c. is_polyreduction c D D'"
 
+paragraph \<open>Properties of the polyreduction relation\<close>
+text \<open>Reflexivity\<close>
 lemma "poly_reduces D D"
   apply(simp add:poly_reduces_def is_polyreduction_def)
 proof
@@ -87,24 +144,7 @@ proof
       done
   qed
 qed
-
-
-lemma is_reduction_compose:
-  assumes "is_reduction f D D'" "is_reduction g D' D''"
-  shows "is_reduction (f;;g) D D''"
-  apply(auto simp add: is_reduction_def)
-  using assms apply(simp add: cons_certif_def is_reduction_def) apply fastforce
-proof -
-  fix x
-   obtain y where y_def: "comp f x y" "(x\<in>D) =(y\<in>D')"
-     using assms(1) by (auto simp add:is_reduction_def)
-   obtain z where z_def: "comp g y z" "(y\<in>D') =(z\<in>D'')"
-     using assms(2) by (auto simp add:is_reduction_def)    
-   have  "comp (f;; g) x z  \<and> (x \<in> D) = (z \<in> D'')"
-     using y_def z_def comp_comp by simp
-   thus  "\<exists>r. comp (f;; g) x r \<and> (x \<in> D) = (r \<in> D'')" by blast
- qed
-
+text \<open>Transitivity\<close>
 lemma "poly_reduces_trans":
   assumes "poly_reduces D D'"  "poly_reduces D' D''" 
   shows "poly_reduces D D''"

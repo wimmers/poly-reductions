@@ -34,6 +34,9 @@ computing a function, decision, verification) is expected to be in the register 
 \<bullet> The output/result/main result is expected to be found in the same register as the input.
 This allows to easily compose to obtain computing code of the composition of computable functions
 just by sequencing their computing codes
+\<bullet> If not otherwise mentioned, the input is strictly the inital content of the ''input'' register.
+In some particular contexts in the theory, we might consider the certificate as second input.
+But this will be explicitly mentioned.
 \<close>
 paragraph \<open>Certificate conserving\<close>
 text \<open>The code always terminates with a final state that 

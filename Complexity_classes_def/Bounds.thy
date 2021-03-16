@@ -51,6 +51,13 @@ definition result_bounded :: "com \<Rightarrow> bound_fun \<Rightarrow> bool" wh
 definition poly_result_bounded :: "com \<Rightarrow> bool" where
 "poly_result_bounded c \<equiv> \<exists>p. poly p \<and> result_bounded c p"
 
+definition verif_result_bounded :: "com \<Rightarrow> bound_fun \<Rightarrow> bool" where
+"verif_result_bounded c p \<equiv> \<forall>x z. \<exists>r. verif c x z r 
+                                \<and> bit_length r \<le> p (bit_length x + bit_length z)"
+
+definition poly_verif_result_bounded :: "com \<Rightarrow> bool" where 
+"poly_verif_result_bounded c \<equiv> \<exists>p. poly p \<and> verif_result_bounded c p"
+
 paragraph \<open>2-register result\<close>
 text \<open>The definition below is analogous to the previous one, with the exception that the
 result of our program is distributed over 2 registers. Hence the result size is their combined
@@ -229,6 +236,49 @@ proof (auto simp add:poly_time_bounded_def time_bounded_def)
     by blast
 qed
 
+lemma verif_time_time:
+  assumes "poly_verif_time_bounded f" "poly_verif_result_bounded f" "poly_time_bounded g"
+  shows "poly_verif_time_bounded (f;;g)"
+proof (auto simp add:poly_verif_time_bounded_def)
+  obtain pf where pf_def: "poly pf" "verif_time_bounded f pf" 
+    using assms(1) poly_verif_time_bounded_def by blast
+  obtain pg where pg_def: "poly pg" "time_bounded g pg" 
+    using assms(3) poly_time_bounded_def by blast
+ obtain pd where pd_def:"poly pd" "verif_result_bounded f pd"
+    using assms(2) poly_verif_result_bounded_def by blast 
+ let ?p = "\<lambda>x. pf x + (make_mono pg o pd) x"
+ have "poly ?p"
+      using poly_add pf_def(1) pg_def(1) poly_compose pd_def(1) poly_make_mono_iff by metis
+    moreover have "verif_time_bounded (f;; g) ?p"
+    proof (auto simp add:verif_time_bounded_def)
+      fix s
+      obtain x z::nat where xz_def : "s ''input'' = x" "s ''certificate'' = z" by blast
+      obtain tf sf where tsf_def: "(f,s)\<Rightarrow>\<^bsup> tf \<^esup> sf" "tf \<le>pf ( bit_length (s ''input'') 
+                                                          +  bit_length (s ''certificate''))"
+        using pf_def(2) verif_time_bounded_def by blast
+      obtain y where y_def: "verif f x z y" "bit_length y \<le> pd ( bit_length x 
+                                                          + bit_length z)"
+        using pd_def(2) verif_result_bounded_def xz_def by blast
+      obtain tf' sf' where tsf'_def: "(f,s)\<Rightarrow>\<^bsup> tf' \<^esup> sf'" "y = sf' ''input'' "
+        using y_def(1) verif_def xz_def tsf_def(1) by auto
+      have y_prop:"y = sf ''input''" using tsf'_def tsf_def(1) big_step_t_determ2 by fast
+      then obtain tg sg where tsg_def: "(g,sf)\<Rightarrow>\<^bsup> tg \<^esup> sg" "tg \<le> pg (bit_length y)"
+        using pg_def(2) time_bounded_def by blast
+      have "(f;;g,s)\<Rightarrow>\<^bsup> tf+tg\<^esup> sg" using tsf_def(1) tsg_def(1) by auto
+      moreover have "tg \<le> make_mono pg (bit_length y)" using tsg_def(2) mono_make_mono
+        using le_trans by blast
+      hence "tg \<le> make_mono pg ( pd (bit_length x + bit_length z))" using y_def(2)
+        by (metis (mono_tags, lifting) monoD mono_make_mono order_subst1)
+      hence " tf+tg \<le> pf (bit_length (s ''input'') + bit_length (s ''certificate'')) +
+                  make_mono pg (pd (bit_length (s ''input'') + bit_length (s ''certificate''))) "
+        using tsf_def(2) xz_def by simp
+      ultimately show "\<exists>t. (\<exists>s'. (f;; g, s) \<Rightarrow>\<^bsup> t \<^esup> s') \<and>
+             t \<le> pf (bit_length (s ''input'') + bit_length (s ''certificate'')) +
+                  make_mono pg (pd (bit_length (s ''input'') + bit_length (s ''certificate'')))"
+        by blast
+    qed 
+    ultimately show "\<exists>p. poly p \<and> verif_time_bounded (f;; g) p" by blast
+  qed
 
 subsection \<open>Valid certificate bounds\<close>
 paragraph \<open>Definition\<close>
