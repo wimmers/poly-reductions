@@ -7,7 +7,6 @@ theory IMP_Minus_To_SAS_Plus
     "IMP--_To_SAS++/IMP_Minus_Minus_To_SAS_Plus_Plus_Correctness"
     "SAS++_To_SAS+/SAS_Plus_Plus_To_SAS_Plus"
     "IMP_Minus_Max_Constant"
-    "HOL-Library.Discrete"
 begin
 
 text \<open> We combine our reduction steps from IMP- to IMP--, then from IMP-- to SAS++ and finally 

@@ -22,8 +22,17 @@ lemma bit_neq_one_iff[simp]: "x \<noteq> One \<longleftrightarrow> x = Zero" by 
 lemma nat_to_bit_eq_One_iff: "nat_to_bit x = One \<longleftrightarrow> x > 0" 
   by (cases x) auto
 
+lemma nat_to_bit_eq_One_iff': "One = nat_to_bit x \<longleftrightarrow> x > 0" 
+  by (cases x) auto
+
 lemma nat_to_bit_eq_Zero_iff: "nat_to_bit x = Zero \<longleftrightarrow> x = 0" 
   by (cases x) auto
+
+lemma nat_to_bit_eq_Zero_iff': "Zero = nat_to_bit x \<longleftrightarrow> x = 0" 
+  by (cases x) auto
+
+lemmas nat_to_bit_cases = nat_to_bit_eq_One_iff nat_to_bit_eq_One_iff' nat_to_bit_eq_Zero_iff
+  nat_to_bit_eq_Zero_iff'
 
 type_synonym vname = string
 
