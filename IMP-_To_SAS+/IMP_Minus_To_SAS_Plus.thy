@@ -17,8 +17,6 @@ text \<open> We combine our reduction steps from IMP- to IMP--, then from IMP-- 
 type_synonym SAS_problem = "(IMP_Minus_Minus_To_SAS_Plus_Plus_State_Translations.variable, 
   IMP_Minus_Minus_To_SAS_Plus_Plus_State_Translations.domain_element) problem" 
 
-definition bit_length where "bit_length x \<equiv>  Discrete.log x + 1"
-
 lemma le_two_to_the_bit_length_intro: "x \<le> y \<Longrightarrow> x \<le> 2 ^ (bit_length y)"
   apply(auto simp: bit_length_def)
   by (metis leD log_exp2_gt max.strict_coboundedI2 max_def)
@@ -29,12 +27,27 @@ definition max_input_bits:: "IMP_Minus_com \<Rightarrow> (vname \<rightharpoonup
 
 lemma bit_at_index_geq_max_input_bits_is_zero: "x < r \<Longrightarrow> max_input_bits c I r \<le> b  
   \<Longrightarrow> nth_bit x b = Zero" 
-  sorry
+proof-
+  assume "x < r" "max_input_bits c I r \<le> b" 
+  hence "bit_length x \<le> bit_length r" using bit_length_monotonic by simp
+  hence "bit_length x \<le> max_input_bits c I r" apply(auto simp: max_input_bits_def)
+    using bit_length_monotonic  by (metis dual_order.trans max.cobounded2 max_def)
+  thus ?thesis using \<open>max_input_bits c I r \<le> b\<close>
+    by(auto simp: max_input_bits_def intro!: bit_geq_bit_length_is_Zero)
+qed
 
 lemma bit_at_index_geq_max_input_bits_is_zero_in_initial_state: "finite (ran I) 
   \<Longrightarrow> max_input_bits c I r \<le> b
   \<Longrightarrow> I x = Some y \<Longrightarrow> nth_bit y b = Zero"
-  sorry
+proof-
+  assume "finite (ran I)" "I x = Some y" "max_input_bits c I r \<le> b" 
+  hence "bit_length y \<le> bit_length (Max (ran I))" using bit_length_monotonic
+    by (meson Max_ge ranI)
+  hence "bit_length y \<le> max_input_bits c I r" apply(auto simp: max_input_bits_def)
+    using bit_length_monotonic  by (metis dual_order.trans max.cobounded2 max_def)
+  thus ?thesis using \<open>max_input_bits c I r \<le> b\<close>
+    by(auto simp: max_input_bits_def intro!: bit_geq_bit_length_is_Zero)
+qed
 
 lemma max_constant_less_two_to_the_max_input_bits: "max_constant c < 2 ^ (max_input_bits c I r)" 
   apply(auto simp: max_input_bits_def bit_length_def algebra_simps)
