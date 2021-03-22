@@ -21,6 +21,10 @@ lemma le_two_to_the_bit_length_intro: "x \<le> y \<Longrightarrow> x \<le> 2 ^ (
   apply(auto simp: bit_length_def)
   by (metis leD log_exp2_gt max.strict_coboundedI2 max_def)
 
+text \<open> We give a definition to compute the upper bound on the number of bits needed to represent
+       all of the fixed input of some IMP- program, the biggest constant therein and all guessed
+       values up to some r. \<close>
+
 definition max_input_bits:: "IMP_Minus_com \<Rightarrow> (vname \<rightharpoonup> nat) \<Rightarrow> nat \<Rightarrow> nat" where
 "max_input_bits c I r = 
   bit_length (max (max (Max (ran I)) r) (IMP_Minus_Max_Constant.max_constant c))" 
@@ -62,6 +66,10 @@ proof -
     by(fastforce simp: max_input_bits_def bit_length_def algebra_simps)
 qed
 
+text \<open> Translation of a (partial) initial state from IMP- to IMP--. Observe that in order to avoid
+       overflows when executing IMP--, we require all bits in in the bit blasted IMP-- registers
+       that are unspecified in the IMP- initial state to be zero. \<close>
+
 definition IMP_Minus_initial_to_IMP_Minus_Minus:: "(vname \<rightharpoonup> nat) 
   \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> (vname \<rightharpoonup> bit)" where
 "IMP_Minus_initial_to_IMP_Minus_Minus I n guess_range = (\<lambda>v. 
@@ -71,6 +79,11 @@ definition IMP_Minus_initial_to_IMP_Minus_Minus:: "(vname \<rightharpoonup> nat)
     _ \<Rightarrow> (if v = ''carry'' then Some Zero 
   else (IMP_Minus_State_To_IMP_Minus_Minus_partial I n guess_range) v)))" 
 
+text \<open> We give our reduction, by composing the steps IMP- \<Rightarrow> IMP-- \<Rightarrow> SAS++ \<Rightarrow> SAS+. For the IMP-
+       \<Rightarrow> IMP-- step, we compute a number of bits n that is guaranteed to suffice for all
+      executions of the program for at most t steps, starting in initial states where the maximal 
+      value of any register is bounded by the maximum of the maximal value of any register in the 
+      partial initial state I and r. \<close>
 
 definition IMP_Minus_to_SAS_Plus:: "IMP_Minus_com \<Rightarrow> (vname \<rightharpoonup> nat) \<Rightarrow> nat \<Rightarrow> (vname \<rightharpoonup> nat) 
   \<Rightarrow>  nat \<Rightarrow> SAS_problem" where

@@ -7,7 +7,9 @@ theory IMP_Minus_Minus_Small_StepT  imports Main IMP_Minus_Minus_Com "../IMP-/Re
 
 paragraph "Summary"
 text\<open>We give small step semantics with time for IMP--. 
-Based on the small step semantics definition time for IMP-\<close>
+Based on the small step semantics definition time for IMP-. In contrast to IMP-, we use partial 
+maps to represent states. That has the simple reason the we designed this with translation to 
+SAS++ in mind, which also uses partial states. \<close>
 
 type_synonym state = "vname \<rightharpoonup> bit"
 
