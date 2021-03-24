@@ -3,7 +3,7 @@ chapter \<open>Abstractions over IMP-\<close>
 paragraph \<open>Summary\<close>
 text \<open>We define an abstraction layer over our computation model 
       to be able to define complexity classes easily.\<close>
-theory Alternative_Abstractions
+theory Abstractions
   imports  "../IMP-/Big_StepT"
 begin
 paragraph \<open>Definitions\<close>

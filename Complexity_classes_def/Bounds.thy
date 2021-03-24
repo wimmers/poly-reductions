@@ -1,5 +1,5 @@
-theory Alternative_Bounds
-  imports Bit_Length  Alternative_Abstractions "../IMP-/Big_StepT"  "../Polynomial_Growth_Functions"
+theory Bounds
+  imports Bit_Length  Abstractions "../IMP-/Big_StepT"  "../Polynomial_Growth_Functions"
 begin
 paragraph \<open>Bounding functions\<close>
 text \<open> We restrict/over-approximate the behaviour of our programs by defining
@@ -177,7 +177,7 @@ proof (auto simp add:result_bounded_def)
     by (meson add_right_mono incseq_def le_add1 le_trans mono_make_mono)
   hence "bit_size r \<le> make_mono p (bit_size xs) + bit_size xs"  using xs_def r_def by force
   ultimately show " \<exists>r. length r = Suc (Suc 0) \<and>
-             Alternative_Abstractions.comp f (zip [''input'', ''certificate''] xs)
+             comp f (zip [''input'', ''certificate''] xs)
               (zip [''input'', ''certificate''] r) \<and>
              bit_size r \<le> make_mono p (bit_size xs) + bit_size xs" by blast
 qed

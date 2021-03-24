@@ -8,8 +8,8 @@ is NP-Hard.
 
 The homomorphism in HOL should be polynomially bounded in time. The statement cannot be formalized ? 
 \<close>
-theory Alternative_Cook_Levin
-  imports Alternative_P
+theory Cook_Levin
+  imports Complexity_Classes
 begin
 locale encode_decode_sat =
   fixes encode_sat :: "nat three_sat \<Rightarrow> nat" (*I think we  should find a way to make it polynomially  bounded*)
