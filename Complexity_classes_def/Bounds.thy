@@ -95,9 +95,12 @@ p is valid-certificate-bounded iff for every input x that has a corresponding va
 there EXISTS a valid certificate limited by p(l), l being the input size (''input'' register)
 \<close>
 
+definition certif_bounded_to_goal :: "com \<Rightarrow> bound_fun \<Rightarrow> lang \<Rightarrow> bool" where
+"certif_bounded_to_goal c p L \<equiv>  \<forall>x. (\<exists>z r. verif c x z r \<and> r \<in> L)
+                             \<longrightarrow> (\<exists>z r. verif c x z r \<and> bit_length z \<le> p (bit_length x) \<and> r \<in> L)"
+
 definition certif_bounded :: "com \<Rightarrow> bound_fun \<Rightarrow> bool" where 
-"certif_bounded c p \<equiv> \<forall>x. (\<exists>z. verif c x z 0)
-                             \<longrightarrow> (\<exists>z. verif c x z 0 \<and> bit_length z \<le> p (bit_length x))"
+"certif_bounded c p \<equiv> certif_bounded_to_goal c p {0} "
 
 definition poly_certif_bounded :: "com \<Rightarrow> bool" where 
 "poly_certif_bounded c \<equiv> \<exists>p. poly p \<and> certif_bounded c p "
@@ -197,8 +200,8 @@ qed
 lemma result_bounded_certif_bounded : 
   assumes "result_bounded f [''input''] [''input''] q"
           "cons_certif f" "certif_bounded g p" "\<forall>y z. \<exists>r. verif g y z r "
-  shows "certif_bounded (f;;g) (make_mono p o q)"  
-proof (auto simp add: certif_bounded_def)
+        shows "certif_bounded (f;;g) (make_mono p o q)" 
+proof (auto simp add: certif_bounded_def certif_bounded_to_goal_def)
   fix x z
   assume local_asm:"verif (f;; g) x z 0" 
   have "length [''input''] = length [x]" "[(''input'',x)] = zip [''input''] [x]"
@@ -217,7 +220,7 @@ proof (auto simp add: certif_bounded_def)
     using comp_comp by (auto simp add:verif_def)
   hence  "r = 0" using local_asm comp_det apply(auto simp add:verif_def) by fastforce
   ultimately obtain z'  where  z'r'_def: " verif g y z' 0" "bit_length z' \<le> p (bit_length y)"
-    using assms(3) certif_bounded_def by blast
+    using assms(3) certif_bounded_def certif_bounded_to_goal_def by auto 
   from z'r'_def(2) have "bit_length z' \<le> make_mono p (bit_length y)"
     using le_trans less_imp_le_nat by blast
   moreover have "make_mono p (bit_length y) \<le> make_mono p (q (bit_length x))"

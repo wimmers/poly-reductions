@@ -171,7 +171,7 @@ proof -
         assume "x\<in>L"
         hence  "\<exists>z. verif v x z 0" using pv_def by (auto simp add: is_verif_def)
         hence  "\<exists>z. verif v x z 0 \<and> bit_length z \<le> p_cer (bit_length x)"
-          using pv_def(4) certif_bounded_def by blast
+          using pv_def(4) certif_bounded_def certif_bounded_to_goal_def by blast
         then obtain z  where z_def: "\<forall>r. verif v x z r \<longrightarrow> 0 = r "
           "bit_length z \<le> p_cer (bit_length x)"
           using comp_det verif_def
