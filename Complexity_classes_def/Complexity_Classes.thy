@@ -223,14 +223,18 @@ next
   hence "tu \<in> L'" using r'_def(2) by simp
   thus  "x\<in>L" using tu_def assms(2) by blast
 qed
-
-lemma NP_alter_def:
+paragraph \<open>NP alternative definition \<close>
+text \<open>A language is NP, iff. there EXISTS a  language of  (input,certifiate) tuples IN P, such that
+1) every input existing IN the language has at least one corresponding certificate that is
+    polynomially bounded
+2) the set of inputs is  exactly the NP language. 
+ \<close>
+theorem NP_alter_def:
       "L \<in> NP \<longleftrightarrow> (\<exists>L' p. L' \<in> P \<and> poly p \<and> 
-                  (\<forall>tu x z . tu \<in> L' \<and> verif entuple x z tu \<longrightarrow>
-                    (\<exists>tu' z'. tu' \<in> L' \<and> verif entuple x z' tu' \<and> 
-                              bit_length z' \<le> p (bit_length x))) \<and> 
+                    certif_bounded_to_goal entuple p L' \<and> 
                   (\<forall>x. x\<in>L \<longleftrightarrow> (\<exists>tu z. tu\<in>L' \<and> verif entuple x z tu)))"
-proof
+  
+proof (auto simp add: certif_bounded_to_goal_def)
   assume " L \<in> NP"
   then obtain v where v_def: "is_poly_verif v L" using NP_def by blast
   let ?L' = "cert_lang_of v"
@@ -268,35 +272,27 @@ proof
     hence "x' =x " using asm(2)  verif_entuple_det by blast
     hence "verif v x z' 0" using def'(2) by blast
     then obtain z'' where def'':"verif v x z'' 0" "bit_length z'' \<le> p (bit_length x)"
-      using p_def certif_bounded_def def'(2) by blast
+      using p_def certif_bounded_def def'(2) certif_bounded_to_goal_def by auto 
     obtain tu'' where tu''_def: "verif entuple x z'' tu''" using total_en by fast
     moreover have "tu'' \<in> cert_lang_of v " 
       using def''(1) def''(2) tu''_def cert_lang_of_def by blast
-    ultimately 
-show " \<exists>tu'. tu' \<in> cert_lang_of v \<and> (\<exists>z'. verif entuple x z' tu' \<and> bit_length z' \<le> p (bit_length x))"
+    ultimately  show 
+" \<exists>tu'. tu' \<in> cert_lang_of v \<and> (\<exists>z'. verif entuple x z' tu' \<and> bit_length z' \<le> p (bit_length x))"
       using def''(2) def''(2) by blast
     qed
-  ultimately show "\<exists>L' p. L' \<in> P \<and> poly p \<and> (\<forall>tu x z.
-           tu \<in> L' \<and> verif entuple x z tu \<longrightarrow>
-           (\<exists>tu' z'. tu' \<in> L' \<and> verif entuple x z' tu' \<and> bit_length z' \<le> p (bit_length x))) \<and>
-       (\<forall>x. (x \<in> L) = (\<exists>tu z. tu \<in> L' \<and> verif entuple x z tu))" 
-    using p_def(1)  by blast
+    ultimately show " \<exists>L'. L' \<in> P \<and>
+         (\<exists>p. poly p \<and>
+              (\<forall>x. (\<exists>z r. verif entuple x z r \<and> r \<in> L') \<longrightarrow>
+                   (\<exists>z r. verif entuple x z r \<and> bit_length z \<le> p (bit_length x) \<and> r \<in> L')) \<and>
+              (\<forall>x. (x \<in> L) = (\<exists>tu. tu \<in> L' \<and> (\<exists>z. verif entuple x z tu))))" 
+    using p_def(1) by force  
 next
-  assume "\<exists>L' p.
-       L' \<in> P \<and>
-       poly p \<and>
-       (\<forall>tu x z.
-           tu \<in> L' \<and> verif entuple x z tu \<longrightarrow>
-           (\<exists>tu' z'. tu' \<in> L' \<and> verif entuple x z' tu' \<and> bit_length z' \<le> p (bit_length x))) \<and>
-       (\<forall>x. (x \<in> L) = (\<exists>tu z. tu \<in> L' \<and> verif entuple x z tu))"
-  then obtain L' p where L'_def: "L' \<in> P" "poly p" 
-      "\<forall>x. (x \<in> L) = (\<exists>tu z. tu \<in> L' \<and> verif entuple x z tu)"
-      " (\<forall>tu x z.
-           tu \<in> L' \<and> verif entuple x z tu \<longrightarrow>
-           (\<exists>tu' z'. tu' \<in> L' \<and> verif entuple x z' tu' \<and> bit_length z' \<le> p (bit_length x)))"
-    by blast
+  fix L' p
+  assume L'_def: "L' \<in> P" "poly p" "\<forall>x. (\<exists>z r. verif entuple x z r \<and> r \<in> L') \<longrightarrow>
+           (\<exists>z r. verif entuple x z r \<and> bit_length z \<le> p (bit_length x) \<and> r \<in> L')"
+          " \<forall>x. (x \<in> L) = (\<exists>tu. tu \<in> L' \<and> (\<exists>z. verif entuple x z tu)) "
   then obtain c where c_def:"decides c L'" "poly_time_bounded c [''input'']" using P_def by blast
-  from L'_def(3) c_def(1) P_to_NP have "is_verif (entuple;;c) L" by presburger
+  from L'_def(4) c_def(1) P_to_NP have "is_verif (entuple;;c) L" by auto
   moreover have  "poly_time_bounded (entuple;;c)[''input'',''certificate'']"
     using c_def(2) en_bound reduction_poly by simp
   moreover have "poly_certif_bounded (entuple;;c)"
@@ -316,7 +312,7 @@ next
       hence "tu \<in> L'" using r'_def(2)  asm by blast
       then obtain tu' z' 
         where tuz'_def: "tu' \<in> L'" " verif entuple x z' tu'" "bit_length z' \<le> p (bit_length x)"
-        using L'_def(4) tu_def by blast
+        using L'_def(3) tu_def by blast
       then obtain r'' 
         where r''_def: "comp' c tu' r''" "tu' \<in> L' \<longleftrightarrow> r''=0" using c_def decides_def by blast
       have "verif (entuple;;c) x z' r''" using r''_def(1) tuz'_def(2) verif_def comp'_def comp_comp
@@ -325,10 +321,8 @@ next
       ultimately show "\<exists>z. verif (entuple;; c) x z 0 \<and> bit_length z \<le> p (bit_length x)"
         using tuz'_def(3) by blast
     qed
-    thus "\<exists>p. poly p \<and>
-        (\<forall>x. (\<exists>z. verif (entuple;; c) x z 0) \<longrightarrow>
-             (\<exists>z. verif (entuple;; c) x z 0 \<and> bit_length z \<le> p (bit_length x))) "
-      using L'_def(2) by auto
+    thus "\<exists>p. poly p \<and> certif_bounded_to_goal (entuple;; c) p {0}"
+      using L'_def(2) certif_bounded_to_goal_def by auto
   qed
   ultimately show "L \<in> NP" using NP_def is_poly_verif_def by auto
 qed
