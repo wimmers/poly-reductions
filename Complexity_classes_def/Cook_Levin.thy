@@ -219,4 +219,4 @@ text\<open>Stating cook-levin \<close>
 lemma cook_levin: "IMP_SAT \<in> NP_hard"
   by (simp add: NP_hard_def NP_reduces_SAT)
 end
-
+end
