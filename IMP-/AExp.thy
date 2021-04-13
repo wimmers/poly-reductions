@@ -20,6 +20,7 @@ fun atomVal :: "atomExp \<Rightarrow> state \<Rightarrow> val" where
 "atomVal (N number) _ = number"
 
 text "Defining arithmetic operators and general form of expressions: "
+
 datatype aexp =  A atomExp            |
                  Plus atomExp atomExp |
                  Sub atomExp atomExp  | 

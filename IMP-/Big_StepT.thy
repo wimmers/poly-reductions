@@ -160,7 +160,8 @@ proof -
   ultimately show ?thesis by simp
 qed
 
-lemma If_THE_False: "Suc (THE n. \<exists>a. (c2, s) \<Rightarrow>\<^bsup> n \<^esup> a) =  (THE n. \<exists>a. (IF b \<noteq>0 THEN c1 ELSE c2, s) \<Rightarrow>\<^bsup> n \<^esup> a)"
+lemma If_THE_False:
+ "Suc (THE n. \<exists>a. (c2, s) \<Rightarrow>\<^bsup> n \<^esup> a) =  (THE n. \<exists>a. (IF b \<noteq>0 THEN c1 ELSE c2, s) \<Rightarrow>\<^bsup> n \<^esup> a)"
      if T: "s b = 0" and c2_t: "\<down> (c2,s)" for s l
 proof -
   from c2_t obtain p t where a: "(c2, s) \<Rightarrow>\<^bsup> p \<^esup> t"  by blast
