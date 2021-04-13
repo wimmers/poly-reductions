@@ -1,9 +1,6 @@
 chapter Poly_Reductions
 
 session IMP_Minus = HOL + 
-  sessions
-    "HOL-Real_Asymp"    
-    "Landau_Symbols"
   theories
     Com
     Big_StepT
