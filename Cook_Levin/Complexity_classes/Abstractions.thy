@@ -118,6 +118,13 @@ definition comp' :: "com \<Rightarrow> val \<Rightarrow> val \<Rightarrow> bool"
 definition verif :: "com \<Rightarrow> val \<Rightarrow> val \<Rightarrow> val \<Rightarrow> bool" where 
 "verif c x z r \<equiv> comp c [(''input'',x),(''certificate'',z)] [(''input'',r)]"
 
+
+lemma comp'_comp':
+  assumes "comp' f x y" "comp' g y z"
+  shows "comp' (f;;g) x z"
+  using assms unfolding comp'_def
+  by(rule comp_comp[where ys="[(''input'',y)]"])
+
 subsection \<open>Decision problems\<close>
 paragraph \<open>Convention\<close>
 text \<open>Decision programs are programs that compute a boolean logical result 
@@ -143,8 +150,8 @@ it is depending on other variables).
 
 The result/decision is True iff x \<in> L .\<close>
 
-definition decides :: "com \<Rightarrow> lang \<Rightarrow> bool"
-  where "decides c L  \<equiv> (\<forall>x. \<exists>r. comp' c x r \<and> ( x\<in>L \<longleftrightarrow> r = 0))"
+definition decides :: "com \<Rightarrow> lang \<Rightarrow> bool" where
+  "decides c L  \<equiv> (\<forall>x. \<exists>r. comp' c x r \<and> ( x\<in>L \<longleftrightarrow> r = 0))"
 
 
 subsection \<open>Verifier programs\<close>
@@ -162,10 +169,17 @@ Every input x has at least one corresponding valid certificate iff. x \<in> L\<c
 definition is_verif :: "com \<Rightarrow> lang \<Rightarrow> bool" where
 "is_verif c L  \<equiv> (\<forall>x z. \<exists>r. verif c x z r) \<and> (\<forall>x. (x\<in>L \<longleftrightarrow> (\<exists>z. verif c x z 0))) "
 
+
+lemma is_verifI:
+  assumes "\<And>x z. \<exists>r. verif c x z r"
+    "\<And>x. x\<in>L \<longleftrightarrow> (\<exists>z. verif c x z 0)"
+  shows "is_verif c L"
+  using assms unfolding is_verif_def by auto
+
 paragraph \<open>Certificate conserving\<close>
 text \<open>The code always terminates with a final state that 
 has the same certificate register content as the initial state.\<close> 
 definition cons_certif :: "com \<Rightarrow> bool" where
-"cons_certif c = (\<forall>s t s'. (c,s) \<Rightarrow>\<^bsup> t \<^esup> s' \<longrightarrow> s ''certificate'' = s' ''certificate'')"
+  "cons_certif c = (\<forall>s t s'. (c,s) \<Rightarrow>\<^bsup> t \<^esup> s' \<longrightarrow> s ''certificate'' = s' ''certificate'')"
 
 end  

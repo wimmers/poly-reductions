@@ -23,10 +23,25 @@ text \<open>We are only interested in programs that always terminate.
 A program c is bounded by a function p, if it does always terminate AND the termination time t is 
 always less than p(l). l being the input size.\<close>
 definition time_bounded :: "com \<Rightarrow> vname list \<Rightarrow> bound_fun \<Rightarrow> bool" where
-"time_bounded c l p \<equiv> (\<forall>s. \<exists>t s'. (c,s) \<Rightarrow>\<^bsup>t\<^esup> s' \<and> t \<le> p (bit_size (map s l)))"
+"time_bounded c l p \<equiv> (\<forall>s. \<exists>t s'. ((c,s) \<Rightarrow>\<^bsup>t\<^esup> s') \<and> t \<le> p (bit_size (map s l)))"
+
+lemma time_boundedI: 
+  assumes "\<And>s. \<exists>t s'. ((c,s) \<Rightarrow>\<^bsup>t\<^esup> s') \<and> t \<le> p (bit_size (map s l))"
+  shows "time_bounded c l p"
+  using assms unfolding time_bounded_def by auto
 
 definition poly_time_bounded :: "com \<Rightarrow> vname list \<Rightarrow> bool" where 
 "poly_time_bounded c l \<equiv> \<exists>p. poly p \<and> time_bounded c l p"
+
+lemma poly_time_boundedD:
+  assumes "poly_time_bounded c l"
+  obtains p where "poly p" "time_bounded c l p"
+  using assms unfolding poly_time_bounded_def by auto
+
+lemma poly_time_boundedI:
+  assumes "poly p" "time_bounded c l p"
+  shows "poly_time_bounded c l"
+  using assms unfolding poly_time_bounded_def by auto
 
 subsection \<open>Result bounded programs \<close>
 paragraph \<open>Definition\<close>
@@ -43,48 +58,48 @@ definition poly_result_bounded :: "com \<Rightarrow> vname list \<Rightarrow> vn
 subsection \<open>Sequencing two polynomially bounded programs \<close>
 lemma reduction_poly:
   assumes "poly_time_bounded f nxs" "poly_time_bounded g nys"  "poly_result_bounded f nxs nys"
-  shows "poly_time_bounded (f;;g) nxs"
-  proof (simp add:poly_time_bounded_def time_bounded_def)
-  from assms(1) obtain pf where pf_props:"poly pf" "time_bounded f nxs pf" 
-    using poly_time_bounded_def by blast
-  from assms(2) obtain pg where pg_props:"poly pg" "time_bounded g nys pg"
-    using poly_time_bounded_def by blast
-  from assms(3) obtain pd  where pd_props: "poly pd" "\<forall>x. length x = length nxs
+  shows "poly_time_bounded (f;;g) nxs" 
+proof -
+  from assms(1) obtain pf where pf_props: "poly pf" "time_bounded f nxs pf" 
+    apply(rule poly_time_boundedD) ..
+  from assms(2) obtain pg where pg_props: "poly pg" "time_bounded g nys pg"
+    apply(rule poly_time_boundedD) ..
+  from assms(3) obtain pd  where "poly pd" and pd_fact: "\<forall>x. length x = length nxs
     \<longrightarrow> (\<exists>r. length r = length nys \<and> comp f (zip nxs x) (zip nys r) \<and>
                                                      bit_size r \<le> pd (bit_size x)) "
     using poly_result_bounded_def result_bounded_def by auto
   let ?p = "\<lambda>x. pf x + (make_mono pg o pd) x"
   have "poly ?p"
-    using poly_add pf_props(1) pg_props(1) poly_compose pd_props(1) poly_make_mono_iff by metis
-  moreover have "\<forall>s. \<exists>t. (\<exists>s'. (f;; g, s) \<Rightarrow>\<^bsup> t \<^esup> s') \<and> t \<le> ?p (bit_size (map s nxs))"
-  proof
+    using poly_add pf_props(1) pg_props(1) poly_compose `poly pd` poly_make_mono_iff by metis
+  moreover have "time_bounded (f;; g) nxs ?p"
+  proof (intro time_boundedI)
     fix s
     obtain x::"val list" where x_def: "x = map s nxs"  "length x = length nxs"  by simp 
     then obtain sf tf where stepf:"(f,s) \<Rightarrow>\<^bsup> tf \<^esup> sf" "tf \<le> pf (bit_size x)"
-        using pf_props(2)  by (simp add: time_bounded_def) blast
-      obtain y where stepd: "comp f (zip nxs x) (zip nys y)" 
-              "bit_size y \<le> pd (bit_size x)" "length y = length nys" using pd_props(2) x_def(2)
-        by auto
-      then obtain s1 t1 where step':"(f,s) \<Rightarrow>\<^bsup> t1 \<^esup> s1" "map s1 nys = y" using comp_def x_def
-          stepd(2) zip_eq_conv  by (smt list.map_comp) 
-      hence "s1 = sf" using big_step_t_determ2 stepf(1) by simp
-      then obtain  sg tg where g_def: "(g,sf)\<Rightarrow>\<^bsup> tg \<^esup> sg" "tg \<le> pg(bit_size y)"
-        using pg_props(2) time_bounded_def step'(2) by blast
-       hence "tg \<le> make_mono pg (bit_size y)" using le_trans by blast
-       moreover have "make_mono pg (bit_size y) \<le> make_mono pg (pd (bit_size x))"
-         using stepd(2) mono_make_mono[of pg] incseq_def  by blast
-       ultimately have t2_ineq: "tg \<le> (make_mono pg o pd)(bit_size x)" by fastforce
-       hence "(f;;g,s) \<Rightarrow>\<^bsup> tf+tg \<^esup> sg" 
-          "tf+tg \<le> pf (bit_size x) + (make_mono pg o pd) (bit_size x)"
-        using stepf(1) g_def (1) apply blast
-        using add_mono stepf(2) t2_ineq by blast
-      thus "\<exists>t. (\<exists>s'. (f;; g, s) \<Rightarrow>\<^bsup> t \<^esup> s') \<and>
+      using pf_props(2)  by (simp add: time_bounded_def) blast
+    obtain y where stepd: "comp f (zip nxs x) (zip nys y)" 
+      "bit_size y \<le> pd (bit_size x)" "length y = length nys" using pd_fact x_def(2)
+      by auto
+    then obtain s1 t1 where step':"(f,s) \<Rightarrow>\<^bsup> t1 \<^esup> s1" "map s1 nys = y" using comp_def x_def
+        stepd(2) zip_eq_conv  by (smt list.map_comp) 
+    hence "s1 = sf" using big_step_t_determ2 stepf(1) by simp
+    then obtain  sg tg where g_def: "(g,sf)\<Rightarrow>\<^bsup> tg \<^esup> sg" "tg \<le> pg(bit_size y)"
+      using pg_props(2) time_bounded_def step'(2) by blast
+    hence "tg \<le> make_mono pg (bit_size y)" using le_trans by blast
+    moreover have "make_mono pg (bit_size y) \<le> make_mono pg (pd (bit_size x))"
+      using stepd(2) mono_make_mono[of pg] incseq_def  by blast
+    ultimately have t2_ineq: "tg \<le> (make_mono pg o pd)(bit_size x)" by fastforce
+    hence "(f;;g,s) \<Rightarrow>\<^bsup> tf+tg \<^esup> sg" 
+      "tf+tg \<le> pf (bit_size x) + (make_mono pg o pd) (bit_size x)"
+      using stepf(1) g_def (1) apply blast
+      using add_mono stepf(2) t2_ineq by blast
+    thus "\<exists>t s'. ((f;; g, s) \<Rightarrow>\<^bsup> t \<^esup> s') \<and>
              t \<le> pf (bit_size (map s nxs)) + (make_mono pg \<circ> pd) (bit_size (map s nxs)) "
-        using x_def by blast
-    qed
-    ultimately show "\<exists>p. poly p 
-        \<and> (\<forall>s. \<exists>t. (\<exists>s'. (f;; g, s) \<Rightarrow>\<^bsup> t \<^esup> s') \<and> t \<le> p (bit_size (map s nxs)))" by blast
+      using x_def by blast
   qed
+  ultimately show ?thesis
+    by (rule poly_time_boundedI) 
+qed
 
 subsection \<open>Valid certificate bounds\<close>
 paragraph \<open>Definition\<close>
@@ -121,10 +136,10 @@ qed
 lemma extend_time_bounded :
   assumes "time_bounded f xs p" 
   shows "time_bounded f (xs@ys) (make_mono p)"  
-proof (auto simp add:time_bounded_def)
+proof (auto simp add: time_bounded_def)
   fix s 
   from assms obtain t s' where def:"(f, s) \<Rightarrow>\<^bsup> t \<^esup> s'" "t \<le> p (bit_size (map s xs))"
-    apply (auto simp add:time_bounded_def) by blast 
+    apply (auto simp add: time_bounded_def) by blast 
   from def(2) have "t \<le> make_mono p (bit_size (map s xs))" 
     using le_trans by blast 
   hence " t \<le> make_mono p (bit_size (map s xs) + bit_size (map s ys))"
@@ -138,7 +153,7 @@ lemma extend_poly_time_bounded:
   assumes "poly_time_bounded f xs " 
   shows "poly_time_bounded f (xs@ys)"
 proof -
-  from assms obtain p where "poly p" "time_bounded f xs p" by (auto simp add:poly_time_bounded_def)
+  from assms obtain p where "poly p" "time_bounded f xs p" by (auto simp add: poly_time_bounded_def)
   hence "time_bounded f (xs@ys) (make_mono p) "  "poly (make_mono p)"
     by(auto simp add: extend_time_bounded  poly_make_mono_iff)
   thus ?thesis by (auto simp add:poly_time_bounded_def)
