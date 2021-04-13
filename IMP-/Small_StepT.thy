@@ -84,6 +84,11 @@ apply(induction arbitrary: cs'' rule: small_step.induct)
   apply auto
   done
 
+subsection "Progress property"
+text "every command costs time"
+lemma small_step_progress: "(c, s) \<rightarrow>\<^bsup> p \<^esup> t \<Longrightarrow> t \<noteq> (c, s)  \<Longrightarrow> p > 0"
+  apply(induction p) by auto
+
 subsection "Sequence properties"
 declare rel_pow_intros[simp,intro]
 
