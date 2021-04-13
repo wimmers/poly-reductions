@@ -112,14 +112,12 @@ next
     using arcs_not_epmty last_pre_digraph_cas assms
     by auto
   then have 2: "last Cycle = u"
-    using assms last_vwalk_arcs_last_p arcs_not_epmty assms
-    by simp
+    by (meson last_vwalk_arcs_last_p arcs_not_epmty)
   have "fst (hd (vwalk_arcs Cycle)) = u"
     using arcs_not_epmty hd_pre_digraph_cas 1 assms
     by auto
   then have 3: "hd Cycle = u"
-    using hd_vwalk_arcs_last_p assms arcs_not_epmty
-    by simp
+    by (meson hd_vwalk_arcs_last_p arcs_not_epmty)
   then show ?thesis using 2 3
     by simp
 qed

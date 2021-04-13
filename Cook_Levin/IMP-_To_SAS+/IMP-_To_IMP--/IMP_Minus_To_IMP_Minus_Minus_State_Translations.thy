@@ -3,7 +3,7 @@
 section "IMP- to IMP-- State Translations"
                                     
 theory IMP_Minus_To_IMP_Minus_Minus_State_Translations 
-  imports "../../../IMP-/Small_StepT" Binary_Arithmetic
+  imports "IMP_Minus.Small_StepT" Binary_Arithmetic
 begin
 
 text \<open> We define a translation between IMP- states, which map registers to natural numbers, and

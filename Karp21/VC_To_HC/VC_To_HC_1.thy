@@ -415,7 +415,7 @@ proof -
     using assms ugraph_def only_previous_edges_in_new_edges
     by metis
   then have "finite e"
-    using card_infinite
+    using card.infinite
     by force
   then show ?thesis
     using 1 2 3 assms elements_of_edges_helper

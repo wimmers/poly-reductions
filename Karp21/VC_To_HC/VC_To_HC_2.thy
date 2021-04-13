@@ -256,8 +256,8 @@ next
     by simp
 qed
 
-
-lemma hd_last_Cycle:
+(* TODO: similar theorem in HC_To_UHC - refactor! *)
+lemma hd_last_Cycle: 
   assumes "Cycle \<noteq> []" "card (verts G) > 1"
   shows "hd Cycle = last Cycle"
 proof (cases "length Cycle = 1")
@@ -285,14 +285,12 @@ next
     using arcs_not_epmty last_pre_digraph_cas
     by auto
   then have 2: "last Cycle = u"
-    using assms last_vwalk_arcs_last_p arcs_not_epmty
-    by simp
+    by (meson last_vwalk_arcs_last_p arcs_not_epmty)
   have "fst (hd (vwalk_arcs Cycle)) = u"
     using arcs_not_epmty hd_pre_digraph_cas 1
     by auto
   then have 3: "hd Cycle = u"
-    using hd_vwalk_arcs_last_p assms arcs_not_epmty
-    by simp
+    by(meson hd_vwalk_arcs_last_p arcs_not_epmty)
   then show ?thesis
     using 2 3
     by simp
@@ -2375,7 +2373,7 @@ proof -
     case False
     then show ?thesis
       using Cover_is_def 1
-      by (meson card_infinite)
+      by (meson card.infinite)
   qed
   have fin_S: "finite S"
     using finite_Cov eq finite_UnionD

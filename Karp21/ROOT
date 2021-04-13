@@ -4,6 +4,7 @@ session Karp21 = Poly_Reductions_Lib +
   sessions
     "HOL-Real_Asymp"    
     "Landau_Symbols"
+    "NREST"
   directories
     "CNF_SAT_To_Clique"
     "HC_To_UHC"

@@ -22,7 +22,7 @@ lemma e_in_E_e_explicit:
   shows "\<exists>u v. e = {u ,v} \<and> u \<noteq> v"
 proof -
   from assms have "finite e"
-    using card_infinite by fastforce
+    using card.infinite by force
   then obtain xs where "distinct xs" "set xs = e" "length xs = card e"
     by (metis assms distinct_card finite_distinct_list)
   with assms show ?thesis

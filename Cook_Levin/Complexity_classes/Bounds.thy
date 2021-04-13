@@ -153,7 +153,7 @@ proof (auto simp add:result_bounded_def)
   fix xs::"val list"
   assume "length xs = Suc (Suc 0)"
   then obtain x z where xs_def: "xs = [x,z]"
-    by (metis length_0_conv length_Suc_conv)
+    by (metis (no_types, lifting) Suc_length_conv length_0_conv)
   have "length [x] = length [''input'']" by auto
   then obtain ys where ys_def: "comp f [(''input'',x)] (zip [''input''] ys)" 
                         "length ys = length [''input'']"
