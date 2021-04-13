@@ -3,7 +3,7 @@
 section "IMP- Max Constant"
 
 theory IMP_Minus_Max_Constant 
-  imports "../IMP-/Small_StepT" 
+  imports "../../IMP-/Small_StepT" 
 begin
 
 text \<open>We define functions to derive the constant with the highest value and enumerate all variables 

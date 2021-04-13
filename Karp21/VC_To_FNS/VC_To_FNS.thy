@@ -1,6 +1,6 @@
 theory VC_To_FNS
   imports Main "../Three_Sat_To_Set_Cover" Graph_Theory.Digraph Graph_Theory.Arc_Walk
-    "../VC_Set_To_VC_List/VC_Set_To_VC_List" "../Auxiliaries/Graph_Auxiliaries"
+    "../VC_Set_To_VC_List/VC_Set_To_VC_List" "Poly_Reductions_Lib.Graph_Auxiliaries"
 begin
 
 section\<open>VC To FNS\<close>

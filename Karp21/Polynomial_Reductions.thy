@@ -1,7 +1,7 @@
 subsection \<open>Polynomial Reductions\<close>
 
 theory Polynomial_Reductions
-  imports NREST.Refine_Foreach Reductions Polynomial_Growth_Functions
+  imports NREST.Refine_Foreach Reductions "Poly_Reductions_Lib.Polynomial_Growth_Functions"
 begin
 
 text \<open>

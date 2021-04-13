@@ -3,7 +3,7 @@
 section "IMP- to IMP--"
 
 theory IMP_Minus_To_IMP_Minus_Minus imports Binary_Operations 
-  "../../IMP-/Big_StepT" "../IMP_Minus_Max_Constant"
+  "../../../IMP-/Big_StepT" "../IMP_Minus_Max_Constant"
   
 begin
 
@@ -291,6 +291,7 @@ proof(induction l)
   have "{ f x |x. x \<in> set (a # l)} = { f a } \<union> { f x |x. x \<in> set l}" by auto
   thus ?case using Cons apply auto
      apply (metis (mono_tags, lifting) card.infinite card_insert_if finite_insert mem_Collect_eq)
+    sledgehammer 
     by (metis (no_types, lifting) Suc_le_mono card_infinite card_insert_disjoint finite_insert 
         insert_absorb le_SucI)
 qed auto

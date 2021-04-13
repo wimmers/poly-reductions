@@ -1,0 +1,15 @@
+chapter Poly_Reductions
+
+session Poly_Reductions_Lib = HOL + 
+  sessions
+    "HOL-Real_Asymp"    
+    "Landau_Symbols"
+  directories
+    "Auxiliaries"
+    "Graph_Extensions"  
+  theories
+    "Auxiliaries/Graph_Auxiliaries"
+    "Graph_Extensions/Vwalk_Cycle"
+    Polynomial_Growth_Functions
+    "SAT_Definition"
+    

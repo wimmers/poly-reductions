@@ -13,12 +13,12 @@ theory Cook_Levin
 begin
 locale encode_decode_sat =
   fixes encode_sat :: "nat three_sat \<Rightarrow> nat" (*I think we  should find a way to make it polynomially  bounded*)
-  fixes decode_sat :: "nat\<Rightarrow> nat three_sat"
-
-assumes decode_encode_inv : "decode_sat (encode_sat F) = F"
+    and decode_sat :: "nat\<Rightarrow> nat three_sat"
+  assumes decode_encode_inv : "decode_sat (encode_sat F) = F"
 begin
-definition IMP_SAT :: "nat set" where 
-  "IMP_SAT == encode_sat ` {n. sat n}"
+
+definition IMP_SAT :: "nat set" where "IMP_SAT == encode_sat ` {n. sat n}"
+
 paragraph \<open>Main lemma\<close>
 text \<open>This is the most important part while proving Cook-Levin.
 We have to prove that for every verifier, that is polynomially bounded, we could find a reduction
@@ -45,7 +45,9 @@ lemma main_lemma :
                                                       \<and>(c, s) \<Rightarrow>\<^bsup> t \<^esup> s' \<longrightarrow> s' ''input'' = 0))
                                         )
                       )"
-  sorry
+  oops
+
+
 paragraph \<open>Main Lemma on HOL level \<close>
 text \<open>Same lemma but we assume that the reduction is written in HOL \<close>
 lemma main_lemma_hol: 
@@ -67,9 +69,37 @@ lemma main_lemma_hol:
                                                       \<and>(c, s) \<Rightarrow>\<^bsup> t \<^esup> s' \<longrightarrow> s' ''input'' = 0))
                                         )
                       )"
-  sorry
+  oops
+
 text \<open>Prove for every NP program that it can be reduced to IMP_SAT using 
 the reduction of main lemma \<close>
+
+end
+
+locale Cook_Levin_assumes_Main_lemma = encode_decode_sat +
+  assumes
+    main_lemma : 
+   "\<lbrakk> poly pt; 
+      poly p_cer;
+      \<forall>s. \<exists>t. Ex (big_step_t (c, s) t) \<and> t \<le> 
+                      pt (bit_length (s ''input'') + bit_length (s ''certificate''));
+      \<forall>x z. \<exists>r. \<forall>s. s ''input'' = x \<and> s ''certificate'' = z \<longrightarrow>
+                         (\<exists>t s'. (c, s) \<Rightarrow>\<^bsup> t \<^esup> s' \<and> s' ''input'' = r) \<rbrakk>
+    \<Longrightarrow> \<exists>imp_to_sat t_red s_red.
+         poly t_red 
+       \<and> poly s_red
+       \<and> (\<forall>s t s'. (imp_to_sat,s) \<Rightarrow>\<^bsup> t \<^esup> s' \<longrightarrow> s ''certificate'' = s' ''certificate'')
+       \<and> (\<forall>x. \<exists>f.    bit_length f \<le> s_red ( bit_length x )
+                   \<and> (\<forall>s. s ''input'' = x \<longrightarrow> (\<exists>t s'. (imp_to_sat,s) \<Rightarrow>\<^bsup> t \<^esup> s' \<and> 
+                                          s' ''input'' = f \<and> t \<le> t_red(bit_length x)))
+                   \<and> ( f \<in> IMP_SAT \<longleftrightarrow>
+                                        (\<exists>z. bit_length z \<le> p_cer (bit_length x) \<and>
+                                                      (\<forall>s t s'. s ''input'' = x 
+                                                      \<and> s ''certificate'' = z 
+                                                      \<and>(c, s) \<Rightarrow>\<^bsup> t \<^esup> s' \<longrightarrow> s' ''input'' = 0))
+                                        )
+                      )"
+begin
 
 lemma NP_reduces_SAT:
   assumes "L \<in> NP"
@@ -218,5 +248,7 @@ text \<open>Stating cook-levin \<close>
 
 lemma cook_levin: "IMP_SAT \<in> NP_hard"
   by (simp add: NP_hard_def NP_reduces_SAT)
-end
-end
+
+end (* end locale *)
+
+end (* end theory *)

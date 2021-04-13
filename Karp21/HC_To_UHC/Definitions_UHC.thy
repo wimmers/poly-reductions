@@ -3,9 +3,8 @@ section \<open>HC to UHC\<close>
 theory Definitions_UHC
   imports Main "../Three_Sat_To_Set_Cover" Graph_Theory.Digraph  Graph_Theory.Arc_Walk
     Graph_Theory.Vertex_Walk
-    "../Auxiliaries/List_Auxiliaries" "../Auxiliaries/Set_Auxiliaries"
-    "../VC_To_HC/Definitions_HC" "../Auxiliaries/Graph_auxiliaries"
-    "../Graph_Extensions/Vwalk_Cycle"
+    "../VC_To_HC/Definitions_HC"
+    "Poly_Reductions_Lib.Vwalk_Cycle"
 begin
 
 subsection\<open>Preliminaries\<close>

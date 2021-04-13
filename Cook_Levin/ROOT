@@ -1,0 +1,15 @@
+chapter Poly_Reductions
+
+session Cook_Levin = HOL + 
+  sessions
+    "HOL-Real_Asymp"    
+    "Landau_Symbols"
+  directories
+    "Complexity_classes"
+    "IMP-_To_SAS+"
+    "IMP-_To_SAS+/IMP-_To_IMP--"
+    "IMP-_To_SAS+/IMP--_To_SAS++"
+    "IMP-_To_SAS+/SAS++_To_SAS+"
+  theories
+    "Complexity_classes/Cook_Levin"
+    "IMP-_To_SAS+/IMP_Minus_To_SAS_Plus"

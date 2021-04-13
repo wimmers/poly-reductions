@@ -4,7 +4,7 @@ paragraph \<open>Summary\<close>
 text \<open>We define an abstraction layer over our computation model 
       to be able to define complexity classes easily.\<close>
 theory Abstractions
-  imports  "../IMP-/Big_StepT"
+  imports  "IMP_Minus.Big_StepT"
 begin
 paragraph \<open>Definitions\<close>
 text \<open>

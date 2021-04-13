@@ -1,6 +1,5 @@
 theory VC_Set_To_VC_List
-  imports Main "../Three_Sat_To_Set_Cover"  "../Auxiliaries/List_Auxiliaries"
-    "../Auxiliaries/Set_Auxiliaries" "../Auxiliaries/Graph_Auxiliaries"
+  imports Main "../Three_Sat_To_Set_Cover"  "Poly_Reductions_Lib.Graph_Auxiliaries"
 begin
 
 section\<open>VC Set to VC List\<close>

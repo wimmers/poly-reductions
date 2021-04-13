@@ -1,9 +1,8 @@
 section\<open>VC to HC\<close>
 
 theory Definitions_HC
-  imports Main "../Three_Sat_To_Set_Cover"  "../Auxiliaries/List_Auxiliaries"
-    "../Auxiliaries/Set_Auxiliaries" "../Auxiliaries/Graph_Auxiliaries"
-    "../VC_Set_to_VC_List/VC_Set_to_VC_List"
+  imports Main "../Three_Sat_To_Set_Cover"  "Poly_Reductions_Lib.Graph_Auxiliaries"
+    "../VC_Set_To_VC_List/VC_Set_To_VC_List"
     Graph_Theory.Digraph  Graph_Theory.Arc_Walk Graph_Theory.Vertex_Walk
 begin
 

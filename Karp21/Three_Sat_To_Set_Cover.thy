@@ -1,26 +1,11 @@
 section \<open>\<open>3CNF-SAT\<close> To \<open>Set Cover\<close>\<close>
 
 theory Three_Sat_To_Set_Cover
-  imports Reductions
+  imports Reductions "Poly_Reductions_Lib.SAT_Definition"
 begin
 
 subsection \<open>Preliminaries\<close>
 
-datatype 'a lit = Pos 'a | Neg 'a
-
-type_synonym 'a three_sat = "'a lit set list"
-
-definition lift :: "('a \<Rightarrow> bool) \<Rightarrow> 'a lit \<Rightarrow> bool" ("_\<up>" 60) where
-  "lift \<sigma> \<equiv> \<lambda>l. case l of Pos x \<Rightarrow> \<sigma> x | Neg x \<Rightarrow> \<not> \<sigma> x"
-
-definition models :: "('a \<Rightarrow> bool) \<Rightarrow> 'a three_sat \<Rightarrow> bool" (infixl "\<Turnstile>" 55) where
-  "\<sigma> \<Turnstile> F \<equiv> \<forall>cls \<in> set F. \<exists>l \<in> cls. (\<sigma>\<up>) l"
-
-definition sat :: "'a three_sat \<Rightarrow> bool" where
-  "sat F \<equiv> \<exists>\<sigma>. \<sigma> \<Turnstile> F"
-
-definition
-  "three_cnf_sat \<equiv> {F. sat F \<and> (\<forall>cls \<in> set F. card cls = 3)}"
 
 type_synonym 'a ugraph = "'a set set"
 

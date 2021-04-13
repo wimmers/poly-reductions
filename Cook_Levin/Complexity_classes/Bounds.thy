@@ -1,5 +1,5 @@
 theory Bounds
-  imports Bit_Length  Abstractions "../IMP-/Big_StepT"  "../Polynomial_Growth_Functions"
+  imports Bit_Length  Abstractions "IMP_Minus.Big_StepT"  "Poly_Reductions_Lib.Polynomial_Growth_Functions"
 begin
 paragraph \<open>Bounding functions\<close>
 text \<open> We restrict/over-approximate the behaviour of our programs by defining

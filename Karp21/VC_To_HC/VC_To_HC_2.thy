@@ -1,7 +1,6 @@
 theory VC_To_HC_2
   imports
-    Definitions_HC "../VC_Set_To_VC_List/VC_Set_To_VC_List" "../Auxiliaries/Set_Auxiliaries"
-    "../Auxiliaries/Graph_Auxiliaries"
+    Definitions_HC "../VC_Set_To_VC_List/VC_Set_To_VC_List" "Poly_Reductions_Lib.Graph_Auxiliaries"
 begin
 
 
