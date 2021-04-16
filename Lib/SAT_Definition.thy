@@ -6,6 +6,7 @@ subsection \<open>Definition of SAT\<close>
 
 datatype 'a lit = Pos 'a | Neg 'a
 
+(* TODO: rename, this is not three_sat ! *)
 type_synonym 'a three_sat = "'a lit set list"
 
 definition lift :: "('a \<Rightarrow> bool) \<Rightarrow> 'a lit \<Rightarrow> bool" ("_\<up>" 60) where
@@ -17,6 +18,7 @@ definition models :: "('a \<Rightarrow> bool) \<Rightarrow> 'a three_sat \<Right
 definition sat :: "'a three_sat \<Rightarrow> bool" where
   "sat F \<equiv> \<exists>\<sigma>. \<sigma> \<Turnstile> F"
 
+(* this is three cnf sat *)
 definition
   "three_cnf_sat \<equiv> {F. sat F \<and> (\<forall>cls \<in> set F. card cls = 3)}"
 

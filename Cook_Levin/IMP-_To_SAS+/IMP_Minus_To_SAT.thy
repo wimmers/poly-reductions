@@ -23,6 +23,8 @@ text \<open>theorem about the translation from SAS+ to SAT
       by Mohammad Abdulaziz and Fred Kurz\<close>
 thm sas_plus_problem_has_serial_solution_iff
 
+(* TODO: use that *)
+term Sema.sat
 
 
 subsection \<open>Putting things together\<close>
@@ -34,7 +36,7 @@ text \<open>Putting things together works in three steps:
 
 subsubsection \<open>Putting things together on the HOL level\<close>
 
-definition encode_sat :: "nat three_sat \<Rightarrow> nat"  where
+definition encode_sat :: "_ \<Rightarrow> nat"  where
   "encode_sat F = undefined"
 
 lemma main_lemma_hol: 
@@ -49,7 +51,7 @@ lemma main_lemma_hol:
          poly t_red 
        \<and> poly s_red
        \<and> (\<forall>x. \<exists>f.    bit_length (encode_sat f) \<le> s_red ( bit_length x ) \<and> imp_to_sat x = f
-                   \<and> ( sat f  \<longleftrightarrow>
+                   \<and> ( Sema.sat f  \<longleftrightarrow>
                                         (\<exists>z. bit_length z \<le> p_cer (bit_length x) \<and>
                                                       (\<forall>s t s'. s ''input'' = x 
                                                       \<and> s ''certificate'' = z 
