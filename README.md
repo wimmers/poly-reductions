@@ -1,6 +1,25 @@
 # Polynomial-Time Reductions in Isabelle/HOL
 This repository sets out to formalize some classic results about NP-completeness in Isabelle/HOL. 
 
+## Using
+
+The theories in this repository are developed with [Isabelle2021](https://isabelle.in.tum.de)
+
+For checking and browsing the theories following sessions are needed:
+
+- from the AFP: `Landau_Symbols`, `Verified_SAT_Based_AI_Planning`, `Graph_Theory`
+- from [here](https://github.com/maxhaslbeck/NREST): `NREST`
+
+Download those sessions and follow [AFP's Using Guide](https://www.isa-afp.org/using.html) to make them available for your Isabelle setup.
+
+In the root folder of this repository invoke `isabelle build -D .` to check all the sessions.
+
+For browsing the theories we recommend `isabelle jedit -l HOL-Analysis Poly_Reductions.thy &`. 
+The first startup will pre-build `HOL-Analysis`---which will take a while. All following invokations of Isabelle/JEdit will be quick.
+
+If you want to look only at Karp's Reductions: `isabelle jedit -l HOL-Analysis Karp21/All_Reductions_Poly.thy &`. 
+If you want to look only at Cook Levin's Theorem: `isabelle jedit -l HOL-Analysis Cook_Levin/Complexity_classes/Cook_Levin.thy &`. 
+
 ## Overview
 The following reductions are currently formalized:
 ![Graph of all formalized reductions](doc/reductions.png)
