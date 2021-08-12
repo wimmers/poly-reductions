@@ -305,9 +305,8 @@ proof -
       then obtain v' i where "v = var_bit_to_var (v', i) \<and> i < ?guess_range" using \<open>\<not>(v \<in> dom ?I)\<close>
          \<open>v \<in> set (enumerate_variables ?c')\<close>
         set_mp[OF IMP_Minus_To_IMP_Minus_Minus_variables \<open>v \<in> set (enumerate_variables ?c')\<close>]
-        apply(auto simp: map_comp_def
+        by(auto simp: map_comp_def
             IMP_Minus_State_To_IMP_Minus_Minus_partial_def split: option.splits)
-        using leI by blast
       thus ?thesis using \<open>v \<in> set (enumerate_variables ?c')\<close> 
           \<open>dom s1 = set (enumerate_variables ?c')\<close>
         by(auto simp: IMP_Minus_State_To_IMP_Minus_Minus_def 
@@ -332,17 +331,19 @@ proof -
       by(auto simp: map_le_def
                     IMP_Minus_State_To_IMP_Minus_Minus_def dom_def
                     IMP_Minus_State_To_IMP_Minus_Minus_partial_def map_comp_def
-              split: option.splits) 
+                    split: option.splits) 
     ultimately show "?s1' v = y"
       using
         \<open>(?I|` set (enumerate_variables ?c')) \<subseteq>\<^sub>m s1\<close>
         less_le_trans[OF initial_state_element_less_two_to_the_max_input_bits[where ?c=c and ?r=r]]
-        \<open>I v = Some y\<close> bit_at_index_geq_max_input_bits_is_zero_in_initial_state \<open>finite (ran I)\<close>
-      by(auto si mp add: map_comp_def 
-           power_add 
+        \<open>I v = Some y\<close> \<open>finite (ran I)\<close>
+      by(auto simp add: map_comp_def 
+          power_add 
           algebra_simps nth_append bit_list_to_nat_eq_nat_iff
-          IMP_Minus_State_To_IMP_Minus_Minus_partial_def map_le_def
- split: if_splits option.splits bool.splits char.splits)
+          IMP_Minus_Minus_State_To_IMP_Minus_def 
+          IMP_Minus_State_To_IMP_Minus_Minus_partial_def
+          intro!: bit_at_index_geq_max_input_bits_is_zero_in_initial_state
+          [symmetric, where ?c=c and ?I = I and ?r=r])
   qed
   hence "I \<subseteq>\<^sub>m Some \<circ> ?s1'" by(auto simp: map_le_def)
   
@@ -369,11 +370,13 @@ proof -
     case True
     assume "?guess_range \<le> i"
     hence "?I (var_bit_to_var (v, i)) = Some Zero" 
-      using \<open>(var_bit_to_var (v, i)) \<in> set (enumerate_variables ?c')\<close>  
-      by(auto simp: IMP_Minus_State_To_IMP_Minus_Minus_partial_def 
-              dest!: set_mp[OF IMP_Minus_To_IMP_Minus_Minus_variables]
+      using set_mp[OF IMP_Minus_To_IMP_Minus_Minus_variables 
+          \<open>(var_bit_to_var (v, i)) \<in> set (enumerate_variables ?c')\<close>] 
+      by (auto simp: IMP_Minus_State_To_IMP_Minus_Minus_partial_def 
+              intro!: var_bit_in_IMP_Minus_Minus_variables 
               split: option.splits)
-    thus ?thesis using \<open>(?I|` set (enumerate_variables ?c')) \<subseteq>\<^sub>m s1\<close> by(auto simp: map_le_def dom_def)
+    thus ?thesis using \<open>(?I|` set (enumerate_variables ?c')) \<subseteq>\<^sub>m s1\<close> 
+      by(auto simp: map_le_def dom_def)
   next
     case False
     then show ?thesis using \<open>dom s1 = set (enumerate_variables ?c')\<close> by auto
