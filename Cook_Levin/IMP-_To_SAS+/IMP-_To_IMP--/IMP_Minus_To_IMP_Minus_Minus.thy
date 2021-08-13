@@ -136,15 +136,15 @@ lemma IMP_Minus_To_IMP_Minus_Minus:
     "t_small_step_fun (100 * n * (t - 1) + 50) 
       (IMP_Minus_To_IMP_Minus_Minus c1 n, IMP_Minus_State_To_IMP_Minus_Minus s1 n)
      = (SKIP, IMP_Minus_State_To_IMP_Minus_Minus s2 n)"
-using assms proof(induction c1 s1 t s2 rule: big_step_t_induct)
+  using assms
+proof(induction c1 s1 t s2 rule: big_step_t_induct)
   case (Assign x a s)
   moreover hence "s v < (2 :: nat) ^ n" for v
     using Max_range_le_then_element_le[where ?s=s and ?x="2^n" and ?y=v] by fastforce
   ultimately show ?case
     apply(subst t_small_step_fun_increase_time[where ?t="50 * (n + 1)"])
-     apply auto
+    apply(clarsimp | safe)+
     apply(subst assignment_to_binary_correct[simplified])
-        apply auto
     by (auto simp: aval_le_when IMP_Minus_State_To_IMP_Minus_Minus_def fun_eq_iff 
         split!: option.splits)
 next

@@ -409,9 +409,10 @@ lemma imp_minus_minus_to_sas_plus_plus:
    "dom is1 = set (enumerate_variables c)"
    "I \<subseteq>\<^sub>m is1"
    "G \<subseteq>\<^sub>m is2"
+   "t \<le> t'"
   shows "(\<exists>plan.
      is_serial_solution_for_problem_sas_plus_plus (imp_minus_minus_to_sas_plus c I G) plan
-     \<and> length plan = t)"
+     \<and> length plan \<le> t')"
 proof -
   let ?\<Psi> = "imp_minus_minus_to_sas_plus c I G"
   let ?I' = "imp_minus_state_to_sas_plus (c, is1)" 
@@ -432,7 +433,8 @@ proof -
   ultimately have "is_serial_solution_for_problem_sas_plus_plus ?\<Psi> plan" 
     using assms
     by(auto simp: is_serial_solution_for_problem_sas_plus_plus_def Let_def list_all_def ListMem_iff)
-  then show ?thesis using plan_def by blast
+  then show ?thesis using plan_def \<open>t \<le> t'\<close>
+    by blast
 qed
 
 lemma sas_plus_plus_to_imp_minus_minus:
