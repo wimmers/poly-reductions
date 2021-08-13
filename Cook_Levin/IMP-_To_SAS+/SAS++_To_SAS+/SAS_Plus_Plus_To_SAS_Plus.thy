@@ -124,16 +124,22 @@ lemma execute_SAS_Plus_Plus_ops_in_SAS_Plus[simp]:
       SAS_Plus_Plus_Operator_To_SAS_Plus_Operator_def)
   by(auto simp: SAS_Plus_Plus_Operator_To_SAS_Plus_Operator_applicable[simplified])
 
+fun thef:: "'a list option \<Rightarrow> 'a list" where 
+"thef None = []"|
+"thef (Some x) = x"
+
+
+
 definition initialization_operators:: "('v, 'd) sas_plus_problem \<Rightarrow> ('v, 'd) operator list" where
 "initialization_operators P = 
   concat (map (\<lambda> v. (if v \<in> dom ((P)\<^sub>I\<^sub>+) then [] 
     else map (\<lambda> y. \<lparr> precondition_of = [(Stage, Init)],  effect_of = [(Var v, DE y)]\<rparr>) 
-      (the (range_of P v)))) ((P)\<^sub>\<V>\<^sub>+))"
+      (thef (range_of P v)))) ((P)\<^sub>\<V>\<^sub>+))"
 
 lemma in_initialization_operators_iff: 
   "\<lparr>precondition_of = [(Stage, Init)], effect_of = [(Var x, DE y)]\<rparr> 
     \<in> set (initialization_operators P) 
-  \<longleftrightarrow> (x \<in> set ((P)\<^sub>\<V>\<^sub>+) \<and> ((P)\<^sub>I\<^sub>+) x = None \<and> y \<in> set (the (range_of P x)))"
+  \<longleftrightarrow> (x \<in> set ((P)\<^sub>\<V>\<^sub>+) \<and> ((P)\<^sub>I\<^sub>+) x = None \<and> y \<in> set (thef (range_of P x)))"
   by(auto simp: initialization_operators_def)
 
 lemma Stage_after_initialization_operator[simp]:

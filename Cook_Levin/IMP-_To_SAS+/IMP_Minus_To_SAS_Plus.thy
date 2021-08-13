@@ -106,6 +106,10 @@ text \<open> First direction of the correctness proof for the IMP- to SAS+ reduc
       no significance, rather they are just derived by adding up the various constants that we
       used in the correctness proofs for the different parts of the reduction. \<close> 
 
+
+lemma foo :
+  assumes "p I"
+  shows "q (sat_decode (Imp_minus_to_sat_nat (imp_encode I) (r_encode r)))"
 lemma IMP_Minus_to_SAS_Plus_correctness:
   assumes
     "I \<subseteq>\<^sub>m Some \<circ> s1" 

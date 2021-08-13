@@ -24,6 +24,7 @@ definition imp_minus_state_to_sas_plus :: "(com \<times> imp_state) \<Rightarrow
   \<circ>\<^sub>m (\<lambda>x. (case x of VN v \<Rightarrow> Some v)))
   (PC \<mapsto> PCV (fst ci))"
 
+
 definition sas_plus_state_to_imp_minus:: "sas_state \<Rightarrow> (com \<times> imp_state)" where
 "sas_plus_state_to_imp_minus ss = ((case (the (ss PC)) of (PCV c) \<Rightarrow> c), 
   (\<lambda>x. (case x of EV y \<Rightarrow> Some y | _ \<Rightarrow> None)) \<circ>\<^sub>m ss \<circ>\<^sub>m (\<lambda>x. Some (VN x)))"
