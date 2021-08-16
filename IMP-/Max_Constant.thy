@@ -2,8 +2,8 @@
 
 section "IMP- Max Constant"
 
-theory IMP_Minus_Max_Constant 
-  imports "IMP_Minus.Small_StepT" 
+theory Max_Constant 
+  imports "Small_StepT" 
 begin
 
 text \<open>We define functions to derive the constant with the highest value and enumerate all variables 
@@ -20,13 +20,16 @@ fun aexp_max_constant:: "AExp.aexp \<Rightarrow> nat" where
 "aexp_max_constant (Parity a) = atomExp_to_constant a" | 
 "aexp_max_constant (RightShift a) = atomExp_to_constant a"
 
-
 fun max_constant :: "com \<Rightarrow> nat" where
 "max_constant (SKIP) = 0" |
 "max_constant (Assign vname aexp) = aexp_max_constant aexp" |
 "max_constant (Seq c1  c2) = max (max_constant c1) (max_constant c2)" |         
 "max_constant (If  _ c1 c2) = max (max_constant c1) (max_constant c2)"  |   
 "max_constant (While _ c) = max_constant c"
+
+lemma max_constant_not_increasing_step:
+  "(c1, s1) \<rightarrow> (c2, s2) \<Longrightarrow> max_constant c2 \<le> max_constant c1"
+  by (induction c1 s1 c2 s2 rule: small_step_induct) auto
 
 lemma Max_range_le_then_element_le: "finite (range s) \<Longrightarrow> 2 * Max (range s) < (x :: nat) \<Longrightarrow> 2 * (s y) < x" 
 proof -
@@ -99,5 +102,37 @@ fun all_variables :: "com \<Rightarrow> vname list" where
 
 definition num_variables:: "com \<Rightarrow> nat" where
 "num_variables c = length (remdups (all_variables c))" 
+
+lemma all_variables_subset_step: "(c1, s1) \<rightarrow> (c2, s2) 
+  \<Longrightarrow> set (all_variables c2) \<subseteq> set (all_variables c1)" 
+  apply(induction c1 s1 c2 s2 rule: small_step_induct)
+  by auto
+
+lemma subset_then_length_remdups_le: "set as \<subseteq> set bs
+  \<Longrightarrow> length (remdups (as @ cs)) \<le> length (remdups (bs @ cs))" 
+  apply(induction cs)
+   apply (auto simp: card_mono length_remdups_card_conv)
+  by (metis (no_types, lifting) List.finite_set Un_insert_right card_mono dual_order.trans 
+      finite.insertI finite_Un sup.boundedI sup.cobounded1 sup.cobounded2)
+
+lemma num_variables_not_increasing_step: "(c1, s1) \<rightarrow> (c2, s2) 
+  \<Longrightarrow> num_variables c2 \<le> num_variables c1" 
+  apply(induction c1 s1 c2 s2 rule: small_step_induct)
+  using subset_then_length_remdups_le[OF all_variables_subset_step] 
+        apply(auto simp: num_variables_def length_remdups_card_conv)
+        apply (meson List.finite_set card_mono finite_Un sup.cobounded1 sup.cobounded2 le_SucI)+
+  by (simp add: insert_absorb)
+
+lemma num_variables_not_increasing: "(c1, s1) \<rightarrow>\<^bsup> t \<^esup> (c2, s2)
+  \<Longrightarrow> num_variables c2 \<le> num_variables c1" 
+proof (induction t arbitrary: c1 s1)
+  case (Suc t)
+  then obtain c3 s3 where "(c1, s1) \<rightarrow> (c3, s3)" "(c3, s3) \<rightarrow>\<^bsup> t \<^esup> (c2, s2)"
+    by auto
+  then show ?case
+    using num_variables_not_increasing_step[OF \<open>(c1, s1) \<rightarrow> (c3, s3)\<close>] 
+      Suc.IH[OF \<open>(c3, s3) \<rightarrow>\<^bsup> t \<^esup> (c2, s2)\<close>]
+    by simp
+qed auto
 
 end

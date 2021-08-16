@@ -51,7 +51,7 @@ next
   ultimately show ?case by simp
 qed
 
-lemma big_to_small: "(c, s) \<Rightarrow>\<^bsup> Suc t \<^esup> s' \<Longrightarrow> (c, s) \<rightarrow>\<^bsup> t \<^esup> (SKIP,s')"
+lemma big_to_small: "(c, s) \<Rightarrow>\<^bsup> Suc t \<^esup> s' \<Longrightarrow> (c, s) \<rightarrow>\<^bsup> t \<^esup> (SKIP, s')"
   using big_to_small_helper by blast
 
 text "from small to big semantics"
@@ -81,5 +81,25 @@ lemma equiv_small_big:
  "cs \<rightarrow>\<^bsup> t \<^esup> (SKIP,s') = cs \<Rightarrow>\<^bsup> Suc t \<^esup> s' "
   using equiv_small_big_pair
   by (metis old.prod.exhaust) 
+
+
+lemma small_step_cant_run_longer_than_big_step: "(c, s) \<Rightarrow>\<^bsup> t \<^esup> s' \<Longrightarrow> (c, s) \<rightarrow>\<^bsup> t' \<^esup> (c'', s'')
+  \<Longrightarrow> t' \<le> t"
+proof(rule ccontr)
+  assume "(c, s) \<Rightarrow>\<^bsup> t \<^esup> s'" "(c, s) \<rightarrow>\<^bsup>t'\<^esup> (c'', s'')" "\<not> t' \<le> t"
+  obtain t'' where "t = Suc t''" 
+    using \<open>(c, s) \<Rightarrow>\<^bsup> t \<^esup> s'\<close> bigstep_progress gr0_implies_Suc 
+    by force
+  hence "(c, s) \<rightarrow>\<^bsup> t'' \<^esup> (SKIP, s')"
+    using equiv_small_big_pair \<open>(c, s) \<Rightarrow>\<^bsup> t \<^esup> s'\<close> 
+    by auto
+  have "t'' < t'" 
+    using \<open>t = Suc t''\<close> \<open>\<not> t' \<le> t\<close> 
+    by simp
+  thus False
+    using small_step_cant_continue_after_reaching_SKIP \<open>(c, s) \<rightarrow>\<^bsup> t'' \<^esup> (SKIP, s')\<close>
+        \<open>(c, s) \<rightarrow>\<^bsup>t'\<^esup> (c'', s'')\<close>
+    by fastforce
+qed
 
 end
