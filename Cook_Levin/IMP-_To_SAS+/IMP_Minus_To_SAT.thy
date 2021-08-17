@@ -94,6 +94,19 @@ proof-
     by(auto intro: SAS_Plus_to_IMP_Minus_correctness)
 qed
 
+definition foo :: "nat \<Rightarrow> nat" where 
+"foo x = 0"
+
+ definition f :: "nat \<Rightarrow> sat_plan_formula" where
+    "f x =
+      (let I = (Map.empty)(''input'' \<mapsto> x); 
+          G = (Map.empty)(''input'' \<mapsto> 0);
+          guess_range = x + 1 + 2 * 2 ^ (p_cer (bit_length x));
+          max_bits = max_input_bits c I guess_range
+      in
+        \<Phi>\<^sub>\<forall> (\<phi> prob_with_noop (IMP_Minus_to_SAS_Plus c I guess_range G (t' x)))
+           100 * (max_bits + (t' x) + 1) * ((t' x) - 1) +
+             (max_bits + (t' x) + 2) * (num_variables c + 2) + 52)"
 
 lemma main_lemma_hol:
   fixes c pt p_cer in_lang

@@ -118,9 +118,6 @@ lemma map_le_IMP_Minus_State_To_IMP_Minus_Minus_2:
 
 
 
-lemma foo :
-  assumes "p I"
-  shows "q (sat_decode (Imp_minus_to_sat_nat (imp_encode I) (r_encode r)))"
 lemma IMP_Minus_to_SAS_Plus_correctness:
   assumes
     "I \<subseteq>\<^sub>m Some \<circ> s1" 
@@ -342,7 +339,7 @@ proof -
         \<open>(?I|` set (enumerate_variables ?c')) \<subseteq>\<^sub>m s1\<close>
         less_le_trans[OF initial_state_element_less_two_to_the_max_input_bits[where ?c=c and ?r=r]]
         \<open>I v = Some y\<close> bit_at_index_geq_max_input_bits_is_zero_in_initial_state \<open>finite (ran I)\<close>
-      by(auto si mp add: map_comp_def 
+      by(auto simp add: map_comp_def 
            power_add 
           algebra_simps nth_append bit_list_to_nat_eq_nat_iff
           IMP_Minus_State_To_IMP_Minus_Minus_partial_def map_le_def

@@ -12,13 +12,23 @@ lemma sublist_possible_assignments_for:
   apply (auto simp add: sub_map_list_find possible_assignments_for_list_def possible_assignments_for_def )
   done
 
+fun map_prodWith :: " nat \<Rightarrow> nat \<Rightarrow>  nat" where 
+"map_prodWith v n = (if n = 0 then 0 else (prod_encode(v,hd_nat n)) ## map_prodWith v (tl_nat n)) "
+
+lemma submap_prodWith :
+"map_prodWith v n = map_nat (\<lambda>a. prod_encode (v,a)) n"
+  apply (induct v n rule:map_prodWith.induct)
+  apply auto
+  done
+
 definition possible_assignments_for_nat
   :: "nat \<Rightarrow> nat \<Rightarrow> nat" 
-  where "possible_assignments_for_nat P v \<equiv> map_nat (\<lambda>a. prod_encode(v, a)) (the_nat (map_list_find_nat (nth_nat (Suc (Suc (Suc (Suc 0)))) P) v))"
+  where "possible_assignments_for_nat P v \<equiv> map_prodWith v (the_nat (map_list_find_nat (nth_nat (Suc (Suc (Suc (Suc 0)))) P) v))"
 
 lemma vdlist_plus_simp:"vdlist_plus_encode = prod_encode o (\<lambda>(v,d). (var_encode v, list_encode (map dom_encode d)))"
   apply auto
   done
+
 lemma subnat_possible_assignments_for_pre:
   assumes "v \<in> set (variables_ofl P)"
   assumes " v \<in> set (variables_ofl P ) \<Longrightarrow> map_list_find  (range_ofl P)  v \<noteq> None"
@@ -27,7 +37,8 @@ lemma subnat_possible_assignments_for_pre:
 = sas_plus_assignment_list_encode (possible_assignments_for_list P v)"
   using inj_var assms
   apply auto
-  apply (auto simp only: possible_assignments_for_nat_def
+  apply (auto simp only: possible_assignments_for_nat_def 
+submap_prodWith
               list_problem_plus_encode_def sub_nth nth.simps
 sub_map_list_find_nat  inj_map_list_find[of var_encode]
             option_encode.simps the_nat.simps diff_Suc_1
@@ -117,12 +128,44 @@ state_to_strips_state (list_problem_to_problem P) (map_of s)"
 state_to_strips_state_def sublist_possible_assignments_for)
   done
 
+declare map_list_find_nat.simps [simp del]
+fun  map_find_eq:: "nat \<Rightarrow> nat \<Rightarrow> nat" where 
+"map_find_eq s n = 
+(if n = 0 then 0 else (prod_encode(hd_nat n, if the_nat (map_list_find_nat s (fst_nat (hd_nat n))) = snd_nat (hd_nat n) then 1 else 0)) ## map_find_eq s (tl_nat n))"
+
+
+lemma submap_find_eq: 
+"map_find_eq s n =  map_nat (\<lambda>va. prod_encode(va, if the_nat (map_list_find_nat s (fst_nat va)) = snd_nat va then 1 else 0)) n "
+  apply (induct s n rule: map_find_eq.induct)
+  apply (auto simp del:map_list_find_nat.simps)
+  done
+
+fun filter_defined :: "nat \<Rightarrow> nat \<Rightarrow> nat" where 
+"filter_defined s n = (if n = 0 then 0 else if map_list_find_nat s (hd_nat n) \<noteq> 0 then (hd_nat n)##filter_defined s (tl_nat n) else filter_defined s (tl_nat n))"
+
+lemma subfilter_defined :
+"filter_defined s n = filter_nat (\<lambda>v. map_list_find_nat s v \<noteq> 0) n "
+  apply (induct s n rule: filter_defined.induct)
+  apply auto
+  done
+
+fun map_possible_assignments_for :: "nat \<Rightarrow> nat \<Rightarrow> nat" where 
+"map_possible_assignments_for s n = (if n = 0 then 0 else (possible_assignments_for_nat s (hd_nat n))
+## map_possible_assignments_for s (tl_nat n) ) "
+
+lemma submap_possible_assignments_for:
+"map_possible_assignments_for s n = map_nat (possible_assignments_for_nat s) n "
+  apply (induct s n rule:map_possible_assignments_for.induct)
+  apply auto
+  done
+
+
+
 definition state_to_strips_state_nat
   :: "nat \<Rightarrow>nat \<Rightarrow>nat" 
   where "state_to_strips_state_nat \<Psi> s 
-    \<equiv> let defined = filter_nat (\<lambda>v. map_list_find_nat s v \<noteq> 0) (nth_nat 0 \<Psi>) in
-      map_nat (\<lambda>va. prod_encode(va, if the_nat (map_list_find_nat s (fst_nat va)) = snd_nat va then 1 else 0)) 
-        (concat_nat (map_nat (possible_assignments_for_nat \<Psi>)  defined))"
+    \<equiv> let defined = filter_defined s (nth_nat 0 \<Psi>) in
+      map_find_eq s (concat_nat (map_possible_assignments_for \<Psi> defined))"
 
 
 lemma subnat_state_to_strips_state_map:
@@ -143,7 +186,9 @@ lemma subnat_state_to_strips_state:
   assumes "is_valid_problem_sas_plus (list_problem_to_problem P)"
   shows "state_to_strips_state_nat (list_problem_plus_encode P) (sas_plus_assignment_list_encode s)
 = strips_assignment_list_encode (state_to_strips_state_list P s)"
-  apply (auto simp only:state_to_strips_state_nat_def list_problem_plus_encode_def sub_nth nth.simps)
+  apply (auto simp only:state_to_strips_state_nat_def subfilter_defined
+submap_possible_assignments_for      
+submap_find_eq list_problem_plus_encode_def sub_nth nth.simps)
   apply (auto simp only: simp flip: list_problem_plus_encode_def)
   apply (auto simp only:       sub_filter  sas_plus_assignment_list_encode_def sas_plus_simp sub_map_list_find_nat option_encode_0
                     filter_map
@@ -198,12 +243,40 @@ lemma sub_operator_for : "operator_for_nat (sas_plus_assignment_list_encode pre)
   done
 
 
+fun filter_diff_snd :: "nat \<Rightarrow> nat \<Rightarrow> nat" where 
+"filter_diff_snd n xs = (if xs = 0 then 0 else if (hd_nat xs) \<noteq> snd_nat n then (hd_nat xs) ## filter_diff_snd n (tl_nat xs) else filter_diff_snd n (tl_nat xs))"
+
+lemma subfilter_diff_snd :
+"filter_diff_snd n xs = filter_nat ((\<noteq>) (snd_nat n)) xs"
+  apply (induct n xs rule:filter_diff_snd.induct)
+  apply (auto)
+  done
+fun map_prod_fst :: "nat \<Rightarrow> nat \<Rightarrow> nat" where 
+"map_prod_fst n xs = (if xs = 0 then 0 else (prod_encode(fst_nat n,hd_nat xs)) ## map_prod_fst n (tl_nat xs))"
+
+lemma submap_prod_fst:
+"map_prod_fst n xs =  map_nat (\<lambda>a'. prod_encode(fst_nat n, a')) xs"
+  apply (induct n xs rule: map_prod_fst.induct)
+  apply (auto)
+  done
+
+fun map_sasp_op_to_strips:: "nat \<Rightarrow> nat \<Rightarrow> nat" where
+" map_sasp_op_to_strips P xs = (if xs=0 then 0 else (
+ map_prod_fst (hd_nat xs) (filter_diff_snd (hd_nat xs) (the_nat (map_list_find_nat (nth_nat (Suc (Suc (Suc (Suc 0)))) P) (fst_nat (hd_nat xs))
+)))) ##  map_sasp_op_to_strips P (tl_nat xs)) "
+
+lemma submap_sasp_op_to_strips:
+"map_sasp_op_to_strips P xs = map_nat (\<lambda>n. map_prod_fst n (filter_diff_snd n (the_nat (map_list_find_nat (nth_nat (Suc (Suc (Suc (Suc 0)))) P ) (fst_nat n))))) xs "
+  apply (induct P xs rule: map_sasp_op_to_strips.induct)
+  apply auto
+  done
+
 definition sasp_op_to_strips_nat
   :: "nat \<Rightarrow>nat \<Rightarrow> nat " 
   where "sasp_op_to_strips_nat \<Psi> op \<equiv> let
       pre = nth_nat 0 op
       ; add = nth_nat (Suc 0)  op
-      ; delete = concat_nat (map_nat (\<lambda>n. map_nat (\<lambda>a'. prod_encode(fst_nat n, a')) (filter_nat ((\<noteq>) (snd_nat n)) (the_nat (map_list_find_nat (nth_nat (Suc (Suc (Suc (Suc 0)))) \<Psi> ) (fst_nat n))))) (nth_nat (Suc 0) op))
+      ; delete = concat_nat (map_sasp_op_to_strips \<Psi>  (nth_nat (Suc 0) op))
     in operator_for_nat pre add delete"
 
 
@@ -274,7 +347,8 @@ lemma subnat_sasp_op_to_strips_pre:
 = 
 strips_operator_encode (sasp_op_to_strips_list P op)"
   apply (auto simp only:sasp_op_to_strips_nat_def operator_plus_encode_def sub_nth nth.simps
-          list_problem_plus_encode_def sub_map_list_find_nat vdlist_plus_simp
+subfilter_diff_snd  submap_sasp_op_to_strips  submap_prod_fst         
+list_problem_plus_encode_def sub_map_list_find_nat vdlist_plus_simp
 sas_plus_assignment_list_encode_def sub_map 
 
  simp flip: map_map )
@@ -362,12 +436,22 @@ lemma subnat_problem_for:
   apply (auto simp only: problem_for_nat_def sub_cons cons0 problem_for_list_def
 strips_list_problem_encode.simps strips_list_problem.simps) done
 
+fun maps_sasp_op_to_strips :: "nat \<Rightarrow> nat \<Rightarrow> nat" where 
+"maps_sasp_op_to_strips P xs = (if xs =0 then 0 else (sasp_op_to_strips_nat P (hd_nat xs)) 
+## maps_sasp_op_to_strips P (tl_nat xs))"
+
+lemma sub_maps_sasp_op_to_strips:
+"maps_sasp_op_to_strips P xs = map_nat (sasp_op_to_strips_nat P) xs"
+  apply (induct P xs rule:maps_sasp_op_to_strips.induct)
+  apply (auto)
+  done
+
 definition sas_plus_problem_to_strips_problem_nat
   :: "nat\<Rightarrow>nat" 
   ("\<phi> _ " 99)
   where "sas_plus_problem_to_strips_problem_nat \<Psi> \<equiv> let 
-      vs =  concat_nat (map_nat (possible_assignments_for_nat \<Psi>)(nth_nat 0 \<Psi>))
-      ; ops = map_nat (sasp_op_to_strips_nat \<Psi>) (nth_nat (Suc 0) \<Psi>)
+      vs =  concat_nat (map_possible_assignments_for \<Psi>(nth_nat 0 \<Psi>))
+      ; ops = maps_sasp_op_to_strips \<Psi> (nth_nat (Suc 0) \<Psi>)
       ; I = state_to_strips_state_nat \<Psi> (nth_nat (Suc (Suc 0)) \<Psi>)
       ; G = state_to_strips_state_nat \<Psi> (nth_nat (Suc (Suc (Suc 0))) \<Psi>)
     in problem_for_nat vs ops I G"
@@ -395,7 +479,8 @@ lemma subnat_sas_plus_problem_to_strips_problem:
   shows "sas_plus_problem_to_strips_problem_nat (list_problem_plus_encode P)
  =  strips_list_problem_encode (sas_plus_problem_to_strips_problem_list P)"
   apply (auto simp only: sas_plus_problem_to_strips_problem_nat_def
-list_problem_plus_encode_def sub_nth nth.simps 
+list_problem_plus_encode_def sub_nth nth.simps submap_possible_assignments_for 
+ sub_maps_sasp_op_to_strips
 )
   using assms  apply (auto simp only: sub_map
               subnat_possible_assignments_for map_map comp_def 
