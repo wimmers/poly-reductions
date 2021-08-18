@@ -94,19 +94,19 @@ proof-
     by(auto intro: SAS_Plus_to_IMP_Minus_correctness)
 qed
 
-definition foo :: "nat \<Rightarrow> nat" where 
-"foo x = 0"
+definition t' ::"(nat \<Rightarrow> nat) \<Rightarrow> (nat\<Rightarrow> nat) \<Rightarrow> nat \<Rightarrow> nat"
+  where "t' pt p_cer x = (make_mono pt) (bit_length x + (make_mono p_cer) (bit_length x)) + 1"
 
- definition f :: "nat \<Rightarrow> sat_plan_formula" where
-    "f x =
+ definition imp_to_sat :: "Com.com \<Rightarrow> (nat \<Rightarrow> nat) \<Rightarrow> (nat\<Rightarrow> nat) \<Rightarrow> nat \<Rightarrow> sat_plan_formula" where
+    "imp_to_sat c pt p_cer x =
       (let I = (Map.empty)(''input'' \<mapsto> x); 
           G = (Map.empty)(''input'' \<mapsto> 0);
           guess_range = x + 1 + 2 * 2 ^ (p_cer (bit_length x));
           max_bits = max_input_bits c I guess_range
       in
-        \<Phi>\<^sub>\<forall> (\<phi> prob_with_noop (IMP_Minus_to_SAS_Plus c I guess_range G (t' x)))
-           100 * (max_bits + (t' x) + 1) * ((t' x) - 1) +
-             (max_bits + (t' x) + 2) * (num_variables c + 2) + 52)"
+        \<Phi>\<^sub>\<forall> (\<phi> prob_with_noop (IMP_Minus_to_SAS_Plus c I guess_range G (t' pt p_cer x)))
+           100 * (max_bits + (t' pt p_cer x) + 1) * ((t' pt p_cer  x) - 1) +
+             (max_bits + (t' pt p_cer x) + 2) * (num_variables c + 2) + 52)"
 
 lemma main_lemma_hol:
   fixes c pt p_cer in_lang
@@ -133,12 +133,12 @@ lemma main_lemma_hol:
                          s' ''input'' = in_lang x"
   assumes verifier_has_registers:
     "''input'' \<in> set (IMP_Minus_Max_Constant.all_variables c)"
-  shows "\<exists>imp_to_sat t_red s_red.
+  shows "\<exists>t_red s_red.
          poly t_red 
        \<and> poly s_red
-       \<and> (\<forall>x. \<exists>f.  bit_length (encode_sat f) \<le> s_red ( bit_length x ) \<and> imp_to_sat x = f
+       \<and> (\<forall>x. \<exists>f.  bit_length (encode_sat f) \<le> s_red ( bit_length x ) \<and> imp_to_sat c pt p_cer x = f
                    \<and> (Sema.sat {f}  \<longleftrightarrow> in_lang x = 0))"
-proof-
+proof -
   define t''::"(char list \<Rightarrow> nat) \<Rightarrow> nat" where
     "t'' s = (make_mono pt) (bit_length (s ''input''))" for s
 
@@ -149,11 +149,8 @@ proof-
 
 
   text\<open>Upper bound on the time\<close>
-  define t'::"nat \<Rightarrow> nat"
-    where "t' x \<equiv> (make_mono pt) (bit_length x + (make_mono p_cer) (bit_length x)) + 1" for x
 
-
-  have t_bound_2: "\<exists>s' t. t \<le> t' x \<and> (c, s) \<Rightarrow>\<^bsup> t \<^esup> s'"
+  have t_bound_2: "\<exists>s' t. t \<le> t' pt p_cer  x \<and> (c, s) \<Rightarrow>\<^bsup> t \<^esup> s'"
     if "s ''input'' = x"
     for s x
   proof-    
@@ -162,10 +159,10 @@ proof-
       "t \<le> pt (bit_length (s ''input''))"
       using verifier_tbounded
       by blast+
-    have "t'' s \<le> t' (s ''input'')"
+    have "t'' s \<le> t' pt p_cer (s ''input'')"
       by (auto simp: t'_def t''_def le_make_mono order_trans
                intro!: le_SucI monoD[OF mono_make_mono])
-    hence "t \<le> t' (s ''input'')"
+    hence "t \<le> t' pt p_cer (s ''input'')"
       using t_bound \<open>(c, s) \<Rightarrow>\<^bsup> t \<^esup> s'\<close>
       by (smt bigstepT_the_cost less_le_trans not_le)
     thus ?thesis
@@ -173,19 +170,7 @@ proof-
       by auto
   qed
 
-  define f where
-    "f x \<equiv>
-      let I = (Map.empty)(''input'' \<mapsto> x); 
-          G = (Map.empty)(''input'' \<mapsto> 0);
-          guess_range = x + 1 + 2 * 2 ^ (p_cer (bit_length x));
-          max_bits = max_input_bits c I guess_range
-      in
-        \<Phi>\<^sub>\<forall> (\<phi> prob_with_noop (IMP_Minus_to_SAS_Plus c I guess_range G (t' x)))
-           100 * (max_bits + (t' x) + 1) * ((t' x) - 1) +
-             (max_bits + (t' x) + 2) * (num_variables c + 2) + 52"
-    for x::nat
-
-  have "Sema.sat {f x}"
+  have "Sema.sat {imp_to_sat c pt p_cer x}"
     if init: "in_lang x = 0"
     for x
   proof-
@@ -198,10 +183,10 @@ proof-
             "s' ''input'' = in_lang x"
       using verifier_terminates(1)[of x s, OF init]
       by auto
-    moreover hence "t'' (s(''certificate'' := z)) \<le> t' x"
+    moreover hence "t'' (s(''certificate'' := z)) \<le> t' pt p_cer x"
       by (auto simp: \<open>s ''input'' = x\<close> t'_def t''_def bit_length_def le_make_mono order_trans
                intro!: le_SucI monoD[OF mono_make_mono])
-    hence "t \<le> t' x"
+    hence "t \<le> t' pt p_cer x"
       using t_bound \<open>(c, s(''certificate'' := z)) \<Rightarrow>\<^bsup> t \<^esup> s'\<close>
       by (smt bigstepT_the_cost less_le_trans not_le)
     moreover have "[''input'' \<mapsto> x] \<subseteq>\<^sub>m Some \<circ> s(''certificate'' := z)"
@@ -212,8 +197,8 @@ proof-
       using \<open>bit_length z \<le> p_cer (bit_length x)\<close>
       apply(simp add: bit_length_def)
       by (metis le_iff_add log_exp2_ge mult.commute not_less power_of_two_increase_exponent_le)
-    ultimately have "\<exists>\<A>. \<A> \<Turnstile> f x"
-      unfolding Sema.sat_def f_def Let_def
+    ultimately have "\<exists>\<A>. \<A> \<Turnstile> imp_to_sat c pt p_cer x"
+      unfolding Sema.sat_def imp_to_sat_def Let_def
       by (fastforce simp add: s_def bit_length_def map_le_def init
                     intro!: while_program_has_model[of _ "s(''certificate'' := z)" _ _ s' _ t])
     thus ?thesis
@@ -221,20 +206,20 @@ proof-
   qed
 
   moreover have "in_lang x = 0"
-    if "Sema.sat {f x}"
+    if "Sema.sat {imp_to_sat c pt p_cer x}"
     for x
   proof-
-    obtain \<A> where "\<A> \<Turnstile> f x"
-      using \<open>Sema.sat {f x}\<close>
+    obtain \<A> where "\<A> \<Turnstile> imp_to_sat c pt p_cer x"
+      using \<open>Sema.sat {imp_to_sat c pt p_cer x}\<close>
       by (auto simp: Sema.sat_def)
-    hence "\<exists>s1 s2 t''. t'' \<le> t' x \<and> [''input'' \<mapsto> x] \<subseteq>\<^sub>m Some \<circ> s1 \<and>
+    hence "\<exists>s1 s2 t''. t'' \<le> t' pt p_cer  x \<and> [''input'' \<mapsto> x] \<subseteq>\<^sub>m Some \<circ> s1 \<and>
                        [''input'' \<mapsto> 0] \<subseteq>\<^sub>m Some \<circ> s2 \<and> (c, s1) \<Rightarrow>\<^bsup> t'' \<^esup> s2"
       apply(intro if_there_is_model_then_program_terminates 
                     [where \<A> = \<A> and r = "x + 1 + 2 * 2 ^ (p_cer (bit_length x))"])
       using verifier_has_registers
-      by (auto simp: map_le_def f_def Let_def intro: t_bound_2 )
+      by (auto simp: map_le_def imp_to_sat_def Let_def intro: t_bound_2 )
     then obtain s1 s2 t'' 
-      where "t'' \<le> t' x" "[''input'' \<mapsto> x] \<subseteq>\<^sub>m Some \<circ> s1"
+      where "t'' \<le> t' pt p_cer x" "[''input'' \<mapsto> x] \<subseteq>\<^sub>m Some \<circ> s1"
             "[''input'' \<mapsto> 0] \<subseteq>\<^sub>m Some \<circ> s2" "(c, s1) \<Rightarrow>\<^bsup> t'' \<^esup> s2"
       by auto
     moreover hence "s2 ''input'' = 0" "s1 ''input'' = x"
