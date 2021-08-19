@@ -211,20 +211,48 @@ encode_interfering_operator_exclusion_def
     sub_foldr sublist_encode_interfering_operator_pair_exclusion
 )
   done
+fun filter_interfering:: "nat \<Rightarrow> nat \<Rightarrow> nat" where 
+"filter_interfering ops xs = (if xs = 0 then 0 else if index_nat ops (fst_nat (hd_nat xs)) \<noteq> index_nat ops (snd_nat (hd_nat xs))
+        \<and> are_operators_interfering_nat (fst_nat (hd_nat xs)) (snd_nat (hd_nat xs)) \<noteq> 0 then (hd_nat xs) ## filter_interfering ops (tl_nat xs) else  filter_interfering ops (tl_nat xs))"
+
+lemma subfilter_interfering:
+"filter_interfering ops xs = filter_nat (\<lambda>n. index_nat ops (fst_nat n) \<noteq> index_nat ops (snd_nat n)
+        \<and> are_operators_interfering_nat (fst_nat n) (snd_nat n) \<noteq> 0 ) xs"
+  apply (induct ops xs rule:filter_interfering.induct)
+  apply (auto simp del:index_nat.simps)
+  done
+fun map_encode_interfering :: "nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat" where 
+"map_encode_interfering p n xs = (if xs = 0 then 0 else (encode_interfering_operator_pair_exclusion_nat p (hd_nat xs) (fst_nat n) (snd_nat n)) 
+## map_encode_interfering p n (tl_nat xs))"
+lemma submap_encode_interfering: 
+"map_encode_interfering p n xs = map_nat (\<lambda>k. encode_interfering_operator_pair_exclusion_nat p k (fst_nat n) (snd_nat n)) xs "
+  apply (induct p n xs rule: map_encode_interfering.induct)
+  apply auto
+  done
+
+fun map_map_encode_interfering :: "nat \<Rightarrow>nat \<Rightarrow> nat \<Rightarrow> nat" where 
+"map_map_encode_interfering \<Pi> t xs = (if xs = 0 then 0 else 
+(map_encode_interfering  \<Pi> (hd_nat xs) (list_less_nat t)) ## map_map_encode_interfering \<Pi> t (tl_nat xs) 
+) "
+lemma submap_map_encode_interfering:
+"map_map_encode_interfering \<Pi> t xs = map_nat (\<lambda>n. map_encode_interfering  \<Pi> n
+      (list_less_nat t) ) xs "
+  apply (induct  \<Pi> t xs rule: map_map_encode_interfering.induct)
+  apply auto
+  done
 
 definition encode_interfering_operator_exclusion_nat
   :: "nat \<Rightarrow> nat \<Rightarrow> nat"
   where "encode_interfering_operator_exclusion_nat \<Pi> t \<equiv> let
       ops = nth_nat (Suc 0) \<Pi>
-      ; interfering = filter_nat (\<lambda>n. index_nat ops (fst_nat n) \<noteq> index_nat ops (snd_nat n)
-        \<and> are_operators_interfering_nat (fst_nat n) (snd_nat n) \<noteq> 0 ) (product_nat ops ops)
-    in BigAnd_nat (concat_nat (map_nat (\<lambda>n. map_nat (\<lambda>k. encode_interfering_operator_pair_exclusion_nat \<Pi> k (fst_nat n) (snd_nat n))
-      (list_less_nat t) ) interfering ))"
+      ; interfering = filter_interfering ops (product_nat ops ops)
+    in BigAnd_nat (concat_nat (map_map_encode_interfering \<Pi> t interfering ))"
 lemma subnat_encode_interfering_operator_exclusion :
 "encode_interfering_operator_exclusion_nat (strips_list_problem_encode p) t =
 sat_formula_encode (encode_interfering_operator_exclusion_list p t)"
   using inj_strips_op
-  apply (auto simp only: encode_interfering_operator_exclusion_nat_def 
+  apply (auto simp only: encode_interfering_operator_exclusion_nat_def
+subfilter_interfering submap_encode_interfering submap_map_encode_interfering
 strips_list_problem_encode.simps sub_nth nth.simps Let_def strips_operator_list_encode_def
 sub_product sub_filter filter_map
          )
