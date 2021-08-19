@@ -3,7 +3,7 @@
 section "IMP- to IMP--"
 
 theory IMP_Minus_To_IMP_Minus_Minus imports Binary_Operations 
-  "IMP_Minus.Big_StepT" "../IMP_Minus_Max_Constant"
+  "IMP_Minus.Big_StepT" "IMP_Minus.Max_Constant"
   
 begin
 
@@ -52,7 +52,7 @@ lemma Max_insert_le_when: "finite (range (s :: vname \<Rightarrow> nat)) \<Longr
   by auto
 
 lemma IMP_Minus_space_growth: "(c1, s1) \<Rightarrow>\<^bsup>t\<^esup> s2 \<Longrightarrow> finite (range s1)
-  \<Longrightarrow> max (Max (range s1)) (IMP_Minus_Max_Constant.max_constant c1) < 2 ^ k 
+  \<Longrightarrow> max (Max (range s1)) (Max_Constant.max_constant c1) < 2 ^ k 
   \<Longrightarrow> (finite (range s2) \<and> Max (range s2) < (2 :: nat) ^ (k + t))" 
   apply(frule finite_range_stays_finite)
   apply simp
@@ -214,7 +214,7 @@ next
     by (meson leD leI less_le_trans mult_less_cancel2)
   hence "2 ^ x * max (Max (range s1)) (max_constant c) < 2 ^ n" by (simp add: nat_mult_max_right)
   have "max (Max (range s1)) (max_constant c) < 2 ^ (n - z)" 
-    using power_of_two_minus WhileTrue by (metis IMP_Minus_Max_Constant.max_constant.simps)
+    using power_of_two_minus WhileTrue by (metis Max_Constant.max_constant.simps)
   have "Max (range s2) < 2 ^ (n - (y + 1))" 
     using IMP_Minus_space_growth[OF \<open>(c, s1) \<Rightarrow>\<^bsup> x \<^esup> s2\<close> \<open>finite (range s1)\<close> 
         \<open>max (Max (range s1)) (max_constant c) < 2 ^ (n - z)\<close>] \<open>1 + x + y = z\<close> \<open>n > z \<close> by auto
@@ -265,7 +265,7 @@ text \<open>We give a few lemmas that specify what variables appear in translate
 
 lemma IMP_Minus_To_IMP_Minus_Minus_variables:
   "n > 0 \<Longrightarrow> set (enumerate_variables (IMP_Minus_To_IMP_Minus_Minus c n)) \<subseteq> 
-    { var_bit_to_var (w, i) | w i. i < n \<and> w \<in> set (IMP_Minus_Max_Constant.all_variables c) }
+    { var_bit_to_var (w, i) | w i. i < n \<and> w \<in> set (Max_Constant.all_variables c) }
     \<union> { operand_bit_to_var (op, i) | op i. i < n \<and> (op = CHR ''a'' \<or> op = CHR ''b'') }
     \<union> { ''carry'' }" 
 proof(induction c)
@@ -304,23 +304,23 @@ lemma card_union_le_intro: "card U \<le> a \<Longrightarrow> card W \<le> b \<Lo
 lemma IMP_Minus_To_IMP_Minus_Minus_variables_length:
   assumes "n > 0"
   shows "length (enumerate_variables (IMP_Minus_To_IMP_Minus_Minus c n)) \<le>
-    (n + 1) * (IMP_Minus_Max_Constant.num_variables c) + 2 * n + 1" 
+    (n + 1) * (Max_Constant.num_variables c) + 2 * n + 1" 
 proof - 
-  have "finite { var_bit_to_var (w, i) | w i. i < n \<and> w \<in> set (IMP_Minus_Max_Constant.all_variables c) } 
-    \<and> card { var_bit_to_var (w, i) | w i. i < n \<and> w \<in> set (IMP_Minus_Max_Constant.all_variables c) }
-    \<le> n * (IMP_Minus_Max_Constant.num_variables c)"
+  have "finite { var_bit_to_var (w, i) | w i. i < n \<and> w \<in> set (Max_Constant.all_variables c) } 
+    \<and> card { var_bit_to_var (w, i) | w i. i < n \<and> w \<in> set (Max_Constant.all_variables c) }
+    \<le> n * (Max_Constant.num_variables c)"
   proof(induction n)
     case (Suc n)
-    have "{var_bit_to_var (w, i) |w i. i < Suc n \<and> w \<in> set (IMP_Minus_Max_Constant.all_variables c)}
-      = {var_bit_to_var (w, i) |w i. i < n \<and> w \<in> set (IMP_Minus_Max_Constant.all_variables c)}
-        \<union> { var_bit_to_var (w, n) |w. w \<in> set (IMP_Minus_Max_Constant.all_variables c) }"
+    have "{var_bit_to_var (w, i) |w i. i < Suc n \<and> w \<in> set (Max_Constant.all_variables c)}
+      = {var_bit_to_var (w, i) |w i. i < n \<and> w \<in> set (Max_Constant.all_variables c)}
+        \<union> { var_bit_to_var (w, n) |w. w \<in> set (Max_Constant.all_variables c) }"
       by auto
-    moreover have "card {var_bit_to_var (w, n) |w. w \<in> set (IMP_Minus_Max_Constant.all_variables c)}
+    moreover have "card {var_bit_to_var (w, n) |w. w \<in> set (Max_Constant.all_variables c)}
       \<le> num_variables c" 
       using card_of_set_comprehension_of_set_list num_variables_def by fastforce
     ultimately show ?case using Suc by (simp add: card_union_le sup_commute)
   qed auto
-  moreover have "card {CHR ''?'' # CHR ''$'' # w |w. w \<in> set (IMP_Minus_Max_Constant.all_variables c)}
+  moreover have "card {CHR ''?'' # CHR ''$'' # w |w. w \<in> set (Max_Constant.all_variables c)}
     \<le> num_variables c" using card_of_set_comprehension_of_set_list num_variables_def by fastforce
   moreover have "finite {operand_bit_to_var (op, i) |op i. i < n \<and> (op = CHR ''a'' \<or> op = CHR ''b'')}
     \<and> card { operand_bit_to_var (op, i) |op i. i < n \<and> (op = CHR ''a'' \<or> op = CHR ''b'') } \<le> 2 * n"
@@ -332,10 +332,10 @@ proof -
     thus ?case using Suc by(auto intro!: card_insert_le_m1)
   qed auto
   ultimately have 
-    f: "finite ({ var_bit_to_var (w, i) | w i. i < n \<and> w \<in> set (IMP_Minus_Max_Constant.all_variables c) }
+    f: "finite ({ var_bit_to_var (w, i) | w i. i < n \<and> w \<in> set (Max_Constant.all_variables c) }
     \<union> { operand_bit_to_var (op, i) | op i. i < n \<and> (op = CHR ''a'' \<or> op = CHR ''b'') }
     \<union> { ''carry'' })" and
-    "card ({ var_bit_to_var (w, i) | w i. i < n \<and> w \<in> set (IMP_Minus_Max_Constant.all_variables c) }
+    "card ({ var_bit_to_var (w, i) | w i. i < n \<and> w \<in> set (Max_Constant.all_variables c) }
     \<union> { operand_bit_to_var (op, i) | op i. i < n \<and> (op = CHR ''a'' \<or> op = CHR ''b'') }
     \<union> { ''carry'' }) \<le> (n + 1) * (num_variables c) + 2 * n + 1"
     by(auto simp: card_union_le intro!: card_insert_le_m1 card_union_le_intro)
@@ -350,7 +350,7 @@ lemma var_bit_in_IMP_Minus_Minus_variables_then_bit_less_n: "n > 0 \<Longrightar
   apply(frule set_mp[OF IMP_Minus_To_IMP_Minus_Minus_variables])
   by auto
 
-lemma var_bit_in_IMP_Minus_Minus_variables: "v \<in> set (IMP_Minus_Max_Constant.all_variables c)
+lemma var_bit_in_IMP_Minus_Minus_variables: "v \<in> set (Max_Constant.all_variables c)
   \<Longrightarrow> i < n \<Longrightarrow> var_bit_to_var (v, i) \<in>  set (enumerate_variables (IMP_Minus_To_IMP_Minus_Minus c n))"
   apply(induction c)
   by(auto simp: assignment_to_binary_def binary_adder_def set_enumerate_variables_seq 

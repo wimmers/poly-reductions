@@ -79,10 +79,16 @@ inductive_cases WhileE[elim]: "(WHILE b\<noteq>0 DO c, s) \<rightarrow> ct"
 text\<open>A simple property:\<close>
 lemma deterministic:
   "cs \<rightarrow> cs' \<Longrightarrow> cs \<rightarrow> cs'' \<Longrightarrow> cs'' = cs'"
-apply(induction arbitrary: cs'' rule: small_step.induct)
+  apply(induction arbitrary: cs'' rule: small_step.induct)
         apply blast+
-  apply auto
+     apply auto
   done
+
+lemma small_step_t_deterministic: "cs \<rightarrow>\<^bsup> t \<^esup> cs' \<Longrightarrow> cs \<rightarrow>\<^bsup> t \<^esup> cs'' \<Longrightarrow> cs'' = cs'"
+  apply(induction t arbitrary: cs)
+  using deterministic apply auto
+  by blast
+
 
 subsection "Progress property"
 text "every command costs time"
@@ -117,4 +123,27 @@ next
   then have "(c1';;c2, s1') \<rightarrow>\<^bsup> t1 + t2 + 1 \<^esup> (c3, s3)" using Suc by blast 
   then show ?case using Suc by auto
 qed
+
+lemma small_step_cant_continue_after_reaching_SKIP: "(c1, s1) \<rightarrow>\<^bsup> t1 \<^esup> (SKIP, s2)
+  \<Longrightarrow> (c1, s1) \<rightarrow>\<^bsup> t2 \<^esup> (c3, s3)
+  \<Longrightarrow> t2 \<le> t1"
+proof(rule ccontr)
+  assume "(c1, s1) \<rightarrow>\<^bsup>t1\<^esup> (SKIP, s2)" "(c1, s1) \<rightarrow>\<^bsup>t2\<^esup> (c3, s3)" "\<not> t2 \<le> t1"
+  then obtain t3 where "t2 = t1 + t3" "t3 > 0"
+    by (metis less_imp_add_positive not_le)
+  hence "(c1, s1) \<rightarrow>\<^bsup> t1 + t3 \<^esup> (c3, s3)" 
+    using \<open>(c1, s1) \<rightarrow>\<^bsup> t2 \<^esup> (c3, s3)\<close> 
+    by auto
+  then obtain c4s4 where "(c1, s1) \<rightarrow>\<^bsup>t1\<^esup> c4s4" "c4s4 \<rightarrow>\<^bsup>t3\<^esup> (c3, s3)" 
+    using \<open>(c1, s1) \<rightarrow>\<^bsup>t2\<^esup> (c3, s3)\<close> rel_pow_sum_decomp[OF \<open>(c1, s1) \<rightarrow>\<^bsup> t1 + t3 \<^esup> (c3, s3)\<close>]
+    by blast
+  hence "c4s4 = (SKIP, s2)"
+    using small_step_t_deterministic \<open>(c1, s1) \<rightarrow>\<^bsup>t1\<^esup> (SKIP, s2)\<close>
+    by simp
+  hence "t3 = 0" 
+    using \<open>c4s4 \<rightarrow>\<^bsup>t3\<^esup> (c3, s3)\<close>
+    by (cases t3) auto
+  thus False using \<open>t3 > 0\<close> by simp
+qed
+
 end

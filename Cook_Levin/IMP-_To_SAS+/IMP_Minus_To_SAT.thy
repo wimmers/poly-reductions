@@ -1,6 +1,6 @@
 theory IMP_Minus_To_SAT
   imports "IMP_Minus_To_SAS_Plus" "Verified_SAT_Based_AI_Planning.SAT_Solve_SAS_Plus"
-    "../Complexity_classes/Cook_Levin"
+    "../Complexity_classes/Cook_Levin" "IMP_Minus.Max_Constant"
 begin
 
 section \<open>Translation from IMP- to SAT\<close>
@@ -73,8 +73,8 @@ qed
 
 lemma if_there_is_model_then_program_terminates:
   assumes 
-    "dom I \<subseteq> set (IMP_Minus_Max_Constant.all_variables c)"
-    "dom G \<subseteq> set (IMP_Minus_Max_Constant.all_variables c)"
+    "dom I \<subseteq> set (Max_Constant.all_variables c)"
+    "dom G \<subseteq> set (Max_Constant.all_variables c)"
     "Max (ran G) < 2 ^ (t + max_input_bits c I r)"
     (* Mohammad: The following assumption cannot be true for many verifiers. s1 has to depend on I 
                  , otherwise the assumption is vacuous.*)
@@ -132,7 +132,7 @@ lemma main_lemma_hol:
           "\<And>x s s' t. \<lbrakk>in_lang x \<noteq> 0; s ''input'' = x; (c, s) \<Rightarrow>\<^bsup> t \<^esup> s'\<rbrakk> \<Longrightarrow>
                          s' ''input'' = in_lang x"
   assumes verifier_has_registers:
-    "''input'' \<in> set (IMP_Minus_Max_Constant.all_variables c)"
+    "''input'' \<in> set (Max_Constant.all_variables c)"
   shows "\<exists>t_red s_red.
          poly t_red 
        \<and> poly s_red
