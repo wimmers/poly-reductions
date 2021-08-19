@@ -339,6 +339,7 @@ proof -
         \<open>(?I|` set (enumerate_variables ?c')) \<subseteq>\<^sub>m s1\<close>
         less_le_trans[OF initial_state_element_less_two_to_the_max_input_bits[where ?c=c and ?r=r]]
         \<open>I v = Some y\<close> bit_at_index_geq_max_input_bits_is_zero_in_initial_state \<open>finite (ran I)\<close>
+      sorry
       by(auto si mp add: map_comp_def 
            power_add 
           algebra_simps nth_append bit_list_to_nat_eq_nat_iff
@@ -428,5 +429,5 @@ proof -
   show ?thesis using \<open>t'' \<le> t\<close> \<open>(c, ?s1') \<Rightarrow>\<^bsup>t''\<^esup> s2''\<close> \<open>I \<subseteq>\<^sub>m Some \<circ> ?s1'\<close> \<open>G \<subseteq>\<^sub>m Some \<circ> s2''\<close>
     by auto
 qed
-
+ 
 end

@@ -4,9 +4,6 @@ theory IMP_Minus_Max_Constant_Nat
 begin
 
 
-fun atomExp_to_constant:: "atomExp \<Rightarrow> nat" where
-"atomExp_to_constant (V var) = 0" |
-"atomExp_to_constant (N val) = val"
 
 definition atomExp_to_constant_nat:: "nat \<Rightarrow> nat" where 
 "atomExp_to_constant_nat n = (if fst_nat n = 0 then 0 else snd_nat n)"
@@ -16,13 +13,6 @@ lemma sub_atomExp_to_constant[simp]: "atomExp_to_constant_nat (atomExp_encode x)
   apply (auto simp add: atomExp_to_constant_nat_def sub_fst sub_snd)
   done
 
-
-fun aexp_max_constant:: "AExp.aexp \<Rightarrow> nat" where
-"aexp_max_constant (A a) = atomExp_to_constant a" |
-"aexp_max_constant (Plus a b) = max (atomExp_to_constant a) (atomExp_to_constant b)" |
-"aexp_max_constant (Sub a b) = max (atomExp_to_constant a) (atomExp_to_constant b)" |
-"aexp_max_constant (Parity a) = atomExp_to_constant a" | 
-"aexp_max_constant (RightShift a) = atomExp_to_constant a"
 
 fun aexp_max_constant_nat:: "nat \<Rightarrow> nat" where
 "aexp_max_constant_nat n = (if hd_nat n \<le>2 \<and> 1 \<le> hd_nat n 
@@ -38,14 +28,6 @@ lemma sub_aexp_max_constant:"aexp_max_constant_nat (aexp_encode x) = aexp_max_co
   done
 
   
-      
-fun max_constant :: "Com.com \<Rightarrow> nat" where
-"max_constant (Com.com.SKIP) = 0" |
-"max_constant (Com.com.Assign vname aexp) = aexp_max_constant aexp" |
-"max_constant (Com.com.Seq c1  c2) = max (max_constant c1) (max_constant c2)" |         
-"max_constant (Com.com.If  _ c1 c2) = max (max_constant c1) (max_constant c2)"  |   
-"max_constant (Com.com.While _ c) = max_constant c"
-
 lemma fst_less [simp]: "n >0 \<Longrightarrow>fst_nat n < n"
   apply (auto simp add:fst_nat_def)
   by (metis fst_conv leI le_add1 le_less_trans prod_decode_aux.cases prod_sum_less)
@@ -79,9 +61,7 @@ lemma sub_max_constant:"max_constant_nat (com_encode c) = max_constant c"
       apply auto
   done
 
-fun atomExp_var:: "atomExp \<Rightarrow> vname list" where
-"atomExp_var (V var) = [ var ]" |
-"atomExp_var (N val) = []"
+
 
 fun atomExp_var_nat:: "nat \<Rightarrow> nat" where
 "atomExp_var_nat n = (if fst_nat n = 0 then cons (snd_nat n) 0 else 0)"
@@ -93,12 +73,6 @@ lemma sub_atomExp_var: "atomExp_var_nat (atomExp_encode x) = vname_list_encode (
    apply (auto simp add:vname_list_encode_def cons_def sub_fst sub_snd prod_encode_eq)
   done
 
-fun aexp_vars:: "AExp.aexp \<Rightarrow> vname list" where
-"aexp_vars (A a) = atomExp_var a" |
-"aexp_vars (Plus a b) = (atomExp_var a) @ (atomExp_var b)" |
-"aexp_vars (Sub a b) = (atomExp_var a) @ (atomExp_var b)" |
-"aexp_vars (Parity a) = atomExp_var a" |
-"aexp_vars (RightShift a) = atomExp_var a"
 
 definition aexp_vars_nat:: "nat \<Rightarrow> nat" where
 "aexp_vars_nat n =  ( if hd_nat n = 1 \<or> hd_nat n = 2 then
@@ -112,12 +86,7 @@ lemma sub_aexp_vars : "aexp_vars_nat (aexp_encode x) = vname_list_encode (aexp_v
       apply auto
   done
 
-fun all_variables :: "Com.com \<Rightarrow> vname list" where
-"all_variables (Com.com.SKIP) = []" |
-"all_variables (Com.com.Assign v aexp) = v # aexp_vars aexp" |
-"all_variables (Com.com.Seq c1 c2) = all_variables c1 @ all_variables c2" |
-"all_variables (Com.com.If v c1 c2) = [ v ] @ all_variables c1 @ all_variables c2" |
-"all_variables (Com.com.While v c) = [ v ] @ all_variables c"
+
 
 declare nth_nat.simps[simp del]
 fun all_variables_nat :: "nat \<Rightarrow> nat" where
@@ -166,8 +135,6 @@ lemma sub_all_variables: "all_variables_nat (com_encode x ) = vname_list_encode 
 
     
    
-definition num_variables:: "Com.com \<Rightarrow> nat" where
-"num_variables c = length (remdups (all_variables c))" 
 
 definition num_variables_nat :: "nat \<Rightarrow> nat" where 
 "num_variables_nat n = length_nat (remdups_nat (all_variables_nat n))"
@@ -179,7 +146,7 @@ lemma [simp]: "remdups (map (vname_encode) x) = map vname_encode (remdups x)"
   apply (induction x)
   using vname_encode_eq by auto
    
-lemma "num_variables_nat (com_encode c) = num_variables c"
+lemma sub_num_variables:"num_variables_nat (com_encode c) = num_variables c"
   apply (auto simp only:num_variables_nat_def sub_all_variables sub_remdups vname_list_encode_def
         sub_length num_variables_def)
   apply (induct "all_variables c"  arbitrary:c)

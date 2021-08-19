@@ -1,5 +1,5 @@
 theory SAS_Plus_Plus_To_SAS_Plus_Nat
-  imports   Primitives SAS_Plus_Plus_To_SAS_Plus
+  imports   "../IMP-_To_IMP--/Primitives" SAS_Plus_Plus_To_SAS_Plus
 begin
 
 definition SAS_Plus_Plus_State_To_SAS_Plus_list:: 
@@ -518,9 +518,9 @@ lemma inv_subnat_initial_state:
   shows  "\<forall>x \<in> set (variables_ofl P). \<exists>t. map_list_find (range_ofl P) x = Some t \<and> t\<noteq>[]"
 proof -
   obtain P' where def: "P' = list_problem_to_problem P" by simp
-  then have "variables_of P' = variables_ofl P " by simp
+  then have "sas_plus_problem.variables_of P' = variables_ofl P " by simp
   moreover have "map_of (range_ofl P) = range_of P' " using def by simp
-  moreover have "\<forall>x \<in> set (variables_of P'). \<exists>t. (range_of P') x = Some t \<and> t \<noteq> []"
+  moreover have "\<forall>x \<in> set (sas_plus_problem.variables_of P'). \<exists>t. (range_of P') x = Some t \<and> t \<noteq> []"
     by (metis assms def is_valid_problem_sas_plus_plus_then(1) option.collapse range_of_not_empty)
   ultimately show ?thesis by (metis sub_map_list_find)
       

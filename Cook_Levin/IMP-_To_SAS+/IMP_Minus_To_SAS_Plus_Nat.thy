@@ -4,9 +4,6 @@ theory IMP_Minus_To_SAS_Plus_Nat imports  "IMP-_To_IMP--/Primitives" IMP_Minus_T
 
 begin
 
-definition max_input_bits:: "IMP_Minus_com \<Rightarrow> (vname \<rightharpoonup> nat) \<Rightarrow> nat \<Rightarrow> nat" where
-"max_input_bits c I r = 
-  bit_length (max (max (Max (ran I)) r) (max_constant c))" 
 
 definition max_input_bits_list :: "IMP_Minus_com \<Rightarrow> (vname,nat) assignment list \<Rightarrow> nat \<Rightarrow> nat" where 
 " max_input_bits_list c I r = 
@@ -86,17 +83,6 @@ IMP_Minus_initial_to_IMP_Minus_Minus_list_def subnat_IMP_Minus_State_To_IMP_Minu
 
 
 
-definition IMP_Minus_to_SAS_Plus:: "IMP_Minus_com \<Rightarrow> (vname \<rightharpoonup> nat) \<Rightarrow> nat \<Rightarrow> (vname \<rightharpoonup> nat) 
-  \<Rightarrow>  nat \<Rightarrow> SAS_problem" where
-"IMP_Minus_to_SAS_Plus c I r G t = (let 
-  guess_range = max_input_bits c I r;
-  n = t + guess_range + 1;
-  c' = IMP_Minus_To_IMP_Minus_Minus c n;
-  I' = IMP_Minus_initial_to_IMP_Minus_Minus I n guess_range
-    |` (set (enumerate_variables c')) ;
-  G' = (IMP_Minus_State_To_IMP_Minus_Minus_partial G n n) |` (set (enumerate_variables c')) in 
-  SAS_Plus_Plus_To_SAS_Plus (imp_minus_minus_to_sas_plus c' I' G'))"
-
 definition IMP_Minus_to_SAS_Plus_list:: "IMP_Minus_com \<Rightarrow> (vname, nat) assignment list \<Rightarrow> nat \<Rightarrow> (vname, nat) assignment list 
   \<Rightarrow>  nat \<Rightarrow> (var,dom) sas_plus_list_problem" where
 "IMP_Minus_to_SAS_Plus_list c I r G t = (let 
@@ -104,7 +90,7 @@ definition IMP_Minus_to_SAS_Plus_list:: "IMP_Minus_com \<Rightarrow> (vname, nat
   n = t + guess_range + 1;
   c' = IMP_Minus_To_IMP_Minus_Minus c n;
   I' = 
-map (\<lambda>(x,y). (x, the y)) (filter (\<lambda>(x,y) . y \<noteq> None) (map (\<lambda>x. (x,IMP_Minus_initial_to_IMP_Minus_Minus_list I n guess_range x)) (enumerate_variables c')))
+map (\<lambda>(x,y). (x, the y)) (filter (\<lambda>(x,y) . y \<noteq> None) (map (\<lambda>x. (x,IMP_Minus_State_To_IMP_Minus_Minus_partial_list I n guess_range x)) (enumerate_variables c')))
 ;
 
   G' = map (\<lambda>(x,y). (x, the y)) (filter (\<lambda>(x,y) . y \<noteq> None) (map (\<lambda>x. (x,IMP_Minus_State_To_IMP_Minus_Minus_partial_list G n n x)) (enumerate_variables c')))
@@ -128,21 +114,21 @@ simp flip:sublist_IMP_Minus_initial_to_IMP_Minus_Minus)
   done
 
 fun map_IMP_Minus_initial_to_IMP_Minus_Minus:: "nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat" where
-"map_IMP_Minus_initial_to_IMP_Minus_Minus I guess_range n x  =(if x = 0 then 0 else (prod_encode(hd_nat x, IMP_Minus_initial_to_IMP_Minus_Minus_nat I n guess_range (hd_nat x)))## map_IMP_Minus_initial_to_IMP_Minus_Minus I guess_range n (tl_nat x))"
+"map_IMP_Minus_initial_to_IMP_Minus_Minus I n guess_range x  =(if x = 0 then 0 else (prod_encode(hd_nat x, IMP_Minus_initial_to_IMP_Minus_Minus_nat I n guess_range (hd_nat x)))## map_IMP_Minus_initial_to_IMP_Minus_Minus I n guess_range (tl_nat x))"
 
 lemma submap_IMP_Minus_initial_to_IMP_Minus_Minus:
-"map_IMP_Minus_initial_to_IMP_Minus_Minus I guess_range n x = map_nat (\<lambda>x. prod_encode(x, IMP_Minus_initial_to_IMP_Minus_Minus_nat I n guess_range x))x"
-  apply (induct I guess_range n x rule:map_IMP_Minus_initial_to_IMP_Minus_Minus.induct)
+"map_IMP_Minus_initial_to_IMP_Minus_Minus I n guess_range x = map_nat (\<lambda>x. prod_encode(x, IMP_Minus_initial_to_IMP_Minus_Minus_nat I n guess_range x))x"
+  apply (induct I n guess_range  x rule:map_IMP_Minus_initial_to_IMP_Minus_Minus.induct)
   apply auto
   done
 
-fun map_IMP_Minus_State_To_IMP_Minus_Minus_partial :: "nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat" where 
-"map_IMP_Minus_State_To_IMP_Minus_Minus_partial G n x = (if x =0 then 0 else 
-( prod_encode(hd_nat x,IMP_Minus_State_To_IMP_Minus_Minus_partial_nat G n n (hd_nat x)))## map_IMP_Minus_State_To_IMP_Minus_Minus_partial G n (tl_nat x) )"
+fun map_IMP_Minus_State_To_IMP_Minus_Minus_partial :: "nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat" where 
+"map_IMP_Minus_State_To_IMP_Minus_Minus_partial I n guess_range x = (if x =0 then 0 else 
+( prod_encode(hd_nat x,IMP_Minus_State_To_IMP_Minus_Minus_partial_nat I n guess_range (hd_nat x)))## map_IMP_Minus_State_To_IMP_Minus_Minus_partial I n guess_range (tl_nat x) )"
 
 lemma submap_IMP_Minus_State_To_IMP_Minus_Minus_partial :
-"map_IMP_Minus_State_To_IMP_Minus_Minus_partial G n x = map_nat (\<lambda>x. prod_encode(x,IMP_Minus_State_To_IMP_Minus_Minus_partial_nat G n n x)) x "
-  apply(induct G n x rule: map_IMP_Minus_State_To_IMP_Minus_Minus_partial.induct)
+"map_IMP_Minus_State_To_IMP_Minus_Minus_partial I n guess_range x = map_nat (\<lambda>x. prod_encode(x,IMP_Minus_State_To_IMP_Minus_Minus_partial_nat I n guess_range x)) x "
+  apply(induct I  n guess_range x rule: map_IMP_Minus_State_To_IMP_Minus_Minus_partial.induct)
   apply auto
   done
 
@@ -170,10 +156,10 @@ definition IMP_Minus_to_SAS_Plus_nat:: "nat \<Rightarrow> nat \<Rightarrow> nat 
   n = t + guess_range + 1;
   c' = IMP_Minus_To_IMP_Minus_Minus_nat c n;
   I' = 
-map_prod_the (filter_none (map_IMP_Minus_initial_to_IMP_Minus_Minus I guess_range n (enumerate_variables_nat c')))
+map_prod_the (filter_none (map_IMP_Minus_State_To_IMP_Minus_Minus_partial I n guess_range (enumerate_variables_nat c')))
 ;
 
-  G' = map_prod_the (filter_none (map_IMP_Minus_State_To_IMP_Minus_Minus_partial G n (enumerate_variables_nat c')))
+  G' = map_prod_the (filter_none (map_IMP_Minus_State_To_IMP_Minus_Minus_partial G n n (enumerate_variables_nat c')))
  in
   SAS_Plus_Plus_To_SAS_Plus_nat (imp_minus_minus_to_sas_plus_nat c' I' G'))"
 
@@ -224,13 +210,15 @@ subnat_IMP_Minus_initial_to_IMP_Minus_Minus
 
  thef_bit_option_lambda
 
+imp_assignment_list_encode_def
 
  simp flip: imp_assignment_encode.simps)
   apply (auto simp only:
 subnat_SAS_Plus_Plus_To_SAS_Plus
- subnat_imp_minus_minus_to_sas_plus simp flip:comp_def[of imp_assignment_encode "\<lambda>x.(x, the (IMP_Minus_initial_to_IMP_Minus_Minus_list I
-                               (t + max_input_bits_list c I r + 1)
-                               (max_input_bits_list c I r) x))" ]
+ subnat_imp_minus_minus_to_sas_plus simp flip:comp_def[of imp_assignment_encode "\<lambda>x.(x, the (IMP_Minus_State_To_IMP_Minus_Minus_partial_list I                             
+(t + max_input_bits_list c I r + 1)
+(max_input_bits_list c I r)  
+                                x))" ]
 comp_def[of imp_assignment_encode "\<lambda>x. (x, the (IMP_Minus_State_To_IMP_Minus_Minus_partial_list G
                                (t + max_input_bits_list c I r + 1)
                                (t + max_input_bits_list c I r + 1) x))" ]
@@ -239,84 +227,57 @@ comp_def[of imp_assignment_encode "\<lambda>x. (x, the (IMP_Minus_State_To_IMP_M
 imp_assignment_list_encode_def
 )
 proof -
-  let ?P = "imp_minus_minus_to_sas_plus_list
-         (IMP_Minus_To_IMP_Minus_Minus c (t + max_input_bits_list c I r + 1))
-         (map (\<lambda>x. (x, the (IMP_Minus_initial_to_IMP_Minus_Minus_list I
-                              (t + max_input_bits_list c I r + 1)
-                              (max_input_bits_list c I r) x)))
+  let ?P = "imp_minus_minus_to_sas_plus_list (IMP_Minus_To_IMP_Minus_Minus c (t + max_input_bits_list c I r + 1))
+         (map (\<lambda>x. (x, the (IMP_Minus_State_To_IMP_Minus_Minus_partial_list I
+                              (t + max_input_bits_list c I r + 1) (max_input_bits_list c I r) x)))
            (filter
-             (\<lambda>x. IMP_Minus_initial_to_IMP_Minus_Minus_list I
-                    (t + max_input_bits_list c I r + 1) (max_input_bits_list c I r)
-                    x \<noteq>
+             (\<lambda>x. IMP_Minus_State_To_IMP_Minus_Minus_partial_list I (t + max_input_bits_list c I r + 1)
+                    (max_input_bits_list c I r) x \<noteq>
                    None)
-             (enumerate_variables
-               (IMP_Minus_To_IMP_Minus_Minus c
-                 (t + max_input_bits_list c I r + 1)))))
+             (enumerate_variables (IMP_Minus_To_IMP_Minus_Minus c (t + max_input_bits_list c I r + 1)))))
          (map (\<lambda>x. (x, the (IMP_Minus_State_To_IMP_Minus_Minus_partial_list G
-                              (t + max_input_bits_list c I r + 1)
-                              (t + max_input_bits_list c I r + 1) x)))
+                              (t + max_input_bits_list c I r + 1) (t + max_input_bits_list c I r + 1) x)))
            (filter
-             (\<lambda>x. IMP_Minus_State_To_IMP_Minus_Minus_partial_list G
-                    (t + max_input_bits_list c I r + 1)
+             (\<lambda>x. IMP_Minus_State_To_IMP_Minus_Minus_partial_list G (t + max_input_bits_list c I r + 1)
                     (t + max_input_bits_list c I r + 1) x \<noteq>
                    None)
-             (enumerate_variables
-               (IMP_Minus_To_IMP_Minus_Minus c
-                 (t + max_input_bits_list c I r + 1)))))"
+             (enumerate_variables (IMP_Minus_To_IMP_Minus_Minus c (t + max_input_bits_list c I r + 1)))))"
   have "is_valid_problem_sas_plus_plus (list_problem_to_problem ?P)"
     by (auto simp only:sublist_imp_minus_minus_to_sas_plus  imp_minus_minus_to_sas_plus_valid)
-  thus "SAS_Plus_Plus_To_SAS_Plus_nat
+  thus " SAS_Plus_Plus_To_SAS_Plus_nat
      (list_problem_encode
-       (imp_minus_minus_to_sas_plus_list
-         (IMP_Minus_To_IMP_Minus_Minus c (t + max_input_bits_list c I r + 1))
-         (map (\<lambda>x. (x, the (IMP_Minus_initial_to_IMP_Minus_Minus_list I
-                              (t + max_input_bits_list c I r + 1)
-                              (max_input_bits_list c I r) x)))
+       (imp_minus_minus_to_sas_plus_list (IMP_Minus_To_IMP_Minus_Minus c (t + max_input_bits_list c I r + 1))
+         (map (\<lambda>x. (x, the (IMP_Minus_State_To_IMP_Minus_Minus_partial_list I
+                              (t + max_input_bits_list c I r + 1) (max_input_bits_list c I r) x)))
            (filter
-             (\<lambda>x. IMP_Minus_initial_to_IMP_Minus_Minus_list I
-                    (t + max_input_bits_list c I r + 1) (max_input_bits_list c I r)
-                    x \<noteq>
+             (\<lambda>x. IMP_Minus_State_To_IMP_Minus_Minus_partial_list I (t + max_input_bits_list c I r + 1)
+                    (max_input_bits_list c I r) x \<noteq>
                    None)
-             (enumerate_variables
-               (IMP_Minus_To_IMP_Minus_Minus c
-                 (t + max_input_bits_list c I r + 1)))))
+             (enumerate_variables (IMP_Minus_To_IMP_Minus_Minus c (t + max_input_bits_list c I r + 1)))))
          (map (\<lambda>x. (x, the (IMP_Minus_State_To_IMP_Minus_Minus_partial_list G
-                              (t + max_input_bits_list c I r + 1)
-                              (t + max_input_bits_list c I r + 1) x)))
+                              (t + max_input_bits_list c I r + 1) (t + max_input_bits_list c I r + 1) x)))
            (filter
-             (\<lambda>x. IMP_Minus_State_To_IMP_Minus_Minus_partial_list G
-                    (t + max_input_bits_list c I r + 1)
+             (\<lambda>x. IMP_Minus_State_To_IMP_Minus_Minus_partial_list G (t + max_input_bits_list c I r + 1)
                     (t + max_input_bits_list c I r + 1) x \<noteq>
                    None)
-             (enumerate_variables
-               (IMP_Minus_To_IMP_Minus_Minus c
-                 (t + max_input_bits_list c I r + 1))))))) =
+             (enumerate_variables (IMP_Minus_To_IMP_Minus_Minus c (t + max_input_bits_list c I r + 1))))))) =
     list_problem_plus_encode
      (SAS_Plus_Plus_To_SAS_Plus_list
-       (imp_minus_minus_to_sas_plus_list
-         (IMP_Minus_To_IMP_Minus_Minus c (t + max_input_bits_list c I r + 1))
-         (map (\<lambda>x. (x, the (IMP_Minus_initial_to_IMP_Minus_Minus_list I
-                              (t + max_input_bits_list c I r + 1)
-                              (max_input_bits_list c I r) x)))
+       (imp_minus_minus_to_sas_plus_list (IMP_Minus_To_IMP_Minus_Minus c (t + max_input_bits_list c I r + 1))
+         (map (\<lambda>x. (x, the (IMP_Minus_State_To_IMP_Minus_Minus_partial_list I
+                              (t + max_input_bits_list c I r + 1) (max_input_bits_list c I r) x)))
            (filter
-             (\<lambda>x. IMP_Minus_initial_to_IMP_Minus_Minus_list I
-                    (t + max_input_bits_list c I r + 1) (max_input_bits_list c I r)
-                    x \<noteq>
+             (\<lambda>x. IMP_Minus_State_To_IMP_Minus_Minus_partial_list I (t + max_input_bits_list c I r + 1)
+                    (max_input_bits_list c I r) x \<noteq>
                    None)
-             (enumerate_variables
-               (IMP_Minus_To_IMP_Minus_Minus c
-                 (t + max_input_bits_list c I r + 1)))))
+             (enumerate_variables (IMP_Minus_To_IMP_Minus_Minus c (t + max_input_bits_list c I r + 1)))))
          (map (\<lambda>x. (x, the (IMP_Minus_State_To_IMP_Minus_Minus_partial_list G
-                              (t + max_input_bits_list c I r + 1)
-                              (t + max_input_bits_list c I r + 1) x)))
+                              (t + max_input_bits_list c I r + 1) (t + max_input_bits_list c I r + 1) x)))
            (filter
-             (\<lambda>x. IMP_Minus_State_To_IMP_Minus_Minus_partial_list G
-                    (t + max_input_bits_list c I r + 1)
+             (\<lambda>x. IMP_Minus_State_To_IMP_Minus_Minus_partial_list G (t + max_input_bits_list c I r + 1)
                     (t + max_input_bits_list c I r + 1) x \<noteq>
                    None)
-             (enumerate_variables
-               (IMP_Minus_To_IMP_Minus_Minus c
-                 (t + max_input_bits_list c I r + 1)))))))"
+             (enumerate_variables (IMP_Minus_To_IMP_Minus_Minus c (t + max_input_bits_list c I r + 1)))))))"
     by (auto simp only: subnat_SAS_Plus_Plus_To_SAS_Plus)
 qed
 

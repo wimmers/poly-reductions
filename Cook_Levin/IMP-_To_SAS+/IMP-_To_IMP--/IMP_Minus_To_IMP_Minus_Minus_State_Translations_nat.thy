@@ -260,8 +260,8 @@ IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b_list_def
 definition IMP_Minus_State_To_IMP_Minus_Minus_partial_list:: 
   "(vname, nat) assignment list \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> vname \<Rightarrow> bit option" where
 "IMP_Minus_State_To_IMP_Minus_Minus_partial_list s n r v = (case var_to_var_bit v of 
-  Some (v', k) \<Rightarrow> if k \<ge> r then Some Zero else 
-  (if k < n then map_list_find (map (\<lambda>(x,y). (x,nth_bit y k)) s) v' else None) |
+  Some (v', k) \<Rightarrow> if k \<ge> n then None else 
+  (if k < r then map_list_find (map (\<lambda>(x,y). (x,nth_bit y k)) s) v' else Some Zero) |
   None \<Rightarrow> (case var_to_operand_bit v of 
     Some (CHR ''a'', k) \<Rightarrow> if k < n then Some Zero else None |
     Some (CHR ''b'', k) \<Rightarrow> if k < n then Some Zero else None | 
@@ -294,8 +294,8 @@ definition IMP_Minus_State_To_IMP_Minus_Minus_partial_nat::
   "nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat" where
 "IMP_Minus_State_To_IMP_Minus_Minus_partial_nat s n r v = (
 let p = var_to_var_bit_nat v ; v' = fst_nat (p-1) ; k = snd_nat (p-1)
-in  if p \<noteq> 0 then  if k \<ge> r then Suc 0 else 
-  (if k < n then map_list_find_nat (map_IMP_Minus_State_To_IMP_Minus_Minus_partial k s) v' else 0) else
+in  if p \<noteq> 0 then  if k \<ge> n then 0 else 
+  (if k < r then map_list_find_nat (map_IMP_Minus_State_To_IMP_Minus_Minus_partial k s) v' else Suc 0) else
       (let po = var_to_operand_bit_nat v ; vo = fst_nat (po-1) ; ko = snd_nat (po-1) in
 if po \<noteq> 0 \<and> vo = encode_char CHR ''a'' then  if ko < n then Suc 0 else 0 else if 
 po \<noteq> 0 \<and> vo = encode_char CHR ''b''then if ko < n then Suc 0 else 0 else 
