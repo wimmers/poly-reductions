@@ -107,6 +107,29 @@ done
 lemma bigstep_det: "(c1, s) \<Rightarrow>\<^bsup> p1 \<^esup> t1 \<Longrightarrow> (c1, s) \<Rightarrow>\<^bsup> p \<^esup> t \<Longrightarrow> p1=p \<and> t1=t"
   using big_step_t_determ2 by simp
 
+lemma seq_assign_t_simp:
+  "((c ;; x ::= a, s) \<Rightarrow>\<^bsup> Suc(Suc t) \<^esup>  s') 
+  \<longleftrightarrow> (\<exists>s''. (c, s) \<Rightarrow>\<^bsup> t \<^esup> s'' \<and> s' = s''(x := aval a s''))"
+proof
+  assume "(c;; x ::= a, s) \<Rightarrow>\<^bsup> Suc (Suc t) \<^esup> s'"
+  then obtain s'' where "(c, s) \<Rightarrow>\<^bsup> t \<^esup> s''" by auto
+  have "s' = s''(x := aval a s'')" using \<open>(c;; x ::= a, s) \<Rightarrow>\<^bsup> Suc (Suc t) \<^esup> s'\<close>
+    using bigstep_det \<open>(c, s) \<Rightarrow>\<^bsup> t \<^esup> s''\<close> 
+    by blast
+  thus "\<exists>s''. (c, s) \<Rightarrow>\<^bsup> t \<^esup> s'' \<and> s' = s''(x := aval a s'')"
+    using \<open>(c, s) \<Rightarrow>\<^bsup> t \<^esup> s''\<close> 
+    by blast
+qed auto
+
+lemma seq_assign_t_intro: "(c, s) \<Rightarrow>\<^bsup> t \<^esup> s'' \<Longrightarrow> s' = s''(x := aval a s'')
+  \<Longrightarrow>(c ;; x ::= a, s) \<Rightarrow>\<^bsup> Suc(Suc t) \<^esup>  s'"
+  using seq_assign_t_simp 
+  by auto
+
+lemma seq_is_noop[simp]: "(SKIP, s) \<Rightarrow>\<^bsup>t\<^esup> s' \<longleftrightarrow> (t = Suc 0 \<and> s = s')" by auto
+
+lemma seq_skip[simp]: "(c ;; SKIP, s) \<Rightarrow>\<^bsup>Suc t\<^esup> s' \<longleftrightarrow> (c, s) \<Rightarrow>\<^bsup>t\<^esup> s'" by auto
+
 subsection "Progress property"
 text "every command costs time"
 lemma bigstep_progress: "(c, s) \<Rightarrow>\<^bsup> p \<^esup> t \<Longrightarrow> p > 0"
