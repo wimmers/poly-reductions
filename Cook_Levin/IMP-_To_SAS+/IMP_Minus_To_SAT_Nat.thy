@@ -348,7 +348,7 @@ lemma main_lemma_hol_list:
           "\<And>x s s' t. \<lbrakk>in_lang x \<noteq> 0; s ''input'' = x; (c, s) \<Rightarrow>\<^bsup> t \<^esup> s'\<rbrakk> \<Longrightarrow>
                          s' ''input'' = in_lang x"
   assumes verifier_has_registers:
-    "''input'' \<in> set (IMP_Minus_Max_Constant.all_variables c)"
+    "''input'' \<in> set (Max_Constant.all_variables c)"
   shows "\<exists>t_red s_red.
          poly t_red 
        \<and> poly s_red
@@ -435,7 +435,7 @@ lemma main_lemma_hol_nat:
           "\<And>x s s' t. \<lbrakk>in_lang x \<noteq> 0; s ''input'' = x; (c, s) \<Rightarrow>\<^bsup> t \<^esup> s'\<rbrakk> \<Longrightarrow>
                          s' ''input'' = in_lang x"
   assumes verifier_has_registers:
-    "''input'' \<in> set (IMP_Minus_Max_Constant.all_variables c)"
+    "''input'' \<in> set (Max_Constant.all_variables c)"
   shows "\<exists>t_red s_red.
          poly t_red 
        \<and> poly s_red

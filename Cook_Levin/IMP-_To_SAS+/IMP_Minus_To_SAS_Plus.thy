@@ -6,7 +6,6 @@ theory IMP_Minus_To_SAS_Plus
   imports "IMP-_To_IMP--/IMP_Minus_To_IMP_Minus_Minus" 
     "IMP--_To_SAS++/IMP_Minus_Minus_To_SAS_Plus_Plus_Correctness"
     "SAS++_To_SAS+/SAS_Plus_Plus_To_SAS_Plus"
-    "IMP_Minus_Max_Constant"
 begin
 
 text \<open> We combine our reduction steps from IMP- to IMP--, then from IMP-- to SAS++ and finally 
@@ -27,7 +26,7 @@ text \<open> We give a definition to compute the upper bound on the number of bi
 
 definition max_input_bits:: "IMP_Minus_com \<Rightarrow> (vname \<rightharpoonup> nat) \<Rightarrow> nat \<Rightarrow> nat" where
 "max_input_bits c I r = 
-  bit_length (max (max (Max (ran I)) r) (IMP_Minus_Max_Constant.max_constant c))" 
+  bit_length (max (max (Max (ran I)) r) (Max_Constant.max_constant c))" 
 
 lemma bit_at_index_geq_max_input_bits_is_zero:
   assumes "x < r" "max_input_bits c I r \<le> b"
@@ -242,8 +241,8 @@ text \<open> Second direction of the correctness proof. We show that for an IMP-
 
 lemma SAS_Plus_to_IMP_Minus_correctness: 
   assumes 
-    "dom I \<subseteq> set (IMP_Minus_Max_Constant.all_variables c)"
-    "dom G \<subseteq> set (IMP_Minus_Max_Constant.all_variables c)" 
+    "dom I \<subseteq> set (Max_Constant.all_variables c)"
+    "dom G \<subseteq> set (Max_Constant.all_variables c)" 
     "Max (ran G) < 2 ^ (t + max_input_bits c I r)" 
     "is_serial_solution_for_problem (IMP_Minus_to_SAS_Plus c I r G t) plan"
     "\<forall>s1. I \<subseteq>\<^sub>m Some o s1 \<longrightarrow> (\<exists>s2. \<exists>t' \<le> t. (c, s1) \<Rightarrow>\<^bsup>t'\<^esup> s2)" 
@@ -257,8 +256,8 @@ proof -
   let ?G = "(IMP_Minus_State_To_IMP_Minus_Minus_partial G ?n ?n) |` (set (enumerate_variables ?c'))"
 
   have "finite (ran I)" "finite (ran G)" 
-    using \<open>dom I \<subseteq> set (IMP_Minus_Max_Constant.all_variables c)\<close> 
-      \<open>dom G \<subseteq> set (IMP_Minus_Max_Constant.all_variables c)\<close>
+    using \<open>dom I \<subseteq> set (Max_Constant.all_variables c)\<close> 
+      \<open>dom G \<subseteq> set (Max_Constant.all_variables c)\<close>
     finite_set by(auto simp: finite_subset intro!: finite_ran)
 
   have "?n > 0" by simp 
@@ -306,9 +305,8 @@ proof -
       then obtain v' i where "v = var_bit_to_var (v', i) \<and> i < ?guess_range" using \<open>\<not>(v \<in> dom ?I)\<close>
          \<open>v \<in> set (enumerate_variables ?c')\<close>
         set_mp[OF IMP_Minus_To_IMP_Minus_Minus_variables \<open>v \<in> set (enumerate_variables ?c')\<close>]
-        apply(auto simp: map_comp_def
+        by(auto simp: map_comp_def
             IMP_Minus_State_To_IMP_Minus_Minus_partial_def split: option.splits)
-        using leI by blast
       thus ?thesis using \<open>v \<in> set (enumerate_variables ?c')\<close> 
           \<open>dom s1 = set (enumerate_variables ?c')\<close>
         by(auto simp: IMP_Minus_State_To_IMP_Minus_Minus_def 
@@ -323,8 +321,8 @@ proof -
 
   have "?s1' v = y" if "I v = Some y" for v y 
   proof -
-    from that have "v \<in> set (IMP_Minus_Max_Constant.all_variables c)" 
-      using \<open>dom I \<subseteq> set (IMP_Minus_Max_Constant.all_variables c)\<close>
+    from that have "v \<in> set (Max_Constant.all_variables c)" 
+      using \<open>dom I \<subseteq> set (Max_Constant.all_variables c)\<close>
       by auto
     hence "\<forall>i < ?n. var_bit_to_var (v, i) \<in> set (enumerate_variables ?c')" 
       by(auto simp: var_bit_in_IMP_Minus_Minus_variables)
@@ -333,18 +331,19 @@ proof -
       by(auto simp: map_le_def
                     IMP_Minus_State_To_IMP_Minus_Minus_def dom_def
                     IMP_Minus_State_To_IMP_Minus_Minus_partial_def map_comp_def
-              split: option.splits) 
+                    split: option.splits) 
     ultimately show "?s1' v = y"
       using
         \<open>(?I|` set (enumerate_variables ?c')) \<subseteq>\<^sub>m s1\<close>
         less_le_trans[OF initial_state_element_less_two_to_the_max_input_bits[where ?c=c and ?r=r]]
-        \<open>I v = Some y\<close> bit_at_index_geq_max_input_bits_is_zero_in_initial_state \<open>finite (ran I)\<close>
-      sorry
-      by(auto si mp add: map_comp_def 
-           power_add 
+        \<open>I v = Some y\<close> \<open>finite (ran I)\<close>
+      by(auto simp add: map_comp_def 
+          power_add 
           algebra_simps nth_append bit_list_to_nat_eq_nat_iff
-          IMP_Minus_State_To_IMP_Minus_Minus_partial_def map_le_def
- split: if_splits option.splits bool.splits char.splits)
+          IMP_Minus_Minus_State_To_IMP_Minus_def 
+          IMP_Minus_State_To_IMP_Minus_Minus_partial_def
+          intro!: bit_at_index_geq_max_input_bits_is_zero_in_initial_state
+          [symmetric, where ?c=c and ?I = I and ?r=r])
   qed
   hence "I \<subseteq>\<^sub>m Some \<circ> ?s1'" by(auto simp: map_le_def)
   
@@ -371,11 +370,13 @@ proof -
     case True
     assume "?guess_range \<le> i"
     hence "?I (var_bit_to_var (v, i)) = Some Zero" 
-      using \<open>(var_bit_to_var (v, i)) \<in> set (enumerate_variables ?c')\<close>  
-      by(auto simp: IMP_Minus_State_To_IMP_Minus_Minus_partial_def 
-              dest!: set_mp[OF IMP_Minus_To_IMP_Minus_Minus_variables]
+      using set_mp[OF IMP_Minus_To_IMP_Minus_Minus_variables 
+          \<open>(var_bit_to_var (v, i)) \<in> set (enumerate_variables ?c')\<close>] 
+      by (auto simp: IMP_Minus_State_To_IMP_Minus_Minus_partial_def 
+              intro!: var_bit_in_IMP_Minus_Minus_variables 
               split: option.splits)
-    thus ?thesis using \<open>(?I|` set (enumerate_variables ?c')) \<subseteq>\<^sub>m s1\<close> by(auto simp: map_le_def dom_def)
+    thus ?thesis using \<open>(?I|` set (enumerate_variables ?c')) \<subseteq>\<^sub>m s1\<close> 
+      by(auto simp: map_le_def dom_def)
   next
     case False
     then show ?thesis using \<open>dom s1 = set (enumerate_variables ?c')\<close> by auto
@@ -391,8 +392,8 @@ proof -
   have "G v = Some y \<Longrightarrow> s2'' v = y" for v y 
   proof -
     assume "G v = Some y" 
-    hence "v \<in> set (IMP_Minus_Max_Constant.all_variables c)" 
-      using \<open>dom G \<subseteq> set (IMP_Minus_Max_Constant.all_variables c)\<close> by auto
+    hence "v \<in> set (Max_Constant.all_variables c)" 
+      using \<open>dom G \<subseteq> set (Max_Constant.all_variables c)\<close> by auto
     hence "\<forall>i < ?n. var_bit_to_var (v, i) \<in> set (enumerate_variables ?c')" 
       by(auto simp: var_bit_in_IMP_Minus_Minus_variables)
     moreover hence "i < ?n \<longrightarrow> s2 (var_bit_to_var (v, i)) = ?G (var_bit_to_var (v, i))" for i

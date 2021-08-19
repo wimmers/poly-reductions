@@ -41,4 +41,26 @@ qed auto
 
 lemma rel_pow_Suc_E: "rel_pow r (Suc n) x z  \<Longrightarrow> (\<exists>y. rel_pow r n x y \<and> r y z)"
   using rel_pow_Suc_E_util by metis
+
+lemma rel_pow_sum_decomp:
+  assumes "rel_pow r (a + b) x z"
+  obtains y where "rel_pow r a x y \<and> rel_pow r b y z"
+  using assms
+proof(induction b arbitrary: z thesis)
+  case (Suc b)
+  obtain y' where "rel_pow r (a + b) x y'" "r y' z" 
+    using  \<open>rel_pow r (a + Suc b) x z\<close>
+      exE[OF rel_pow_Suc_E[where ?n = "a + b" and ?x = x and ?z = z]]
+    by auto
+  obtain y where "rel_pow r a x y" "rel_pow r b y y'"
+    using Suc.IH \<open>rel_pow r (a + b) x y'\<close>
+    by auto
+  have "rel_pow r (Suc b) y z" 
+    using \<open>rel_pow r b y y'\<close> \<open>r y' z\<close> rel_pow_rhs
+    by fastforce
+  thus ?case
+    using \<open>rel_pow r a x y\<close> Suc.prems 
+    by blast
+qed auto
+
 end
