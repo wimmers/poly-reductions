@@ -5,8 +5,39 @@ begin
 
 
 fun com_list_to_seq_nat:: "nat \<Rightarrow> nat" where
-"com_list_to_seq_nat n = (if n =0 then cons 0 0 else 
-cons 2 (cons (hd_nat n) (cons (com_list_to_seq_nat (tl_nat n)) 0)))"
+"com_list_to_seq_nat n = (if n =0 then  0 ## 0 else 
+ 2 ## ((hd_nat n) ## ((com_list_to_seq_nat (tl_nat n)) ## 0)))"
+
+fun com_list_to_seq_acc :: "nat \<Rightarrow> nat \<Rightarrow> nat" where 
+"com_list_to_seq_acc acc n = (if n = 0 then  acc 
+else com_list_to_seq_acc ( 2 ## ((hd_nat n) ## (acc ## 0))) (tl_nat n))"
+
+lemma com_list_to_seq_induct: "com_list_to_seq_nat (append_nat (reverse_nat ys) xs) =
+       com_list_to_seq_acc  (com_list_to_seq_nat xs) ys"
+  apply(induct ys arbitrary:xs rule: length_nat.induct)
+    apply (auto simp only: reverse_nat_0 append_nat.simps)
+  apply(subst com_list_to_seq_acc.simps)
+   apply(auto simp del:com_list_to_seq_acc.simps com_list_to_seq_nat.simps 
+          simp add: append_rev_nat )
+  apply(subst (2) com_list_to_seq_acc.simps )
+     apply(auto simp del:com_list_to_seq_acc.simps com_list_to_seq_nat.simps 
+          simp add: append_rev_nat )
+  apply(subst com_list_to_seq_nat.simps)
+       apply(auto simp del:com_list_to_seq_acc.simps com_list_to_seq_nat.simps 
+          simp add: append_rev_nat cons_Nil hd_cons tl_cons )
+  done
+
+lemma com_list_to_seq_rev: "com_list_to_seq_nat (append_nat ys xs) =
+       com_list_to_seq_acc  (com_list_to_seq_nat xs) (reverse_nat ys)"
+  using rev_rev_nat com_list_to_seq_induct by metis
+
+definition  com_list_to_seq_tail :: "nat \<Rightarrow> nat" where 
+"com_list_to_seq_tail ys = com_list_to_seq_acc  (0##0) (reverse_nat ys) "
+lemma subtail_com_list_to_seq: "com_list_to_seq_nat ys=
+       com_list_to_seq_acc  (0##0) (reverse_nat ys)"
+  using  com_list_to_seq_rev[of ys 0]  append_nat_0 
+  by(auto)
+
 
 definition comm_list_encode :: "IMP_Minus_Minus_com list \<Rightarrow> nat" where
 "comm_list_encode xs = list_encode (map comm_encode xs) "
@@ -36,6 +67,28 @@ fun binary_assign_constant_nat:: "nat \<Rightarrow> nat \<Rightarrow> nat \<Righ
     (cons (var_bit_to_var_nat(prod_encode (v,n-1))) (cons (nth_bit_nat x (n-1)) 0 )))
   (cons (binary_assign_constant_nat (n-1) v x)0) ) )"
 
+fun binary_assign_constant_acc:: " nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat" where 
+"binary_assign_constant_acc acc diff n v x = (if diff = 0 then acc else
+binary_assign_constant_acc  (cons 2 ( cons (cons 1 
+    (cons (var_bit_to_var_tail(prod_encode (v,n-diff))) (cons (nth_bit_tail x (n-diff)) 0 )))
+  (cons acc 0) )) (diff-1) n v x )"
+
+lemma binary_assign_constant_induct: 
+  "diff \<le>n \<Longrightarrow>
+ binary_assign_constant_acc (binary_assign_constant_nat (n- diff) v x)  diff n v x
+= binary_assign_constant_nat n v x"
+  apply(induct diff)
+  apply (auto simp add: subtail_nth_bit subtail_var_bit_to_var)
+  done
+
+definition  binary_assign_constant_tail:: "nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat" where 
+"binary_assign_constant_tail n v x = binary_assign_constant_acc (0##0) n n v x "
+lemma subtail_binary_assign_constant:
+"binary_assign_constant_tail n v x = binary_assign_constant_nat n v x"
+  using binary_assign_constant_induct[of n n v x]
+  apply (auto simp add:binary_assign_constant_tail_def)
+  done
+
 lemma  sub_binary_assign_constant:
 "binary_assign_constant_nat n (vname_encode v) x = comm_encode (binary_assign_constant n v x)"
   apply (induct n)
@@ -58,6 +111,33 @@ fun copy_var_to_operand_nat:: "nat \<Rightarrow> nat \<Rightarrow> nat \<Rightar
  ## (copy_var_to_operand_nat (i-1) op v) 
   ## 0))
 "
+fun copy_var_to_operand_acc ::"nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat" where 
+"copy_var_to_operand_acc acc diff i op v = (if diff = 0 then acc 
+else copy_var_to_operand_acc  (2 ## 
+    ( 3##((var_bit_to_var_tail(prod_encode(v,i-diff))) ##0) ## (1 ## (operand_bit_to_var_tail(prod_encode(op,i-diff)))##1##0 )
+## ( 1 ## (operand_bit_to_var_tail(prod_encode(op,i-diff)))##0##0) ## 0)
+
+ ## acc ## 0) (diff-1) i op v )"
+
+lemma copy_var_to_operand_induct :
+" diff \<le> i \<Longrightarrow> copy_var_to_operand_acc (copy_var_to_operand_nat (i-diff) op v) diff i op v 
+= copy_var_to_operand_nat i op v"
+  apply(induct diff)
+   apply (auto simp add:subtail_var_bit_to_var subtail_operand_bit_to_var
+simp del:  operand_bit_to_var_nat.simps  )
+  done
+
+definition copy_var_to_operand_tail :: "nat => nat => nat => nat" where 
+"copy_var_to_operand_tail i op v = copy_var_to_operand_acc (0 ## 0) i i op v"
+
+lemma subtail_copy_var_to_operand:
+"copy_var_to_operand_tail i op v  
+= copy_var_to_operand_nat i op v"
+  using copy_var_to_operand_induct [of i i op v]
+  apply(auto simp add: copy_var_to_operand_tail_def)
+  done
+
+
 lemma sub_copy_var_to_operand:
  "copy_var_to_operand_nat i (encode_char op) (vname_encode v) = comm_encode (copy_var_to_operand i op v)  "
   apply (induct i)

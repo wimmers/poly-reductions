@@ -20,6 +20,82 @@ lemma subtakeWhile_char :
   apply metis
   done
 
+fun takeWhile_char_acc :: "nat \<Rightarrow> nat \<Rightarrow> nat" where 
+"takeWhile_char_acc acc n = (if n=0 then acc else if hd_nat n =encode_char(CHR ''#'') then takeWhile_char_acc ((hd_nat n) ## acc) (tl_nat n) else acc)"
+lemma takeWhile_char_append : "takeWhile_char xs = xs \<Longrightarrow>
+ takeWhile_char (append_nat xs ys) = append_nat xs (takeWhile_char ys)"
+proof -
+  assume "takeWhile_char xs =xs"
+  moreover obtain xs' ys' where "xs =list_encode xs'"  "ys = list_encode ys'"
+    by (metis list_decode_inverse)
+  ultimately show ?thesis by (auto simp del:takeWhile_char.simps takeWhile_nat.simps 
+          simp add: subtakeWhile_char sub_takeWhile sub_append list_encode_eq )
+qed
+lemma append_nat_cons: "append_nat xs (a ## ys) = append_nat (append_nat xs (a##0)) ys"
+proof -
+obtain xs' ys' where "xs =list_encode xs'"  "ys = list_encode ys'"
+  by (metis list_decode_inverse)
+  thus ?thesis by(auto simp del:append_nat.simps list_encode.simps simp add: cons0 sub_cons
+          sub_append)
+qed
+lemma takeWhile_char_extend:"takeWhile_char xs =xs \<Longrightarrow>takeWhile_char (append_nat xs ((encode_char CHR ''#'') ## 0))
+= append_nat xs ((encode_char CHR ''#'') ## 0)"
+proof -
+assume "takeWhile_char xs =xs"
+moreover obtain xs' where "xs =list_encode xs'" 
+  by (metis list_decode_inverse)
+  ultimately show ?thesis by(auto simp del:append_nat.simps takeWhile_char.simps takeWhile_nat.simps
+              list_encode.simps simp add: cons0 sub_cons  subtakeWhile_char sub_takeWhile
+                list_encode_eq
+          sub_append)
+qed
+lemma reverse_append_nat:
+    "reverse_nat (append_nat xs ys) = append_nat (reverse_nat ys) (reverse_nat xs)"
+proof - 
+obtain xs' ys' where "xs =list_encode xs'"  "ys = list_encode ys'"
+  by (metis list_decode_inverse)
+  thus ?thesis by(auto simp del:append_nat.simps list_encode.simps simp add: cons0 sub_cons
+          sub_append sub_reverse)
+qed
+lemma reverse_singleton_nat:
+"reverse_nat (a ## 0) = a ## 0" by(auto simp add: cons0 sub_reverse simp del:list_encode.simps) 
+lemma append_singleton_nat : 
+"append_nat (a##0) xs = a ## xs"
+proof - 
+  obtain xs' where "xs = list_encode xs'"
+ by (metis list_decode_inverse)
+  thus ?thesis by(auto simp del:append_nat.simps list_encode.simps simp add: cons0 sub_cons
+          sub_append )
+qed
+lemma takeWhile_char_induct: " takeWhile_char xs = xs \<Longrightarrow>
+takeWhile_char (append_nat xs ys) = 
+reverse_nat (takeWhile_char_acc (reverse_nat (takeWhile_char xs)) ys) "
+  apply (induct ys arbitrary:xs rule:length_nat.induct)
+   apply (auto simp del: takeWhile_char_acc.simps takeWhile_char.simps simp add: append_nat_0 )
+   apply (simp add: rev_rev_nat)
+  apply(auto simp only: takeWhile_char_append)
+  apply(subst takeWhile_char.simps)
+  apply(auto  simp del: takeWhile_char_acc.simps takeWhile_char.simps )
+  subgoal for v xs
+    apply(subst append_nat_cons[of xs])
+    apply(auto simp add: takeWhile_char_extend simp del: takeWhile_char_acc.simps takeWhile_char.simps )
+    apply(subst (2) takeWhile_char_acc.simps)
+    apply(auto simp add: reverse_append_nat  reverse_singleton_nat append_singleton_nat
+            simp del: takeWhile_char_acc.simps takeWhile_char.simps)
+    done
+  apply(subst takeWhile_char_acc.simps)
+    apply(auto simp add:append_nat_0  rev_rev_nat
+            simp del: takeWhile_char_acc.simps takeWhile_char.simps)
+  done
+definition takeWhile_char_tail:: "nat \<Rightarrow> nat" where
+"takeWhile_char_tail ys = reverse_nat (takeWhile_char_acc 0 ys)  "
+lemma subtail_takeWhile_char: "
+takeWhile_char_tail ys = takeWhile_char ys"
+  using  takeWhile_char_induct[of 0]
+  apply (auto simp del:takeWhile_char_acc.simps takeWhile_char.simps simp add:
+ reverse_nat_0 takeWhile_char_tail_def)
+  apply auto
+  done
 
 definition var_to_var_bit_nat :: "nat \<Rightarrow> nat" where
 "var_to_var_bit_nat v = (if length_nat v > 0 then (if hd_nat v = encode_char (CHR ''#'') 
@@ -29,6 +105,18 @@ definition var_to_var_bit_nat :: "nat \<Rightarrow> nat" where
    else 0))
   else 0)
   else 0)"
+
+definition var_to_var_bit_tail :: "nat \<Rightarrow> nat" where
+"var_to_var_bit_tail v = (if length_nat v > 0 then (if hd_nat v = encode_char (CHR ''#'') 
+  then (let t = dropWhile_char v; 
+  l = length_nat (takeWhile_char_tail v) - 1 in
+  (if length_nat t > 0 \<and> hd_nat t = encode_char(CHR ''$'') then some_nat (prod_encode(tl_nat t, l))
+   else 0))
+  else 0)
+  else 0)"
+lemma subtail_var_to_var_bit:
+"var_to_var_bit_tail v = var_to_var_bit_nat v"
+  by (auto simp only:var_to_var_bit_tail_def var_to_var_bit_nat_def subtail_takeWhile_char)
 
 fun vname_nat_encode :: "vname*nat \<Rightarrow> nat" where 
 "vname_nat_encode (v,n) = prod_encode (vname_encode v, n)"
@@ -81,12 +169,51 @@ lemma sub_n_hashes : "n_hashes_nat n = vname_encode (n_hashes n)"
    apply (auto simp only:vname_encode_def n_hashes_nat.simps n_hashes.simps sub_cons)
    apply auto 
   done
+fun n_hashes_acc :: "nat \<Rightarrow> nat \<Rightarrow> nat" where 
+"n_hashes_acc acc 0  = acc" |
+"n_hashes_acc acc (Suc n) = n_hashes_acc ((encode_char (CHR ''#'')) ## acc) n"
+lemma Suc_plus:"Suc(m+n) = Suc m + n "
+  by simp
+lemma n_hashes_dashes: 
+"reverse_nat (n_hashes_nat (Suc m)) = (encode_char CHR ''#'') ## reverse_nat (n_hashes_nat m)"
+  apply(auto simp add: sub_cons sub_reverse sub_n_hashes vname_encode_def 
+list_encode_eq
+simp del:list_encode.simps)
+  apply(induct m)
+   apply auto
+  done
 
+lemma n_hashes_induct: "
+n_hashes_nat (m+n) = reverse_nat (n_hashes_acc (reverse_nat (n_hashes_nat m)) n) "
+  apply(induct n arbitrary:m)
+  apply(simp add: rev_rev_nat)
+  apply(auto simp add:rev_rev_nat 
+ simp del:n_hashes_acc.simps n_hashes_nat.simps)
+  subgoal for n m
+    apply(auto simp only: Suc_plus[of m n] n_hashes_acc.simps n_hashes_dashes)
+    done
+  done
+
+definition n_hashes_tail::"nat \<Rightarrow> nat" where 
+"n_hashes_tail n = reverse_nat (n_hashes_acc 0 n)"
+
+lemma subtail_n_hashes:
+"n_hashes_tail n = n_hashes_nat n"
+  using  n_hashes_induct[of 0 n]
+  by (auto simp del: n_hashes_acc.simps simp add:reverse_nat_0 n_hashes_tail_def)
 
 definition var_bit_to_var_nat:: "nat \<Rightarrow> nat" where
 "var_bit_to_var_nat vk = append_nat (append_nat (n_hashes_nat (snd_nat vk + 1)) 
     (vname_encode ''$'')) (fst_nat vk)" 
-thm "vname_nat_encode.simps"
+
+definition var_bit_to_var_tail:: "nat \<Rightarrow> nat" where
+"var_bit_to_var_tail vk = append_nat (append_nat (n_hashes_tail (snd_nat vk + 1)) 
+    (vname_encode ''$'')) (fst_nat vk)" 
+lemma subtail_var_bit_to_var:
+"var_bit_to_var_tail vk = var_bit_to_var_nat vk"
+  apply(auto simp only: var_bit_to_var_nat_def var_bit_to_var_tail_def subtail_n_hashes)
+  done
+
 lemma sub_var_bit_to_var :
 "var_bit_to_var_nat (vname_nat_encode vk) = vname_encode (var_bit_to_var vk)"
   apply (cases vk)
@@ -114,6 +241,45 @@ qed
 fun operand_bit_to_var_nat:: "nat \<Rightarrow> nat" where 
 "operand_bit_to_var_nat p  = (if snd_nat p = 0 then cons (fst_nat p) 0 else cons (fst_nat p) 
 (operand_bit_to_var_nat (prod_encode (fst_nat p, snd_nat p - 1))))"
+
+fun operand_bit_to_var_acc:: " nat \<Rightarrow> nat \<Rightarrow> nat" where 
+"operand_bit_to_var_acc acc p  = (if snd_nat p = 0 then acc else 
+(operand_bit_to_var_acc ((fst_nat p) ## acc) (prod_encode (fst_nat p, snd_nat p - 1))))"
+
+lemma operand_bit_to_var_induct: 
+"operand_bit_to_var_nat (prod_encode (c,n+m)) = 
+operand_bit_to_var_acc (operand_bit_to_var_nat (prod_encode (c,n))) (prod_encode (c,m))"
+  apply(induct m arbitrary:n)
+   apply(subst operand_bit_to_var_acc.simps)
+   apply(auto simp add: sub_fst sub_snd 
+          simp del: operand_bit_to_var_nat.simps operand_bit_to_var_acc.simps)
+  subgoal for m n
+    apply(auto simp only: Suc_plus [of n m])
+       apply(subst (2) operand_bit_to_var_acc.simps)
+          apply(auto simp add: rev_rev_nat sub_fst sub_snd 
+          simp del: operand_bit_to_var_nat.simps operand_bit_to_var_acc.simps)
+    apply(subst operand_bit_to_var_nat.simps)
+    apply(auto simp add: rev_rev_nat sub_fst sub_snd 
+          simp del: operand_bit_to_var_nat.simps operand_bit_to_var_acc.simps)
+    done
+  done
+
+definition operand_bit_to_var_tail :: "nat \<Rightarrow> nat" where 
+"operand_bit_to_var_tail p = operand_bit_to_var_acc (cons (fst_nat p) 0) p "
+lemma subtail_operand_bit_to_var: 
+"operand_bit_to_var_tail p = operand_bit_to_var_nat p "
+proof - 
+  obtain c m where "p = prod_encode (c,m)"
+    by (metis operand_bit_to_var_acc.cases prod_decode_inverse)
+  thus ?thesis using  operand_bit_to_var_induct[of c 0 m] apply (auto simp add:sub_fst
+operand_bit_to_var_tail_def 
+              simp del:operand_bit_to_var_nat.simps
+operand_bit_to_var_acc.simps )
+    apply(subst operand_bit_to_var_nat.simps)
+    apply (auto simp add:sub_fst sub_snd simp del:operand_bit_to_var_nat.simps
+operand_bit_to_var_acc.simps )
+    done
+qed
 
 fun char_nat_encode ::"char * nat \<Rightarrow> nat " where 
 "char_nat_encode (x,n) = prod_encode (encode_char x,n) "
@@ -149,6 +315,17 @@ definition var_to_operand_bit_nat:: "nat \<Rightarrow> nat" where
 "var_to_operand_bit_nat v = (if v \<noteq> 0 \<and> v = (operand_bit_to_var_nat
      (prod_encode(hd_nat v, length_nat v - 1))) 
   then some_nat (prod_encode(hd_nat v, length_nat v - 1)) else 0)" 
+
+definition var_to_operand_bit_tail:: "nat \<Rightarrow> nat" where
+"var_to_operand_bit_tail v = (if v \<noteq> 0 \<and> v = (operand_bit_to_var_tail
+     (prod_encode(hd_nat v, length_nat v - 1))) 
+  then some_nat (prod_encode(hd_nat v, length_nat v - 1)) else 0)" 
+
+lemma subtail_var_to_operand_bit: 
+"var_to_operand_bit_tail v =var_to_operand_bit_nat v"
+  apply(auto simp only:var_to_operand_bit_tail_def var_to_operand_bit_nat_def
+subtail_operand_bit_to_var)
+  done
 
 fun char_nat_option_encode :: "(char*nat) option \<Rightarrow> nat" where 
 "char_nat_option_encode None = 0"|
@@ -211,6 +388,27 @@ definition IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b_nat::
 if k < n then Suc (nth_bit_nat a k) else 0 else if  var_to_operand_bit_nat v \<noteq> 0 \<and> v' = encode_char( CHR ''b'') 
 then if k < n then Suc (nth_bit_nat b k) else 0 else  
    (if v = vname_encode (''carry'') then Suc 0 else 0)))"
+
+definition IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b_tail:: 
+  "nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow>nat \<Rightarrow> nat" where
+"IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b_tail s n a b v =  
+ ( if  var_to_var_bit_tail v \<noteq> 0 then 
+ ( let v' = fst_nat (var_to_var_bit_tail v -1) ; k = snd_nat (var_to_var_bit_tail v -1) in
+     if k < n then some_nat (nth_bit_tail (fun_list_find_tail  s v') k) else 0) 
+  else ( let  v' = fst_nat (var_to_operand_bit_tail v -1) ; k = snd_nat (var_to_operand_bit_tail v -1)
+             in if var_to_operand_bit_tail v \<noteq> 0 \<and> v' = encode_char( CHR ''a'') then 
+if k < n then Suc (nth_bit_tail a k) else 0 else if  var_to_operand_bit_tail v \<noteq> 0 \<and> v' = encode_char( CHR ''b'') 
+then if k < n then Suc (nth_bit_tail b k) else 0 else  
+   (if v = vname_encode (''carry'') then Suc 0 else 0)))"
+
+lemma subtail_IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b:
+"IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b_tail s n a b v 
+= IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b_nat s n a b v"
+  apply(auto simp only:
+      IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b_tail_def
+      IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b_nat_def
+      subtail_var_to_operand_bit subtail_nth_bit subtail_var_to_var_bit subtail_fun_list_find)
+  done
 
 lemma impm_assignment_simp:"impm_assignment_encode = prod_encode o (\<lambda>(x,y).(vname_encode x,y))"
   apply auto
@@ -284,11 +482,80 @@ sub_lambda_partial)
 fun map_IMP_Minus_State_To_IMP_Minus_Minus_partial:: "nat \<Rightarrow> nat \<Rightarrow> nat" where 
 "map_IMP_Minus_State_To_IMP_Minus_Minus_partial k n = 
 (if n =0 then 0 else (prod_encode(fst_nat (hd_nat n),nth_bit_nat (snd_nat (hd_nat n)) k)) ##  map_IMP_Minus_State_To_IMP_Minus_Minus_partial k (tl_nat n))"
+
+fun map_IMP_Minus_State_To_IMP_Minus_Minus_partial_acc:: "nat \<Rightarrow> nat \<Rightarrow> nat  \<Rightarrow> nat" where 
+"map_IMP_Minus_State_To_IMP_Minus_Minus_partial_acc acc k n
+= (if n = 0 then acc else map_IMP_Minus_State_To_IMP_Minus_Minus_partial_acc (
+(prod_encode(fst_nat (hd_nat n),nth_bit_nat (snd_nat (hd_nat n)) k))## acc) k (tl_nat n))"
+
+
 lemma submap_IMP_Minus_State_To_IMP_Minus_Minus_partial:
 "map_IMP_Minus_State_To_IMP_Minus_Minus_partial k s = map_nat (\<lambda>n. prod_encode(fst_nat n,nth_bit_nat (snd_nat n) k)) s"
   apply (induct k s rule:map_IMP_Minus_State_To_IMP_Minus_Minus_partial.induct)
   apply (auto)
   done
+
+lemma map_IMP_Minus_state_append:
+"map_IMP_Minus_State_To_IMP_Minus_Minus_partial k (append_nat xs ys)
+= append_nat (map_IMP_Minus_State_To_IMP_Minus_Minus_partial k xs) 
+(map_IMP_Minus_State_To_IMP_Minus_Minus_partial k ys)"
+proof -
+  obtain xs' ys' where  "xs = list_encode xs'" "ys = list_encode ys'"
+    by (metis list_decode_inverse)
+  thus ?thesis 
+    apply( auto simp del:map_IMP_Minus_State_To_IMP_Minus_Minus_partial.simps list_encode.simps
+map_IMP_Minus_State_To_IMP_Minus_Minus_partial_acc.simps map_nat.simps simp add:
+    submap_IMP_Minus_State_To_IMP_Minus_Minus_partial sub_map sub_append)
+    done
+qed
+lemma append_nat_Suc: 
+"append_nat xs (Suc v) = append_nat (append_nat xs ((hd_nat (Suc v))##0)) (tl_nat (Suc v))"
+proof -
+  obtain xs' v' where "xs =list_encode xs'" "Suc v = list_encode v'"
+    by (metis list_decode_inverse)
+  then moreover obtain a ys where "v' = a # ys" 
+    by (metis Zero_neq_Suc list_encode.elims)
+  ultimately show ?thesis apply(auto simp add:sub_append  sub_hd cons0 
+              sub_tl simp del:list_encode.simps) done
+qed
+
+lemma map_IMP_Minus_State_To_IMP_Minus_Minus_partial_induct:
+" map_IMP_Minus_State_To_IMP_Minus_Minus_partial k (append_nat xs ys) = reverse_nat(
+map_IMP_Minus_State_To_IMP_Minus_Minus_partial_acc (reverse_nat (map_IMP_Minus_State_To_IMP_Minus_Minus_partial k xs)) k ys)"
+  apply(induct ys arbitrary:xs rule:length_nat.induct)
+   apply(auto simp add: append_nat_0 simp del: map_IMP_Minus_State_To_IMP_Minus_Minus_partial.simps
+        map_IMP_Minus_State_To_IMP_Minus_Minus_partial_acc.simps)
+   apply(subst map_IMP_Minus_State_To_IMP_Minus_Minus_partial_acc.simps)
+     apply(auto simp add: rev_rev_nat append_nat_Suc simp del: map_IMP_Minus_State_To_IMP_Minus_Minus_partial.simps
+        map_IMP_Minus_State_To_IMP_Minus_Minus_partial_acc.simps)
+  apply(subst (2)  map_IMP_Minus_State_To_IMP_Minus_Minus_partial_acc.simps)
+  apply(auto simp add: rev_rev_nat append_nat_Suc map_IMP_Minus_state_append
+        reverse_append_nat simp del: map_IMP_Minus_State_To_IMP_Minus_Minus_partial.simps
+        map_IMP_Minus_State_To_IMP_Minus_Minus_partial_acc.simps)
+  apply(subst  map_IMP_Minus_State_To_IMP_Minus_Minus_partial.simps)
+    apply(auto simp add: cons_Nil reverse_singleton_nat simp del: list_encode.simps map_IMP_Minus_State_To_IMP_Minus_Minus_partial.simps
+        map_IMP_Minus_State_To_IMP_Minus_Minus_partial_acc.simps)
+    apply(auto simp add: sub_hd cons0 sub_tl simp del: list_encode.simps map_IMP_Minus_State_To_IMP_Minus_Minus_partial.simps
+        map_IMP_Minus_State_To_IMP_Minus_Minus_partial_acc.simps)
+  apply(auto simp only: list_encode.simps)
+  apply(subst  map_IMP_Minus_State_To_IMP_Minus_Minus_partial.simps)
+    apply(auto simp add: reverse_singleton_nat append_singleton_nat  simp del: list_encode.simps map_IMP_Minus_State_To_IMP_Minus_Minus_partial.simps
+        map_IMP_Minus_State_To_IMP_Minus_Minus_partial_acc.simps)
+  done
+
+definition map_IMP_Minus_State_To_IMP_Minus_Minus_partial_tail :: "nat \<Rightarrow> nat \<Rightarrow> nat" where 
+" map_IMP_Minus_State_To_IMP_Minus_Minus_partial_tail k ys  = reverse_nat(
+map_IMP_Minus_State_To_IMP_Minus_Minus_partial_acc 0 k ys)"
+
+lemma subtail_map_IMP_Minus_State_To_IMP_Minus_Minus_partial:
+"  map_IMP_Minus_State_To_IMP_Minus_Minus_partial_tail k ys = 
+map_IMP_Minus_State_To_IMP_Minus_Minus_partial k ys"
+  using map_IMP_Minus_State_To_IMP_Minus_Minus_partial_induct[of k 0 ys]
+  apply (auto simp add: reverse_nat_0 map_IMP_Minus_State_To_IMP_Minus_Minus_partial_tail_def     
+            simp del:map_IMP_Minus_State_To_IMP_Minus_Minus_partial_acc.simps 
+       )
+  done
+
 
 definition IMP_Minus_State_To_IMP_Minus_Minus_partial_nat:: 
   "nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat" where
@@ -300,6 +567,27 @@ in  if p \<noteq> 0 then  if k \<ge> n then 0 else
 if po \<noteq> 0 \<and> vo = encode_char CHR ''a'' then  if ko < n then Suc 0 else 0 else if 
 po \<noteq> 0 \<and> vo = encode_char CHR ''b''then if ko < n then Suc 0 else 0 else 
 (if v = vname_encode ''carry'' then Suc 0 else 0)))"
+
+definition IMP_Minus_State_To_IMP_Minus_Minus_partial_tail:: 
+  "nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat" where
+"IMP_Minus_State_To_IMP_Minus_Minus_partial_tail s n r v = (
+let p = var_to_var_bit_tail v ; v' = fst_nat (p-1) ; k = snd_nat (p-1)
+in  if p \<noteq> 0 then  if k \<ge> n then 0 else 
+  (if k < r then map_list_find_tail (map_IMP_Minus_State_To_IMP_Minus_Minus_partial_tail k s) v' else Suc 0) else
+      (let po = var_to_operand_bit_tail v ; vo = fst_nat (po-1) ; ko = snd_nat (po-1) in
+if po \<noteq> 0 \<and> vo = encode_char CHR ''a'' then  if ko < n then Suc 0 else 0 else if 
+po \<noteq> 0 \<and> vo = encode_char CHR ''b''then if ko < n then Suc 0 else 0 else 
+(if v = vname_encode ''carry'' then Suc 0 else 0)))"
+
+lemma subtail_IMP_Minus_State_To_IMP_Minus_Minus_partial:
+"IMP_Minus_State_To_IMP_Minus_Minus_partial_tail s n r v = 
+IMP_Minus_State_To_IMP_Minus_Minus_partial_nat s n r v"
+  apply(auto simp only: IMP_Minus_State_To_IMP_Minus_Minus_partial_tail_def
+     IMP_Minus_State_To_IMP_Minus_Minus_partial_nat_def
+      subtail_map_list_find subtail_var_to_operand_bit subtail_var_to_var_bit
+      subtail_map_IMP_Minus_State_To_IMP_Minus_Minus_partial
+)
+  done
 
 lemma snd_nat_0 :"snd_nat 0 = 0"
   apply (auto simp add:snd_nat_def prod_decode_def prod_decode_aux.simps)
@@ -358,6 +646,18 @@ IMP_Minus_State_To_IMP_Minus_Minus (fun_of s) n v"
 definition IMP_Minus_State_To_IMP_Minus_Minus_nat:: "nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat" where
 "IMP_Minus_State_To_IMP_Minus_Minus_nat s n v
   = IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b_nat s n 0 0 v"
+
+definition IMP_Minus_State_To_IMP_Minus_Minus_tail:: "nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat" where
+"IMP_Minus_State_To_IMP_Minus_Minus_tail s n v
+  = IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b_tail s n 0 0 v"
+
+lemma subtail_IMP_Minus_State_To_IMP_Minus_Minus:
+"IMP_Minus_State_To_IMP_Minus_Minus_tail s n v = 
+IMP_Minus_State_To_IMP_Minus_Minus_nat s n v"
+  apply(auto simp only: IMP_Minus_State_To_IMP_Minus_Minus_tail_def 
+IMP_Minus_State_To_IMP_Minus_Minus_nat_def
+        subtail_IMP_Minus_State_To_IMP_Minus_Minus_with_operands_a_b)
+  done
 
 lemma subnat_IMP_Minus_State_To_IMP_Minus_Minus:
 "IMP_Minus_State_To_IMP_Minus_Minus_nat (impm_assignment_list_encode s) n (vname_encode v) =

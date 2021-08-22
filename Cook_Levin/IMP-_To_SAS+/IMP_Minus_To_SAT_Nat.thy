@@ -451,7 +451,7 @@ lemma inj_formula : "inj sat_formula_encode"
 lemma inj_formula_simp : "(sat_formula_encode x = sat_formula_encode y) = (x=y)"
   using inj_formula by (auto simp add:inj_def)
 lemma main_lemma_hol_nat:
-  fixes c pt p_cer in_lang
+  fixes c and pt::"nat*nat" and p_cer::"nat*nat" and in_lang
   assumes verifier_tbounded:
     "\<And>s. \<exists>t s'. (c, s) \<Rightarrow>\<^bsup> t \<^esup> s' \<and>
                    t \<le> poly_of pt (bit_length (s ''input''))"
