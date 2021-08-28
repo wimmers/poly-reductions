@@ -523,7 +523,7 @@ fun com_decode :: "nat \<Rightarrow> Com.com" where
                   [Suc (Suc (Suc (Suc 0))),v,c] \<Rightarrow> Com.com.While  (vname_decode v) (com_decode c)
 )" 
   
-lemma "com_decode (com_encode x) = x" 
+lemma com_id: "com_decode (com_encode x) = x" 
   apply (subst com_encode.simps com_decode.simps)
   apply (induct x)
   apply (auto simp add: vname_id aexp_id simp del:aexp_encode.simps aexp_decode.simps )
