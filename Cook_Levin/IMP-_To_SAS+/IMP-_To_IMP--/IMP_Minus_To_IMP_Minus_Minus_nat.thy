@@ -241,7 +241,7 @@ function IMP_Minus_to_IMP_Minus_Minus_stack_nat :: "nat \<Rightarrow> nat" where
 else if c = 4 then IMP_Minus_to_IMP_Minus_Minus_stack_nat (push_on_stack_nat (nth_nat (Suc (Suc 0)) h) (nth_nat (Suc (Suc (Suc 0))) h) s) 
 else if c = 6 then IMP_Minus_to_IMP_Minus_Minus_stack_nat (push_on_stack_nat (nth_nat (Suc (Suc 0)) h) (nth_nat (Suc (Suc (Suc (Suc 0)))) h) s)
 else if c = 7 then IMP_Minus_to_IMP_Minus_Minus_stack_nat (push_on_stack_nat (nth_nat (Suc (Suc (Suc 0))) h) (nth_nat (Suc (Suc (Suc (Suc 0)))) h) s)
-else if c = 10 then IMP_Minus_to_IMP_Minus_Minus_stack_nat (push_on_stack_nat (nth_nat (Suc (Suc 0)) h) (nth_nat (Suc (Suc (Suc 0))) h) s) 
+else if c = 9 then IMP_Minus_to_IMP_Minus_Minus_stack_nat (push_on_stack_nat (nth_nat (Suc (Suc 0)) h) (nth_nat (Suc (Suc (Suc 0))) h) s) 
 else if c = 1 then IMP_Minus_to_IMP_Minus_Minus_stack_nat (add_result_to_stack_nat (0##0) t)
 else if c = 2 then IMP_Minus_to_IMP_Minus_Minus_stack_nat (add_result_to_stack_nat (assignment_to_binary_nat (nth_nat (Suc (Suc (Suc 0))) h) (nth_nat (Suc 0) h) (nth_nat (Suc (Suc 0)) h)) t)
 else if c = 5 then IMP_Minus_to_IMP_Minus_Minus_stack_nat (add_result_to_stack_nat (2 ## (nth_nat (Suc (Suc (Suc (Suc 0)))) h) ## (nth_nat (Suc (Suc (Suc (Suc 0)))) h) ## 0  ) t) 
@@ -258,17 +258,53 @@ else nth_nat (Suc 0) h
   sorry
 termination sorry
 
+lemma push_non_empty : "push_on_stack c n s \<noteq> []"
+  apply(cases c)
+      apply auto
+  done
+lemma add_result_non_empty: "add_result_to_stack c s \<noteq> []"
+  apply(cases s)
+   apply auto
+  subgoal for a xs
+    apply(cases a)
+              apply auto
+    done 
+  done
+
 lemma subtailnat_IMP_Minus_to_IMP_Minus_Minus_stack:
 "s \<noteq> []  \<Longrightarrow> IMP_Minus_to_IMP_Minus_Minus_stack_nat (IMPm_IMPmm_list_encode s)
 = comm_encode (IMP_Minus_to_IMP_Minus_Minus_stack s) "
-  apply(induct)
-   apply simp
-  subgoal for a xs
-    apply(cases a)
-   apply(auto simp add: sub_nth Let_def sub_tl sub_add_result_to_stack sub_cons cons0
-  IMPm_IMPmm_list_encode_def sub_hd simp del: push_on_stack_nat.simps add_result_to_stack_nat.simps list_encode.simps )
-    apply(auto simp add: sub_add_result_to_stack simp flip: comm_encode.simps IMPm_IMPmm_list_encode_def  simp del: push_on_stack_nat.simps add_result_to_stack_nat.simps list_encode.simps )
-lemma IMP_Minus_to_IMP_Minus_Minus_stack_correct: 
+  apply(induct s rule: IMP_Minus_to_IMP_Minus_Minus_stack.induct )
+  apply(subst IMP_Minus_to_IMP_Minus_Minus_stack_nat.simps)
+            apply(simp only: Let_def sub_hd head.simps sub_nth nth.simps sub_push_on_stack sub_nth nth.simps
+IMPm_IMPmm_list_encode_def list.simps IMPm_IMPmm_encode.simps)
+            apply( simp only: sub_push_on_stack flip:IMPm_IMPmm_encode.simps list.simps IMPm_IMPmm_list_encode_def)
+            apply (auto simp del: IMP_Minus_to_IMP_Minus_Minus_stack_nat.simps simp add: push_non_empty )
+ apply(subst IMP_Minus_to_IMP_Minus_Minus_stack_nat.simps)
+            apply(simp only: Let_def sub_hd head.simps sub_nth nth.simps sub_push_on_stack sub_nth nth.simps
+IMPm_IMPmm_list_encode_def list.simps IMPm_IMPmm_encode.simps)
+            apply( simp only: sub_push_on_stack flip:IMPm_IMPmm_encode.simps list.simps IMPm_IMPmm_list_encode_def)
+           apply (auto simp del: IMP_Minus_to_IMP_Minus_Minus_stack_nat.simps simp add: push_non_empty )
+ apply(subst IMP_Minus_to_IMP_Minus_Minus_stack_nat.simps)
+            apply(simp only: Let_def sub_hd head.simps sub_nth nth.simps sub_push_on_stack sub_nth nth.simps
+IMPm_IMPmm_list_encode_def list.simps IMPm_IMPmm_encode.simps)
+            apply( simp only: sub_push_on_stack flip:IMPm_IMPmm_encode.simps list.simps IMPm_IMPmm_list_encode_def)
+          apply (auto simp del: IMP_Minus_to_IMP_Minus_Minus_stack_nat.simps simp add: push_non_empty )
+ apply(subst IMP_Minus_to_IMP_Minus_Minus_stack_nat.simps)
+            apply(simp only: Let_def sub_hd head.simps sub_nth nth.simps sub_push_on_stack sub_nth nth.simps
+IMPm_IMPmm_list_encode_def list.simps IMPm_IMPmm_encode.simps)
+            apply( simp only: sub_push_on_stack flip:IMPm_IMPmm_encode.simps list.simps IMPm_IMPmm_list_encode_def)
+         apply (auto simp del: IMP_Minus_to_IMP_Minus_Minus_stack_nat.simps simp add: push_non_empty )
+ apply(subst IMP_Minus_to_IMP_Minus_Minus_stack_nat.simps)
+            apply(simp only: Let_def sub_hd head.simps sub_nth nth.simps sub_push_on_stack sub_nth nth.simps
+IMPm_IMPmm_list_encode_def list.simps IMPm_IMPmm_encode.simps)
+            apply( simp only: sub_add_result_to_stack sub_push_on_stack flip:IMPm_IMPmm_encode.simps list.simps IMPm_IMPmm_list_encode_def)
+        apply (auto simp del: IMP_Minus_to_IMP_Minus_Minus_stack_nat.simps simp add: push_non_empty add_result_non_empty)
+ apply(subst IMP_Minus_to_IMP_Minus_Minus_stack_nat.simps)
+            apply(simp only: Let_def cons0 sub_cons sub_hd sub_tl tail.simps head.simps sub_nth nth.simps sub_push_on_stack sub_nth nth.simps
+IMPm_IMPmm_list_encode_def list.simps IMPm_IMPmm_encode.simps )
+         apply (auto simp del: list_encode.simps IMP_Minus_to_IMP_Minus_Minus_stack_nat.simps add_result_to_stack.simps simp flip: IMPm_IMPmm_encode.simps comm_encode.simps simp add: sub_cons cons0 push_non_empty add_result_non_empty)
+lemma IMP_Minus_to_IMP_Minus_Minus_stack_correct:
 "IMP_Minus_to_IMP_Minus_Minus_stack (push_on_stack c n stack) 
 = IMP_Minus_to_IMP_Minus_Minus_stack (add_result_to_stack (IMP_Minus_To_IMP_Minus_Minus c n) stack)"
   by (induct c arbitrary:stack) auto
