@@ -49,24 +49,7 @@ moreover obtain xs' where "xs =list_encode xs'"
                 list_encode_eq
           sub_append)
 qed
-lemma reverse_append_nat:
-    "reverse_nat (append_nat xs ys) = append_nat (reverse_nat ys) (reverse_nat xs)"
-proof - 
-obtain xs' ys' where "xs =list_encode xs'"  "ys = list_encode ys'"
-  by (metis list_decode_inverse)
-  thus ?thesis by(auto simp del:append_nat.simps list_encode.simps simp add: cons0 sub_cons
-          sub_append sub_reverse)
-qed
-lemma reverse_singleton_nat:
-"reverse_nat (a ## 0) = a ## 0" by(auto simp add: cons0 sub_reverse simp del:list_encode.simps) 
-lemma append_singleton_nat : 
-"append_nat (a##0) xs = a ## xs"
-proof - 
-  obtain xs' where "xs = list_encode xs'"
- by (metis list_decode_inverse)
-  thus ?thesis by(auto simp del:append_nat.simps list_encode.simps simp add: cons0 sub_cons
-          sub_append )
-qed
+
 lemma takeWhile_char_induct: " takeWhile_char xs = xs \<Longrightarrow>
 takeWhile_char (append_nat xs ys) = 
 reverse_nat (takeWhile_char_acc (reverse_nat (takeWhile_char xs)) ys) "
@@ -172,8 +155,7 @@ lemma sub_n_hashes : "n_hashes_nat n = vname_encode (n_hashes n)"
 fun n_hashes_acc :: "nat \<Rightarrow> nat \<Rightarrow> nat" where 
 "n_hashes_acc acc 0  = acc" |
 "n_hashes_acc acc (Suc n) = n_hashes_acc ((encode_char (CHR ''#'')) ## acc) n"
-lemma Suc_plus:"Suc(m+n) = Suc m + n "
-  by simp
+
 lemma n_hashes_dashes: 
 "reverse_nat (n_hashes_nat (Suc m)) = (encode_char CHR ''#'') ## reverse_nat (n_hashes_nat m)"
   apply(auto simp add: sub_cons sub_reverse sub_n_hashes vname_encode_def 
@@ -207,11 +189,11 @@ definition var_bit_to_var_nat:: "nat \<Rightarrow> nat" where
     (vname_encode ''$'')) (fst_nat vk)" 
 
 definition var_bit_to_var_tail:: "nat \<Rightarrow> nat" where
-"var_bit_to_var_tail vk = append_nat (append_nat (n_hashes_tail (snd_nat vk + 1)) 
+"var_bit_to_var_tail vk = append_tail (append_tail (n_hashes_tail (snd_nat vk + 1)) 
     (vname_encode ''$'')) (fst_nat vk)" 
 lemma subtail_var_bit_to_var:
 "var_bit_to_var_tail vk = var_bit_to_var_nat vk"
-  apply(auto simp only: var_bit_to_var_nat_def var_bit_to_var_tail_def subtail_n_hashes)
+  apply(auto simp only:subtail_append var_bit_to_var_nat_def var_bit_to_var_tail_def subtail_n_hashes)
   done
 
 lemma sub_var_bit_to_var :
@@ -508,16 +490,7 @@ map_IMP_Minus_State_To_IMP_Minus_Minus_partial_acc.simps map_nat.simps simp add:
     submap_IMP_Minus_State_To_IMP_Minus_Minus_partial sub_map sub_append)
     done
 qed
-lemma append_nat_Suc: 
-"append_nat xs (Suc v) = append_nat (append_nat xs ((hd_nat (Suc v))##0)) (tl_nat (Suc v))"
-proof -
-  obtain xs' v' where "xs =list_encode xs'" "Suc v = list_encode v'"
-    by (metis list_decode_inverse)
-  then moreover obtain a ys where "v' = a # ys" 
-    by (metis Zero_neq_Suc list_encode.elims)
-  ultimately show ?thesis apply(auto simp add:sub_append  sub_hd cons0 
-              sub_tl simp del:list_encode.simps) done
-qed
+
 
 lemma map_IMP_Minus_State_To_IMP_Minus_Minus_partial_induct:
 " map_IMP_Minus_State_To_IMP_Minus_Minus_partial k (append_nat xs ys) = reverse_nat(

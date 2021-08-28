@@ -41,15 +41,44 @@ lemma sublist_SAS_Plus_Plus_State_To_SAS_Plus:
 
 fun map_sasps :: "nat\<Rightarrow>nat" where 
 "map_sasps n = (if n = 0 then 0 else (prod_encode (Suc(fst_nat (hd_nat n)) , Suc(Suc(snd_nat (hd_nat n))) ))## map_sasps (tl_nat n))"
+fun map_sasps_acc :: "nat \<Rightarrow> nat\<Rightarrow>nat" where 
+"map_sasps_acc acc n = (if n = 0 then acc else map_sasps_acc ((prod_encode (Suc(fst_nat (hd_nat n)) , Suc(Suc(snd_nat (hd_nat n))) ))## acc) (tl_nat n))"
+
+
 lemma submap_sasps:
  "map_sasps  n = map_nat (\<lambda>x. prod_encode (Suc(fst_nat x) , Suc(Suc(snd_nat x)) )) n"
   apply (induct n rule:map_sasps.induct)
   apply auto
   done
 
+lemma map_sasps_induct:
+"map_sasps_acc acc n = map_acc  (\<lambda>x. prod_encode (Suc(fst_nat x) , Suc(Suc(snd_nat x)) )) acc n "
+  apply(induct acc n rule:map_sasps_acc.induct)
+  apply auto
+  done
+
+definition map_sasps_tail :: "nat \<Rightarrow> nat" where 
+"map_sasps_tail n = reverse_nat (map_sasps_acc 0 n)"
+
+lemma subtail_map_sasps:
+"map_sasps_tail n = map_sasps n"
+  using map_sasps_tail_def  map_sasps_induct submap_sasps subtail_map
+  by presburger
+
 definition SAS_Plus_Plus_State_To_SAS_Plus_nat :: "nat \<Rightarrow> nat" where
 "SAS_Plus_Plus_State_To_SAS_Plus_nat is = (prod_encode (0,fst_nat is))##
 (map_sasps (snd_nat is))"
+
+definition SAS_Plus_Plus_State_To_SAS_Plus_tail:: "nat \<Rightarrow> nat" where
+"SAS_Plus_Plus_State_To_SAS_Plus_tail is = (prod_encode (0,fst_nat is))##
+(map_sasps_tail (snd_nat is))"
+
+lemma subtail_SAS_Plus_Plus_State_To_SAS_Plus:
+"SAS_Plus_Plus_State_To_SAS_Plus_tail is = SAS_Plus_Plus_State_To_SAS_Plus_nat is"
+  apply(auto simp only: SAS_Plus_Plus_State_To_SAS_Plus_tail_def
+SAS_Plus_Plus_State_To_SAS_Plus_nat_def
+subtail_map_sasps)
+  done
 
 lemma subnat_SAS_Plus_Plus_State_To_SAS_Plus:
 "SAS_Plus_Plus_State_To_SAS_Plus_nat(islist_encode is) =
@@ -76,17 +105,51 @@ lemma sub_SAS_Plus_Plus_State_To_SAS_Plus:
 fun map_var_de :: "nat \<Rightarrow> nat" where 
 "map_var_de n = (if n = 0 then 0 else (prod_encode(Suc (fst_nat (hd_nat n)), Suc (Suc(snd_nat (hd_nat n)))))## map_var_de (tl_nat n) )"
 
+fun map_var_de_acc :: " nat \<Rightarrow> nat \<Rightarrow> nat" where 
+"map_var_de_acc acc n = (if n = 0 then acc else  map_var_de_acc
+((prod_encode(Suc (fst_nat (hd_nat n)), Suc (Suc(snd_nat (hd_nat n)))))## acc) (tl_nat n) )"
+
 lemma submap_var_de :
 "map_var_de n = map_nat (\<lambda> x. prod_encode(Suc (fst_nat x), Suc (Suc(snd_nat x)))) n"
   apply (induct n rule: map_var_de.induct)
   apply auto
   done
 
+lemma map_var_de_induct:
+"map_var_de_acc acc n = map_acc  (\<lambda> x. prod_encode(Suc (fst_nat x), Suc (Suc(snd_nat x)))) acc n "
+  apply (induct acc n rule: map_var_de_acc.induct)
+  apply auto
+  done
+
+definition map_var_de_tail :: "nat \<Rightarrow> nat" where 
+"map_var_de_tail n = reverse_nat (map_var_de_acc 0 n)"
+
+lemma subtail_map_var_de:
+"map_var_de_tail n = map_var_de n"
+  using map_var_de_tail_def  submap_var_de  map_var_de_induct 
+      subtail_map 
+  by presburger
+      
 definition SAS_Plus_Plus_Operator_To_SAS_Plus_Operator_nat:: 
   "nat \<Rightarrow> nat" where
 "SAS_Plus_Plus_Operator_To_SAS_Plus_Operator_nat op = 
   ((prod_encode(0,0)) ## (map_var_de (nth_nat 0 op)))##
    (( map_sasps  (nth_nat (Suc 0) op))) ## 0"
+
+definition SAS_Plus_Plus_Operator_To_SAS_Plus_Operator_tail:: 
+  "nat \<Rightarrow> nat" where
+"SAS_Plus_Plus_Operator_To_SAS_Plus_Operator_tail op = 
+  ((prod_encode(0,0)) ## (map_var_de_tail (nth_nat 0 op)))##
+   (( map_sasps_tail  (nth_nat (Suc 0) op))) ## 0"
+
+lemma subtail_SAS_Plus_Plus_Operator_To_SAS_Plus_Operator:
+"SAS_Plus_Plus_Operator_To_SAS_Plus_Operator_tail op =  SAS_Plus_Plus_Operator_To_SAS_Plus_Operator_nat op"
+  apply(auto simp only: SAS_Plus_Plus_Operator_To_SAS_Plus_Operator_tail_def 
+SAS_Plus_Plus_Operator_To_SAS_Plus_Operator_nat_def
+subtail_map_sasps
+subtail_map_var_de)
+  done
+
 
 lemma fst_sas_assignment : "fst_nat (sas_assignment_encode x) = variable_encode (fst x)"
   apply (cases x)
@@ -96,6 +159,7 @@ lemma snd_sas_assignment : "snd_nat (sas_assignment_encode x) = domain_element_e
   apply (cases x)
   apply (auto simp add:sub_snd)
   done
+
 lemma sub_SAS_Plus_Plus_Operator_To_SAS_Plus_Operator:
   "SAS_Plus_Plus_Operator_To_SAS_Plus_Operator_nat (operator_encode op) =
     operator_plus_encode (SAS_Plus_Plus_Operator_To_SAS_Plus_Operator op)"
@@ -134,26 +198,62 @@ lemma sublist_initialization_operators:
 fun map_inner :: "nat \<Rightarrow> nat\<Rightarrow>nat" where 
 "map_inner v n = (if n = 0 then 0 else ((((prod_encode (0, 1)))##0) ## ((prod_encode (Suc v, Suc (Suc (hd_nat n))))## 0) ## 0) ## map_inner v (tl_nat n) )"
 
-lemma submap_inner: 
+fun map_inner_acc :: "nat \<Rightarrow> nat \<Rightarrow> nat\<Rightarrow>nat" where 
+"map_inner_acc v acc n = (if n = 0 then acc else map_inner_acc v (((((prod_encode (0, 1)))##0) ## ((prod_encode (Suc v, Suc (Suc (hd_nat n))))## 0) ## 0) ## acc) (tl_nat n) )"
+
+lemma submap_inner:
 "map_inner v n =  map_nat (\<lambda> y. (((prod_encode (0, 1)))##0) ## ((prod_encode (Suc v, Suc (Suc y)))## 0) ## 0) n"
   apply (induct v n rule:map_inner.induct)
   apply auto
   done
 
+lemma map_inner_induct:
+"map_inner_acc v acc n = map_acc (\<lambda> y. (((prod_encode (0, 1)))##0) ## ((prod_encode (Suc v, Suc (Suc y)))## 0) ## 0) acc n "
+  apply(induct v acc n rule:map_inner_acc.induct)
+  apply auto
+  done
+
+definition map_inner_tail ::"nat \<Rightarrow> nat \<Rightarrow> nat" where
+ "map_inner_tail v n = reverse_nat ( map_inner_acc v 0 n)"
+
+lemma subtail_map_inner:
+"map_inner_tail v n = map_inner v n"
+  using map_inner_tail_def  map_inner_induct submap_inner
+        subtail_map by presburger
+
+
+
 fun map_fst :: "nat\<Rightarrow>nat" where 
 "map_fst n  = (if n =0 then 0 else (fst_nat (hd_nat n)) ## map_fst (tl_nat n))"
+
+fun map_fst_acc :: "nat \<Rightarrow> nat\<Rightarrow>nat" where 
+"map_fst_acc acc n  = (if n =0 then acc else map_fst_acc ((fst_nat (hd_nat n)) ## acc) (tl_nat n))"
+
 
 lemma submap_fst :
 "map_fst n = map_nat fst_nat n"
   apply (induct n rule:map_fst.induct)
   apply auto
   done
-function map_outer :: "nat \<Rightarrow> nat \<Rightarrow> nat" where
+lemma map_fst_induct:
+"map_fst_acc acc n = map_acc fst_nat acc n"
+  apply(induct acc n rule:map_fst_acc.induct)
+  apply auto
+  done
+
+definition map_fst_tail :: "nat \<Rightarrow> nat" where 
+"map_fst_tail n = reverse_nat (map_fst_acc 0 n)"
+
+lemma subtail_map_fst :
+"map_fst_tail n = map_fst n"
+  using map_fst_tail_def map_fst_induct submap_fst subtail_map 
+  by presburger
+
+fun map_outer :: "nat \<Rightarrow> nat \<Rightarrow> nat" where
 "map_outer P n = (if n =0 then 0 else (if elemof (hd_nat n) (map_fst (nth_nat (Suc (Suc 0)) P)) \<noteq> 0 then 0 
     else (map_inner (hd_nat n) 
       (the_nat (map_list_find_nat (nth_nat (Suc (Suc (Suc (Suc 0)))) P) (hd_nat n))))) ## map_outer P (tl_nat n))"
-   apply  pat_completeness apply (auto simp only:) done
-termination by lexicographic_order
+
 
 lemma submap_outer: 
 "map_outer P n = map_nat (\<lambda> v. (if elemof v (map_fst (nth_nat (Suc (Suc 0)) P)) \<noteq> 0 then 0 
@@ -161,11 +261,47 @@ lemma submap_outer:
       (the_nat (map_list_find_nat (nth_nat (Suc (Suc (Suc (Suc 0)))) P) v)))) n"
   apply (induct P n rule:map_outer.induct)
   by (metis (no_types, lifting) map_nat.elims map_outer.elims)
+declare map_list_find_nat.simps elemof.simps [simp del]
+fun  map_outer_acc :: "nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat" where
+"map_outer_acc P acc n = (if n =0 then acc else map_outer_acc P ((if elemof (hd_nat n) (map_fst_tail (nth_nat (Suc (Suc 0)) P)) \<noteq> 0 then 0 
+    else (map_inner_tail (hd_nat n) 
+      (the_nat (map_list_find_nat (nth_nat (Suc (Suc (Suc (Suc 0)))) P) (hd_nat n))))) ## acc) (tl_nat n))"
+
+lemma map_outer_induct : 
+"map_outer_acc P acc n = map_acc (\<lambda> v. (if elemof v (map_fst (nth_nat (Suc (Suc 0)) P)) \<noteq> 0 then 0 
+    else map_inner v 
+      (the_nat (map_list_find_nat (nth_nat (Suc (Suc (Suc (Suc 0)))) P) v)))) acc n"
+  apply(induct P acc n rule:map_outer_acc.induct)
+  using subtail_map_fst subtail_map_inner 
+  by (metis (no_types, lifting) map_acc.elims map_outer_acc.elims)
+
+definition map_outer_tail :: "nat \<Rightarrow> nat \<Rightarrow> nat" where 
+"map_outer_tail P  n = reverse_nat (map_outer_acc P  0 n)"
+
+
+lemma subtail_map_outer:
+"map_outer_tail P  n  = map_outer P n "
+  using map_outer_tail_def  map_outer_induct submap_outer subtail_map
+  by presburger
+
 
 definition initialization_operators_nat::
     "nat \<Rightarrow> nat" where
 "initialization_operators_nat  P = 
   concat_nat (map_outer P (nth_nat 0 P))"
+
+definition initialization_operators_tail::
+    "nat \<Rightarrow> nat" where
+"initialization_operators_tail  P = 
+  concat_tail (map_outer_tail P (nth_nat 0 P))"
+
+lemma subtail_initialization_operators:
+"initialization_operators_tail  P = 
+initialization_operators_nat  P
+"
+  apply(simp only: initialization_operators_tail_def initialization_operators_nat_def
+      subtail_concat subtail_map_outer)
+  done
 
 lemma simp_vdlist_encode: "vdlist_encode = prod_encode o (\<lambda>(x,y). (variable_encode x,list_encode (map domain_element_encode y)))"
   by force
@@ -255,6 +391,10 @@ fun map_init_seq :: "nat \<Rightarrow> nat" where
 "map_init_seq n = (if n = 0 then 0 else ((((prod_encode (0,1))##0) ## 
       ((prod_encode(Suc (fst_nat (hd_nat n)), Suc (Suc (snd_nat (hd_nat n)))))##0) ##0)) ## map_init_seq (tl_nat n))"
 
+fun map_init_seq_acc :: "nat \<Rightarrow> nat \<Rightarrow> nat" where 
+"map_init_seq_acc  acc n = (if n = 0 then acc else map_init_seq_acc (((((prod_encode (0,1))##0) ## 
+      ((prod_encode(Suc (fst_nat (hd_nat n)), Suc (Suc (snd_nat (hd_nat n)))))##0) ##0)) ## acc) (tl_nat n))"
+
 lemma submap_init_seq: 
 "map_init_seq n = map_nat (\<lambda>v. (((prod_encode (0,1))##0) ## 
       ((prod_encode(Suc (fst_nat v), Suc (Suc (snd_nat v))))##0) ##0)) n"
@@ -262,8 +402,33 @@ lemma submap_init_seq:
   apply auto
   done
 
+lemma map_init_seq_induct:
+"map_init_seq_acc  acc n = map_acc  (\<lambda>v. (((prod_encode (0,1))##0) ## 
+      ((prod_encode(Suc (fst_nat v), Suc (Suc (snd_nat v))))##0) ##0)) acc n"
+  apply(induct acc n rule:map_init_seq_acc.induct)
+  apply auto
+  done
+
+definition map_init_seq_tail :: "nat \<Rightarrow> nat" where 
+"map_init_seq_tail n = reverse_nat (map_init_seq_acc 0 n) "
+
+lemma subtail_map_init_seq:
+"map_init_seq_tail n = map_init_seq n"
+  using map_init_seq_tail_def map_init_seq_induct
+submap_init_seq subtail_map by presburger
+
 definition initialization_sequence_nat:: "nat \<Rightarrow> nat" where
   "initialization_sequence_nat vs = map_init_seq vs"
+
+definition initialization_sequence_tail:: "nat \<Rightarrow> nat" where
+  "initialization_sequence_tail vs = map_init_seq_tail vs"
+
+lemma subtail_initialization_sequence:
+"initialization_sequence_tail vs = initialization_sequence_nat vs"
+  using initialization_sequence_nat_def
+ initialization_sequence_tail_def
+ subtail_map_init_seq by presburger
+
 
 lemma sub_initialization_sequence :
   "initialization_sequence_nat (sas_assignment_list_encode vs) =
@@ -338,7 +503,10 @@ declare map_list_find_nat.simps [simp del]
 fun map_initial_state :: "nat \<Rightarrow> nat \<Rightarrow> nat" where 
 "map_initial_state P n = (if n = 0 then 0 else (prod_encode(hd_nat n, case (map_list_find_nat (nth_nat (Suc (Suc 0))  P) (hd_nat n)) of  Suc val \<Rightarrow> val |
         0 \<Rightarrow> hd_nat (the_nat (map_list_find_nat (nth_nat (Suc (Suc (Suc (Suc 0)))) P) (hd_nat n))))) ## map_initial_state P (tl_nat n))"
-declare map_list_find_nat.simps [simp]
+
+fun map_initial_state_acc :: "nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow>  nat" where 
+"map_initial_state_acc P acc n = (if n = 0 then acc else map_initial_state_acc P ((prod_encode(hd_nat n, case (map_list_find_nat (nth_nat (Suc (Suc 0))  P) (hd_nat n)) of  Suc val \<Rightarrow> val |
+        0 \<Rightarrow> hd_nat (the_nat (map_list_find_nat (nth_nat (Suc (Suc (Suc (Suc 0)))) P) (hd_nat n))))) ## acc )(tl_nat n))"
 
 lemma submap_initial_state:
 "map_initial_state P n  =  map_nat (\<lambda>v. prod_encode(v, case (map_list_find_nat (nth_nat (Suc (Suc 0))  P) v) of  Suc val \<Rightarrow> val |
@@ -347,11 +515,43 @@ lemma submap_initial_state:
   apply auto
   done
 
+lemma map_initial_state_induct: 
+"map_initial_state_acc P acc n = map_acc  (\<lambda>v. prod_encode(v, case (map_list_find_nat (nth_nat (Suc (Suc 0))  P) v) of  Suc val \<Rightarrow> val |
+        0 \<Rightarrow> hd_nat (the_nat (map_list_find_nat (nth_nat (Suc (Suc (Suc (Suc 0)))) P) v))) ) acc n "
+  apply(induct P acc n rule:map_initial_state_acc.induct)
+  apply auto
+  done
+
+definition map_initial_state_tail :: "nat \<Rightarrow> nat \<Rightarrow> nat" where 
+"map_initial_state_tail P n = reverse_nat (map_initial_state_acc P 0 n)"
+
+lemma subtail_map_initial_state:
+" map_initial_state_tail P n = map_initial_state P n"
+  using  map_initial_state_tail_def  map_initial_state_induct submap_initial_state
+subtail_map by presburger
+
+declare map_list_find_nat.simps [simp]
+
+
+
 definition initial_state_nat::
   "nat \<Rightarrow> nat " where
 "initial_state_nat P = SAS_Plus_Plus_State_To_SAS_Plus_nat (prod_encode(1, 
   map_initial_state P (nth_nat 0 P) 
 ))"
+
+
+definition initial_state_tail::
+  "nat \<Rightarrow> nat " where
+"initial_state_tail P = SAS_Plus_Plus_State_To_SAS_Plus_tail (prod_encode(1, 
+  map_initial_state_tail P (nth_nat 0 P) 
+))"
+
+lemma subtail_initial_state:
+"initial_state_tail P = initial_state_nat P"
+
+  using initial_state_nat_def initial_state_tail_def subtail_SAS_Plus_Plus_State_To_SAS_Plus 
+subtail_map_initial_state by presburger
 
 lemma option_encode_case: "(case option_encode x of 0 \<Rightarrow>  t | Suc y \<Rightarrow> f y) =
  (case x of None \<Rightarrow> t | Some y \<Rightarrow> f y)  "
@@ -611,22 +811,65 @@ lemma snd_vdlist_simp: "snd_nat (vdlist_encode x) = list_encode (map domain_elem
 fun map_sasp_to_sas_op :: "nat \<Rightarrow> nat" where 
 "map_sasp_to_sas_op n = (if n = 0 then 0 else (SAS_Plus_Plus_Operator_To_SAS_Plus_Operator_nat (hd_nat n)) ## map_sasp_to_sas_op (tl_nat n))"
 
+fun map_sasp_to_sas_op_acc :: "nat \<Rightarrow> nat \<Rightarrow> nat" where 
+"map_sasp_to_sas_op_acc acc n = (if n = 0 then acc else map_sasp_to_sas_op_acc ((SAS_Plus_Plus_Operator_To_SAS_Plus_Operator_tail (hd_nat n)) ## acc) (tl_nat n))"
+
+lemma map_sasp_to_sas_op_induct:
+"map_sasp_to_sas_op_acc acc n = map_acc SAS_Plus_Plus_Operator_To_SAS_Plus_Operator_nat acc n"
+  apply(induct acc n rule:map_sasp_to_sas_op_acc.induct)
+  apply (auto simp add: subtail_SAS_Plus_Plus_Operator_To_SAS_Plus_Operator)
+  done
+
 lemma submap_sasp_to_sas_op: 
 "map_sasp_to_sas_op n = map_nat SAS_Plus_Plus_Operator_To_SAS_Plus_Operator_nat n "
   apply (induct  n rule: map_sasp_to_sas_op.induct)
   apply auto
   done
 
+definition map_sasp_to_sas_op_tail :: "nat \<Rightarrow> nat" where 
+"map_sasp_to_sas_op_tail n = reverse_nat (map_sasp_to_sas_op_acc 0 n)"
+
+lemma subtail_map_sasp_to_sas_op:
+"map_sasp_to_sas_op_tail n = map_sasp_to_sas_op n "
+  using map_sasp_to_sas_op_tail_def  submap_sasp_to_sas_op  map_sasp_to_sas_op_induct
+subtail_map by presburger
+
 fun map_DE :: "nat \<Rightarrow> nat" where 
 "map_DE n = (if n = 0 then 0 else (Suc (Suc (hd_nat n))) ## map_DE (tl_nat n))"
+
+fun map_DE_acc :: "nat \<Rightarrow> nat \<Rightarrow> nat" where 
+"map_DE_acc acc n = (if n = 0 then acc else map_DE_acc ((Suc (Suc (hd_nat n))) ## acc) (tl_nat n))"
 
 lemma submap_DE : "map_DE n =  map_nat (\<lambda>n. Suc (Suc n)) n"
   apply (induct n rule:map_DE.induct)
   apply auto
   done
 
+lemma map_DE_induct : 
+"map_DE_acc acc n = map_acc (\<lambda>n. Suc (Suc n)) acc n "
+  apply(induct acc n rule:map_DE_acc.induct)
+  apply auto
+  done
+
+definition map_DE_tail :: "nat \<Rightarrow> nat" where 
+"map_DE_tail n = reverse_nat (map_DE_acc 0 n)"
+
+lemma subtail_map_DE:
+"map_DE_tail n = map_DE n "
+  using map_DE_tail_def  map_DE_induct submap_DE subtail_map
+  by presburger
+
 fun map_var :: "nat \<Rightarrow> nat" where 
 "map_var n = (if n = 0 then 0 else ( prod_encode(Suc (fst_nat (hd_nat n)), snd_nat (hd_nat n))) ## map_var (tl_nat n) )"
+
+fun map_var_acc :: "nat \<Rightarrow> nat \<Rightarrow> nat" where 
+"map_var_acc acc n = (if n = 0 then acc else map_var_acc (( prod_encode(Suc (fst_nat (hd_nat n)), snd_nat (hd_nat n))) ## acc) (tl_nat n) )"
+
+lemma map_var_induct:
+"map_var_acc acc n = map_acc (\<lambda>n. prod_encode(Suc (fst_nat n), snd_nat n)) acc n"
+  apply(induct acc n rule:map_var_acc.induct)
+  apply auto
+  done
 
 lemma submap_var :
 "map_var n = map_nat (\<lambda>n. prod_encode(Suc (fst_nat n), snd_nat n)) n"
@@ -634,22 +877,64 @@ lemma submap_var :
   apply auto
   done
 
+definition map_var_tail :: "nat \<Rightarrow> nat" where 
+"map_var_tail n = reverse_nat (map_var_acc 0 n)"
+
+lemma subtail_map_var:
+"map_var_tail n = map_var n"
+  using map_var_tail_def submap_var map_var_induct subtail_map
+  by presburger
+
 fun map_var_DE :: "nat \<Rightarrow> nat" where 
 "map_var_DE n = (if n = 0 then 0 else (prod_encode(fst_nat (hd_nat n), map_DE (snd_nat (hd_nat n)))) ## map_var_DE (tl_nat n))"
+
+fun map_var_DE_acc :: "nat \<Rightarrow> nat \<Rightarrow> nat" where 
+"map_var_DE_acc acc n = (if n = 0 then acc else map_var_DE_acc ((prod_encode(fst_nat (hd_nat n), map_DE_tail (snd_nat (hd_nat n)))) ## acc )(tl_nat n))"
+
+lemma map_var_DE_induct:
+"map_var_DE_acc acc n = map_acc ( \<lambda>n. prod_encode(fst_nat n, map_DE (snd_nat n))) acc n "
+  apply(induct acc n rule:map_var_DE_acc.induct)
+  apply (auto simp add:subtail_map_DE)
+  done
 
 lemma submap_var_DE:
 "map_var_DE n = map_nat  ( \<lambda>n. prod_encode(fst_nat n, map_DE (snd_nat n))) n"
   apply (induct n rule: map_var_DE.induct)
   apply auto
   done
+definition map_var_DE_tail :: "nat \<Rightarrow> nat" where 
+"map_var_DE_tail n = reverse_nat (map_var_DE_acc 0 n)"
+
+lemma subtail_map_var_DE:
+"map_var_DE_tail n = map_var_DE n"
+  using map_var_DE_tail_def submap_var_DE map_var_DE_induct
+subtail_map by presburger
+
 fun map_Suc :: "nat\<Rightarrow> nat" where 
 "map_Suc n = (if n = 0 then 0 else ((Suc (hd_nat n)) ## map_Suc (tl_nat n)))"
+
+fun map_Suc_acc :: "nat \<Rightarrow> nat\<Rightarrow> nat" where 
+"map_Suc_acc acc n = (if n = 0 then acc  else map_Suc_acc ((Suc (hd_nat n)) ## acc) (tl_nat n))"
 
 lemma submap_Suc : 
 "map_Suc n = map_nat Suc n"
   apply (induct n rule:map_Suc.induct)
   apply auto
   done
+lemma map_Suc_induct :
+"map_Suc_acc acc n = map_acc Suc acc n"
+  apply(induct acc n rule:map_Suc_acc.induct)
+  apply auto
+  done
+
+definition map_Suc_tail:: "nat\<Rightarrow> nat" where 
+"map_Suc_tail n = reverse_nat (map_Suc_acc 0 n)"
+
+lemma subtail_map_Suc:
+"map_Suc_tail n = map_Suc n"
+  using map_Suc_induct submap_Suc map_Suc_tail_def subtail_map
+  by presburger
+
 definition SAS_Plus_Plus_To_SAS_Plus_nat:: " nat \<Rightarrow> nat " where
 "SAS_Plus_Plus_To_SAS_Plus_nat P = ((0 ## (map_Suc (nth_nat 0 P)))##
       ( append_nat ((((prod_encode(0,Suc 0))##0) ## ((prod_encode(0,0))##0) ## 0 ) 
@@ -659,6 +944,26 @@ definition SAS_Plus_Plus_To_SAS_Plus_nat:: " nat \<Rightarrow> nat " where
       (SAS_Plus_Plus_State_To_SAS_Plus_nat (prod_encode(0, (nth_nat (Suc (Suc (Suc 0))) P))))##
       ((prod_encode(0, ((Suc 0) ## 0 ##0)))## 
            map_var_DE (map_var (nth_nat (Suc (Suc (Suc (Suc 0)))) P))) ## 0 )"
+
+definition SAS_Plus_Plus_To_SAS_Plus_tail:: " nat \<Rightarrow> nat " where
+"SAS_Plus_Plus_To_SAS_Plus_tail P = ((0 ## (map_Suc_tail (nth_nat 0 P)))##
+      ( append_tail ((((prod_encode(0,Suc 0))##0) ## ((prod_encode(0,0))##0) ## 0 ) 
+        ## (initialization_operators_tail P)) 
+        (map_sasp_to_sas_op_tail (nth_nat (Suc 0) P))) ## 
+      (initial_state_tail P)  ##
+      (SAS_Plus_Plus_State_To_SAS_Plus_tail (prod_encode(0, (nth_nat (Suc (Suc (Suc 0))) P))))##
+      ((prod_encode(0, ((Suc 0) ## 0 ##0)))## 
+           map_var_DE_tail (map_var_tail (nth_nat (Suc (Suc (Suc (Suc 0)))) P))) ## 0 )"
+
+lemma subtail_SAS_Plus_Plus_To_SAS_Plus:
+"SAS_Plus_Plus_To_SAS_Plus_tail P = SAS_Plus_Plus_To_SAS_Plus_nat P"
+  using SAS_Plus_Plus_To_SAS_Plus_nat_def
+ SAS_Plus_Plus_To_SAS_Plus_tail_def 
+subtail_SAS_Plus_Plus_State_To_SAS_Plus 
+subtail_append
+ subtail_initial_state 
+subtail_initialization_operators subtail_map_Suc subtail_map_sasp_to_sas_op subtail_map_var
+ subtail_map_var_DE by presburger
 
 lemma lambda_equals: " (\<lambda>x. case x of
                   (x1, x2) \<Rightarrow>

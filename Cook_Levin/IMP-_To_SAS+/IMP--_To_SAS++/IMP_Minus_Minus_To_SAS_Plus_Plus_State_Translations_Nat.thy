@@ -42,14 +42,42 @@ lemma sublist_imp_minus_state_to_sas_plus:
 fun map_impms_sp:: " nat \<Rightarrow> nat" where 
 "map_impms_sp n = (if n =0 then 0 else (prod_encode (Suc(fst_nat (hd_nat n)) , prod_encode(0,snd_nat (hd_nat n))))## map_impms_sp (tl_nat n))"
 
+fun map_impms_sp_acc:: " nat \<Rightarrow> nat \<Rightarrow> nat" where
+"map_impms_sp_acc acc n = (if n = 0 then acc else map_impms_sp_acc ((prod_encode (Suc(fst_nat (hd_nat n)) , prod_encode(0,snd_nat (hd_nat n))))  ## acc) (tl_nat n) )"
+
+lemma map_impms_sp_induct:
+"map_impms_sp_acc acc n = map_acc (\<lambda>x. prod_encode (Suc(fst_nat x) , prod_encode(0,snd_nat x)) ) acc n"
+  apply(induct acc n rule: map_impms_sp_acc.induct)
+  apply auto
+  done
+
+definition map_impms_sp_tail :: "nat \<Rightarrow> nat" where
+"map_impms_sp_tail n = reverse_nat (map_impms_sp_acc 0 n)"
+
 lemma submap_immpms_sp:
 "map_impms_sp n = map_nat (\<lambda>x. prod_encode (Suc(fst_nat x) , prod_encode(0,snd_nat x)) ) n "
   apply (induct n rule:map_impms_sp.induct)
   apply auto
   done
+
+lemma subtail_map_impms_sp:
+"map_impms_sp_tail n = map_impms_sp n"
+  using subtail_map map_impms_sp_tail_def map_impms_sp_induct submap_immpms_sp
+  by presburger
+
 definition imp_minus_state_to_sas_plus_nat :: "nat \<Rightarrow> nat" where
 "imp_minus_state_to_sas_plus_nat ci = (prod_encode (0,prod_encode(1,fst_nat ci)))##
 (map_impms_sp (snd_nat ci))"
+
+definition imp_minus_state_to_sas_plus_tail :: "nat \<Rightarrow> nat" where
+"imp_minus_state_to_sas_plus_tail ci = (prod_encode (0,prod_encode(1,fst_nat ci)))##
+(map_impms_sp_tail (snd_nat ci))"
+
+lemma subtail_imp_minus_state_to_sas_plus:
+"imp_minus_state_to_sas_plus_tail ci = imp_minus_state_to_sas_plus_nat ci"
+  apply(auto simp only: imp_minus_state_to_sas_plus_nat_def imp_minus_state_to_sas_plus_tail_def
+      subtail_map_impms_sp)
+  done
 
 lemma subnat_imp_minus_state_to_sas_plus:
 "imp_minus_state_to_sas_plus_nat   (cilist_encode ci)

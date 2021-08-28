@@ -161,74 +161,7 @@ fun bit_list_to_nat_acc:: "nat \<Rightarrow> nat \<Rightarrow> nat" where
    else  bit_list_to_nat_acc (2*acc +1) (tl_nat n))"
 
 
-fun reverse_nat_acc :: "nat \<Rightarrow>nat \<Rightarrow> nat" where 
-"reverse_nat_acc acc n = (if n = 0 then acc else reverse_nat_acc ((hd_nat n) ## acc) (tl_nat n) )"
 
-lemma sub_reverse_nat_acc:"reverse_nat_acc (list_encode acc) (list_encode n) = list_encode (rev n @ acc) "
-  apply(induct n arbitrary: acc)
-  apply simp
-  apply(subst reverse_nat_acc.simps)
-  apply(auto simp only:sub_hd head.simps sub_tl tail.simps sub_cons rev.simps)
-  apply auto
-  done
-
-definition reverse_nat :: "nat \<Rightarrow> nat" where 
-"reverse_nat n = reverse_nat_acc 0 n"
-
-lemma sub_reverse:"reverse_nat (list_encode n) = list_encode (rev n)"
-  apply(auto simp only: reverse_nat_def )
-  using sub_reverse_nat_acc list_encode.simps(1) 
-  by (metis append_Nil2)
-lemma reverse_nat_0:"(reverse_nat 0 =0)" by (auto simp add:reverse_nat_def)
-
-lemma append_rev_nat:"append_nat (reverse_nat (Suc v)) xs = append_nat (reverse_nat (tl_nat (Suc v))) ((hd_nat (Suc v)) ## xs)"
-proof-
-  obtain ys where xs_def: "Suc v = list_encode ys" 
-    by (metis list_decode_inverse)
-  then moreover obtain a ys' where xs_def_cons : "ys = a#ys'"
-    by (metis list_encode.elims nat.simps(3))
-  moreover obtain xs_list where "xs = list_encode xs_list"  by (metis list_decode_inverse)
-  ultimately show ?thesis by (auto simp add: sub_reverse sub_tl sub_hd sub_cons 
-          sub_append simp del: list_encode.simps)
-qed
-lemma append_cons_nat_0 : "append_nat xs (a ## ys) \<noteq> 0"
-proof-
-  obtain ys' where xs_def: "ys = list_encode ys'" 
-    by (metis list_decode_inverse)
-  moreover obtain xs' where xs_def_cons : "xs = list_encode xs'"
-   by (metis list_decode_inverse)
-  ultimately show ?thesis by (auto simp add: sub_reverse sub_tl sub_hd sub_cons 
-          sub_append list_encode_eq simp flip: list_encode.simps)
-qed
-lemma cons_Nil:"xs ## ys \<noteq> 0"
-proof-
-  obtain ys' where xs_def: "ys = list_encode ys'" 
-    by (metis list_decode_inverse)
-  then show ?thesis by (auto simp add: sub_cons 
-          list_encode_eq simp flip: list_encode.simps)
-qed
-lemma tl_cons: "tl_nat (a##ys) = ys"
-proof-
-  obtain ys' where xs_def: "ys = list_encode ys'" 
-    by (metis list_decode_inverse)
-  then show ?thesis by (auto simp add: sub_cons sub_tl
-          list_encode_eq simp flip: list_encode.simps)
-qed
-
-lemma hd_cons: "hd_nat (a##ys) = a"
-proof-
-  obtain ys' where xs_def: "ys = list_encode ys'" 
-    by (metis list_decode_inverse)
-  then show ?thesis by (auto simp add: sub_cons sub_hd
-          list_encode_eq simp flip: list_encode.simps)
-qed
-lemma rev_rev_nat: "reverse_nat (reverse_nat ys) = ys"
- proof-
-  obtain ys' where xs_def: "ys = list_encode ys'" 
-    by (metis list_decode_inverse)
-  then show ?thesis by (auto simp add: sub_cons sub_reverse sub_hd
-          list_encode_eq simp flip: list_encode.simps)
-qed
 lemma bit_list_to_nat_induct: "bit_list_to_nat_nat (append_nat (reverse_nat ys) xs) = bit_list_to_nat_acc (bit_list_to_nat_nat xs) ys"
   apply(induct ys arbitrary:xs rule: length_nat.induct)
   apply (auto simp only: reverse_nat_0 append_nat.simps)
@@ -246,13 +179,6 @@ lemma bit_list_to_nat_induct: "bit_list_to_nat_nat (append_nat (reverse_nat ys) 
           simp add: append_cons_nat_0 cons_Nil tl_cons hd_cons)
   done
 
-lemma append_nat_0: "append_nat ys 0 = ys"
-proof-
-  obtain ys' where xs_def: "ys = list_encode ys'" 
-    by (metis list_decode_inverse)
-  then show ?thesis by (auto simp add: sub_append sub_hd
-          list_encode_eq simp flip: list_encode.simps)
-qed
 
 lemma bit_list_to_nat_inverse: 
 "bit_list_to_nat_nat (append_nat ys xs) = bit_list_to_nat_acc (bit_list_to_nat_nat xs) (reverse_nat ys)"

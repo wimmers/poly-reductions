@@ -224,6 +224,160 @@ lemma sub_append: "append_nat (list_encode xs) (list_encode ys) = list_encode (x
 head.simps(2) prod.sel(2) prod_encode_inverse snd_nat_def 
 sub_cons sub_hd tl_nat_def)
 
+
+fun append_acc :: "nat \<Rightarrow> nat \<Rightarrow> nat" where 
+"append_acc acc 0 = acc"|
+"append_acc acc xs = append_acc ((hd_nat xs)## acc) (tl_nat xs)"
+
+fun reverse_nat_acc :: "nat \<Rightarrow>nat \<Rightarrow> nat" where 
+"reverse_nat_acc acc n = (if n = 0 then acc else reverse_nat_acc ((hd_nat n) ## acc) (tl_nat n) )"
+
+lemma sub_reverse_nat_acc:"reverse_nat_acc (list_encode acc) (list_encode n) = list_encode (rev n @ acc) "
+  apply(induct n arbitrary: acc)
+  apply simp
+  apply(subst reverse_nat_acc.simps)
+  apply(auto simp only:sub_hd head.simps sub_tl tail.simps sub_cons rev.simps)
+  apply auto
+  done
+
+definition reverse_nat :: "nat \<Rightarrow> nat" where 
+"reverse_nat n = reverse_nat_acc 0 n"
+
+lemma sub_reverse:"reverse_nat (list_encode n) = list_encode (rev n)"
+  apply(auto simp only: reverse_nat_def )
+  using sub_reverse_nat_acc list_encode.simps(1) 
+  by (metis append_Nil2)
+lemma reverse_nat_0:"(reverse_nat 0 =0)" by (auto simp add:reverse_nat_def)
+
+lemma append_rev_nat:"append_nat (reverse_nat (Suc v)) xs = append_nat (reverse_nat (tl_nat (Suc v))) ((hd_nat (Suc v)) ## xs)"
+proof-
+  obtain ys where xs_def: "Suc v = list_encode ys" 
+    by (metis list_decode_inverse)
+  then moreover obtain a ys' where xs_def_cons : "ys = a#ys'"
+    by (metis list_encode.elims nat.simps(3))
+  moreover obtain xs_list where "xs = list_encode xs_list"  by (metis list_decode_inverse)
+  ultimately show ?thesis by (auto simp add: sub_reverse sub_tl sub_hd sub_cons 
+          sub_append simp del: list_encode.simps)
+qed
+lemma append_cons_nat_0 : "append_nat xs (a ## ys) \<noteq> 0"
+proof-
+  obtain ys' where xs_def: "ys = list_encode ys'" 
+    by (metis list_decode_inverse)
+  moreover obtain xs' where xs_def_cons : "xs = list_encode xs'"
+   by (metis list_decode_inverse)
+  ultimately show ?thesis by (auto simp add: sub_reverse sub_tl sub_hd sub_cons 
+          sub_append list_encode_eq simp flip: list_encode.simps)
+qed
+lemma cons_Nil:"xs ## ys \<noteq> 0"
+proof-
+  obtain ys' where xs_def: "ys = list_encode ys'" 
+    by (metis list_decode_inverse)
+  then show ?thesis by (auto simp add: sub_cons 
+          list_encode_eq simp flip: list_encode.simps)
+qed
+lemma tl_cons: "tl_nat (a##ys) = ys"
+proof-
+  obtain ys' where xs_def: "ys = list_encode ys'" 
+    by (metis list_decode_inverse)
+  then show ?thesis by (auto simp add: sub_cons sub_tl
+          list_encode_eq simp flip: list_encode.simps)
+qed
+
+lemma hd_cons: "hd_nat (a##ys) = a"
+proof-
+  obtain ys' where xs_def: "ys = list_encode ys'" 
+    by (metis list_decode_inverse)
+  then show ?thesis by (auto simp add: sub_cons sub_hd
+          list_encode_eq simp flip: list_encode.simps)
+qed
+lemma rev_rev_nat: "reverse_nat (reverse_nat ys) = ys"
+ proof-
+  obtain ys' where xs_def: "ys = list_encode ys'" 
+    by (metis list_decode_inverse)
+  then show ?thesis by (auto simp add: sub_cons sub_reverse sub_hd
+          list_encode_eq simp flip: list_encode.simps)
+qed
+
+
+lemma append_nat_0: "append_nat ys 0 = ys"
+proof-
+  obtain ys' where xs_def: "ys = list_encode ys'" 
+    by (metis list_decode_inverse)
+  then show ?thesis by (auto simp add: sub_append sub_hd
+          list_encode_eq simp flip: list_encode.simps)
+qed
+lemma cons0:"cons a 0 = list_encode [a]"
+  by (metis list_encode.simps(1) sub_cons)
+
+lemma append_nat_Suc: 
+"append_nat xs (Suc v) = append_nat (append_nat xs ((hd_nat (Suc v))##0)) (tl_nat (Suc v))"
+proof -
+  obtain xs' v' where "xs =list_encode xs'" "Suc v = list_encode v'"
+    by (metis list_decode_inverse)
+  then moreover obtain a ys where "v' = a # ys" 
+    by (metis Zero_neq_Suc list_encode.elims)
+  ultimately show ?thesis apply(auto simp add:sub_append  sub_hd cons0 
+              sub_tl simp del:list_encode.simps) done
+qed
+
+lemma reverse_append_nat:
+    "reverse_nat (append_nat xs ys) = append_nat (reverse_nat ys) (reverse_nat xs)"
+proof - 
+obtain xs' ys' where "xs =list_encode xs'"  "ys = list_encode ys'"
+  by (metis list_decode_inverse)
+  thus ?thesis by(auto simp del:append_nat.simps list_encode.simps simp add: cons0 sub_cons
+          sub_append sub_reverse)
+qed
+lemma reverse_singleton_nat:
+"reverse_nat (a ## 0) = a ## 0" by(auto simp add: cons0 sub_reverse simp del:list_encode.simps) 
+lemma append_singleton_nat : 
+"append_nat (a##0) xs = a ## xs"
+proof - 
+  obtain xs' where "xs = list_encode xs'"
+ by (metis list_decode_inverse)
+  thus ?thesis by(auto simp del:append_nat.simps list_encode.simps simp add: cons0 sub_cons
+          sub_append )
+qed
+
+lemma reverse_cons_nat:
+"reverse_nat (a ## xs) = append_nat (reverse_nat xs) (a##0) "
+proof -
+  obtain xs' where "xs= list_encode xs'" 
+    by (metis list_decode_inverse)
+  thus ?thesis 
+    apply (auto simp add:sub_append sub_reverse sub_cons cons0 simp del:
+                  list_encode.simps) done
+qed
+
+lemma cons_is_reverse: "a ## reverse_nat xs = reverse_nat (append_nat xs (a##0))"
+proof -
+  obtain xs' where "xs= list_encode xs'" 
+    by (metis list_decode_inverse)
+  thus ?thesis 
+    apply (auto simp add:sub_append sub_reverse sub_cons cons0 simp del:
+                  list_encode.simps) done
+qed
+
+lemma append_induct: " reverse_nat(append_nat xs ys) = 
+
+append_acc (reverse_nat xs) ys"
+  apply(induct ys  arbitrary: xs rule:length_nat.induct)
+   apply(simp add: append_nat_0)
+  apply (auto simp add: append_nat_Suc   reverse_append_nat reverse_singleton_nat 
+append_singleton_nat simp flip: reverse_cons_nat)
+  apply(auto simp only: cons_is_reverse)
+  done
+
+definition append_tail :: "nat \<Rightarrow> nat \<Rightarrow> nat" where 
+"append_tail xs ys = reverse_nat (append_acc (reverse_nat xs) ys)"
+
+lemma subtail_append:
+"append_tail xs ys = append_nat xs ys"
+  apply(auto simp only: append_tail_def)
+  using rev_rev_nat
+  by (metis append_induct)
+
+
 fun elemof :: "nat \<Rightarrow> nat \<Rightarrow> nat" where 
 "elemof e l = (if l = 0 then 0 else if hd_nat l = e then 1 else elemof e (tl_nat l))"
 
@@ -240,9 +394,14 @@ split:if_splits
 
 lemma sub_elem_of2: "(elemof e (list_encode l) = 0) =  (e \<notin> set l)"
   using sub_elem_of by blast
+
 fun remdups_nat :: "nat \<Rightarrow> nat" where 
 "remdups_nat n = (if n=0 then 0 else if elemof (hd_nat n) (tl_nat n) \<noteq> 0 then remdups_nat (tl_nat n)
                  else cons (hd_nat n) (remdups_nat (tl_nat n)))"
+
+fun remdups_acc :: "nat \<Rightarrow> nat => nat" where 
+"remdups_acc acc n =(if n=0 then acc else if elemof (hd_nat n) (tl_nat n) \<noteq> 0 then remdups_acc acc (tl_nat n)
+                 else remdups_acc (cons (hd_nat n) acc) (tl_nat n))"
 
 lemma sub_remdups: "remdups_nat (list_encode xs) = list_encode (remdups xs)"
   apply (subst remdups_nat.simps)
@@ -252,6 +411,30 @@ lemma sub_remdups: "remdups_nat (list_encode xs) = list_encode (remdups xs)"
    apply auto[1]
   by (smt less_numeral_extra(3) non_empty_positive remdups_nat.elims sub_cons 
 sub_elem_of sub_hd sub_tl)
+lemma non_empty_not_zero:"list_encode (a#xs) \<noteq> 0" using non_empty_positive by auto
+lemma remdups_induct : 
+" reverse_nat (append_nat (reverse_nat acc) (remdups_nat xs))
+= remdups_acc acc xs "
+proof -
+  obtain xs' acc' where "xs =list_encode xs'" "acc = list_encode acc'"
+    by (metis list_decode_inverse)
+  thus ?thesis apply(auto simp only: sub_reverse sub_remdups sub_append rev_append rev_rev_ident)
+    apply(induct xs' arbitrary: acc' xs acc)
+     apply simp
+    apply(subst remdups_acc.simps)
+    apply(auto simp add: sub_cons sub_hd sub_tl sub_elem_of2 sub_elem_of non_empty_positive non_empty_not_zero
+simp del: list_encode.simps remdups_acc.simps append_nat.simps elemof.simps)
+    done
+qed
+
+definition remdups_tail :: "nat \<Rightarrow> nat" where 
+"remdups_tail xs = reverse_nat (remdups_acc 0 xs)"
+
+lemma subtail_remdups:
+"remdups_tail xs = remdups_nat xs"
+  apply(auto simp only:remdups_tail_def)
+  using remdups_induct[of 0 xs]
+  by (metis append_nat.simps(1) rev_rev_nat reverse_nat_0)
 
 lemma prod_sum_less:"0< x \<Longrightarrow>(x,y) = prod_decode p  \<Longrightarrow> x+y < p"
   by (smt Nat.add_0_right Suc_leI add.left_commute add.left_neutral add.right_neutral 
@@ -418,8 +601,7 @@ not_less_eq_eq prod.exhaust_sel prod_decode_inverse)
     using pos_tl_less[of x] nth_less[of n "tl_nat x"]
     by linarith
   done
-lemma cons0:"cons a 0 = list_encode [a]"
-  by (metis list_encode.simps(1) sub_cons)
+
 
 fun map_nat :: "(nat\<Rightarrow> nat) \<Rightarrow> nat \<Rightarrow> nat" where 
 "map_nat f n= (if n =0 then 0 else cons (f (hd_nat n)) (map_nat f (tl_nat n)))"
@@ -467,8 +649,15 @@ lemma sub_tail_map : "tail (map f v) = map f (tl v)"
    apply auto
   done
 
+
 fun list_from_nat :: "nat \<Rightarrow> nat \<Rightarrow> nat" where 
 "list_from_nat s n = (if n = 0 then 0 else cons s (list_from_nat (s+1) (n-1)))"
+
+fun list_from_acc :: "nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat" where 
+"list_from_acc acc s n = (if n = 0 then acc else list_from_acc (s ## acc) (s+1) (n-1) )  "
+
+lemma Suc_plus:"Suc(m+n) = Suc m + n "
+  by simp
 
 lemma sub_list_from: "list_from_nat s n = list_encode [s..<s+n]"
   apply (induct s n rule: list_from_nat.induct)
@@ -477,9 +666,46 @@ lemma sub_list_from: "list_from_nat s n = list_encode [s..<s+n]"
   apply (simp add: upt_rec)
   done
 
+lemma list_from_reverse:
+"reverse_nat (list_from_nat s (Suc n)) = (s + n) ## reverse_nat (list_from_nat s n)"
+  apply(auto simp only:sub_list_from sub_reverse sub_cons list_encode_eq)
+  by auto
+
+lemma list_from_induct:
+"reverse_nat (list_from_nat s (n+m)) =
+list_from_acc (reverse_nat (list_from_nat s n)) (s+n) m 
+"
+  apply(induct m arbitrary: n)
+   apply (simp)
+  apply(subst list_from_acc.simps)
+  subgoal for m n
+    apply (auto simp del: list_from_acc.simps list_from_nat.simps)
+    apply(subst Suc_plus)
+    apply(auto simp only:)
+    apply (auto  simp add: list_from_reverse simp del: list_from_acc.simps list_from_nat.simps)
+    done
+  done
+
+definition list_from_tail :: "nat \<Rightarrow> nat \<Rightarrow> nat" where 
+"list_from_tail s n = reverse_nat (list_from_acc 0 s n)"
+
+lemma subtail_list_from: 
+"list_from_tail s n = list_from_nat s n"
+  apply(auto simp only: list_from_tail_def)
+  using list_from_induct[of s 0 n] list_from_nat.simps reverse_nat_0 rev_rev_nat 
+  by (metis add.left_neutral nat_arith.rule0)
+
 definition list_less_nat :: "nat \<Rightarrow> nat" where
 "list_less_nat n = list_from_nat 0 n"
 
+definition list_less_tail :: "nat \<Rightarrow> nat" where
+"list_less_tail n = list_from_tail 0 n"
+
+lemma subtail_list_less : 
+"list_less_tail n = list_less_nat n"
+  apply(auto simp only: list_less_tail_def list_less_nat_def subtail_list_from)
+  done
+  
 lemma sub_list_less : "list_less_nat n = list_encode ([0..<n])"
   apply (simp only: list_less_nat_def sub_list_from)
   apply auto
@@ -506,6 +732,9 @@ lemma remdups_map : "inj f \<Longrightarrow> remdups (map f xs) = map f (remdups
 fun concat_nat :: "nat \<Rightarrow> nat" where
 "concat_nat n = (if n = 0 then 0 else append_nat (hd_nat n) (concat_nat (tl_nat n)))"
 
+fun concat_acc :: "nat \<Rightarrow> nat \<Rightarrow> nat" where
+"concat_acc acc n = (if n =0 then acc else concat_acc (append_tail (reverse_nat (hd_nat n)) acc) (tl_nat n)) "
+
 lemma sub_concat : "concat_nat (list_encode (map list_encode xs)) = list_encode (concat xs)"
   apply (induct xs)
    apply simp
@@ -513,6 +742,39 @@ lemma sub_concat : "concat_nat (list_encode (map list_encode xs)) = list_encode 
   apply (simp only: concat.simps sub_hd sub_tl)
   apply (auto simp add:sub_append)
   done
+
+lemma conc_append: "concat xs @ a = concat(xs @ [a])" by auto
+find_theorems "rev _ @ rev _"
+lemma concat_induct: 
+"reverse_nat (concat_nat (append_nat xs ys))
+= concat_acc (reverse_nat (concat_nat xs)) ys"
+proof -
+  obtain xs' ys' where "xs =list_encode (map list_encode xs')" "ys = list_encode (map list_encode ys')"
+    by (metis ex_map_conv list_decode_inverse)
+  thus ?thesis 
+    apply(auto simp add: sub_append sub_concat sub_reverse 
+       simp flip: map_append  simp del: list_encode.simps append_nat.simps concat_nat.simps concat_acc.simps)
+    apply(induct ys' arbitrary:xs' xs ys)
+     apply (simp)
+    apply(subst concat_acc.simps)
+    apply(auto  simp add: simp del: list_encode.simps append_nat.simps concat_nat.simps concat_acc.simps)
+     apply(simp)
+    apply(auto simp add: sub_tl sub_hd  sub_append subtail_append  sub_reverse
+           simp del: list_encode.simps append_nat.simps concat_nat.simps concat_acc.simps)
+    apply(auto simp only: conc_append simp flip: rev_append ) 
+    done
+qed
+
+definition concat_tail:: "nat \<Rightarrow> nat" where 
+"concat_tail ys = reverse_nat (concat_acc 0 ys)"
+
+lemma subtail_concat:
+"concat_tail ys = concat_nat ys"
+  apply(auto simp only:concat_tail_def)
+  using concat_induct [of 0 ys] rev_rev_nat append_nat.simps(1)
+  by (metis concat_nat.simps reverse_nat_0)
+
+
 lemma vname_list_encode_as_comp:"vname_list_encode = list_encode o (map vname_encode)"
   by (auto simp add:fun_eq_iff vname_list_encode_def)
 
@@ -726,6 +988,12 @@ lemma operator_id : " operator_decode (operator_encode x) = x"
 fun list_update_nat :: "nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat" where
 "list_update_nat l n v = (if l =0 then 0 else if n=0 then (v##tl_nat l) else (hd_nat l) ##
                list_update_nat (tl_nat l) (n-1) v)"
+
+definition list_update_tail :: "nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat" where
+"list_update_tail l n v = list_update_nat l n v"
+
+lemma subtail_list_update:
+"list_update_tail l n v = list_update_nat l n v" using list_update_tail_def by auto
 
 lemma sub_list_update : 
       "list_update_nat (list_encode l) n v = list_encode (list_update l n v) "
@@ -1544,6 +1812,12 @@ lemma sat_formula_list_id:
 fun BigAnd_nat:: "nat \<Rightarrow> nat" where 
 "BigAnd_nat xs = (if xs=0 then 2##(0##0)##0 else 3##(hd_nat xs)##(BigAnd_nat (tl_nat xs))##0)"
 
+fun BigAnd_acc:: "nat \<Rightarrow> nat \<Rightarrow> nat" where 
+"BigAnd_acc acc xs = (if xs=0 then acc 
+ else BigAnd_acc (3##(hd_nat xs)## acc ##0) (tl_nat xs))"
+
+
+
 lemma sub_BigAnd:
 "BigAnd_nat (sat_formula_list_encode xs) = sat_formula_encode (BigAnd xs)"
   apply (induct xs)
@@ -1553,7 +1827,32 @@ lemma sub_BigAnd:
 simp del:BigAnd_nat.simps)
   done
 
-fun BigOr_nat:: "nat \<Rightarrow> nat" where 
+lemma BigAnd_induct : 
+" BigAnd_nat (append_nat (reverse_nat xs) ys) = BigAnd_acc (BigAnd_nat ys) xs"
+proof -
+  obtain xs' ys' where "xs =list_encode xs' " "ys = list_encode ys'"
+    
+    by (metis list_decode_inverse)
+  thus ?thesis apply (auto simp only: sub_reverse sub_BigAnd sub_append)
+    apply(induct xs' arbitrary:ys' xs ys )
+     apply (auto simp del:BigAnd_nat.simps BigAnd_acc.simps list_encode.simps)
+     apply simp
+    apply(subst(2) BigAnd_acc.simps)
+    apply (auto simp add: list_encode_eq sub_hd
+        simp del:BigAnd_nat.simps BigAnd_acc.simps simp flip:list_encode.simps)
+    apply(subst BigAnd_nat.simps)
+     apply (auto simp add: list_encode_eq sub_hd sub_tl
+        simp del:BigAnd_nat.simps BigAnd_acc.simps simp flip:list_encode.simps)
+    done
+qed
+definition BigAnd_tail :: "nat \<Rightarrow> nat" where 
+"BigAnd_tail xs = BigAnd_acc (2##(0##0)##0) (reverse_nat xs) "
+
+lemma subtail_BigAnd :
+" BigAnd_tail xs = BigAnd_nat xs "
+  by (metis BigAnd_induct BigAnd_nat.elims BigAnd_tail_def append_nat_0 rev_rev_nat)
+
+fun BigOr_nat:: "nat \<Rightarrow> nat" where
 "BigOr_nat xs = (if xs=0 then (0##0) else 4##(hd_nat xs)##(BigOr_nat (tl_nat xs))##0)"
 
 lemma sub_BigOr:
@@ -1564,6 +1863,38 @@ lemma sub_BigOr:
   apply (auto simp add:sat_formula_list_encode_def sub_hd sub_tl sub_cons cons0 list_encode_eq simp flip:list_encode.simps
 simp del:BigOr_nat.simps)
   done
+
+fun BigOr_acc:: "nat \<Rightarrow> nat \<Rightarrow> nat" where 
+"BigOr_acc acc xs = (if xs=0 then acc 
+ else BigOr_acc (4##(hd_nat xs)## acc ##0) (tl_nat xs))"
+
+
+
+
+lemma BigOr_induct : 
+" BigOr_nat (append_nat (reverse_nat xs) ys) = BigOr_acc (BigOr_nat ys) xs"
+proof -
+  obtain xs' ys' where "xs =list_encode xs' " "ys = list_encode ys'"
+    
+    by (metis list_decode_inverse)
+  thus ?thesis apply (auto simp only: sub_reverse sub_BigAnd sub_append)
+    apply(induct xs' arbitrary:ys' xs ys )
+     apply (auto simp del:BigOr_nat.simps BigOr_acc.simps list_encode.simps)
+     apply simp
+    apply(subst(2) BigOr_acc.simps)
+    apply (auto simp add: list_encode_eq sub_hd
+        simp del:BigOr_nat.simps BigOr_acc.simps simp flip:list_encode.simps)
+     apply (auto simp add: list_encode_eq sub_hd sub_tl
+        simp del:BigAnd_nat.simps BigAnd_acc.simps simp flip:list_encode.simps)
+    done
+qed
+
+definition BigOr_tail :: "nat \<Rightarrow> nat" where 
+"BigOr_tail xs = BigOr_acc (0##0) (reverse_nat xs) "
+
+lemma subtail_BigOr :
+" BigOr_tail xs = BigOr_nat xs "
+  by (metis BigOr_induct BigOr_nat.elims BigOr_tail_def append_nat_0 rev_rev_nat)
 
 lemma strips_simp:"strips_assignment_encode = prod_encode o (\<lambda>(s,b). (sas_plus_assignment_encode s, bool_encode b))"
   apply (auto)
@@ -1602,5 +1933,75 @@ lemma sub_elem_of_inj: "inj f \<Longrightarrow> (elemof (f e) (list_encode (map 
   apply (auto simp add: inj_def 
       list_encode_eq sub_hd sub_tl simp del:elemof.simps simp flip: list_encode.simps)
   done
+
+fun map_acc :: "(nat \<Rightarrow> nat) \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat" where 
+"map_acc f acc n = (if n = 0 then acc else map_acc f ((f (hd_nat n)) ## acc) (tl_nat n))"
+
+lemma rev_cons: "a # rev xs = rev (xs @[a])"
+  apply auto
+  done
+lemma append_singleton:
+"map f xs @ [f a] = map f (xs@[a])"
+  apply(auto)
+  done
+lemma map_induct :
+"reverse_nat (map_nat f (append_nat xs ys))
+= map_acc f (reverse_nat ( map_nat f xs)) ys"
+proof - 
+  obtain xs' ys' where "xs = list_encode xs'" "ys = list_encode ys'"
+    by (metis list_decode_inverse)
+  thus ?thesis  
+    apply(auto simp only: sub_append sub_map sub_reverse) 
+    apply(induct ys' arbitrary:xs' xs ys)
+     apply simp
+    apply(subst map_acc.simps)
+    apply(auto simp add: sub_tl sub_hd sub_cons 
+            simp del:map_acc.simps list_encode.simps)
+     apply simp
+    subgoal for a ys' xs'
+      apply(auto simp only: rev_cons append_singleton)
+      done
+    done
+qed
+
+      
+lemma subtail_map:
+"reverse_nat (map_acc f  0 xs) = map_nat f xs"
+  using map_induct[of f 0 xs] 
+  by (metis append_nat.simps(1) map_nat.simps rev_rev_nat reverse_nat_0)
+
+fun filter_acc :: "(nat \<Rightarrow> bool) \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat" where 
+"filter_acc f acc xs = (if xs = 0 then acc else if f (hd_nat xs) then filter_acc f ((hd_nat xs) ## acc) (tl_nat xs)
+else filter_acc  f  acc (tl_nat xs))"
+
+lemma filter_append:
+"f a \<Longrightarrow> filter f xs @ [a] = filter f (xs @ [a]) "
+  apply auto
+  done
+
+lemma filter_induct:
+"reverse_nat (filter_nat f (append_nat xs ys))
+= filter_acc f (reverse_nat ( filter_nat f xs)) ys"
+proof - 
+  obtain xs' ys' where "xs = list_encode xs'" "ys = list_encode ys'"
+    by (metis list_decode_inverse)
+  thus ?thesis  
+    apply(auto simp only: sub_append sub_filter sub_reverse) 
+    apply(induct ys' arbitrary:xs' xs ys)
+     apply simp
+    apply(subst filter_acc.simps)
+    apply(auto simp add: sub_tl sub_hd sub_cons  non_empty_not_zero
+            simp del:filter_acc.simps list_encode.simps)
+    subgoal for a ys' xs'
+      apply(auto simp only: rev_cons filter_append append_singleton)
+      done
+    done
+qed
+
+lemma subtail_filter:
+"reverse_nat (filter_acc f  0 xs) = filter_nat f xs"
+  using filter_induct[of f 0 xs] 
+  by (metis append_nat.simps(1) filter_nat.simps rev_rev_nat reverse_nat_0)
+
 
 end

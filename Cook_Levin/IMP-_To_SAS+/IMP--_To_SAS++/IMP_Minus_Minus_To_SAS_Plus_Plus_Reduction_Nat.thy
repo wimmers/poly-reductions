@@ -5,6 +5,10 @@ begin
 definition domain_nat :: "nat" where
 "domain_nat = list_encode [prod_encode(0,0), prod_encode(0,1)]"
 
+definition domain_tail :: "nat " where "domain_tail = domain_nat"
+
+lemma subtail_domain  : "domain_tail = domain_nat" using domain_tail_def by auto
+
 lemma sub_domain: "domain_nat = list_encode (map domain_element_encode domain)"
   apply (auto simp add:domain_nat_def)
   done
@@ -12,6 +16,12 @@ lemma sub_domain: "domain_nat = list_encode (map domain_element_encode domain)"
 definition pc_to_com_nat :: "nat\<Rightarrow> nat" where
 "pc_to_com_nat l =(if fst_nat(snd_nat(hd_nat l)) = 1 then snd_nat (snd_nat (hd_nat l)) 
                   else  0##0)"
+
+definition pc_to_com_tail ::" nat \<Rightarrow> nat" where 
+"pc_to_com_tail l = pc_to_com_nat l"
+
+lemma subtail_pc_to_com:
+"pc_to_com_tail l = pc_to_com_nat l" using pc_to_com_tail_def by auto
 
 lemma sub_pc_to_com :
   "pc_to_com_nat (sas_assignment_list_encode l) = comm_encode (pc_to_com l)"
@@ -39,6 +49,27 @@ fun map_com_to_operators:: "nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow
 ## map_com_to_operators c c2 (tl_nat n)
 )"
 
+fun map_com_to_operators_acc:: " nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat" where 
+"map_com_to_operators_acc c c2 acc n = (if n = 0 then acc else map_com_to_operators_acc c c2 
+ ((let c1' = pc_to_com_tail (nth_nat (Suc 0) (hd_nat n)) in  
+        (list_update_tail (nth_nat 0 (hd_nat n)) 0 (prod_encode (0,prod_encode(1,c))))##
+        (list_update_tail (nth_nat (Suc 0) (hd_nat n)) 0 (prod_encode(0, prod_encode(1, 2 ##c1'##c2##0))))##0 )
+## acc) (tl_nat n)
+)"
+
+lemma map_com_to_operators_induct:
+"map_com_to_operators_acc c c2 acc n = map_acc(\<lambda> op. 
+    (let c1' = pc_to_com_nat (nth_nat (Suc 0) op) in  
+        (list_update_nat (nth_nat 0 op) 0 (prod_encode (0,prod_encode(1,c))))##
+        (list_update_nat (nth_nat (Suc 0) op) 0 (prod_encode(0, prod_encode(1, 2 ##c1'##c2##0))))##0 ))
+acc n "
+  apply(induct c c2 acc n rule:map_com_to_operators_acc.induct)
+  apply(auto simp add: subtail_pc_to_com subtail_list_update)
+  done
+
+definition map_com_to_operators_tail :: "nat => nat => nat => nat" where 
+"map_com_to_operators_tail c c2 n =  reverse_nat (map_com_to_operators_acc c c2 0 n)"
+
 lemma submap_com_to_operators:
 "map_com_to_operators c c2 n =
  map_nat (\<lambda> op. 
@@ -49,8 +80,15 @@ lemma submap_com_to_operators:
   apply (induct c c2 n rule:map_com_to_operators.induct)
   apply auto
   done
+
+lemma subtail_map_com_to_operators:
+"map_com_to_operators_tail c c2 n = map_com_to_operators c c2 n"
+  using  submap_com_to_operators  map_com_to_operators_tail_def
+ map_com_to_operators_induct subtail_map by presburger
+
 fun map_com_to_operators2 :: "nat \<Rightarrow> nat" where 
 " map_com_to_operators2 n = (if n = 0 then 0 else (prod_encode(Suc (hd_nat n), prod_encode(0,0)))##  map_com_to_operators2 (tl_nat n))"
+
 
 lemma submap_com_to_operators2: 
 " map_com_to_operators2 n =  map_nat (\<lambda>v. prod_encode(Suc v, prod_encode(0,0))) n"
@@ -58,9 +96,31 @@ lemma submap_com_to_operators2:
   apply auto
   done
 
+fun map_com_to_operators2_acc :: "nat \<Rightarrow> nat \<Rightarrow> nat" where 
+" map_com_to_operators2_acc acc n = (if n = 0 then acc else map_com_to_operators2_acc
+((prod_encode(Suc (hd_nat n), prod_encode(0,0)))## acc )(tl_nat n))"
+
+lemma map_com_to_operators2_induct: 
+"map_com_to_operators2_acc acc n = map_acc (\<lambda>v. prod_encode(Suc v, prod_encode(0,0))) acc n"
+  apply(induct acc n rule:map_com_to_operators2_acc.induct)
+apply auto
+  done
+
+definition map_com_to_operators2_tail :: "nat => nat" where 
+"map_com_to_operators2_tail n =  reverse_nat (map_com_to_operators2_acc 0 n)"
+
+lemma subtail_map_com_to_operators2:
+"map_com_to_operators2_tail  n = map_com_to_operators2 n"
+  using  submap_com_to_operators2  map_com_to_operators2_tail_def
+ map_com_to_operators2_induct subtail_map by presburger
+
 fun  map_com_to_operators3 :: "nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat" where 
 "map_com_to_operators3 i c1 n  = (if n =0 then 0 else ((((prod_encode(0, i))## (prod_encode(Suc (hd_nat n), prod_encode(0,1)))##0)## 
          ((prod_encode(0, prod_encode(1, c1)))##0)## 0)) ##map_com_to_operators3 i c1 (tl_nat n))"
+
+fun  map_com_to_operators3_acc :: "nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat" where 
+"map_com_to_operators3_acc  i c1 acc n  = (if n =0 then acc else map_com_to_operators3_acc  i c1  (((((prod_encode(0, i))## (prod_encode(Suc (hd_nat n), prod_encode(0,1)))##0)## 
+         ((prod_encode(0, prod_encode(1, c1)))##0)## 0)) ##acc) (tl_nat n))"
 
 lemma submap_com_to_operators3:
 "map_com_to_operators3 i c1 n = map_nat (\<lambda> v. 
@@ -69,18 +129,53 @@ lemma submap_com_to_operators3:
   apply (induct i c1 n rule:map_com_to_operators3.induct)
   apply auto
   done
+lemma map_com_to_operators3_induct:
+"map_com_to_operators3_acc  i c1 acc n = map_acc  (\<lambda> v. 
+      ( ((prod_encode(0, i))## (prod_encode(Suc v, prod_encode(0,1)))##0)## 
+         ((prod_encode(0, prod_encode(1, c1)))##0)## 0)) acc n"
+  apply(induct  i c1 acc n  rule:map_com_to_operators3_acc.induct)
+  apply auto
+  done
+
+definition map_com_to_operators3_tail :: " nat \<Rightarrow> nat \<Rightarrow> nat => nat" where 
+"map_com_to_operators3_tail i c1 n =  reverse_nat (map_com_to_operators3_acc i c1 0 n)"
+
+lemma subtail_map_com_to_operators3:
+"map_com_to_operators3_tail i c1 n = map_com_to_operators3 i c1 n"
+  using  submap_com_to_operators3  map_com_to_operators3_tail_def
+ map_com_to_operators3_induct subtail_map by presburger
 
 fun  map_com_to_operators4 :: "nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow>nat" where 
-"map_com_to_operators4 i j n = (if n=0 then 0 else (( (((prod_encode(0, i)) ## (prod_encode (Suc (hd_nat n), prod_encode(0,1) )) ##0)) ## 
-         (((prod_encode(0, j))##0) ## 0 ))) ## map_com_to_operators4 i j (tl_nat n))"
+"map_com_to_operators4 i j n = (if n=0 then 0 else ((((prod_encode(0, i)) ## (prod_encode (Suc (hd_nat n), prod_encode(0,1) )) ##0)) ## 
+         (((prod_encode(0, j))##0) ## 0 )) ## map_com_to_operators4 i j (tl_nat n))"
 
 lemma submap_com_to_operators4:
 "map_com_to_operators4 i j n =  map_nat (\<lambda> v. 
-      ( (((prod_encode(0, i)) ## (prod_encode (Suc v, prod_encode(0,1) )) ##0)) ## 
-         (((prod_encode(0, j))##0) ## 0 ))) n "
+       (((prod_encode(0, i)) ## (prod_encode (Suc v, prod_encode(0,1) )) ##0)) ## 
+         (((prod_encode(0, j))##0) ## 0 )) n "
   apply (induct i j n rule:map_com_to_operators4.induct)
   apply auto
   done
+fun  map_com_to_operators4_acc :: "nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow>nat" where 
+"map_com_to_operators4_acc i j acc n = (if n=0 then acc else map_com_to_operators4_acc i j  (((((prod_encode(0, i)) ## (prod_encode (Suc (hd_nat n), prod_encode(0,1) )) ##0)) ## 
+         (((prod_encode(0, j))##0) ## 0 )) ## acc) (tl_nat n))"
+
+lemma map_com_to_operators4_induct:
+"map_com_to_operators4_acc i j acc n = map_acc(\<lambda> v. 
+      ( (((prod_encode(0, i)) ## (prod_encode (Suc v, prod_encode(0,1) )) ##0)) ## 
+         (((prod_encode(0, j))##0) ## 0 ))) acc n"
+  apply(induct i j acc n rule:map_com_to_operators4_acc.induct)
+  apply auto
+  done
+
+
+definition map_com_to_operators4_tail :: " nat \<Rightarrow> nat \<Rightarrow> nat => nat" where 
+"map_com_to_operators4_tail i j n =  reverse_nat (map_com_to_operators4_acc i j 0 n)"
+
+lemma subtail_map_com_to_operators4:
+"map_com_to_operators4_tail i j n = map_com_to_operators4 i j n"
+  using  submap_com_to_operators4  map_com_to_operators4_tail_def
+ map_com_to_operators4_induct subtail_map by presburger
 
 fun com_to_operators_nat :: "nat \<Rightarrow> nat" where
 "com_to_operators_nat c = (if c = 0 \<or> hd_nat c = 0 then 0 else 
@@ -108,6 +203,7 @@ else (let i = prod_encode(1,c) ;  vs = nth_nat (Suc 0) c ; c' = nth_nat (Suc (Su
         (((prod_encode(0, k))##0))##0) 
       ## map_com_to_operators4 i j vs))
 "
+
 declare nth_nat.simps[simp]
 
 lemma com_to_operators_inv: 
@@ -183,7 +279,8 @@ sas_assignment_encode.simps variable_encode.simps domain_element_encode.simps co
 
 fun map_coms_to_operators :: "nat \<Rightarrow> nat" where 
 "map_coms_to_operators n = (if n = 0 then 0 else (com_to_operators_nat (hd_nat n)) ## map_coms_to_operators (tl_nat n))"
- 
+
+
 lemma submap_coms_to_operators : 
 "map_coms_to_operators n  = map_nat com_to_operators_nat n "
   apply (induct n rule:map_coms_to_operators.induct)

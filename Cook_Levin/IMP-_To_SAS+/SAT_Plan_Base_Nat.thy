@@ -7,6 +7,14 @@ definition  encode_state_variable_nat
   where "encode_state_variable_nat t k v = ( if v-1 >0  then 1##(0##t##k##0)##0
 else 2##(1##(0##t##k##0)##0)##0)"
 
+definition  encode_state_variable_tail
+  :: "nat \<Rightarrow> nat \<Rightarrow> nat\<Rightarrow> nat"
+  where "encode_state_variable_tail t k v = encode_state_variable_nat t k v"
+
+lemma subtail_encode_state_variable:
+"encode_state_variable_tail t k v = encode_state_variable_nat t k v"
+  by (simp add: encode_state_variable_tail_def)
+
 lemma sub_encode_state_variable:
   assumes "v \<noteq> None"
   shows "encode_state_variable_nat t k (bool_option_encode v)
@@ -35,21 +43,57 @@ lemma sublist_encode_initial_state:
 fun map_encode_initial_state :: "nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat  \<Rightarrow> nat" where 
 "map_encode_initial_state t I vs  xs = (if xs =0 then 0 else ( 4 ## (encode_state_variable_nat t (index_nat vs (hd_nat xs)) (map_list_find_nat I (hd_nat xs)))## (0##0) ## 0) ## map_encode_initial_state t I vs (tl_nat xs))  "
 
+fun map_encode_initial_state_acc :: "nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat  \<Rightarrow> nat" where 
+"map_encode_initial_state_acc t I vs acc  xs = (if xs =0 then acc else map_encode_initial_state_acc t I vs (( 4 ## (encode_state_variable_tail t (index_nat vs (hd_nat xs)) (map_list_find_nat I (hd_nat xs)))## (0##0) ## 0) ## acc) (tl_nat xs))  "
+
+lemma  map_encode_initial_state_induct:
+"map_encode_initial_state_acc t I vs acc xs = map_acc  (\<lambda>v. 4 ## (encode_state_variable_nat t (index_nat vs v) (map_list_find_nat I v))## (0##0) ## 0) acc xs "
+  apply(induct t I vs acc xs rule: map_encode_initial_state_acc.induct)
+  apply (auto simp add: subtail_encode_state_variable)
+  done
+
+definition map_encode_initial_state_tail ::  "nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat  \<Rightarrow> nat" where 
+"map_encode_initial_state_tail  t I vs xs = reverse_nat ( map_encode_initial_state_acc t I vs 0 xs)"
 
 lemma submap_encode_initial_state:
 "map_encode_initial_state t I vs xs = map_nat (\<lambda>v. 4 ## (encode_state_variable_nat t (index_nat vs v) (map_list_find_nat I v))## (0##0) ## 0) xs"
   apply (induct t I vs xs rule: map_encode_initial_state.induct)
   apply (auto)
   done
+
+lemma subtail_map_encode_initial_state:
+"map_encode_initial_state_tail  t I vs xs = map_encode_initial_state  t I vs xs"
+  using map_encode_initial_state_induct map_encode_initial_state_tail_def 
+submap_encode_initial_state subtail_map by presburger
+
+
 declare map_list_find_nat.simps[simp del]
 fun filter_defined :: "nat \<Rightarrow> nat \<Rightarrow> nat" where
 "filter_defined s n = (if n = 0 then 0 else if map_list_find_nat s (hd_nat n) \<noteq> 0 then (hd_nat n)##filter_defined s (tl_nat n) else filter_defined s (tl_nat n))"
+
+fun filter_defined_acc :: "nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat" where 
+"filter_defined_acc s acc n = (if n = 0 then acc else if map_list_find_nat s (hd_nat n) \<noteq> 0 then filter_defined_acc s ((hd_nat n)##acc) (tl_nat n) else filter_defined_acc s acc (tl_nat n))"
 
 lemma subfilter_defined :
 "filter_defined s n = filter_nat (\<lambda>v. map_list_find_nat s v \<noteq> 0) n "
   apply (induct s n rule: filter_defined.induct)
   apply auto
   done
+
+lemma filter_defined_induct:
+"filter_defined_acc s acc n = filter_acc (\<lambda>v. map_list_find_nat s v \<noteq> 0) acc n"
+  apply( induct s acc n rule:filter_defined_acc.induct)
+  apply auto
+  done
+
+definition filter_defined_tail :: "nat \<Rightarrow> nat \<Rightarrow> nat" where 
+"filter_defined_tail s n  = reverse_nat (filter_defined_acc s 0 n)"
+
+lemma subtail_filter_defined :
+"filter_defined_tail s n  = filter_defined s n  "
+  using  filter_defined_tail_def filter_defined_induct subfilter_defined
+subtail_filter  by presburger
+
 
 definition  encode_initial_state_nat
   :: "nat\<Rightarrow> nat" 
@@ -58,6 +102,18 @@ definition  encode_initial_state_nat
         ; vs = nth_nat 0 \<Pi>
       in BigAnd_nat ( map_encode_initial_state 0 I vs
     (filter_defined I  vs))"
+
+definition  encode_initial_state_tail
+  :: "nat\<Rightarrow> nat" 
+  where "encode_initial_state_tail \<Pi>
+    \<equiv> let I = nth_nat (Suc (Suc 0)) \<Pi>
+        ; vs = nth_nat 0 \<Pi>
+      in BigAnd_tail ( map_encode_initial_state_tail 0 I vs
+    (filter_defined_tail I  vs))"
+
+lemma subtail_encode_initial_state:
+"encode_initial_state_tail \<Pi> = encode_initial_state_nat \<Pi>"
+  using encode_initial_state_nat_def subtail_map_encode_initial_state encode_initial_state_tail_def subtail_BigAnd subtail_filter_defined by presburger
 
 lemma inj_sasp:"inj sas_plus_assignment_encode"
   using sas_plus_assignment_id 
@@ -128,6 +184,19 @@ definition  encode_goal_state_nat
         ; vs = nth_nat 0 \<Pi>
       in BigAnd_nat (map_encode_initial_state t G vs
     (filter_defined G vs))"
+
+definition  encode_goal_state_tail
+  :: "nat\<Rightarrow> nat \<Rightarrow> nat" 
+  where "encode_goal_state_tail \<Pi> t
+    \<equiv> let G = nth_nat (Suc (Suc (Suc 0))) \<Pi>
+        ; vs = nth_nat 0 \<Pi>
+      in BigAnd_tail (map_encode_initial_state_tail t G vs
+    (filter_defined_tail G vs))"
+
+lemma subtail_encode_goal_state:
+"encode_goal_state_tail P t = encode_goal_state_nat P t"
+  using encode_goal_state_nat_def encode_goal_state_tail_def subtail_BigAnd subtail_filter_defined
+ subtail_map_encode_initial_state by presburger
 
 lemma subnat_encode_goal_state_map: 
 "map (\<lambda>x. list_encode
@@ -205,6 +274,17 @@ map_nat (\<lambda>v.
   done
 
 definition encode_operator_precondition_nat
+  :: "nat
+    \<Rightarrow> nat
+    \<Rightarrow> nat
+    \<Rightarrow> nat"
+  where "encode_operator_precondition_nat \<Pi> t op \<equiv> let
+      vs = nth_nat 0 \<Pi>
+      ; ops = nth_nat (Suc 0) \<Pi>
+    in BigAnd_nat (map_encode_operator_precondition t ops op vs
+      (nth_nat 0 op))"
+
+definition encode_operator_precondition_tail
   :: "nat
     \<Rightarrow> nat
     \<Rightarrow> nat
