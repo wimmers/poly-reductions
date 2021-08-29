@@ -177,6 +177,36 @@ lemma subtail_map_com_to_operators4:
   using  submap_com_to_operators4  map_com_to_operators4_tail_def
  map_com_to_operators4_induct subtail_map by presburger
 
+fun com_to_operators :: "com \<Rightarrow> operator list" where
+"com_to_operators (SKIP) = []" |
+"com_to_operators (v ::= b) = 
+   [\<lparr> precondition_of = [(PC, PCV (v ::= b))], 
+      effect_of = [(PC, PCV SKIP), (VN v, EV b)]\<rparr>]" |
+"com_to_operators (c1;; c2) = 
+  (if c1 = SKIP then  [\<lparr> precondition_of = [(PC, PCV (c1 ;; c2))],
+                                                   effect_of = [(PC, PCV c2)]\<rparr>]
+   else (let ops = com_to_operators c1 in map (\<lambda> op. 
+    (let c1' = pc_to_com (effect_of op) in 
+      \<lparr> precondition_of = 
+        list_update (precondition_of op) 0 (PC, PCV (c1 ;; c2)),
+        effect_of = 
+        list_update (effect_of op) 0 (PC, PCV (c1' ;; c2))\<rparr>)) ops))" |
+"com_to_operators (IF vs\<noteq>0 THEN c1 ELSE c2) = (let i = PCV (IF vs\<noteq>0 THEN c1 ELSE c2)
+   in  \<lparr> precondition_of = (PC, i) # map (\<lambda>v. (VN v, EV Zero)) (remdups vs), 
+        effect_of = [(PC, PCV c2)]\<rparr> 
+      # map (\<lambda> v. 
+      \<lparr> precondition_of = [(PC, i), (VN v, EV One)], 
+         effect_of = [(PC, PCV c1)]\<rparr>) vs)" |
+"com_to_operators (WHILE vs\<noteq>0 DO c) = (let i = PCV (WHILE vs\<noteq>0 DO c) ;
+  j = PCV (c ;; (WHILE vs\<noteq>0 DO c)); k = PCV SKIP in 
+    \<lparr> precondition_of = (PC, i) # map (\<lambda>v. (VN v, EV Zero)) (remdups vs), 
+        effect_of = [(PC, k)]\<rparr> 
+      # map (\<lambda> v. 
+      \<lparr> precondition_of = [(PC, i), (VN v, EV One)], 
+         effect_of = [(PC, j)]\<rparr>) vs)"
+
+datatype
+
 fun com_to_operators_nat :: "nat \<Rightarrow> nat" where
 "com_to_operators_nat c = (if c = 0 \<or> hd_nat c = 0 then 0 else 
 if hd_nat c = 1 then (
