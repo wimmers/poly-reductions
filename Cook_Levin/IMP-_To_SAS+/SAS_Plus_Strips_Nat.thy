@@ -646,7 +646,6 @@ sub_maps_sasp_op_to_strips subtail_map by presburger
 
 definition sas_plus_problem_to_strips_problem_nat
   :: "nat\<Rightarrow>nat" 
-  ("\<phi> _ " 99)
   where "sas_plus_problem_to_strips_problem_nat \<Psi> \<equiv> let 
       vs =  concat_nat (map_possible_assignments_for \<Psi>(nth_nat 0 \<Psi>))
       ; ops = maps_sasp_op_to_strips \<Psi> (nth_nat (Suc 0) \<Psi>)

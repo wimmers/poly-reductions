@@ -516,10 +516,37 @@ lemma sub_all_variables:"all_variables_nat (com_encode c) = vname_list_encode (a
 definition all_variables_tail :: "nat \<Rightarrow> nat" where 
 "all_variables_tail  c = all_variables_nat c"
 
-lemma subtail_max_constant:
+lemma subtail_all_variables:
 "all_variables_tail  c = all_variables_nat c"
   by (simp add: all_variables_tail_def)
 
+definition max_constant_t :: "Com.com \<Rightarrow>nat" where 
+" max_constant_t c =  max_constant_stack (push_con c [])"
+
+definition  max_constant_nat :: "nat \<Rightarrow> nat" where 
+" max_constant_nat c =  max_constant_stack_nat (push_con_nat c 0)"
+
+lemma subtailnat_max_constant:
+" max_constant_nat (com_encode c) =   (max_constant_t c)"
+  by (metis max_constant_nat_def max_constant_t_def list.map(1) list_encode.simps(1) 
+push_con_Nil sub_max_constant_stack sub_push_con)
+
+
+lemma subt_max_constant:
+"max_constant_t c = max_constant c"
+  using max_constant_t_def  max_constant_stack_correct push_var_Nil
+  by simp 
+
+
+lemma sub_max_constant:"max_constant_nat (com_encode c) = (max_constant c)"
+  by (simp add: subt_max_constant subtailnat_max_constant)
+
+definition max_constant_tail :: "nat \<Rightarrow> nat" where 
+"max_constant_tail  c = max_constant_nat c"
+
+lemma subtail_max_constant:
+"max_constant_tail  c = max_constant_nat c"
+  by (simp add: max_constant_tail_def)
 
 
 lemma sub_cons_vname: "cons (vname_encode x) (vname_list_encode xs) = vname_list_encode (x#xs)"
@@ -541,7 +568,6 @@ definition num_variables_tail :: "nat \<Rightarrow> nat" where
 
 lemma subtail_num_variables:
 "num_variables_tail n = num_variables_nat n"
-  sledgehammer
   by (simp add: all_variables_tail_def num_variables_nat_def 
 num_variables_tail_def subtail_length subtail_remdups)
 
