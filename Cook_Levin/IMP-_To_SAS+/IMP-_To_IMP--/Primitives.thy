@@ -1011,7 +1011,7 @@ lemma sub_list_update :
   apply (simp only: head.simps sub_cons )
   by (metis One_nat_def Suc_pred list_encode.simps(1) list_update_code(3) neq0_conv sub_cons tail.simps(2))
 
-fun restrict_list :: "(vname,bit) assignment list \<Rightarrow> vname list \<Rightarrow> (vname,bit) assignment list" where 
+fun restrict_list :: "('vname,'bit) assignment list \<Rightarrow> 'vname list \<Rightarrow> ('vname,'bit) assignment list" where 
 "restrict_list [] s = []" |
 "restrict_list ((x,y)#xs) s = (if x \<in> set s then (x,y) # (restrict_list xs s) else restrict_list xs s)"
 
@@ -1080,7 +1080,10 @@ declare elemof.simps [simp del]
 fun restrict_nat :: "nat \<Rightarrow> nat \<Rightarrow> nat" where 
 "restrict_nat l s = (if l = 0 then 0 else (let t = restrict_nat (tl_nat l) s in (if elemof (fst_nat (hd_nat l)) s \<noteq> 0 then 
     (hd_nat l)## t else t))) "
-declare elemof.simps [simp]
+
+fun restrict_acc :: "nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat" where 
+"restrict_acc acc l s = (if l = 0 then acc else(if elemof (fst_nat (hd_nat l)) s \<noteq> 0 then 
+   restrict_acc  ((hd_nat l)## acc) (tl_nat l) s else restrict_acc acc (tl_nat l) s)) "
 
 lemma sub_restrict_nat:
   "restrict_nat (imp_assignment_list_encode l) (vname_list_encode s) = imp_assignment_list_encode (restrict_list l s)"
@@ -1098,6 +1101,49 @@ lemma sub_restrict_nat:
     apply (metis imageE set_map vname_id)
     done    
   done
+
+lemma sub_restrict_nat_gen:
+  "restrict_nat (list_encode (map prod_encode  l)) (list_encode s) = list_encode (map prod_encode  (restrict_list l s))"
+  apply(induct l)
+   apply (simp)
+  subgoal for x xs
+  apply (cases x)
+  apply (subst restrict_nat.simps)
+    apply (auto simp only:  sub_cons restrict_list.simps list_encode_eq sub_tl  imp_assignment_list_encode_def sub_tail_map Let_def sub_fst sub_hd sub_head_map list.simps  head.simps imp_assignment_encode.simps fst_def tail.simps non_empty_positive  split:if_splits 
+  simp flip: list_encode.simps 
+)
+     apply (auto simp only: list_encode.simps sub_elem_of2)
+    done
+  done
+
+lemma restrict_induct:
+"restrict_acc acc l s = append_nat (reverse_nat (restrict_nat l s)) acc"
+proof -
+  obtain acc' l' s' where "acc = list_encode (map prod_encode acc') "
+"l = list_encode (map prod_encode l')" "s = list_encode s'"
+    by (metis ex_map_conv list_decode_inverse prod_decode_inverse)
+  thus ?thesis apply (auto simp only: sub_restrict_nat_gen sub_reverse sub_append rev_map simp flip:
+        map_append)
+    apply(induct l' arbitrary: acc' acc l)
+    apply (subst restrict_acc.simps)
+     apply simp
+    apply (subst restrict_acc.simps)
+    apply (auto simp only: sub_hd head.simps fst_conv  sub_fst list.simps sub_cons sub_tl tail.simps sub_elem_of2)
+    apply (auto simp only:restrict_list.simps simp flip: list.map(2))
+    apply auto
+    done
+qed
+
+definition restrict_tail :: "nat \<Rightarrow> nat \<Rightarrow> nat " where 
+"restrict_tail l s = reverse_nat (restrict_acc 0 l s)"
+
+lemma subtail_restrict: 
+"restrict_tail l s =  restrict_nat l s"
+  using append_nat_0 restrict_induct restrict_tail_def rev_rev_nat by auto
+  
+declare elemof.simps [simp]
+
+
 
 type_synonym  var = "variable SAS_Plus_Plus_To_SAS_Plus.variable"
 type_synonym  dom = "domain_element SAS_Plus_Plus_To_SAS_Plus.domain_element"

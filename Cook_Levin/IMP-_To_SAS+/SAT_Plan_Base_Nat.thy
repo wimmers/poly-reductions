@@ -264,6 +264,15 @@ fun map_encode_operator_precondition :: "nat \<Rightarrow> nat \<Rightarrow> nat
 ## map_encode_operator_precondition t ops op vs (tl_nat xs)
 )"
 
+fun map_encode_operator_precondition_acc :: "nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat" where
+"map_encode_operator_precondition_acc acc t ops op vs xs = (if xs = 0 then 0 else 
+( 4 ##(2 ## (1## (1 ## t ##(index_nat ops op) ## 0)##0) ## 0 )##  (1##(0 ## t ##(index_nat vs (hd_nat xs)) ## 0)##0) ## 0)
+## map_encode_operator_precondition t ops op vs (tl_nat xs)
+)"
+
+lemma map_encode_operator_precondition_induct:
+"map_encode_operator_precondition_acc acc t ops op vs xs = map_acc "
+
 lemma submap_encode_operator_precondition:
 "map_encode_operator_precondition t ops op vs xs = 
 map_nat (\<lambda>v.
@@ -289,7 +298,7 @@ definition encode_operator_precondition_tail
     \<Rightarrow> nat
     \<Rightarrow> nat
     \<Rightarrow> nat"
-  where "encode_operator_precondition_nat \<Pi> t op \<equiv> let
+  where "encode_operator_precondition_tail \<Pi> t op \<equiv> let
       vs = nth_nat 0 \<Pi>
       ; ops = nth_nat (Suc 0) \<Pi>
     in BigAnd_nat (map_encode_operator_precondition t ops op vs

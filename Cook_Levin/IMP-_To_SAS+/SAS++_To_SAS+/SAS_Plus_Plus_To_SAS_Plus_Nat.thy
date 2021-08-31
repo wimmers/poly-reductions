@@ -249,11 +249,14 @@ lemma subtail_map_fst :
   using map_fst_tail_def map_fst_induct submap_fst subtail_map 
   by presburger
 
-fun map_outer :: "nat \<Rightarrow> nat \<Rightarrow> nat" where
+function map_outer :: "nat \<Rightarrow> nat \<Rightarrow> nat" where
 "map_outer P n = (if n =0 then 0 else (if elemof (hd_nat n) (map_fst (nth_nat (Suc (Suc 0)) P)) \<noteq> 0 then 0 
     else (map_inner (hd_nat n) 
       (the_nat (map_list_find_nat (nth_nat (Suc (Suc (Suc (Suc 0)))) P) (hd_nat n))))) ## map_outer P (tl_nat n))"
-
+   apply pat_completeness
+  apply (auto simp only:)
+  done
+termination by lexicographic_order
 
 lemma submap_outer: 
 "map_outer P n = map_nat (\<lambda> v. (if elemof v (map_fst (nth_nat (Suc (Suc 0)) P)) \<noteq> 0 then 0 
@@ -262,10 +265,15 @@ lemma submap_outer:
   apply (induct P n rule:map_outer.induct)
   by (metis (no_types, lifting) map_nat.elims map_outer.elims)
 declare map_list_find_nat.simps elemof.simps [simp del]
-fun  map_outer_acc :: "nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat" where
+
+function  map_outer_acc :: "nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat" where
 "map_outer_acc P acc n = (if n =0 then acc else map_outer_acc P ((if elemof (hd_nat n) (map_fst_tail (nth_nat (Suc (Suc 0)) P)) \<noteq> 0 then 0 
     else (map_inner_tail (hd_nat n) 
       (the_nat (map_list_find_nat (nth_nat (Suc (Suc (Suc (Suc 0)))) P) (hd_nat n))))) ## acc) (tl_nat n))"
+  apply pat_completeness
+  apply (auto simp only:)
+  done
+termination by lexicographic_order
 
 lemma map_outer_induct : 
 "map_outer_acc P acc n = map_acc (\<lambda> v. (if elemof v (map_fst (nth_nat (Suc (Suc 0)) P)) \<noteq> 0 then 0 
