@@ -109,6 +109,7 @@ fun length_nat :: "nat \<Rightarrow> nat" where
 "length_nat 0 = 0"|
 "length_nat n = Suc (length_nat (tl_nat n))"
 
+
 lemma non_empty_positive : "list_encode (a #xs) > 0" by simp
 
 lemma sub_length : "length_nat (list_encode xs) = length xs"
@@ -2255,5 +2256,28 @@ definition ran_tail :: "nat \<Rightarrow> nat" where
 lemma subtail_ran:
 "ran_tail xs = ran_nat xs"
   using ran_nat_def ran_tail_def subtail_map_snd subtail_nub by presburger
+
+fun length_acc :: "nat \<Rightarrow> nat \<Rightarrow> nat" where 
+"length_acc acc xs = (if xs = 0 then acc else length_acc (acc+1) (tl_nat xs))"
+
+lemma length_induct: 
+"length_acc acc xs = length_nat xs + acc"
+proof -
+  obtain xs' where "xs = list_encode xs'"
+    by (metis list_decode_inverse)
+  thus ?thesis apply (auto simp only: sub_length)
+    apply(induct xs' arbitrary:xs acc)
+     apply simp
+    apply(subst length_acc.simps)
+    apply( auto simp add: non_empty_positive sub_tl simp del:length_acc.simps list_encode.simps(2))
+    done
+qed
+definition length_tail :: "nat \<Rightarrow> nat" where 
+"length_tail xs = length_acc 0 xs"
+
+lemma subtail_length :
+"length_tail xs = length_nat xs"
+  using Primitives.length_induct length_tail_def by auto
+
 
 end
