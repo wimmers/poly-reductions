@@ -8,6 +8,13 @@ begin
 definition atomExp_to_constant_nat:: "nat \<Rightarrow> nat" where 
 "atomExp_to_constant_nat n = (if fst_nat n = 0 then 0 else snd_nat n)"
 
+definition atomExp_to_constant_tail:: "nat \<Rightarrow> nat" where 
+"atomExp_to_constant_tail n = atomExp_to_constant_nat n"
+
+lemma subtail_atomExp_to_constant:
+"atomExp_to_constant_tail n = atomExp_to_constant_nat n"
+  using atomExp_to_constant_tail_def by presburger
+
 lemma sub_atomExp_to_constant[simp]: "atomExp_to_constant_nat (atomExp_encode x) = atomExp_to_constant x"
   apply (cases x)
   apply (auto simp add: atomExp_to_constant_nat_def sub_fst sub_snd)
@@ -18,6 +25,17 @@ fun aexp_max_constant_nat:: "nat \<Rightarrow> nat" where
 "aexp_max_constant_nat n = (if hd_nat n \<le>2 \<and> 1 \<le> hd_nat n 
 then max (atomExp_to_constant_nat (nth_nat (Suc 0) n)) (atomExp_to_constant_nat (nth_nat (Suc (Suc 0)) n))
 else atomExp_to_constant_nat (nth_nat (Suc 0) n))"
+
+fun aexp_max_constant_tail:: "nat \<Rightarrow> nat" where
+"aexp_max_constant_tail n = (if hd_nat n \<le>2 \<and> 1 \<le> hd_nat n 
+then max (atomExp_to_constant_tail (nth_nat (Suc 0) n)) (atomExp_to_constant_tail (nth_nat (Suc (Suc 0)) n))
+else atomExp_to_constant_tail (nth_nat (Suc 0) n))"
+
+lemma subtail_aexp_max_constant:
+"aexp_max_constant_tail n = aexp_max_constant_nat n"
+  using aexp_max_constant_nat.simps aexp_max_constant_tail.simps 
+atomExp_to_constant_tail_def by presburger
+
 
 lemma sub_aexp_max_constant:"aexp_max_constant_nat (aexp_encode x) = aexp_max_constant x"
   apply (cases x)
@@ -52,7 +70,18 @@ declare nth_nat.simps [simp]
 
 lemma [simp]: "fst_nat 0 =0" 
   by (simp add: fst_nat_def fst_def prod_decode_aux.simps prod_decode_def)
-    
+
+datatype max_con = Bot nat|
+                   SKIP |
+                   Assign vname aexp|
+      
+fun max_constant :: "com \<Rightarrow> nat" where
+"max_constant (SKIP) = 0" |
+"max_constant (Assign vname aexp) = aexp_max_constant aexp" |
+"max_constant (Seq c1  c2) = max (max_constant c1) (max_constant c2)" |         
+"max_constant (If  _ c1 c2) = max (max_constant c1) (max_constant c2)"  |   
+"max_constant (While _ c) = max_constant c"
+
 lemma sub_max_constant:"max_constant_nat (com_encode c) = max_constant c"
   apply (subst max_constant_nat.simps)
   apply (induction c)

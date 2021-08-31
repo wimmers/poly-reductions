@@ -13,6 +13,10 @@ definition max_input_bits_nat :: "nat \<Rightarrow> nat \<Rightarrow> nat\<Right
 "max_input_bits_nat c I r =
 bit_length (max (max (max_list_nat (ran_nat I)) r) (max_constant_nat c))"
 
+definition max_input_bits_tail :: "nat \<Rightarrow> nat \<Rightarrow> nat\<Rightarrow> nat" where 
+"max_input_bits_tail c I r =
+bit_length (max (max (max_list_tail (ran_tail I)) r) (max_constant_nat c))"
+
 lemma impm_assignment_simp:"impm_assignment_encode = prod_encode o (\<lambda>(a,b). (vname_encode a,b))"
   apply auto
   done

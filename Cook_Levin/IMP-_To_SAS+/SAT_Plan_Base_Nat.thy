@@ -265,13 +265,19 @@ fun map_encode_operator_precondition :: "nat \<Rightarrow> nat \<Rightarrow> nat
 )"
 
 fun map_encode_operator_precondition_acc :: "nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat" where
-"map_encode_operator_precondition_acc acc t ops op vs xs = (if xs = 0 then 0 else 
+"map_encode_operator_precondition_acc acc t ops op vs xs = (if xs = 0 then acc else map_encode_operator_precondition_acc (
 ( 4 ##(2 ## (1## (1 ## t ##(index_nat ops op) ## 0)##0) ## 0 )##  (1##(0 ## t ##(index_nat vs (hd_nat xs)) ## 0)##0) ## 0)
-## map_encode_operator_precondition t ops op vs (tl_nat xs)
+## acc )t ops op vs (tl_nat xs)
 )"
 
 lemma map_encode_operator_precondition_induct:
-"map_encode_operator_precondition_acc acc t ops op vs xs = map_acc "
+"map_encode_operator_precondition_acc acc t ops op vs xs = map_acc (\<lambda>v.
+        4 ##(2 ## (1## (1 ## t ##(index_nat ops op) ## 0)##0) ## 0 )##  (1##(0 ## t ##(index_nat vs v) ## 0)##0) ## 0)
+ acc xs
+   "
+  apply(induct acc t ops op vs xs rule:map_encode_operator_precondition_acc.induct)
+  apply (auto) done
+
 
 lemma submap_encode_operator_precondition:
 "map_encode_operator_precondition t ops op vs xs = 
@@ -281,6 +287,14 @@ map_nat (\<lambda>v.
   apply (induct t ops op vs xs rule:map_encode_operator_precondition.induct)
   apply auto
   done
+
+definition map_encode_operator_precondition_tail :: "nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat" where
+" map_encode_operator_precondition_tail t ops op vs xs = reverse_nat ( map_encode_operator_precondition_acc 0 t ops op vs xs)  "
+
+lemma subtail_map_encode_operator_precondition:
+" map_encode_operator_precondition_tail t ops op vs xs =  map_encode_operator_precondition t ops op vs xs"
+  using  map_encode_operator_precondition_tail_def  submap_encode_operator_precondition
+ map_encode_operator_precondition_induct subtail_map by presburger
 
 definition encode_operator_precondition_nat
   :: "nat
@@ -301,8 +315,13 @@ definition encode_operator_precondition_tail
   where "encode_operator_precondition_tail \<Pi> t op \<equiv> let
       vs = nth_nat 0 \<Pi>
       ; ops = nth_nat (Suc 0) \<Pi>
-    in BigAnd_nat (map_encode_operator_precondition t ops op vs
+    in BigAnd_tail (map_encode_operator_precondition_tail t ops op vs
       (nth_nat 0 op))"
+
+lemma subtail_encode_operator_precondition:
+"encode_operator_precondition_tail p t op = encode_operator_precondition_nat p t op"
+  using encode_operator_precondition_nat_def encode_operator_precondition_tail_def subtail_BigAnd 
+subtail_map_encode_operator_precondition by presburger
 
 lemma inj_strips_op: "inj strips_operator_encode"
   using strips_operator_id 
@@ -349,7 +368,8 @@ definition  encode_all_operator_preconditions_list
 lemma sublist_encode_all_operator_preconditions:
 "encode_all_operator_preconditions_list \<Pi> ops t = 
 encode_all_operator_preconditions (strips_list_problem_to_problem \<Pi>) ops t"
-  apply (auto simp only:encode_all_operator_preconditions_list_def encode_all_operator_preconditions_def
+  apply (auto simp only:encode_all_operator_preconditions_list_def 
+encode_all_operator_preconditions_def
         sublist_encode_operator_precondition sub_foldr
 )
   done
@@ -368,6 +388,24 @@ lemma submaps_encode_operator_precondition :
   apply auto
   done
 
+fun maps_encode_operator_precondition_acc :: "nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat" where 
+"maps_encode_operator_precondition_acc P acc xs = (if xs = 0 then acc else maps_encode_operator_precondition_acc  P   
+ ((encode_operator_precondition_tail P  (fst_nat (hd_nat xs)) (snd_nat (hd_nat xs))) ## acc ) (tl_nat xs)
+)"
+
+lemma  maps_encode_operator_precondition_induct:
+"maps_encode_operator_precondition_acc P acc xs = map_acc (\<lambda>n. encode_operator_precondition_nat P (fst_nat n) (snd_nat n )) acc xs "
+  apply(induct P acc xs rule:maps_encode_operator_precondition_acc.induct)
+  apply (auto simp add: subtail_encode_operator_precondition)
+  done
+
+definition maps_encode_operator_precondition_tail :: "nat \<Rightarrow> nat \<Rightarrow> nat" where 
+"maps_encode_operator_precondition_tail P  xs = reverse_nat (maps_encode_operator_precondition_acc P 0 xs)"
+
+lemma subtail_maps_encode_operator_precondition:
+"maps_encode_operator_precondition_tail P  xs = maps_encode_operator_precondition P xs"
+  using maps_encode_operator_precondition_induct maps_encode_operator_precondition_tail_def
+ submaps_encode_operator_precondition subtail_map by presburger
 
 definition  encode_all_operator_preconditions_nat
   :: "nat
@@ -377,6 +415,22 @@ definition  encode_all_operator_preconditions_nat
   where "encode_all_operator_preconditions_nat \<Pi> ops t \<equiv> let
       l = product_nat (list_less_nat t) ops
     in BigAnd_nat (maps_encode_operator_precondition \<Pi>  l)"
+
+definition  encode_all_operator_preconditions_tail
+  :: "nat
+    \<Rightarrow> nat
+    \<Rightarrow> nat
+    \<Rightarrow> nat"
+  where "encode_all_operator_preconditions_tail \<Pi> ops t \<equiv> let
+      l = product_tail (list_less_tail t) ops
+    in BigAnd_tail (maps_encode_operator_precondition_tail \<Pi>  l)"
+
+lemma subtail_encode_all_operator_preconditions:
+"encode_all_operator_preconditions_tail \<Pi> ops t = encode_all_operator_preconditions_nat \<Pi> ops t"
+  using encode_all_operator_preconditions_nat_def encode_all_operator_preconditions_tail_def
+ subtail_BigAnd subtail_list_less subtail_maps_encode_operator_precondition
+ subtail_product by presburger
+
 lemma case_prod_simp:"(\<lambda>x. case x of (a,b) \<Rightarrow> f a b) = (\<lambda>(x,y). f x y)"
   by simp
 
@@ -430,6 +484,20 @@ fun map_encode_operator_effect::"nat \<Rightarrow> nat \<Rightarrow> nat \<Right
 ## map_encode_operator_effect t ops op vs (tl_nat n) 
 )"
 
+fun map_encode_operator_effect_acc::"nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat" where 
+"map_encode_operator_effect_acc acc t ops op vs n = (if n =0 then acc else map_encode_operator_effect_acc( 
+( 4 ## (2 ## (1 ## (1 ##  t ## (index_nat ops op)## 0) ## 0) ## 0)
+              ## (1 ## (0 ## (Suc t) ## (index_nat vs (hd_nat n))## 0) ## 0) ## 0)
+## acc) t ops op vs (tl_nat n) 
+)"
+lemma map_encode_operator_effect_induct:
+"map_encode_operator_effect_acc acc t ops op vs n =  map_acc (\<lambda>v.
+             4 ## (2 ## (1 ## (1 ##  t ## (index_nat ops op)## 0) ## 0) ## 0)
+              ## (1 ## (0 ## (Suc t) ## (index_nat vs v)## 0) ## 0) ## 0)  acc n"
+  apply(induct acc t ops op vs n rule: map_encode_operator_effect_acc.induct)
+  apply   auto
+  done
+
 lemma submap_encode_operator_effect:
 "map_encode_operator_effect t ops op vs n = map_nat (\<lambda>v.
              4 ## (2 ## (1 ## (1 ##  t ## (index_nat ops op)## 0) ## 0) ## 0)
@@ -437,6 +505,14 @@ lemma submap_encode_operator_effect:
   apply( induct t ops op vs n rule :map_encode_operator_effect.induct)
   apply (auto)
   done
+
+definition map_encode_operator_effect_tail ::"nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat" where 
+" map_encode_operator_effect_tail t ops op vs n = reverse_nat (map_encode_operator_effect_acc 0 t ops op vs n)"
+
+lemma subtail_map_encode_operator_effect :
+"map_encode_operator_effect_tail t ops op vs n = map_encode_operator_effect t ops op vs n"
+  using  map_encode_operator_effect_tail_def submap_encode_operator_effect 
+ map_encode_operator_effect_induct subtail_map by presburger
 
 fun map_encode_operator_effect2 :: "nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat" where 
 "map_encode_operator_effect2 t ops op vs n = (if n=0 then 0 else 
@@ -452,6 +528,33 @@ lemma submap_encode_operator_effect2:
   apply (auto)
   done
 
+
+fun map_encode_operator_effect2_acc :: "nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat" where 
+"map_encode_operator_effect2_acc acc t ops op vs n = (if n=0 then acc else
+ map_encode_operator_effect2_acc (
+( 4 ## (2 ## (1 ## (1 ##  t ## (index_nat ops op)## 0) ## 0) ## 0)
+              ## (2 ## (1 ## (0 ## (Suc t) ## (index_nat vs (hd_nat n)) ## 0) ## 0) ## 0) ## 0)
+## acc) t ops op vs (tl_nat n) 
+)"
+
+lemma map_encode_operator_effect2_induct:
+"map_encode_operator_effect2_acc acc t ops op vs n = map_acc (\<lambda>v.
+             4 ## (2 ## (1 ## (1 ##  t ## (index_nat ops op)## 0) ## 0) ## 0)
+              ## (2 ## (1 ## (0 ## (Suc t) ## (index_nat vs v) ## 0) ## 0) ## 0) ## 0)  acc n "
+  apply(induct acc t ops op vs n rule: map_encode_operator_effect2_acc.induct)
+  apply auto
+  done
+
+definition  map_encode_operator_effect2_tail :: "nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat" where 
+" map_encode_operator_effect2_tail  t ops op vs n = 
+reverse_nat (map_encode_operator_effect2_acc 0 t ops op vs n)"
+
+lemma subtail_map_encode_operator_effect2:
+"map_encode_operator_effect2_tail t ops op vs n  = map_encode_operator_effect2 t ops op vs n "
+  using  map_encode_operator_effect2_tail_def map_encode_operator_effect2_induct 
+ submap_encode_operator_effect2 subtail_map by presburger
+
+
 definition  encode_operator_effect_nat
   :: "nat
     \<Rightarrow> nat
@@ -465,6 +568,25 @@ definition  encode_operator_effect_nat
             (nth_nat (Suc 0) op))
           (map_encode_operator_effect2 t ops op vs
             (nth_nat (Suc (Suc 0)) op)))"
+
+definition  encode_operator_effect_tail
+  :: "nat
+    \<Rightarrow> nat
+    \<Rightarrow> nat
+    \<Rightarrow> nat"
+  where "encode_operator_effect_tail \<Pi> t op
+    \<equiv> let
+        vs = nth_nat 0 \<Pi>
+        ; ops = nth_nat (Suc 0) \<Pi>
+      in BigAnd_tail( append_tail  (map_encode_operator_effect_tail t ops op vs
+            (nth_nat (Suc 0) op))
+          (map_encode_operator_effect2_tail t ops op vs
+            (nth_nat (Suc (Suc 0)) op)))"
+
+lemma subtail_encode_operator_effect:
+"encode_operator_effect_tail P t op = encode_operator_effect_nat P t op"
+  using encode_operator_effect_nat_def encode_operator_effect_tail_def subtail_BigAnd subtail_append
+ subtail_map_encode_operator_effect subtail_map_encode_operator_effect2 by presburger
 
 lemma subnat_encode_operator_effect:
 "encode_operator_effect_nat (strips_list_problem_encode P) t (strips_operator_encode op) = 
@@ -511,12 +633,36 @@ fun map_encode_all_operator_effects :: "nat \<Rightarrow> nat \<Rightarrow> nat"
 else (encode_operator_effect_nat P (fst_nat (hd_nat xs)) (snd_nat (hd_nat xs))) ##
 map_encode_all_operator_effects P (tl_nat xs)
  )"
+
+fun map_encode_all_operator_effects_acc :: "nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat" where 
+"map_encode_all_operator_effects_acc acc P xs = (if xs = 0 then acc 
+else map_encode_all_operator_effects_acc( (encode_operator_effect_tail P (fst_nat (hd_nat xs)) (snd_nat (hd_nat xs))) ##
+acc) P (tl_nat xs)
+ )"
+
+lemma map_encode_all_operator_effects_induct:
+"map_encode_all_operator_effects_acc acc P xs  = map_acc
+ (\<lambda>n. encode_operator_effect_nat P (fst_nat n) (snd_nat n)) acc xs "
+  apply(induct acc P xs rule:map_encode_all_operator_effects_acc.induct)
+  apply (auto simp add:subtail_encode_operator_effect)
+  done
+
+definition  map_encode_all_operator_effects_tail:: "nat => nat => nat" where
+" map_encode_all_operator_effects_tail P xs = reverse_nat ( map_encode_all_operator_effects_acc 0 P xs)"
+
 lemma submap_encode_all_operator_effects:
 "map_encode_all_operator_effects P xs =
 map_nat (\<lambda>n. encode_operator_effect_nat P (fst_nat n) (snd_nat n)) xs "
   apply (induct P xs rule:map_encode_all_operator_effects.induct)
   apply auto
   done
+
+lemma subtail_map_encode_all_operator_effects:
+" map_encode_all_operator_effects_tail P xs =  map_encode_all_operator_effects P xs"
+  using   map_encode_all_operator_effects_tail_def   map_encode_all_operator_effects_induct 
+submap_encode_all_operator_effects subtail_map
+  by presburger
+
 
 definition encode_all_operator_effects_nat
   :: "nat
@@ -526,6 +672,20 @@ definition encode_all_operator_effects_nat
   where "encode_all_operator_effects_nat P ops t
     \<equiv> let l = product_nat (list_less_nat t) ops
       in BigAnd_nat (map_encode_all_operator_effects P l)"
+
+definition encode_all_operator_effects_tail
+  :: "nat
+    \<Rightarrow> nat
+    \<Rightarrow> nat
+    \<Rightarrow> nat"
+  where "encode_all_operator_effects_tail P ops t
+    \<equiv> let l = product_tail (list_less_tail t) ops
+      in BigAnd_tail(map_encode_all_operator_effects_tail P l)"
+
+lemma subtail_encode_all_operator_effects:
+"encode_all_operator_effects_tail P ops t = encode_all_operator_effects_nat P ops t"
+  using encode_all_operator_effects_nat_def encode_all_operator_effects_tail_def subtail_BigAnd
+ subtail_list_less subtail_map_encode_all_operator_effects subtail_product by presburger
 
 lemma subnat_encode_all_operator_effects:
 "encode_all_operator_effects_nat (strips_list_problem_encode P) (strips_operator_list_encode ops) t
@@ -565,6 +725,18 @@ definition encode_operators_nat
   where "encode_operators_nat \<Pi> t
     \<equiv> let ops = nth_nat (Suc 0) \<Pi>
       in 3 ## (encode_all_operator_preconditions_nat \<Pi> ops t) ## (encode_all_operator_effects_nat \<Pi> ops t) ## 0"
+
+definition encode_operators_tail
+  :: "nat \<Rightarrow> nat \<Rightarrow> nat"
+  where "encode_operators_tail \<Pi> t
+    \<equiv> let ops = nth_nat (Suc 0) \<Pi>
+      in 3 ## (encode_all_operator_preconditions_tail \<Pi> ops t) ##
+ (encode_all_operator_effects_tail \<Pi> ops t) ## 0"
+
+lemma subtail_encode_operators:
+"encode_operators_tail \<Pi> t = encode_operators_nat \<Pi> t"
+  by (simp add: encode_operators_nat_def encode_operators_tail_def 
+subtail_encode_all_operator_effects subtail_encode_all_operator_preconditions)
 
 lemma subnat_encode_operators:
 "encode_operators_nat (strips_list_problem_encode P) t =
@@ -609,16 +781,58 @@ lemma subfilter_del_effects:
   apply auto
   done
 
+fun filter_del_effects_acc :: "nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat" where 
+"filter_del_effects_acc acc v ops = (if ops = 0 then acc else if 
+elemof v (nth_nat (Suc (Suc 0)) (hd_nat ops)) \<noteq> 0 then 
+filter_del_effects_acc ((hd_nat ops) ## acc) v (tl_nat ops) else  filter_del_effects_acc
+ acc v (tl_nat ops) )"
+
+lemma filter_del_effects_induct :
+"filter_del_effects_acc acc v ops = filter_acc 
+(\<lambda>op. elemof v (nth_nat (Suc (Suc 0)) op) \<noteq> 0) acc ops "
+  apply(induct acc v ops rule:filter_del_effects_acc.induct)
+  apply auto
+  done
+
+definition filter_del_effects_tail :: "nat \<Rightarrow> nat \<Rightarrow> nat" where 
+"filter_del_effects_tail v ops = reverse_nat (filter_del_effects_acc 0 v ops ) "
+
+lemma subtail_filter_del_effects:
+"filter_del_effects_tail v ops = filter_del_effects v ops "
+  using filter_del_effects_induct filter_del_effects_tail_def
+ subfilter_del_effects subtail_filter by presburger
+   
 fun map_transition :: "nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat" where 
 "map_transition t ops xs = (if xs =0 then 0 else 
 (1 ## (1 ## t  ## (index_nat ops (hd_nat xs)) ## 0) ## 0) ## map_transition t ops (tl_nat xs)
   )"
+
+fun map_transition_acc :: "nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat" where 
+"map_transition_acc acc t ops xs = (if xs =0 then acc else map_transition_acc (
+(1 ## (1 ## t  ## (index_nat ops (hd_nat xs)) ## 0) ## 0) ## acc) t ops (tl_nat xs)
+  )"
+
+lemma map_transition_induct:
+"map_transition_acc acc t ops xs = map_acc 
+(\<lambda>op. 1 ## (1 ## t  ## (index_nat ops op) ## 0) ## 0) acc xs "
+  apply(induct acc t ops xs rule:map_transition_acc.induct)
+  apply auto
+  done
 
 lemma submap_transition:
 "map_transition t ops xs = map_nat (\<lambda>op. 1 ## (1 ## t  ## (index_nat ops op) ## 0) ## 0) xs"
   apply( induct t ops xs rule:map_transition.induct)
   apply auto
   done
+
+definition map_transition_tail :: "nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat"
+  where 
+"map_transition_tail t ops xs = reverse_nat (map_transition_acc 0 t ops xs)"
+
+lemma subtail_map_transition:
+"map_transition_tail t ops xs  = map_transition t ops xs "
+  using map_transition_induct map_transition_tail_def
+ submap_transition subtail_map by presburger
 
 definition  encode_negative_transition_frame_axiom_nat
   :: "nat
@@ -633,6 +847,25 @@ definition  encode_negative_transition_frame_axiom_nat
           (4 ## (1 ## (0 ## (Suc t) ## (index_nat vs v) ## 0) ## 0 )
           ## (BigOr_nat (map_transition t ops deleting_operators)) ## 0) ## 0"
 
+definition  encode_negative_transition_frame_axiom_tail
+  :: "nat
+    \<Rightarrow> nat
+    \<Rightarrow>nat
+    \<Rightarrow> nat"
+  where "encode_negative_transition_frame_axiom_tail \<Pi> t v
+    \<equiv> let vs = nth_nat 0 \<Pi>
+        ; ops = nth_nat (Suc 0) \<Pi>
+        ; deleting_operators = filter_del_effects_tail v ops
+     in   4 ## ( 2 ##(1 ## (0 ## t ## (index_nat vs v) ## 0) ## 0 ) ## 0) ##
+          (4 ## (1 ## (0 ## (Suc t) ## (index_nat vs v) ## 0) ## 0 )
+          ## (BigOr_tail (map_transition_tail t ops deleting_operators)) ## 0) ## 0
+"
+lemma subtail_encode_negative_transition_frame_axiom:
+"encode_negative_transition_frame_axiom_tail P t v = encode_negative_transition_frame_axiom_nat P t v"
+  using encode_negative_transition_frame_axiom_nat_def
+ encode_negative_transition_frame_axiom_tail_def subtail_BigOr
+ subtail_filter_del_effects subtail_map_transition by presburger
+  
 lemma subnat_encode_negative_transition_frame_axiom:
 "encode_negative_transition_frame_axiom_nat (strips_list_problem_encode P) t (sas_plus_assignment_encode v) 
 = sat_formula_encode (encode_negative_transition_frame_axiom_list P t v)"
@@ -682,11 +915,30 @@ fun filter_add_effects :: "nat \<Rightarrow> nat \<Rightarrow> nat" where
 elemof v (nth_nat (Suc 0) (hd_nat ops)) \<noteq> 0 then 
 (hd_nat ops) ## filter_add_effects v (tl_nat ops) else  filter_add_effects v (tl_nat ops) )"
 
+fun filter_add_effects_acc :: "nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat" where 
+"filter_add_effects_acc acc v ops = (if ops = 0 then acc else if  
+elemof v (nth_nat (Suc 0) (hd_nat ops)) \<noteq> 0 then  filter_add_effects_acc (
+(hd_nat ops) ## acc) v (tl_nat ops) else  filter_add_effects_acc acc v (tl_nat ops) )"
+
+lemma filter_add_effects_induct: 
+"filter_add_effects_acc acc v ops = filter_acc  (\<lambda>op. elemof v (nth_nat (Suc 0) op) \<noteq> 0) acc ops  "
+  apply(induct acc v ops rule:filter_add_effects_acc.induct)
+  apply auto
+  done
+
 lemma subfilter_add_effects:
 "filter_add_effects v ops = filter_nat (\<lambda>op. elemof v (nth_nat (Suc 0) op) \<noteq> 0) ops "
   apply(induct v ops rule:filter_add_effects.induct)
   apply auto
   done
+
+definition filter_add_effects_tail :: "nat \<Rightarrow> nat \<Rightarrow> nat" where 
+"filter_add_effects_tail v ops  = reverse_nat (filter_add_effects_acc 0 v ops)"
+
+lemma subtail_filter_add_effects:
+"filter_add_effects_tail v ops = filter_add_effects v ops"
+  using filter_add_effects_induct filter_add_effects_tail_def 
+subfilter_add_effects subtail_filter by presburger
 
 definition  encode_positive_transition_frame_axiom_nat
   :: "nat
@@ -700,6 +952,26 @@ definition  encode_positive_transition_frame_axiom_nat
       in  4 ## (1 ## (0 ## t ## (index_nat vs v) ## 0) ## 0 ) ##
           (4 ## (2 ## (1 ## (0 ## (Suc t) ## (index_nat vs v) ## 0) ## 0 ) ## 0)
           ## (BigOr_nat (map_transition t ops adding_operators)) ## 0) ## 0"
+
+definition  encode_positive_transition_frame_axiom_tail
+  :: "nat
+    \<Rightarrow> nat
+    \<Rightarrow> nat
+    \<Rightarrow> nat"
+  where "encode_positive_transition_frame_axiom_tail \<Pi> t v
+    \<equiv> let vs = nth_nat 0 \<Pi>
+        ; ops = nth_nat (Suc 0) \<Pi>
+        ; adding_operators = filter_add_effects_tail v ops
+      in  4 ## (1 ## (0 ## t ## (index_nat vs v) ## 0) ## 0 ) ##
+          (4 ## (2 ## (1 ## (0 ## (Suc t) ## (index_nat vs v) ## 0) ## 0 ) ## 0)
+          ## (BigOr_tail (map_transition_tail t ops adding_operators)) ## 0) ## 0"
+
+lemma subtail_encode_positive_transition_frame_axiom:
+"encode_positive_transition_frame_axiom_tail P t v = encode_positive_transition_frame_axiom_nat P t v"
+  using encode_positive_transition_frame_axiom_nat_def
+ encode_positive_transition_frame_axiom_tail_def subtail_BigOr
+ subtail_filter_add_effects subtail_map_transition by presburger
+
 
 lemma subnat_encode_positive_transition_frame_axiom:
 "encode_positive_transition_frame_axiom_nat (strips_list_problem_encode P) t (sas_plus_assignment_encode v) 
@@ -755,6 +1027,27 @@ lemma submap_encode_negative:
   apply auto
   done
 
+fun map_encode_negative_acc ::"nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat" where 
+"map_encode_negative_acc acc P xs = (if xs = 0 then acc else  map_encode_negative_acc (
+( encode_negative_transition_frame_axiom_tail P (fst_nat (hd_nat xs)) (snd_nat (hd_nat xs)))##
+acc) P (tl_nat xs)
+)"
+
+lemma  map_encode_negative_induct : 
+"map_encode_negative_acc acc P xs = map_acc (\<lambda>n. encode_negative_transition_frame_axiom_nat P (fst_nat n) (snd_nat n)) acc  xs "
+  apply(induct acc P xs rule:map_encode_negative_acc.induct)
+  apply (auto simp add:subtail_encode_negative_transition_frame_axiom)
+  done
+
+
+definition map_encode_negative_tail :: "nat \<Rightarrow> nat \<Rightarrow> nat" where
+"map_encode_negative_tail P xs = reverse_nat ( map_encode_negative_acc 0 P xs)"
+
+lemma subtail_map_encode_negative:
+"map_encode_negative_tail P xs = map_encode_negative P xs"
+  using map_encode_negative_induct map_encode_negative_tail_def
+ submap_encode_negative subtail_map by presburger
+
 fun map_encode_positive ::"nat \<Rightarrow> nat \<Rightarrow> nat" where 
 "map_encode_positive P xs = (if xs = 0 then 0 else 
 ( encode_positive_transition_frame_axiom_nat P (fst_nat (hd_nat xs)) (snd_nat (hd_nat xs)))##
@@ -767,6 +1060,26 @@ lemma submap_encode_positive:
   apply auto
   done
 
+fun map_encode_positive_acc ::"nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat" where 
+"map_encode_positive_acc acc P xs = (if xs = 0 then acc else  map_encode_positive_acc (
+( encode_positive_transition_frame_axiom_tail P (fst_nat (hd_nat xs)) (snd_nat (hd_nat xs)))##
+acc) P (tl_nat xs)
+)"
+
+lemma  map_encode_positive_induct : 
+"map_encode_positive_acc acc P xs = map_acc (\<lambda>n. encode_positive_transition_frame_axiom_nat P (fst_nat n) (snd_nat n)) acc  xs "
+  apply(induct acc P xs rule:map_encode_positive_acc.induct)
+  apply (auto simp add:subtail_encode_positive_transition_frame_axiom)
+  done
+
+
+definition map_encode_positive_tail :: "nat \<Rightarrow> nat \<Rightarrow> nat" where
+"map_encode_positive_tail P xs = reverse_nat ( map_encode_positive_acc 0 P xs)"
+
+lemma subtail_map_encode_positive:
+"map_encode_positive_tail P xs = map_encode_positive P xs"
+  using map_encode_positive_induct map_encode_positive_tail_def
+ submap_encode_positive subtail_map by presburger
 
 
 definition encode_all_frame_axioms_nat
@@ -775,6 +1088,20 @@ definition encode_all_frame_axioms_nat
     \<equiv> let l = product_nat (list_less_nat t) (nth_nat 0 \<Pi>)
       in BigAnd_nat ( append_nat (map_encode_negative \<Pi> l)
             (map_encode_positive \<Pi> l))"
+
+definition encode_all_frame_axioms_tail
+  :: "nat \<Rightarrow> nat \<Rightarrow> nat"
+  where "encode_all_frame_axioms_tail \<Pi> t
+    \<equiv> let l = product_tail (list_less_tail t) (nth_nat 0 \<Pi>)
+      in BigAnd_tail ( append_tail (map_encode_negative_tail \<Pi> l)
+            (map_encode_positive_tail \<Pi> l))"
+
+lemma subtail_encode_all_frame_axioms:
+"encode_all_frame_axioms_tail \<Pi> t = encode_all_frame_axioms_nat \<Pi> t"
+  using encode_all_frame_axioms_nat_def encode_all_frame_axioms_tail_def
+ subtail_BigAnd subtail_append subtail_list_less subtail_map_encode_negative 
+subtail_map_encode_positive subtail_product by presburger
+
 thm "prod.case_eq_if"
 lemma subnat_encode_all_frame_axioms:
 "encode_all_frame_axioms_nat (strips_list_problem_encode P) t =
@@ -817,6 +1144,18 @@ definition  encode_problem_nat:: "nat \<Rightarrow> nat \<Rightarrow> nat"
       ( 3 ## (encode_operators_nat \<Pi> t)
         ## (3 ##(encode_all_frame_axioms_nat \<Pi> t)
      ## (encode_goal_state_nat \<Pi> t) ## 0) ## 0) ## 0"
+
+definition  encode_problem_tail:: "nat \<Rightarrow> nat \<Rightarrow> nat"
+  where "encode_problem_tail \<Pi> t
+    \<equiv> 3 ## (encode_initial_state_tail \<Pi>) ## 
+      ( 3 ## (encode_operators_tail \<Pi> t)
+        ## (3 ##(encode_all_frame_axioms_tail \<Pi> t)
+     ## (encode_goal_state_tail \<Pi> t) ## 0) ## 0) ## 0"
+
+lemma subtail_encode_problem:
+"encode_problem_tail \<Pi> t = encode_problem_nat \<Pi> t"
+  by (simp add: encode_problem_nat_def encode_problem_tail_def subtail_encode_all_frame_axioms 
+subtail_encode_goal_state subtail_encode_initial_state subtail_encode_operators)
 
 lemma subnat_encode_problem:
 "encode_problem_nat (strips_list_problem_encode P) t

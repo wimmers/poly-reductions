@@ -1433,6 +1433,9 @@ fun max_list :: "nat list \<Rightarrow> nat" where
 fun max_list_nat :: "nat \<Rightarrow> nat" where 
 "max_list_nat xs = (if xs = 0 then 0 else max (hd_nat xs) (max_list_nat (tl_nat xs)))"
 
+fun max_list_acc :: "nat \<Rightarrow> nat \<Rightarrow> nat" where 
+"max_list_acc acc xs = (if xs = 0 then acc else max_list_acc (max (hd_nat xs) acc) (tl_nat xs))"
+
 lemma sub_max_list_nat: "max_list_nat (list_encode xs) = max_list xs"
   apply (induct xs)
   apply simp
@@ -1440,6 +1443,29 @@ lemma sub_max_list_nat: "max_list_nat (list_encode xs) = max_list xs"
   apply (auto simp only: sub_tl tail.simps sub_hd head.simps)
   apply auto
   done
+
+lemma max_list_acc_correct:
+"max_list_acc acc xs = max (max_list_nat xs) acc"
+proof -
+  obtain xs' where "xs = list_encode xs'"
+    by (metis list_decode_inverse)
+  thus ?thesis apply(auto simp only:sub_max_list_nat )
+    apply(induct xs' arbitrary: xs acc)
+     apply simp
+    apply(subst max_list_acc.simps)
+    apply (auto simp only: sub_tl tail.simps sub_hd head.simps)
+    apply auto
+    done
+qed
+
+definition max_list_tail :: "nat \<Rightarrow>  nat" where 
+"max_list_tail xs = max_list_acc 0 xs "
+
+lemma subtail_max_list: 
+"max_list_tail xs =  max_list_nat xs"
+  using max_list_acc_correct max_list_tail_def by presburger
+  
+
 
 lemma sub_max_list: "xs \<noteq> [] \<Longrightarrow> max_list xs = Max (set xs)"
   apply (cases xs)
@@ -1455,6 +1481,13 @@ lemma sub_max_list: "xs \<noteq> [] \<Longrightarrow> max_list xs = Max (set xs)
 fun del :: "('a,'b) assignment list \<Rightarrow> 'a \<Rightarrow>  ('a,'b) assignment list" where 
 "del [] _ = []"|
 "del ((x,y)#xs) a = (if x = a then del xs a else (x,y)# del xs a)"
+
+lemma del_filter:
+"del xs a = filter(\<lambda>x. fst x \<noteq> a) xs"
+  apply(induct xs)
+   apply auto
+  done
+
 
 fun del_nat :: "nat \<Rightarrow> nat \<Rightarrow> nat" where 
 "del_nat xs a = (if xs =0 then 0 else if fst_nat (hd_nat xs) = a then del_nat (tl_nat xs) a else cons
@@ -1492,6 +1525,7 @@ lemma del_shorter : "length (del xs a) \<le> length xs"
   apply (induct xs)
    apply auto
   done
+
 function nub_nat :: "nat \<Rightarrow> nat" where 
 "nub_nat xs = (if xs = 0 then 0 else (hd_nat xs) ## nub_nat (del_nat xs (fst_nat (hd_nat xs))))"
   by pat_completeness auto
@@ -1524,6 +1558,7 @@ lemma sub_nub: "nub_nat (list_encode( map prod_encode xs)) = list_encode (map pr
   apply (auto simp add: sub_fst list_encode_eq sub_cons  simp del:nub_nat.simps list_encode.simps(2) simp flip: list_encode.simps(1))
   done
 
+
 lemma del_includes: "set (del xs x) \<subseteq> set xs"
   apply (induct xs)
    apply (auto split:if_splits)
@@ -1552,11 +1587,21 @@ lemma map_of_nub:"map_of (nub xs)  = map_of xs "
 definition ran_list :: "('a,'b) assignment list \<Rightarrow> 'b list" where 
 "ran_list xs = map snd (nub xs)"
 
+fun map_snd  :: "nat \<Rightarrow> nat " where 
+"map_snd xs = (if xs = 0 then 0 else (snd_nat (hd_nat xs)) ## map_snd (tl_nat xs))"
+
+lemma submap_snd:
+"map_snd xs = map_nat snd_nat xs"
+  apply(induct xs rule:map_snd.induct)
+  apply auto
+  done
+
 definition ran_nat :: "nat \<Rightarrow> nat" where 
-"ran_nat xs = map_nat snd_nat (nub_nat xs)"
+"ran_nat xs = map_snd (nub_nat xs)"
 
 lemma sub_ran_nat : "ran_nat (list_encode (map prod_encode  xs)) = list_encode (ran_list xs) "
-  apply (auto simp only: ran_nat_def ran_list_def sub_nub sub_map map_map comp_def sub_snd)
+  apply (auto simp only: ran_nat_def ran_list_def submap_snd
+ sub_nub sub_map map_map comp_def sub_snd)
   done
 
 lemma sub_ran_list_helper : "distinct (map fst xs) \<Longrightarrow> 
@@ -1949,6 +1994,9 @@ lemma strips_simp:"strips_assignment_encode = prod_encode o (\<lambda>(s,b). (sa
 fun map_pair :: "nat \<Rightarrow> nat \<Rightarrow> nat" where 
 "map_pair x xs = (if xs = 0 then 0 else (prod_encode (x,hd_nat xs)) ## map_pair x (tl_nat xs))"
 
+fun map_pair_acc :: "nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat" where 
+"map_pair_acc acc x xs = (if xs = 0 then acc else map_pair_acc ((prod_encode (x,hd_nat xs)) ## acc) x (tl_nat xs))"
+
 lemma submap_pair:
 "map_pair (f x) (list_encode (map g xs)) = list_encode ( map (\<lambda>(x,y). prod_encode (f x, g y)) (map (Pair x) xs)) "
   apply (induct xs)
@@ -1959,8 +2007,22 @@ list_encode_eq simp del: map_pair.simps
 simp flip: list_encode.simps 
 )
   done
+
+lemma submap_pair_gen: 
+"map_pair x (list_encode xs) = list_encode  (map (prod_encode o Pair x) xs) "
+  using submap_pair[of id x id xs] apply auto
+  done 
+
+lemma submap_pair_mappair:
+"map_pair x xs = map_nat (prod_encode o Pair x) xs"
+using submap_pair_gen sub_map 
+  by (metis list_decode_inverse)
+
+
+
 fun product_nat :: "nat \<Rightarrow> nat \<Rightarrow> nat" where 
 "product_nat xs ys = (if xs = 0 then 0 else append_nat (map_pair (hd_nat xs) ys) (product_nat (tl_nat xs) ys))"
+
 
 lemma sub_product:
 "product_nat (list_encode (map f xs)) (list_encode (map g ys)) 
@@ -1972,6 +2034,12 @@ lemma sub_product:
 sub_hd head.simps)
   apply (auto simp add: list_encode_eq)
   done
+
+lemma sub_product_id:
+"product_nat (list_encode xs) (list_encode ys) 
+= list_encode (map prod_encode (List.product xs ys))"
+  using sub_product[of id xs id ys] by simp
+
 lemma sub_elem_of_inj: "inj f \<Longrightarrow> (elemof (f e) (list_encode (map f l)) \<noteq> 0) = (e \<in> set l)"
   apply (induct l)
    apply simp
@@ -2049,5 +2117,143 @@ lemma subtail_filter:
   using filter_induct[of f 0 xs] 
   by (metis append_nat.simps(1) filter_nat.simps rev_rev_nat reverse_nat_0)
 
+lemma map_pair_induct :
+"map_pair_acc acc x xs = map_acc (prod_encode o Pair x) acc xs"
+  apply(induct acc x xs rule:map_pair_acc.induct)
+  apply auto
+  done
+
+definition map_pair_tail :: "nat \<Rightarrow> nat \<Rightarrow> nat" where 
+"map_pair_tail x xs = reverse_nat (map_pair_acc 0 x xs)"
+
+lemma subtail_map_pair:
+"map_pair_tail x xs = map_pair x xs"
+  using map_pair_tail_def map_pair_induct submap_pair_mappair subtail_map by presburger
+
+fun product_acc :: "nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat" where 
+"product_acc acc xs ys = (if xs = 0 then acc else 
+product_acc (append_tail ( reverse_nat (map_pair_tail (hd_nat xs) ys)) acc ) (tl_nat xs) ys)"
+
+
+lemma product_induct:
+"product_acc acc xs ys = append_nat (reverse_nat (product_nat xs ys))  acc "
+proof -
+  obtain acc' xs' ys'  where "acc = list_encode acc'" "xs = list_encode xs'" "ys =list_encode ys'"
+    by (metis list_decode_inverse)
+  thus ?thesis using sub_product_id  apply(auto simp only: list.map_id  id_apply
+        sub_reverse sub_append  )
+    apply(induct xs' arbitrary: acc' acc xs)
+     apply simp
+    apply (subst product_acc.simps)
+    apply (auto simp add: non_empty_not_zero subtail_append sub_reverse sub_hd subtail_map_pair
+      submap_pair_mappair sub_map sub_append sub_tl 
+ simp flip: map_append 
+          simp del: product_acc.simps product_nat.simps list_encode.simps map_pair.simps map_nat.simps)
+    apply force
+    done
+
+qed
+
+definition product_tail :: "nat \<Rightarrow> nat \<Rightarrow> nat" where
+"product_tail xs ys = reverse_nat (product_acc 0 xs ys)"
+
+lemma subtail_product: 
+"product_tail xs ys = product_nat xs ys "
+  using append_nat_0 product_induct product_tail_def rev_rev_nat by presburger
+
+fun map_snd_acc  :: "nat \<Rightarrow> nat \<Rightarrow> nat " where 
+"map_snd_acc acc xs = (if xs = 0 then acc else map_snd_acc ((snd_nat (hd_nat xs)) ##acc) (tl_nat xs))"
+
+lemma map_snd_induct: 
+"map_snd_acc acc xs = map_acc snd_nat acc xs"
+  apply(induct acc xs rule:map_snd_acc.induct)
+  apply auto
+  done
+
+definition map_snd_tail :: "nat \<Rightarrow> nat" where
+"map_snd_tail xs = reverse_nat (map_snd_acc 0 xs)"
+
+lemma subtail_map_snd:
+"map_snd_tail xs = map_snd xs"
+  using map_snd_induct map_snd_tail_def submap_snd subtail_map by presburger
+
+lemma del_filter_nat:
+"del_nat xs a = filter_nat (\<lambda>x. fst_nat x \<noteq> a) xs"
+proof -
+  obtain xs' where "xs =list_encode (map prod_encode xs')"
+    by (metis list_decode_inverse map_idI map_map o_def prod_decode_inverse)
+  thus ?thesis apply (auto simp only: sub_filter filter_map comp_def sub_fst sub_del del_filter)
+    done
+qed
+
+fun del_acc :: "nat \<Rightarrow>nat \<Rightarrow> nat \<Rightarrow> nat" where 
+"del_acc acc xs a = (if xs =0 then acc else if fst_nat (hd_nat xs) = a then del_acc acc (tl_nat xs) a else del_acc 
+  ((hd_nat xs)##acc)  (tl_nat xs) a )"
+
+lemma del_induct :
+"del_acc acc xs a = filter_acc (\<lambda>x. fst_nat x \<noteq> a) acc  xs "
+  apply(induct acc xs a rule:del_acc.induct)
+  apply auto
+  done
+
+definition del_tail :: "nat \<Rightarrow> nat \<Rightarrow> nat" where 
+"del_tail xs a = reverse_nat (del_acc 0 xs a) "
+
+lemma subtail_del:
+"del_tail xs a = del_nat xs a"
+  using del_tail_def del_induct del_filter_nat subtail_filter by presburger
+
+function nub_acc :: "nat \<Rightarrow> nat \<Rightarrow> nat" where
+"nub_acc acc xs = (if xs = 0 then acc else nub_acc ((hd_nat xs) ## acc) 
+      (del_tail xs (fst_nat (hd_nat xs))))"
+ by pat_completeness auto
+termination
+  apply (relation "measure (\<lambda>(acc,xs). length_nat xs)")
+   apply simp
+  apply (auto simp del: del_nat.simps)
+  subgoal for xs
+  proof -
+    assume asm:"0 < xs"
+    obtain ys where ys_def: "ys = map prod_decode (list_decode xs)" by simp
+    then have t:"xs = list_encode (map prod_encode ys)"
+      by (auto simp add: comp_def)
+    moreover have "ys \<noteq> []" using ys_def asm t by force
+    ultimately show  ?thesis  apply (auto simp only: t sub_del sub_length  length_map  sub_hd)
+      apply (auto simp add: sub_head_map sub_fst)
+      apply (cases ys)
+       apply (auto simp only: subtail_del sub_del sub_length )
+      by (auto simp add: del_shorter less_Suc_eq_le)
+  qed
+  done
+
+lemma nub_induct: 
+"nub_acc acc xs = append_nat (reverse_nat (nub_nat xs)) acc "
+proof -
+  obtain xs' acc' where "xs =list_encode (map prod_encode xs')" "acc =list_encode acc'"
+    by (metis list_decode_inverse map_idI map_map o_def prod_decode_inverse)
+  thus ?thesis apply(auto simp only: sub_nub  sub_reverse sub_append )
+    apply(induct  xs' arbitrary: xs acc' acc rule: nub.induct)
+     apply simp
+    apply(subst nub_acc.simps)
+    apply (auto simp only:subtail_del sub_del sub_hd head.simps list.simps sub_fst fst_conv sub_cons )
+    apply(auto simp only: sub_del  simp flip: list.map )
+    by (metis (no_types, lifting) append.assoc append.left_neutral
+ del.simps(2) list.simps(3) list.simps(9) list_encode.simps(1) list_encode_eq 
+nub.simps(2) rev_append rev_cons rev_rev_ident) 
+qed
+
+definition nub_tail :: "nat \<Rightarrow> nat" where 
+"nub_tail xs = reverse_nat (nub_acc 0 xs)"
+
+lemma subtail_nub:
+"nub_tail xs = nub_nat xs"
+  using append_nat_0 nub_induct nub_tail_def rev_rev_nat by presburger
+
+definition ran_tail :: "nat \<Rightarrow> nat" where 
+"ran_tail xs = map_snd_tail (nub_tail xs)"
+
+lemma subtail_ran:
+"ran_tail xs = ran_nat xs"
+  using ran_nat_def ran_tail_def subtail_map_snd subtail_nub by presburger
 
 end
