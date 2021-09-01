@@ -136,11 +136,11 @@ proof(induction k arbitrary: s rule: less_induct )
           mult.commute mult_2 mult_Suc numeral_2_eq_2 odd_two_times_div_two_succ)
 
     show ?thesis
-      using \<open>x = Suc nat\<close> \<open>s ''b'' = x\<close> \<open>s ''b'' \<noteq> 0\<close> log_rec remaining_iterations s''_is_goal
+      using \<open>x = Suc nat\<close> \<open>s ''b'' = x\<close> \<open>s ''b'' \<noteq> 0\<close> log_rec s''_is_goal
       by (fastforce simp: Euclidean_Division.div_eq_0_iff
-          intro!: mul_iteration_effect Big_StepT.WhileTrue[
+          intro!: Big_StepT.WhileTrue[
             OF _ mul_iteration_effect
-            terminates_in_state_intro[OF remaining_iterations s''_is_goal]])
+            terminates_in_state_intro[OF remaining_iterations]])
   qed (force intro: terminates_in_state_intro)
 qed
 
