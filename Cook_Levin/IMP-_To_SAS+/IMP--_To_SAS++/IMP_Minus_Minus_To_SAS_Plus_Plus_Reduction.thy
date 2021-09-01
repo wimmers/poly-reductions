@@ -19,7 +19,11 @@ type_synonym operator = "(variable, domain_element) sas_plus_operator"
 type_synonym problem = "(variable, domain_element) sas_plus_problem"
 
 definition pc_to_com :: "(variable \<times> domain_element) list \<Rightarrow> com" where
-"pc_to_com l = (case  l ! 0 of (_, PCV x) \<Rightarrow> x)"
+"pc_to_com l = (if l = [] then SKIP else (case  l ! 0 of (_, PCV x) \<Rightarrow> x | t \<Rightarrow> SKIP))"
+
+lemma pc_to_com_def2 :"l \<noteq> [] \<Longrightarrow> pc_to_com l = (case  l ! 0 of (_, PCV x) \<Rightarrow> x | t \<Rightarrow> SKIP)"
+  apply (auto simp add: pc_to_com_def)
+  done
 
 fun com_to_operators :: "com \<Rightarrow> operator list" where
 "com_to_operators (SKIP) = []" |
@@ -144,16 +148,18 @@ lemma map_of_precondition_of_op_PC[simp]: "op \<in> set (com_to_operators c)
 
 lemma pc_to_com_precondition_of_op_PC [simp]: "op \<in> set (com_to_operators c) 
   \<Longrightarrow> pc_to_com (precondition_of op) = c"
-  using PC_of_precondition  
-  by (metis PC_in_effect_precondition domain_element.simps nth_mem old.prod.case pc_to_com_def 
-      precondition_nonempty)
+  using PC_of_precondition  pc_to_com_def2
+  by (metis PC_in_effect_precondition domain_element.simps(6) 
+        length_greater_0_conv nth_mem old.prod.case precondition_nonempty)
+  
 
 lemma pc_to_com_effect[simp]: "op \<in> set (com_to_operators c) 
   \<Longrightarrow> (PC, y) \<in> set (effect_of op) \<longleftrightarrow> y = PCV (pc_to_com (effect_of op))"
   using com_to_operators_variables_distinct PC_in_effect_precondition 
-  by (auto simp: pc_to_com_def)
-   (metis domain_element.simps effect_nonempty eq_key_imp_eq_value nth_mem old.prod.case)+
-
+  pc_to_com_def2
+  by (metis domain_element.simps(6) effect_nonempty eq_key_imp_eq_value length_greater_0_conv
+ nth_mem old.prod.case)
+  
 lemma PC_of_effect[simp]: "op \<in> set (com_to_operators c) 
   \<Longrightarrow> map_of (effect_of op) PC = Some (PCV (pc_to_com (effect_of op)))"
   using com_to_operators_variables_distinct PC_in_effect_precondition 

@@ -116,6 +116,7 @@ lemma map_le_IMP_Minus_State_To_IMP_Minus_Minus_2:
 
 
 
+
 lemma IMP_Minus_to_SAS_Plus_correctness:
   assumes
     "I \<subseteq>\<^sub>m Some \<circ> s1" 
@@ -429,5 +430,5 @@ proof -
   show ?thesis using \<open>t'' \<le> t\<close> \<open>(c, ?s1') \<Rightarrow>\<^bsup>t''\<^esup> s2''\<close> \<open>I \<subseteq>\<^sub>m Some \<circ> ?s1'\<close> \<open>G \<subseteq>\<^sub>m Some \<circ> s2''\<close>
     by auto
 qed
-
+ 
 end

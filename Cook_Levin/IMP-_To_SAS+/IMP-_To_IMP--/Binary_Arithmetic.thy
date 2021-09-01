@@ -14,6 +14,15 @@ fun nth_bit_nat:: "nat \<Rightarrow> nat \<Rightarrow> nat" where
 "nth_bit_nat x 0 = x mod 2" |
 "nth_bit_nat x (Suc n) = nth_bit_nat (x div 2) n"
 
+fun nth_bit_tail:: "nat \<Rightarrow> nat \<Rightarrow> nat" where
+"nth_bit_tail x 0 = x mod 2" |
+"nth_bit_tail x (Suc n) = nth_bit_nat (x div 2) n"
+
+lemma subtail_nth_bit: "nth_bit_tail x n = nth_bit_nat x n"
+  apply(induct n)
+   apply auto
+  done
+
 lemma nth_bit_nat_is_right_shift: "nth_bit_nat x n = (x div 2 ^ n) mod 2"
   apply(induction n arbitrary: x)
   by(auto simp:  div_mult2_eq)
