@@ -150,13 +150,17 @@ definition IMP_minus_mul where "IMP_minus_mul =
   ''a'' ::= A (N 0) ;;
   ''d'' ::= A (N 0)" 
 
+definition mul_time where "mul_time y 
+  \<equiv> 12 * (if y = 0 then 0 else 1 + Discrete.log y) + 8"
+
 lemma IMP_minus_mul_correct: 
   shows "(IMP_minus_mul, s) 
-    \<Rightarrow>\<^bsup>12 * (if s ''b'' = 0 then 0 else 1 + Discrete.log (s ''b'')) + 8\<^esup> 
+    \<Rightarrow>\<^bsup>mul_time (s ''b'')\<^esup> 
     s(''a'' := 0,
       ''b'' := 0,
       ''c'' := s ''a'' * s ''b'',
       ''d'' := 0)"
+  unfolding mul_time_def
   using mul_loop_correct
   by(force simp: IMP_minus_mul_def
            intro!: terminates_in_state_intro[OF Seq[OF Seq[OF Seq]]])
