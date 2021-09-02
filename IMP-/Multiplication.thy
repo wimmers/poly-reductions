@@ -4,7 +4,7 @@ theory Multiplication
   imports Big_Step_Small_Step_Equivalence "HOL-Library.Discrete"
 begin
 
-definition IMP_max_a_min_b where "IMP_max_a_min_b = 
+definition IMP_Minus_max_a_min_b where "IMP_Minus_max_a_min_b = 
   ''c'' ::= ((V ''a'') \<ominus> (V ''b'')) ;;
   IF ''c'' \<noteq>0 
   THEN
@@ -18,19 +18,19 @@ definition IMP_max_a_min_b where "IMP_max_a_min_b =
     ''b'' ::= A (V ''c'') ;;
     ''c'' ::= A (N 0))"
 
-lemma IMP_max_a_min_b_correct: 
-    "(IMP_max_a_min_b, s) \<Rightarrow>\<^bsup>11\<^esup> s(''a'' := max (s ''a'') (s ''b''),
+lemma IMP_Minus_max_a_min_b_correct: 
+    "(IMP_Minus_max_a_min_b, s) \<Rightarrow>\<^bsup>11\<^esup> s(''a'' := max (s ''a'') (s ''b''),
                                    ''b'' := min (s ''a'') (s ''b''), ''c'' := 0)" 
 proof(cases "(s ''a'') \<le> (s ''b'')")
   case True
   then show ?thesis
-    apply(auto simp: IMP_max_a_min_b_def numeral_eq_Suc
+    apply(auto simp: IMP_Minus_max_a_min_b_def numeral_eq_Suc
         intro!: Seq[OF Big_StepT.Assign Big_StepT.IfFalse])
     by(auto simp: assign_t_simp fun_eq_iff intro!: Seq)
 next
   case False
   then show ?thesis 
-    apply(auto simp: IMP_max_a_min_b_def numeral_eq_Suc seq_assign_t_simp 
+    apply(auto simp: IMP_Minus_max_a_min_b_def numeral_eq_Suc seq_assign_t_simp 
         intro!: Seq[OF Big_StepT.Assign Big_StepT.IfTrue])
     by (auto simp: fun_eq_iff)
 qed
@@ -48,6 +48,10 @@ definition mul_iteration where
   ''d'' ::= A (N 0)"
 
 lemma terminates_in_state_intro: "(c, s) \<Rightarrow>\<^bsup>t\<^esup> s' \<Longrightarrow> s' = s'' \<Longrightarrow> (c, s) \<Rightarrow>\<^bsup>t\<^esup> s''"
+  by simp
+
+lemma terminates_in_time_state_intro: "(c, s) \<Rightarrow>\<^bsup>t\<^esup> s' \<Longrightarrow> t = t' \<Longrightarrow> s' = s'' 
+  \<Longrightarrow> (c, s) \<Rightarrow>\<^bsup>t'\<^esup> s''"
   by simp
 
 lemma mul_iteration_effect:
