@@ -80,6 +80,26 @@ fun max_con_encode :: "max_con \<Rightarrow> nat" where
 "max_con_encode (While_f c n) = list_encode[6, com_encode c ,n]"|
 "max_con_encode (Bot n) = list_encode[7,n]"
 
+fun max_con_decode :: "nat \<Rightarrow> max_con" where 
+"max_con_decode n = (case list_decode n of 
+    [0] \<Rightarrow> SKIP |
+    [Suc 0,aexp] \<Rightarrow> Assign (aexp_decode aexp)|
+    [Suc (Suc 0), c1 , c2] \<Rightarrow> Seq_0  (com_decode c1) (com_decode c2)|
+    [Suc (Suc ( Suc 0)), c1 , c2, n] \<Rightarrow> Seq_m (com_decode c1) (com_decode c2) n|
+    [Suc (Suc (Suc (Suc 0))), c1 , c2, n, m] \<Rightarrow> Seq_f  (com_decode c1) (com_decode c2) n m|
+    [Suc (Suc (Suc (Suc (Suc 0)))), c] \<Rightarrow> While_0  (com_decode c) |
+    [Suc (Suc (Suc (Suc (Suc (Suc 0))))), c,n] \<Rightarrow> While_f  (com_decode c) n |
+    [Suc (Suc (Suc (Suc (Suc (Suc (Suc 0)))))),n] \<Rightarrow> Bot  n | x \<Rightarrow> Bot 0
+)"
+value "max_con_decode (0##0##0)"
+lemma max_con_id:
+"max_con_decode (max_con_encode x) = x"
+  apply(cases x)
+         apply (auto simp add: max_con_decode.simps max_con_encode.simps list_encode_inverse
+              aexp_id com_id
+            simp del: aexp_decode.simps com_decode.simps )
+  done
+
 
 fun push_con :: "Com.com \<Rightarrow> max_con list \<Rightarrow> max_con list " where 
 "push_con Com.com.SKIP s = SKIP # s"|
@@ -153,21 +173,6 @@ lemma sub_add_res:
     done
   done
 
-fun size_root :: "max_con \<Rightarrow> nat" where 
-"size_root (Seq_0 c1 c2) = Suc (size c1) + (size c2)"|
-"size_root (Seq_m c1 c2 _ ) = Suc (size c1) + (size c2) "|
-"size_root (Seq_f c1 c2 _ _ ) = Suc (size c1) + (size c2)"|
-"size_root (While_0 c) = Suc (size c)"|
-"size_root (While_f c _) = Suc(size c) "|
-"size_root (Bot _ ) = 0"|
-"size_root s = 1"
-
-fun size_out :: "max_con \<Rightarrow> nat" where
-"size_out (Seq_m c1 _ _) = size c1 "|
-"size_out (Seq_f c1 c2 _ _) =  size c1 + size c2"|
-"size_out (While_f c _) = size c"|
-"size_out c = 0"
-
 fun size_e :: "Com.com \<Rightarrow> nat" where 
 "size_e Com.com.SKIP = 1 "|
 "size_e (Com.com.Assign v a)  = 1"|
@@ -179,19 +184,27 @@ fun size_stack_rev :: "max_con list \<Rightarrow> nat" where
 "size_stack_rev (Seq_0 c1 c2# s) =  (if s = [] then Suc (2* (size_e c1 + size_e c2)) else  Suc (2 * size_e c2) + size_stack_rev s )  "|
 "size_stack_rev (Seq_m c1 c2 n#s) = (if s = [] then  Suc (2 * size_e c2) else  Suc (size_stack_rev s)) "|
 "size_stack_rev (While_0 c #s)  = (if s = [] then Suc (2* size_e c) else Suc (size_stack_rev s) )"|
-"size_stack_rev (Bot x # s) = size_stack_rev s"|
-"size_stack_rev (_#s) = Suc (size_stack_rev s)"|
-"size_stack_rev [] = 0"
+"size_stack_rev (Bot x # s) = (if s =[] then 0 else Suc (size_stack_rev s))"|
+"size_stack_rev (_#s) = (if s = [] then 1 else Suc (size_stack_rev s))"|
+"size_stack_rev [] = 1"
 
+lemma size_stack_0:"(size_stack_rev x = 0) = (\<exists>n. x = [Bot n]) "
+  apply(cases x)
+   apply auto
+  subgoal for a xs
+    apply (cases a)
+           apply (auto split :if_splits)
+    done
+ subgoal for a xs
+    apply (cases a)
+           apply (auto split :if_splits)
+   done
+  done
+
+  
 fun size_stack :: "max_con list \<Rightarrow> nat" where 
 "size_stack s = size_stack_rev (rev s)"
 
-fun compare :: "max_con list \<Rightarrow> max_con list \<Rightarrow> bool" where 
-"compare (Bot _ # _) _  = True"|
-"compare [] _ = True"|
-"compare (push_con c1 (Seq_0 c1 c2 # s) )  (Seq_0 c1 c2 # s) = True"|
-"compare (push_con c2 (Seq_m c1 c2 n # s) )  (Seq_m c1 c2 n # s) = True"|
-"compare (push_con c (While_0  c # s))   (While_0  c # s)  = True"
 lemma size_pos:"size_e c >0"
   apply(induct c)
       apply auto
@@ -207,14 +220,19 @@ size_stack_mono :" x \<noteq> [] \<Longrightarrow>y \<noteq>  [] \<Longrightarro
     done
   done
 
-lemma " (s = Seq_0 c1 c2 # s' \<or> s = Seq_m c1 c2 n # s' \<or> s = While_0 c # s') 
-  \<Longrightarrow> size_stack (add_res r s) < size_stack s "
-  using size_stack_mono size_pos
+
+
+lemma add_res_less:"\<forall>x. s \<noteq> [Bot x] \<and> a \<noteq> Bot x \<Longrightarrow> size_stack (add_res r s) < size_stack (a#s) "
+  apply(cases s)
+   apply auto
+   apply (cases a)
   apply auto
-  done
+  subgoal for a xs
+    apply (cases a)
+    using size_stack_mono size_stack_0 nat_less_le    apply (auto )
+    done
+done
 
-
-    
 
 function max_constant_stack :: "max_con list \<Rightarrow> nat" where 
 "max_constant_stack (Bot x # s) = x"|
@@ -224,32 +242,76 @@ function max_constant_stack :: "max_con list \<Rightarrow> nat" where
 "max_constant_stack (Seq_m c1 c2 n0 # s) = max_constant_stack (push_con c2  (Seq_m c1 c2 n0 # s))"|
 "max_constant_stack (Seq_f _ _ n m #s) = max_constant_stack (add_res (max n m) s)"|
 "max_constant_stack (While_0 c# s) = max_constant_stack (push_con c (While_0 c# s)) "|
-"max_constant_stack (While_f _  n# s) = max_constant_stack (add_res n s)"
-  by pat_completeness auto
-termination 
-  apply (relation "measure size_stack")
-         apply auto
-  subgoal for s
-    apply (cases s)
-     apply auto
-    subgoal for a xs
-      apply (cases a)
-      apply auto
+"max_constant_stack (While_f _  n# s) = max_constant_stack (add_res n s)"|
+"max_constant_stack [] = 0"
+  by pat_completeness  auto
+
+lemma max_const_stack_term:"All max_constant_stack_dom"
+proof  (relation "measure size_stack", goal_cases)
+case 1
+  then show ?case by auto
+next
+  case (2 s)
+  then show ?case using add_res_less apply auto
+    by (metis Suc_less_SucD add_res.simps(5) length_Cons length_append_singleton less_Suc_eq_0_disj
+ list.size(3) max_con.distinct(1) not_less_less_Suc_eq rev_singleton_conv size_stack_0)
+        
+next
+  case (3 v s)
+  then show ?case sorry
+next
+  case (4 c1 c2 s)
+  then show ?case sorry
+next
+  case (5 c1 c2 n0 s)
+  then show ?case sorry
+next
+  case (6 uu uv n m s)
+  then show ?case sorry
+next
+  case (7 c s)
+  then show ?case sorry
+next
+  case (8 uw n s)
+  then show ?case sorry
+qed
+
+qed
+
+  using add_res_less apply (auto)
+        apply (metis Suc_less_SucD add_res.simps length_Cons length_append_singleton less_Suc_eq_0_disj
+ list.size(3) max_con.distinct not_less_less_Suc_eq rev_singleton_conv size_stack_0)
+  apply (metis Suc_less_SucD add_res.simps(5) length_Cons length_append_singleton less_Suc_eq_0_disj 
+list.size(3) max_con.distinct not_less_less_Suc_eq rev_singleton_conv size_stack_0)
+  subgoal for c1 c2 s
+    apply (cases c1)
+        using size_stack_mono apply auto
+        done 
+subgoal for c1 c2 n0 s
+    apply (cases c2)
+        using size_stack_mono apply auto
+        done
+      apply (metis add_res.simps(5) append.left_neutral append_Cons max_con.distinct(9)
+ not_Cons_self2 rev.simps(1) rev.simps(2) size_stack_rev.simps(4) zero_less_Suc)
+      subgoal for c s
+        apply (cases c)
+        using size_stack_mono apply auto
+        done
+      apply (metis Suc_less_SucD add_res.simps(5) length_Cons length_append_singleton 
+less_Suc_eq_0_disj list.size(3) max_con.distinct(13) not_less_less_Suc_eq rev_singleton_conv 
+size_stack_0)
+      done
+
+termination using max_const_stack_term  by auto
+
+
+ 
 
 
 
+   
 
-fun compare_max_con::  "max_con list \<Rightarrow> max_con list \<Rightarrow> bool" where
-"compare_max_con x y = compare_max_con' (rev x) (rev y)"
-
-lemma "s\<noteq> [] \<Longrightarrow> compare_max_con (a#s) s"
-  nitpick
-  apply (auto)
-  apply(induct s)
-   apply auto
-    
-
-function max_constant_stack_nat :: "nat \<Rightarrow> nat" where 
+function (domintros) max_constant_stack_nat :: "nat \<Rightarrow> nat" where 
 " max_constant_stack_nat s = (let h = hd_nat s; t = tl_nat s;
   c = hd_nat h; e1 = nth_nat (Suc 0) h; e2 = nth_nat (Suc (Suc 0)) h;
  e3 = nth_nat (Suc (Suc (Suc 0))) h ; e4 = nth_nat (Suc (Suc (Suc (Suc 0)))) h in 
@@ -261,9 +323,14 @@ else if c = 4 then   max_constant_stack_nat (add_res_nat (max e3 e4) t)
 else if c = 5 then   max_constant_stack_nat (push_con_nat e1 s) 
 else if c = 6 then  max_constant_stack_nat (add_res_nat e2 t)
 else e1)"
+  by pat_completeness auto
+thm "max_constant_stack_nat.pinduct"
+find_theorems "max_constant_stack_nat_dom"
+termination
+  apply (relation "measure (size_stack o (map max_con_decode) o list_decode)")
+         apply (auto simp del:add_res_nat.simps simp add: )
   sorry
-termination sorry
-
+         
 lemma list_encode_0:"(list_encode xs = 0) =  (xs = [])"
   by (metis list_encode.simps(1) list_encode_inverse)
 
@@ -313,6 +380,7 @@ lemma sub_max_constant_stack:
           del: list_encode.simps max_constant_stack_nat.simps
                 add_res.simps add_res_nat.simps push_con_nat.simps push_con.simps aexp_max_constant.simps
                     aexp_max_constant_nat.simps aexp_max_constant_tail.simps )
+  apply auto
   done
 
 
@@ -469,6 +537,57 @@ lemma sub_add_var:
     done
   done
 
+fun size_stack_rev_var :: "all_var list \<Rightarrow> nat" where
+"size_stack_rev_var (Seq_0 c1 c2# s) =  (if s = [] then Suc (2* (size_e c1 + size_e c2)) else  Suc (2 * size_e c2) + size_stack_rev_var s )  "|
+"size_stack_rev_var (Seq_m c1 c2 n#s) = (if s = [] then  Suc (2 * size_e c2) else  Suc (size_stack_rev_var s)) "|
+"size_stack_rev_var (If_0 _ c1 c2# s) =  (if s = [] then Suc (2* (size_e c1 + size_e c2)) else  Suc (2 * size_e c2) + size_stack_rev_var s )  "|
+"size_stack_rev_var (If_m _ c1 c2 n#s) = (if s = [] then  Suc (2 * size_e c2) else  Suc (size_stack_rev_var s)) "|
+"size_stack_rev_var (While_0 _ c #s)  = (if s = [] then Suc (2* size_e c) else Suc (size_stack_rev_var s) )"|
+"size_stack_rev_var (Bot x # s) = (if s =[] then 0 else Suc (size_stack_rev_var s))"|
+"size_stack_rev_var (_#s) = (if s = [] then 1 else Suc (size_stack_rev_var s))"|
+"size_stack_rev_var [] = 1"
+
+fun size_stack_var :: "all_var list \<Rightarrow> nat" where 
+"size_stack_var s = size_stack_rev_var (rev s)"
+
+lemma 
+size_stack_var_mono :" x \<noteq> [] \<Longrightarrow>y \<noteq>  [] \<Longrightarrow> size_stack_rev_var y < size_stack_rev_var x
+ \<Longrightarrow> size_stack_rev_var (s @ y) < size_stack_rev_var (s @ x) "
+  apply(induct s )
+   apply auto
+  subgoal for a xs
+    apply (cases a)
+           apply (auto)
+    done
+  done
+
+lemma size_stack_var_0:"(size_stack_rev_var x = 0) = (\<exists>n. x = [Bot n]) "
+  apply(cases x)
+   apply auto
+  subgoal for a xs
+    apply (cases a)
+           apply (auto split :if_splits)
+    done
+ subgoal for a xs
+    apply (cases a)
+           apply (auto split :if_splits)
+   done
+  done
+
+
+lemma add_res_less_var:
+"\<forall>x. s \<noteq> [Bot x] \<and> a \<noteq> Bot x \<Longrightarrow> size_stack_var (add_var r s) < size_stack_var (a#s) "
+  apply(cases s)
+   apply auto
+   apply (cases a)
+  apply (auto simp add: size_stack_var_mono)
+  subgoal for a xs
+    apply (cases a)
+    using size_stack_var_mono size_stack_var_0 nat_less_le    apply (auto )
+    done
+  done
+
+
 function all_variables_stack :: "all_var list \<Rightarrow>vname list" where 
 "all_variables_stack (Bot x # s) = x"|
 "all_variables_stack (SKIP # s) = all_variables_stack (add_var [] s)"|
@@ -480,9 +599,39 @@ function all_variables_stack :: "all_var list \<Rightarrow>vname list" where
 "all_variables_stack (If_m v c1 c2 n0 # s) =all_variables_stack (push_var c2  (If_m v c1 c2 n0 # s))"|
 "all_variables_stack (If_f v _ _ n m #s) = all_variables_stack (add_var (v # n @ m) s)"|
 "all_variables_stack (While_0 v c# s) = all_variables_stack (push_var c (While_0 v c# s)) "|
-"all_variables_stack (While_f v _  n# s) = all_variables_stack (add_var (v#n) s)"
-  sorry
-termination sorry
+"all_variables_stack (While_f v _  n# s) = all_variables_stack (add_var (v#n) s)"|
+"all_variables_stack [] = []"
+  by pat_completeness auto
+termination 
+  apply (relation "measure size_stack_var")
+  using add_res_less_var  apply auto
+      
+           apply (metis add_var.simps(7)
+ all_var.distinct(1) append_self_conv2 gr0I last_snoc rev_singleton_conv size_stack_var_0)
+  apply (metis add_var.simps(7) all_var.distinct(3) gr0I last_ConsL last_snoc rev_singleton_conv 
+size_stack_var_0)
+  subgoal for c1 c2 s
+    apply (cases c1)
+    using size_stack_var_mono apply auto done
+      subgoal for c1 c2 n s
+    apply (cases c2)
+        using size_stack_var_mono apply auto done
+      apply (metis add_var.simps(7) all_var.distinct(15) append_Cons append_self_conv2
+ not_Cons_self2 rev_singleton_conv size_stack_rev_var.simps(6) zero_less_Suc)
+  subgoal for v c1 c2 s
+    apply (cases c1)
+    using size_stack_var_mono apply auto done
+ subgoal for v c1 c2 n s
+    apply (cases c2)
+   using size_stack_var_mono apply auto done
+   apply (metis add_var.simps(7) all_var.distinct(9) list.inject neq0_conv 
+rev.simps(2) rev_singleton_conv size_stack_var_0)
+  subgoal for v c s
+    apply (cases c)
+    using size_stack_var_mono apply auto done
+  apply (metis add_var.simps(7) all_var.distinct(19) list.distinct(1) n_not_Suc_n neq0_conv
+ rev.simps(2) rev_singleton_conv size_stack_rev_var.simps(11) size_stack_var_0)
+  done
 
 function all_variables_stack_nat :: "nat \<Rightarrow> nat" where 
 "  all_variables_stack_nat s = (let h = hd_nat s; t = tl_nat s;
