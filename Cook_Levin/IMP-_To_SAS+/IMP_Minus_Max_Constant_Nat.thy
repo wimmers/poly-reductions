@@ -117,7 +117,7 @@ fun add_res :: "nat \<Rightarrow> max_con list \<Rightarrow> max_con list" where
 "add_res n (Seq_0 c1 c2 # s) = Seq_m c1 c2 n # s"|
 "add_res n (Seq_m c1 c2 n0 #s) = Seq_f c1 c2 n0 n # s "|
 "add_res n (While_0 c #s) = While_f c n # s"|
-"add_res n s = s"
+"add_res n s = [Bot n]"
 
 lemma add_res_Nil:
 "add_res n s \<noteq> []"
@@ -137,7 +137,7 @@ else (let h =hd_nat s; t =tl_nat s; c = hd_nat h; e1 = nth_nat (Suc 0) h ; e2 = 
 e3 = nth_nat (Suc (Suc (Suc 0))) h in
 if c = 2 then (3##e1##e2##n##0)##t else 
 if c = 3 then (4##e1##e2##e3##n##0)##t else 
-if c = 5 then (6##e1##n##0)##t else s   )
+if c = 5 then (6##e1##n##0)##t else  (7##n##0) ## 0  )
 
 )"
 
@@ -153,6 +153,69 @@ lemma sub_add_res:
     done
   done
 
+fun size_root :: "max_con \<Rightarrow> nat" where 
+"size_root (Seq_0 c1 c2) = Suc (size c1) + (size c2)"|
+"size_root (Seq_m c1 c2 _ ) = Suc (size c1) + (size c2) "|
+"size_root (Seq_f c1 c2 _ _ ) = Suc (size c1) + (size c2)"|
+"size_root (While_0 c) = Suc (size c)"|
+"size_root (While_f c _) = Suc(size c) "|
+"size_root (Bot _ ) = 0"|
+"size_root s = 1"
+
+fun size_out :: "max_con \<Rightarrow> nat" where
+"size_out (Seq_m c1 _ _) = size c1 "|
+"size_out (Seq_f c1 c2 _ _) =  size c1 + size c2"|
+"size_out (While_f c _) = size c"|
+"size_out c = 0"
+
+fun size_e :: "Com.com \<Rightarrow> nat" where 
+"size_e Com.com.SKIP = 1 "|
+"size_e (Com.com.Assign v a)  = 1"|
+"size_e (Com.com.Seq c1 c2) = Suc (size_e c1 + size_e c2)"|
+"size_e (Com.com.If v c1 c2) = Suc (size_e c1 + size_e c2)"|
+"size_e (Com.com.While v c) = Suc (size_e c)"
+
+fun size_stack_rev :: "max_con list \<Rightarrow> nat" where
+"size_stack_rev (Seq_0 c1 c2# s) =  (if s = [] then Suc (2* (size_e c1 + size_e c2)) else  Suc (2 * size_e c2) + size_stack_rev s )  "|
+"size_stack_rev (Seq_m c1 c2 n#s) = (if s = [] then  Suc (2 * size_e c2) else  Suc (size_stack_rev s)) "|
+"size_stack_rev (While_0 c #s)  = (if s = [] then Suc (2* size_e c) else Suc (size_stack_rev s) )"|
+"size_stack_rev (Bot x # s) = size_stack_rev s"|
+"size_stack_rev (_#s) = Suc (size_stack_rev s)"|
+"size_stack_rev [] = 0"
+
+fun size_stack :: "max_con list \<Rightarrow> nat" where 
+"size_stack s = size_stack_rev (rev s)"
+
+fun compare :: "max_con list \<Rightarrow> max_con list \<Rightarrow> bool" where 
+"compare (Bot _ # _) _  = True"|
+"compare [] _ = True"|
+"compare (push_con c1 (Seq_0 c1 c2 # s) )  (Seq_0 c1 c2 # s) = True"|
+"compare (push_con c2 (Seq_m c1 c2 n # s) )  (Seq_m c1 c2 n # s) = True"|
+"compare (push_con c (While_0  c # s))   (While_0  c # s)  = True"
+lemma size_pos:"size_e c >0"
+  apply(induct c)
+      apply auto
+  done
+lemma 
+size_stack_mono :" x \<noteq> [] \<Longrightarrow>y \<noteq>  [] \<Longrightarrow> size_stack_rev y < size_stack_rev x
+ \<Longrightarrow> size_stack_rev (s @ y) < size_stack_rev (s @ x) "
+  apply(induct s )
+   apply auto
+  subgoal for a xs
+    apply (cases a)
+           apply (auto)
+    done
+  done
+
+lemma " (s = Seq_0 c1 c2 # s' \<or> s = Seq_m c1 c2 n # s' \<or> s = While_0 c # s') 
+  \<Longrightarrow> size_stack (add_res r s) < size_stack s "
+  using size_stack_mono size_pos
+  apply auto
+  done
+
+
+    
+
 function max_constant_stack :: "max_con list \<Rightarrow> nat" where 
 "max_constant_stack (Bot x # s) = x"|
 "max_constant_stack (SKIP # s) = max_constant_stack (add_res 0 s)"|
@@ -162,9 +225,29 @@ function max_constant_stack :: "max_con list \<Rightarrow> nat" where
 "max_constant_stack (Seq_f _ _ n m #s) = max_constant_stack (add_res (max n m) s)"|
 "max_constant_stack (While_0 c# s) = max_constant_stack (push_con c (While_0 c# s)) "|
 "max_constant_stack (While_f _  n# s) = max_constant_stack (add_res n s)"
-  sorry
-termination sorry
+  by pat_completeness auto
+termination 
+  apply (relation "measure size_stack")
+         apply auto
+  subgoal for s
+    apply (cases s)
+     apply auto
+    subgoal for a xs
+      apply (cases a)
+      apply auto
 
+
+
+
+fun compare_max_con::  "max_con list \<Rightarrow> max_con list \<Rightarrow> bool" where
+"compare_max_con x y = compare_max_con' (rev x) (rev y)"
+
+lemma "s\<noteq> [] \<Longrightarrow> compare_max_con (a#s) s"
+  nitpick
+  apply (auto)
+  apply(induct s)
+   apply auto
+    
 
 function max_constant_stack_nat :: "nat \<Rightarrow> nat" where 
 " max_constant_stack_nat s = (let h = hd_nat s; t = tl_nat s;
@@ -184,7 +267,8 @@ termination sorry
 lemma list_encode_0:"(list_encode xs = 0) =  (xs = [])"
   by (metis list_encode.simps(1) list_encode_inverse)
 
-
+thm "accp.simps"
+find_theorems "wf"
 lemma sub_max_constant_stack:
 "s \<noteq> [] \<Longrightarrow> max_constant_stack_nat (list_encode (map max_con_encode s))
 = max_constant_stack s "
