@@ -145,6 +145,52 @@ lemma IMPm_IMPmm_list_id:
   apply auto
   done
 
+fun size_e :: "Com.com \<Rightarrow> nat" where 
+"size_e Com.com.SKIP = 1 "|
+"size_e (Com.com.Assign v a)  = 1"|
+"size_e (Com.com.Seq c1 c2) = Suc (size_e c1 + size_e c2)"|
+"size_e (Com.com.If v c1 c2) = Suc (size_e c1 + size_e c2)"|
+"size_e (Com.com.While v c) = Suc (size_e c)"
+
+fun size_stack_rev :: "IMPm_IMPmm list \<Rightarrow> nat" where
+"size_stack_rev (Seq_0 c1 c2 _# s) =  (if s = [] then Suc (2* (size_e c1 + size_e c2)) else  Suc (2 * size_e c2) + size_stack_rev s )  "|
+"size_stack_rev (Seq_m c1 c2 _ _#s) = (if s = [] then  Suc (2 * size_e c2) else  Suc (size_stack_rev s)) "|
+"size_stack_rev (If_0 _ c1 c2 _# s) =  (if s = [] then Suc (2* (size_e c1 + size_e c2)) else  Suc (2 * size_e c2) + size_stack_rev s )  "|
+"size_stack_rev (If_m _ c1 c2  _ _#s) = (if s = [] then  Suc (2 * size_e c2) else  Suc (size_stack_rev s)) "|
+"size_stack_rev (While_0 _ c _ #s)  = (if s = [] then Suc (2* size_e c) else Suc (size_stack_rev s) )"|
+"size_stack_rev (Bot x # s) = (if s =[] then 0 else Suc (size_stack_rev s))"|
+"size_stack_rev (_#s) = (if s = [] then 1 else Suc (size_stack_rev s))"|
+"size_stack_rev [] = 1"
+
+fun size_stack :: "IMPm_IMPmm list \<Rightarrow> nat" where 
+"size_stack s = size_stack_rev (rev s)"
+
+lemma 
+size_stack_mono :" x \<noteq> [] \<Longrightarrow>y \<noteq>  [] \<Longrightarrow> size_stack_rev y < size_stack_rev x
+ \<Longrightarrow> size_stack_rev (s @ y) < size_stack_rev (s @ x) "
+  apply(induct s )
+   apply auto
+  subgoal for a xs
+    apply (cases a)
+           apply (auto)
+    done
+  done
+
+lemma size_stack_var_0:"(size_stack_rev x = 0) = (\<exists>n. x = [Bot n]) "
+  apply(cases x)
+   apply auto
+  subgoal for a xs
+    apply (cases a)
+           apply (auto split :if_splits)
+    done
+ subgoal for a xs
+    apply (cases a)
+           apply (auto split :if_splits)
+   done
+  done
+
+
+
 fun push_on_stack :: "IMP_Minus_com \<Rightarrow> nat \<Rightarrow> IMPm_IMPmm list \<Rightarrow> IMPm_IMPmm list" where 
 "push_on_stack Com.SKIP n stack = SKIP n # stack "|
 "push_on_stack (Com.Assign v aexp) n stack =  ( Assign v aexp n) # stack "|
@@ -171,7 +217,7 @@ IMPm_IMPmm_list_encode (push_on_stack c n s)"
 
 
 
-      
+       
            
 fun add_result_to_stack :: "IMP_Minus_Minus_com \<Rightarrow> IMPm_IMPmm list \<Rightarrow> IMPm_IMPmm list" where 
 "add_result_to_stack c [] = [Bot c]"|
@@ -209,6 +255,19 @@ lemma sub_add_result_to_stack:
     done
   done
 
+lemma add_res_less:
+"\<forall>x. s \<noteq> [Bot x] \<and> a \<noteq> Bot x \<Longrightarrow> size_stack (add_result_to_stack r s) < size_stack (a#s) "
+  apply(cases s)
+   apply auto
+   apply (cases a)
+  apply (auto simp add: size_stack_var_mono)
+  subgoal for a xs
+    apply (cases a)
+    using size_stack_mono size_stack_var_0 nat_less_le    apply (auto )
+    done
+  done
+
+
 function IMP_Minus_to_IMP_Minus_Minus_stack :: "IMPm_IMPmm list \<Rightarrow> IMP_Minus_Minus_com" where 
 "IMP_Minus_to_IMP_Minus_Minus_stack (Seq_0 c1 c2 n #stack) = 
   IMP_Minus_to_IMP_Minus_Minus_stack (push_on_stack c1 n (Seq_0 c1 c2 n #stack))"|
@@ -230,9 +289,64 @@ function IMP_Minus_to_IMP_Minus_Minus_stack :: "IMPm_IMPmm list \<Rightarrow> IM
   IMP_Minus_to_IMP_Minus_Minus_stack (add_result_to_stack ( IMP_Minus_Minus_Com.If (var_bit_list n v) c1  c2) stack)"|
 "IMP_Minus_to_IMP_Minus_Minus_stack (While_f v _ n c # stack) = 
   IMP_Minus_to_IMP_Minus_Minus_stack (add_result_to_stack (IMP_Minus_Minus_Com.While (var_bit_list n v) c) stack)"|
-"IMP_Minus_to_IMP_Minus_Minus_stack (Bot res # stack) =  res"
-  sorry
-termination sorry
+"IMP_Minus_to_IMP_Minus_Minus_stack (Bot res # stack) =  res"|
+"IMP_Minus_to_IMP_Minus_Minus_stack [] =  com.SKIP"
+  by pat_completeness  auto
+termination 
+proof  (relation "measure size_stack",goal_cases)
+case 1
+then show ?case by auto
+next
+  case (2 c1 c2 n stack)
+  then show ?case   using size_stack_mono by (cases c1)  auto
+next
+  case (3 c1 c2 n c3 stack)
+  then show ?case  using size_stack_mono by (cases c2)  auto
+next
+  case (4 v c1 c2 n stack)
+  then show ?case  using size_stack_mono by (cases c1)  auto
+next
+  case (5 v c1 c2 n c3 stack)
+  then show ?case  using size_stack_mono by (cases c2)  auto
+next
+  case (6 v c n stack)
+  then show ?case  using size_stack_mono by (cases c)  auto
+next
+  case (7 uu stack)
+  then show ?case using add_res_less apply auto
+    by (metis IMP_Minus_To_IMP_Minus_Minus_nat.size_stack_var_0 
+IMPm_IMPmm.distinct One_nat_def Suc_less_SucD Suc_mono add_result_to_stack.simps
+gr0I length_Cons length_append_singleton list.size(3) rev_singleton_conv zero_less_one)
+    
+next
+  case (8 v aexp n stack)
+  then show ?case  using add_res_less apply auto
+    by (metis IMP_Minus_To_IMP_Minus_Minus_nat.size_stack_var_0 
+IMPm_IMPmm.distinct One_nat_def Suc_less_SucD Suc_mono add_result_to_stack.simps
+gr0I length_Cons length_append_singleton list.size(3) rev_singleton_conv zero_less_one)
+
+next
+case (9 uv uw ux c1 c2 stack)
+  then show ?case  using add_res_less apply auto
+    by (metis IMP_Minus_To_IMP_Minus_Minus_nat.size_stack_var_0 
+IMPm_IMPmm.distinct One_nat_def Suc_less_SucD Suc_mono add_result_to_stack.simps
+gr0I length_Cons length_append_singleton list.size(3) rev_singleton_conv zero_less_one)
+
+next
+  case (10 v uy uz n c1 c2 stack)
+  then show ?case  using add_res_less apply auto
+    by (metis IMP_Minus_To_IMP_Minus_Minus_nat.size_stack_var_0 
+IMPm_IMPmm.distinct One_nat_def Suc_less_SucD Suc_mono add_result_to_stack.simps
+gr0I length_Cons length_append_singleton list.size(3) rev_singleton_conv zero_less_one)
+
+next
+  case (11 v va n c stack)
+  then show ?case  using add_res_less apply auto
+    by (metis IMP_Minus_To_IMP_Minus_Minus_nat.size_stack_var_0 
+IMPm_IMPmm.distinct One_nat_def Suc_less_SucD Suc_mono add_result_to_stack.simps
+gr0I length_Cons length_append_singleton list.size(3) rev_singleton_conv zero_less_one)
+
+qed
 
 
 function IMP_Minus_to_IMP_Minus_Minus_stack_nat :: "nat \<Rightarrow> nat" where 

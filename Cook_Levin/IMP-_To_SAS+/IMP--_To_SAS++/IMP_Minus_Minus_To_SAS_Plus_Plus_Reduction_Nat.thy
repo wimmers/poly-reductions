@@ -258,7 +258,59 @@ lemma sub_add_res_to_stack:
     done
   done
 
-  
+fun size_e :: "com \<Rightarrow> nat" where 
+"size_e com.SKIP = 1 "|
+"size_e (com.Assign v a)  = 1"|
+"size_e (com.Seq c1 c2) = Suc (size_e c1)"|
+"size_e (com.If v c1 c2) = 1"|
+"size_e (com.While v c) = 1"
+
+fun stack_size_rev :: "com_op list \<Rightarrow> nat" where 
+"stack_size_rev (Seq_0 c1 c2 # s ) = (if s = [] then Suc (2 * size_e c1) else 
+  Suc (stack_size_rev s))"|
+"stack_size_rev (Bot x # s) = (if s = [] then 0 else Suc (stack_size_rev s))"|
+"stack_size_rev (_ #s) = (if s = [] then 1 else Suc (stack_size_rev s))"|
+"stack_size_rev [] = 1"
+
+fun stack_size :: "com_op list \<Rightarrow> nat" where 
+"stack_size s = stack_size_rev (rev s)"
+
+lemma 
+stack_size_mono :" x \<noteq> [] \<Longrightarrow>y \<noteq>  [] \<Longrightarrow> stack_size_rev y < stack_size_rev x
+ \<Longrightarrow> stack_size_rev (s @ y) < stack_size_rev (s @ x) "
+  apply(induct s )
+   apply auto
+  subgoal for a xs
+    apply (cases a)
+           apply (auto)
+    done
+  done
+
+lemma stack_size_0:"(stack_size_rev x = 0) = (\<exists>n. x = [Bot n]) "
+  apply(cases x)
+   apply auto
+  subgoal for a xs
+    apply (cases a)
+           apply (auto split :if_splits)
+    done
+ subgoal for a xs
+    apply (cases a)
+           apply (auto split :if_splits)
+   done
+  done
+
+lemma add_res_less:
+"\<forall>x. s \<noteq> [Bot x] \<and> a \<noteq> Bot x \<Longrightarrow> stack_size (add_res_to_stack_op r s) < stack_size (a#s) "
+  apply(cases s)
+   apply auto
+   apply (cases a)
+  apply (auto simp add: stack_size_mono)
+  subgoal for a xs
+    apply (cases a)
+    using stack_size_mono stack_size_0 nat_less_le    apply (auto )
+    done
+  done
+
 function com_to_operators_stack :: "com_op list \<Rightarrow> operator list" where 
 "com_to_operators_stack (Bot x # s) = x "|
 "com_to_operators_stack (SKIP# s) = com_to_operators_stack (add_res_to_stack_op [] s)"|
@@ -291,9 +343,58 @@ com_to_operators_stack (add_res_to_stack_op  (let i = PCV (com.While vs c) ;
         effect_of = [(PC, k)]\<rparr> 
       # map (\<lambda> v. 
       \<lparr> precondition_of = [(PC, i), (VN v, EV One)], 
-         effect_of = [(PC, j)]\<rparr>) vs) s)"
-  sorry
-termination sorry
+         effect_of = [(PC, j)]\<rparr>) vs) s)"|
+"com_to_operators_stack [] = []"
+  by pat_completeness auto
+termination
+proof (relation "measure stack_size",goal_cases)
+case 1
+then show ?case by auto
+next
+  case (2 s)
+  then show ?case using add_res_less apply auto
+    by (metis add_res_to_stack_op.simps butlast.simps(2) butlast_snoc com_op.distinct 
+neq0_conv not_Cons_self2 rev_singleton_conv stack_size_0)
+
+    
+next
+  case (3 v b s)
+   then show ?case using add_res_less apply auto
+     by (smt One_nat_def Zero_not_Suc add_res_to_stack_op.simps(3) 
+last_ConsL last_snoc less_nat_zero_code linorder_neqE_nat rev_singleton_conv 
+stack_size_0 stack_size_rev.simps(4))
+      
+next
+  case (4 c1 c2 s)
+  then show ?case using add_res_less apply auto
+     by (smt One_nat_def Zero_not_Suc add_res_to_stack_op.simps
+last_ConsL last_snoc less_nat_zero_code linorder_neqE_nat rev_singleton_conv 
+stack_size_0 stack_size_rev.simps)
+
+next
+  case (5 c1 c2 s)
+  then show ?case using stack_size_mono  by (cases c1) auto
+
+next
+  case (6 c1 c2 ops s)
+  then show ?case using add_res_less apply auto
+     by (smt One_nat_def Zero_not_Suc add_res_to_stack_op.simps
+last_ConsL last_snoc less_nat_zero_code linorder_neqE_nat rev_singleton_conv 
+stack_size_0 stack_size_rev.simps)
+next
+case (7 vs c1 c2 s)
+then show ?case using add_res_less apply auto
+     by (smt One_nat_def Zero_not_Suc add_res_to_stack_op.simps
+last_ConsL last_snoc less_nat_zero_code linorder_neqE_nat rev_singleton_conv 
+stack_size_0 stack_size_rev.simps)
+next
+  case (8 vs c s)
+  then show ?case using add_res_less apply auto
+     by (smt One_nat_def Zero_not_Suc add_res_to_stack_op.simps
+last_ConsL last_snoc less_nat_zero_code linorder_neqE_nat rev_singleton_conv 
+stack_size_0 stack_size_rev.simps)
+qed
+
 
 lemma com_to_operators_stack_correct:
 "com_to_operators_stack (push_to_stack_op c s) = com_to_operators_stack (add_res_to_stack_op (
