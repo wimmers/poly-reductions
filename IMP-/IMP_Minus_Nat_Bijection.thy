@@ -33,16 +33,19 @@ definition IMP_Minus_prod_encode where "IMP_Minus_prod_encode \<equiv>
   ''prod_encode'' ::= ((V ''triangle'') \<oplus> (V ''prod_encode'')) ;;
   ''triangle'' ::= (A (N 0))"
 
+definition IMP_Minus_prod_encode_time where "IMP_Minus_prod_encode_time x y \<equiv>
+  mul_time (1 + x + y) + 14"
+
 lemma IMP_Minus_prod_encode_correct: 
   "(IMP_Minus_prod_encode, s) 
-      \<Rightarrow>\<^bsup>mul_time (1 + s ''a'' + s ''b'') + 14\<^esup> 
+      \<Rightarrow>\<^bsup>IMP_Minus_prod_encode_time (s ''a'') (s ''b'')\<^esup> 
       s(''a'' := 0,
         ''b'' := 0,
         ''c'' := 0,
         ''d'' := 0,
         ''triangle'' := 0,
         ''prod_encode'' := prod_encode (s ''a'', s ''b''))"
-  unfolding IMP_Minus_prod_encode_def prod_encode_def
+  unfolding IMP_Minus_prod_encode_def prod_encode_def IMP_Minus_prod_encode_time_def
   by(force
       intro: terminates_in_state_intro[OF Seq[OF Seq]]
         IMP_Minus_triangle_correct)
@@ -225,5 +228,98 @@ lemma nth_nat_IMP_Minus_correct:
   by (fastforce simp: hd_nat_def nth_nat_is_hd_of_drop_n_nat
             intro!: terminates_in_state_intro[OF Seq] 
               IMP_Minus_fst_nat_correct nth_nat_loop_correct)+
+
+definition cons_IMP_Minus :: "atomExp \<Rightarrow> atomExp \<Rightarrow> Com.com" 
+  where "cons_IMP_Minus h t \<equiv> 
+    ''a'' ::= (A h) ;;
+    ''b'' ::= (A t) ;;
+    IMP_Minus_prod_encode ;;
+    ''cons'' ::= ((V ''prod_encode'') \<oplus> (N 1)) ;;
+    ''prod_encode'' ::= (A (N 0))"
+
+definition cons_IMP_Minus_time where "cons_IMP_Minus_time h t \<equiv>
+  8 + IMP_Minus_prod_encode_time h t"
+
+lemma cons_IMP_Minus_correct:
+  "t \<noteq> (V ''a'') \<Longrightarrow>
+    (cons_IMP_Minus h t, s) \<Rightarrow>\<^bsup>cons_IMP_Minus_time (atomVal h s) (atomVal t s)\<^esup>
+    s(''a'' := 0,
+      ''b'' := 0,
+      ''c'' := 0,
+      ''d'' := 0,
+      ''triangle'' := 0,
+      ''prod_encode'' := 0,
+      ''cons'' := (atomVal h s) ## (atomVal t s))"
+  unfolding cons_IMP_Minus_def cons_IMP_Minus_time_def cons_def
+  by (cases t) (fastforce intro!: terminates_in_state_intro[OF Seq] IMP_Minus_prod_encode_correct)+
+
+fun cons_list_IMP_Minus :: "atomExp list \<Rightarrow> Com.com" where
+"cons_list_IMP_Minus [] = Com.SKIP" |
+"cons_list_IMP_Minus (a # as) = (if as = [] 
+  then 
+    ''cons'' ::= (A a) ;;
+    ''a'' ::= (A (N 0)) ;;
+    ''b'' ::= (A (N 0)) ;;
+    ''c'' ::= (A (N 0)) ;;
+    ''d'' ::= (A (N 0)) ;;
+    ''triangle'' ::= (A (N 0)) ;;
+    ''prod_encode'' ::= (A (N 0))
+  else
+    cons_list_IMP_Minus as ;;
+    cons_IMP_Minus a (V ''cons''))"
+
+fun cons_list :: "nat list \<Rightarrow> nat" where
+"cons_list [] = 0" |
+"cons_list (a # as) = 
+  (if as = [] 
+   then a
+   else a ## cons_list as)"
+
+fun cons_list_IMP_Minus_time :: "nat list \<Rightarrow> nat" where
+"cons_list_IMP_Minus_time [] = 1" | 
+"cons_list_IMP_Minus_time (a # as) = 
+  (if as = [] 
+   then 14
+   else cons_list_IMP_Minus_time as + cons_IMP_Minus_time a (cons_list as))"
+
+lemma cons_list_IMP_Minus_correct:
+  "as \<noteq> [] 
+    \<Longrightarrow> (\<forall>i \<in> set as. i \<notin> V ` { ''cons'', ''a'', ''b'', ''c'', ''d'', ''triangle'', ''prod_encode''}) 
+    \<Longrightarrow> (cons_list_IMP_Minus as, s) \<Rightarrow>\<^bsup>cons_list_IMP_Minus_time (map (\<lambda>i. atomVal i s) as)\<^esup>
+      s(''a'' := 0,
+        ''b'' := 0,
+        ''c'' := 0,
+        ''d'' := 0,
+        ''triangle'' := 0,
+        ''prod_encode'' := 0,
+        ''cons'' := cons_list (map (\<lambda>i. atomVal i s) as))"
+proof(induction as arbitrary: s)
+  case (Cons a as)
+  then show ?case
+  proof (cases as)
+    case Nil
+    then show ?thesis
+      by (fastforce intro!: terminates_in_time_state_intro[OF Seq'])
+  next
+    case (Cons b bs)
+
+    hence "as \<noteq> []" by simp
+    have *: "(\<forall>i \<in> set as. i \<notin> V ` { ''cons'', ''a'', ''b'', ''c'', ''d'',
+       ''triangle'', ''prod_encode''})"
+      using \<open>\<forall>i\<in>set (a # as). i \<notin> V ` {''cons'', ''a'', ''b'', ''c'', ''d'', ''triangle'',
+             ''prod_encode''}\<close>
+      by simp
+
+    show ?thesis
+      apply(cases a; rule terminates_in_state_intro)
+      using \<open>as \<noteq> []\<close> 
+        \<open>\<forall>i\<in>set (a # as). i \<notin> V ` {''cons'', ''a'', ''b'', ''c'', ''d'', ''triangle'',
+           ''prod_encode''}\<close> 
+      by(fastforce intro!: Cons.IH[OF _ *] cons_IMP_Minus_correct)+
+  qed
+qed auto
+
+declare cons_list_IMP_Minus.simps [simp del]
+declare cons_list_IMP_Minus_time.simps [simp del]
 
 end
