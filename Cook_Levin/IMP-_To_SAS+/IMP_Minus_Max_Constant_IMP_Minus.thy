@@ -278,19 +278,6 @@ lemma add_res_nat_second_part_correct:
   unfolding add_res_nat_second_part_def add_res_nat_second_part_time_def Let_def
   by (fastforce intro: cons_IMP_Minus_correct cons_list_IMP_Minus_correct)+
 
-(*"add_res_nat n s = ( d e
-  if s = 0 then  (7##n##0) ## 0
-else (
-let h =hd_nat s; f
-    t =tl_nat s; g
-    c = hd_nat h; h 
-    e1 = nth_nat (Suc 0) h ; i 
-    e2 = nth_nat (Suc (Suc 0)) h; j 
-    e3 = nth_nat (Suc (Suc (Suc 0))) h in nth_nat
-if c = 2 then (3##e1##e2##n##0)##t else 
-if c = 3 then (4##e1##e2##e3##n##0)##t else 
-if c = 5 then (6##e1##n##0)##t else s   *)
-
 definition add_res_nat_third_part where "add_res_nat_third_part \<equiv>
   IF ''e'' \<noteq>0
   THEN
@@ -422,4 +409,498 @@ next
           [OF add_res_nat_second_part_correct]]
         simp: Let_def)+
 qed
-end
+
+definition push_con_first_part where "push_con_first_part \<equiv>
+  ''e'' ::= (A (V ''a'')) ;;
+  ''f'' ::= (A (V ''b'')) ;;
+  
+  ''a'' ::= ((V ''a'') \<ominus> (N 1)) ;;
+  IMP_Minus_fst_nat ;;
+  ''g'' ::= (A (V ''fst_nat'')) ;;
+  
+  ''a'' ::= (A (N (Suc 0))) ;;
+  ''b'' ::= (A (V ''e'')) ;;
+  nth_nat_IMP_Minus ;;
+  ''h'' ::= (A (V ''nth_nat'')) ;; 
+
+  ''a'' ::= (A (N (Suc (Suc 0)))) ;;
+  ''b'' ::= (A (V ''e'')) ;;
+  nth_nat_IMP_Minus ;;
+  ''i'' ::= (A (V ''nth_nat'')) ;;
+
+  ''a'' ::= (A (N (Suc (Suc (Suc 0))))) ;;
+  ''b'' ::= (A (V ''e'')) ;;
+  nth_nat_IMP_Minus"
+
+definition push_con_first_part_time where "push_con_first_part_time c s \<equiv>
+  (let con = hd_nat c in
+    24 + IMP_Minus_fst_nat_time (c - 1) + nth_nat_IMP_Minus_time (Suc 0) c
+     + nth_nat_IMP_Minus_time (Suc (Suc 0)) c  
+     + nth_nat_IMP_Minus_time (Suc (Suc (Suc 0))) c)"
+
+lemma push_con_first_part_correct:
+  "(push_con_first_part, s) \<Rightarrow>\<^bsup>push_con_first_part_time (s ''a'') (s ''b'')\<^esup>
+    (let con = hd_nat (s ''a''); 
+         e1 = nth_nat (Suc 0) (s ''a'') ; 
+         e2 = nth_nat (Suc (Suc 0)) (s ''a''); 
+         e3 = nth_nat (Suc (Suc (Suc 0))) (s ''a'') in 
+       s(''a'' := 0,
+         ''b'' := 0,
+         ''c'' := 0,
+         ''e'' := s ''a'',
+         ''f'' := s ''b'',
+         ''g'' := con,
+         ''h'' := e1,
+         ''i'' := e2,
+         ''fst_nat'' := 0,
+         ''snd_nat'' := 0,
+         ''nth_nat'' := e3))"
+  unfolding Let_def push_con_first_part_def push_con_first_part_time_def 
+    hd_nat_def
+  by (fastforce simp: Let_def intro: terminates_in_time_state_intro[OF Seq] 
+      terminates_in_state_intro[OF nth_nat_IMP_Minus_correct]
+      IMP_Minus_fst_nat_correct)
+
+definition push_con_second_part where "push_con_second_part \<equiv>
+  cons_IMP_Minus (N 0) (N 0) ;;
+  ''j'' ::= (A (V ''cons'')) ;;
+  
+  cons_list_IMP_Minus [N 1, V ''i'', N 0] ;;
+  ''k'' ::= (A (V ''cons'')) ;;
+    
+  cons_list_IMP_Minus [N 2, V ''i'', V ''nth_nat'', N 0] ;;
+  ''l'' ::= (A (V ''cons'')) ;;
+
+  cons_list_IMP_Minus [N 5, V ''i'', N 0];; 
+
+  ''nth_nat'' ::= (A (N 0)) ;;
+  ''h'' ::= (A (N 0)) ;;
+  ''i'' ::= (A (N 0))"
+
+definition push_con_second_part_time where "push_con_second_part_time c s \<equiv>
+  (let
+    con = hd_nat c;
+    e1 = nth_nat (Suc 0) c;
+    e2 = nth_nat (Suc (Suc 0)) c;
+    e3 = nth_nat (Suc (Suc (Suc 0))) c in
+      12 + cons_IMP_Minus_time 0 0
+      + cons_list_IMP_Minus_time [1, e2, 0]
+      + cons_list_IMP_Minus_time [2, e2, e3, 0]
+      + cons_list_IMP_Minus_time [5, e2, 0])"
+
+lemma push_con_second_part_correct:  
+  "(push_con_first_part ;; push_con_second_part, s) 
+    \<Rightarrow>\<^bsup>push_con_first_part_time (s ''a'') (s ''b'') 
+      + push_con_second_part_time (s ''a'') (s ''b'') \<^esup>
+    (let con = hd_nat (s ''a'');
+         e1 = nth_nat (Suc 0) (s ''a'');
+         e2 = nth_nat (Suc (Suc 0)) (s ''a'');
+         e3 = nth_nat (Suc (Suc (Suc 0))) (s ''a'');
+         l1 = [0, 0];
+         l2 = [1, e2, 0];
+         l3 = [2, e2, e3, 0];
+         l4 = [5, e2, 0]
+    in 
+      s(''a'' := 0,
+        ''b'' := 0,
+        ''c'' := 0,
+        ''d'' := 0,
+        ''e'' := s ''a'',
+        ''f'' := s ''b'',
+        ''g'' := con,
+        ''h'' := 0,
+        ''i'' := 0,
+        ''fst_nat'' := 0,
+        ''snd_nat'' := 0,
+        ''nth_nat'' := 0,
+        ''j'' := cons_list l1,
+        ''k'' := cons_list l2,
+        ''l'' := cons_list l3,
+        ''cons'' := cons_list l4,
+        ''triangle'' := 0,
+        ''prod_encode'' := 0))"
+  apply(rule terminates_in_state_intro[OF Seq'[OF push_con_first_part_correct]])
+  unfolding push_con_second_part_def push_con_second_part_time_def Let_def
+  by (fastforce intro: cons_IMP_Minus_correct cons_list_IMP_Minus_correct)+
+
+definition push_con_third_part where "push_con_third_part \<equiv>
+  ''a'' ::= ((V ''g'') \<ominus> (N 1)) ;;
+  IF ''a'' \<noteq>0 THEN
+  (
+    ''a'' ::= ((V ''g'') \<ominus> (N 2)) ;;
+    IF ''a'' \<noteq>0 THEN
+    (
+      ''a'' ::= ((V ''g'') \<ominus> (N 3)) ;;
+      IF ''a'' \<noteq>0 THEN
+      (
+        ''a'' ::= (A (V ''cons'')) 
+      )
+      ELSE
+      (
+        ''a'' ::= (A (V ''l''))
+      )
+    )
+    ELSE
+    (
+      Com.SKIP ;; Com.SKIP ;; Com.SKIP ;;
+      ''a'' ::= (A (V ''e''))
+    )
+  )
+  ELSE
+  (
+    Com.SKIP ;; Com.SKIP ;; Com.SKIP ;;
+    Com.SKIP ;; Com.SKIP ;;
+    IF ''g'' \<noteq>0 THEN
+    (
+      ''a'' ::= (A (V ''k'')) 
+    )
+    ELSE
+    (
+      ''a'' ::= (A (V ''j''))
+    )
+  ) ;;
+  cons_IMP_Minus (V ''a'') (V ''f'') ;;
+  ''push_con'' ::= (A (V ''cons'')) ;;
+  ''e'' ::= (A (N 0)) ;; 
+  ''f'' ::= (A (N 0)) ;;
+  ''g'' ::= (A (N 0)) ;; 
+  ''j'' ::= (A (N 0)) ;;
+  ''k'' ::= (A (N 0)) ;;
+  ''l'' ::= (A (N 0)) ;;
+  ''cons'' ::= (A (N 0)) ;;
+  ''a'' ::= (A (N 0))"
+
+definition push_con_third_part_time where "push_con_third_part_time c s \<equiv>
+  (let
+    con = hd_nat c;
+    e1 = nth_nat (Suc 0) c;
+    e2 = nth_nat (Suc (Suc 0)) c;
+    e3 = nth_nat (Suc (Suc (Suc 0))) c; 
+    l = (
+     if con = 0 then (0##0) else 
+     if con = 1 then (1##e2##0) else 
+     if con = 2 then c else 
+     if con = 3 then (2 ## e2 ## e3 ## 0) else
+     (5 ## e2 ## 0)) in
+      11 + 18 + cons_IMP_Minus_time l s)"
+
+definition push_con_IMP_Minus where "push_con_IMP_Minus \<equiv>
+  push_con_first_part ;;
+  push_con_second_part ;;
+  push_con_third_part"
+
+definition push_con_IMP_Minus_time where "push_con_IMP_Minus_time c s \<equiv>
+  push_con_first_part_time c s
+  + push_con_second_part_time c s
+  + push_con_third_part_time c s"
+
+lemma push_con_IMP_Minus_correct:
+  "(push_con_IMP_Minus, s) 
+    \<Rightarrow>\<^bsup>push_con_IMP_Minus_time (s ''a'') (s ''b'') \<^esup>
+     (s(''a'' := 0,
+        ''b'' := 0,
+        ''c'' := 0,
+        ''d'' := 0,
+        ''e'' := 0,
+        ''f'' := 0,
+        ''g'' := 0,
+        ''h'' := 0,
+        ''i'' := 0,
+        ''fst_nat'' := 0,
+        ''snd_nat'' := 0,
+        ''nth_nat'' := 0,
+        ''j'' := 0,
+        ''k'' := 0,
+        ''l'' := 0,
+        ''cons'' := 0,
+        ''triangle'' := 0,
+        ''prod_encode'' := 0,
+        ''push_con'' := push_con_nat (s ''a'') (s ''b'')))"
+proof -
+  have "hd_nat (s ''a'') = 0 \<or> hd_nat (s ''a'') = 1 \<or> hd_nat (s ''a'') = 2 
+    \<or> hd_nat (s ''a'') = 3 \<or> hd_nat (s ''a'') > 3"
+    by auto
+  thus ?thesis
+    apply(elim disjE)
+    unfolding push_con_IMP_Minus_def push_con_IMP_Minus_time_def 
+    by(rule terminates_in_state_intro[OF Seq'
+          [OF  push_con_second_part_correct]] ;
+        fastforce 
+        simp: push_con_third_part_def push_con_third_part_time_def Let_def
+        intro: terminates_in_state_intro[OF Seq]
+        terminates_in_state_intro[OF Big_StepT.Assign]
+        cons_IMP_Minus_correct)+
+qed
+
+definition max_constant_iteration_first_part where 
+  "max_constant_iteration_first_part \<equiv>
+  ''e'' ::= (A (V ''a'')) ;;
+
+  ''a'' ::= ((V ''e'') \<ominus> (N 1)) ;;
+  IMP_Minus_fst_nat ;;
+  ''f'' ::= (A (V ''fst_nat'')) ;;
+
+  ''a'' ::= ((V ''e'') \<ominus> (N 1)) ;;
+  IMP_Minus_snd_nat ;;
+  ''g'' ::= (A (V ''snd_nat'')) ;;
+
+  ''a'' ::= ((V ''f'') \<ominus> (N 1)) ;;
+  IMP_Minus_fst_nat ;;
+  ''h'' ::= (A (V ''fst_nat'')) ;;
+
+  ''a'' ::= (A (N (Suc 0))) ;;
+  ''b'' ::= (A (V ''f'')) ;;
+  nth_nat_IMP_Minus ;;
+  ''i'' ::= (A (V ''nth_nat'')) ;;
+
+  ''a'' ::= (A (N (Suc (Suc 0)))) ;;
+  ''b'' ::= (A (V ''f'')) ;;
+  nth_nat_IMP_Minus ;;
+  ''j'' ::= (A (V ''nth_nat'')) ;;
+
+  ''a'' ::= (A (N (Suc (Suc (Suc 0))))) ;;
+  ''b'' ::= (A (V ''f'')) ;;
+  nth_nat_IMP_Minus ;;
+  ''k'' ::= (A (V ''nth_nat'')) ;;
+
+  ''a'' ::= (A (N (Suc (Suc (Suc (Suc 0)))))) ;;
+  ''b'' ::= (A (V ''f'')) ;;
+  nth_nat_IMP_Minus ;;
+  ''l'' ::= (A (V ''nth_nat''))"
+
+definition max_constant_iteration_first_part_time 
+  where "max_constant_iteration_first_part_time s \<equiv>
+  (let h = hd_nat s in
+    38 + 2 * IMP_Minus_fst_nat_time (s - 1) + IMP_Minus_fst_nat_time (h - 1)
+    + nth_nat_IMP_Minus_time (Suc 0) h + nth_nat_IMP_Minus_time (Suc (Suc 0)) h
+    + nth_nat_IMP_Minus_time (Suc (Suc (Suc 0))) h
+    + nth_nat_IMP_Minus_time (Suc (Suc (Suc (Suc 0)))) h)"
+
+lemma max_constant_iteration_first_part_correct:
+  "(max_constant_iteration_first_part, s) 
+    \<Rightarrow>\<^bsup>max_constant_iteration_first_part_time (s ''a'')\<^esup>
+    (let h = hd_nat (s ''a''); 
+         t = tl_nat (s ''a''); 
+         c = hd_nat h;  
+         e1 = nth_nat (Suc 0) h ; 
+         e2 = nth_nat (Suc (Suc 0)) h; 
+         e3 = nth_nat (Suc (Suc (Suc 0))) h;
+         e4 = nth_nat (Suc (Suc (Suc (Suc 0)))) h in 
+       s(''a'' := 0,
+         ''b'' := 0,
+         ''c'' := 0,
+         ''e'' := s ''a'',
+         ''f'' := h,
+         ''g'' := t,
+         ''h'' := c,
+         ''i'' := e1,
+         ''j'' := e2,
+         ''k'' := e3,
+         ''l'' := e4,
+         ''fst_nat'' := 0,
+         ''snd_nat'' := 0,
+         ''nth_nat'' := e4))"
+  unfolding Let_def max_constant_iteration_first_part_def 
+    max_constant_iteration_first_part_time_def hd_nat_def tl_nat_def
+  by (fastforce intro: terminates_in_time_state_intro[OF Seq] 
+      nth_nat_IMP_Minus_correct
+      terminates_in_state_intro[OF Big_StepT.Assign]
+      IMP_Minus_fst_nat_correct IMP_Minus_snd_nat_correct)+
+
+(*if c = 0 then  max_constant_stack_nat (add_res_nat 0 t) 
+else if c = 1 then max_constant_stack_nat (add_res_nat (aexp_max_constant_tail e1) t)
+else if c = 2 then  max_constant_stack_nat (push_con_nat e1 s) 
+else if c = 3 then   max_constant_stack_nat (push_con_nat e2 s)
+else if c = 4 then   max_constant_stack_nat (add_res_nat (max e3 e4) t)
+else if c = 5 then   max_constant_stack_nat (push_con_nat e1 s) 
+else if c = 6 then  max_constant_stack_nat (add_res_nat e2 t)
+else e1*)
+
+definition max_constant_iteration_second_part where "max_constant_iteration_second_part \<equiv>
+  ''max_constant'' ::= (A (N 1)) ;;
+  IF ''h'' \<noteq>0 THEN
+  (
+    ''a'' ::= ((V ''h'') \<ominus> (N 1)) ;;
+    IF ''a'' \<noteq>0 THEN
+    (
+      ''a'' ::= ((V ''h'') \<ominus> (N 2)) ;;
+      IF ''a'' \<noteq>0 THEN
+      (
+        ''a'' ::= ((V ''h'') \<ominus> (N 3)) ;;
+        IF ''a'' \<noteq>0 THEN
+        (
+          ''a'' ::= ((V ''h'') \<ominus> (N 4)) ;;
+          IF ''a'' \<noteq>0 THEN
+          (
+            ''a'' ::= ((V ''h'') \<ominus> (N 5)) ;;
+            IF ''a'' \<noteq>0 THEN
+            (
+              ''a'' ::= ((V ''h'') \<ominus> (N 6)) ;;
+              IF ''a'' \<noteq>0 THEN
+              (
+                ''a'' ::= (A (V ''i'')) ;;
+                ''max_constant'' ::= (A (N 0))
+              )
+              ELSE
+              (
+                ''a'' ::= (A (V ''j'')) ;;
+                ''b'' ::= (A (V ''g'')) ;;
+                add_res_nat_IMP_Minus ;;
+                ''a'' ::= (A (V ''add_res''))
+              )
+            )
+            ELSE
+            (
+              ''a'' ::= (A (V ''i'')) ;;
+              ''b'' ::= (A (V ''e'')) ;;
+              push_con_IMP_Minus ;;
+              ''a'' ::= (A (V ''push_con''))
+            )
+          )
+          ELSE
+          (
+            ''a'' ::= (A (V ''k'')) ;;
+            ''b'' ::= (A (V ''l'')) ;;
+            IMP_Minus_max_a_min_b ;;
+            ''b'' ::= (A (V ''g'')) ;;
+            add_res_nat_IMP_Minus ;;
+            ''a'' ::= (A (V ''add_res''))
+          )
+        )
+        ELSE
+        (
+          ''a'' ::= (A (V ''j'')) ;;
+          ''b'' ::= (A (V ''e'')) ;;
+          push_con_IMP_Minus ;;
+          ''a'' ::= (A (V ''push_con''))
+        )
+      )
+      ELSE
+      (
+        ''a'' ::= (A (V ''i'')) ;;
+        ''b'' ::= (A (V ''e'')) ;;
+        push_con_IMP_Minus ;;
+        ''a'' ::= (A (V ''push_con''))
+      )
+    )
+    ELSE
+    (
+      ''a'' ::= (A (V ''i'')) ;;
+      aexp_max_constant_IMP_Minus ;;
+      ''a'' ::= (A (V ''aexp_max_constant'')) ;;
+      ''b'' ::= (A (V ''g'')) ;;
+      add_res_nat_IMP_Minus ;;
+      ''a'' ::= (A (V ''add_res''))
+    )
+  )
+  ELSE
+  (
+    ''a'' ::= (A (N 0)) ;;
+    ''b'' ::= (A (V ''g'')) ;;
+    add_res_nat_IMP_Minus ;;
+    ''a'' ::= (A (V ''add_res''))
+  ) ;;
+  zero_variables [''d'', ''e'', ''f'', ''g'', ''h'', ''i'', ''j'', ''k'', ''l'', ''m'', ''n'',
+    ''nth_nat'', ''aexp_max_constant'', ''add_res'', ''cons'', ''triangle'',
+        ''prod_encode'', ''add_res'', ''atomExp_to_constant'', ''push_con'']"
+
+definition max_constant_iteration_second_part_time where 
+  "max_constant_iteration_second_part_time s \<equiv>
+  Suc (Suc 0) + 
+  (let h = hd_nat s; 
+       t = tl_nat s; 
+       c = hd_nat h;  
+       e1 = nth_nat (Suc 0) h ; 
+       e2 = nth_nat (Suc (Suc 0)) h; 
+       e3 = nth_nat (Suc (Suc (Suc 0))) h;
+       e4 = nth_nat (Suc (Suc (Suc (Suc 0)))) h in 
+      (if c = 0 then  1 + 6 + (add_res_nat_IMP_Minus_time 0 t) 
+       else if c = 1 then 4 + 8 
+          + (add_res_nat_IMP_Minus_time (aexp_max_constant_tail e1) t)
+          + (aexp_max_constant_IMP_Minus_time e1)
+       else if c = 2 then 7 + 6 + (push_con_IMP_Minus_time e1 s) 
+       else if c = 3 then 10 + 6 + (push_con_IMP_Minus_time e2 s)
+       else if c = 4 then 13 + 8 + 11 + (add_res_nat_IMP_Minus_time (max e3 e4) t)
+       else if c = 5 then 16 + 6 + (push_con_IMP_Minus_time e1 s) 
+       else if c = 6 then 19 + 6 + (add_res_nat_IMP_Minus_time e2 t)
+       else 19 + 4))
+  + zero_variables_time [''d'', ''e'', ''f'', ''g'', ''h'', ''i'', ''j'', ''k'', ''l'', ''m'', ''n'',
+    ''nth_nat'', ''aexp_max_constant'', ''add_res'', ''cons'', ''triangle'',
+        ''prod_encode'', ''add_res'', ''atomExp_to_constant'', ''push_con'']"
+
+definition max_constant_iteration where "max_constant_iteration \<equiv>
+  max_constant_iteration_first_part ;;
+  max_constant_iteration_second_part"
+
+definition max_constant_iteration_time where "max_constant_iteration_time s \<equiv>
+  max_constant_iteration_first_part_time s 
+  + max_constant_iteration_second_part_time s"
+
+declare add_res_nat.simps [simp del]
+declare push_con_nat.simps [simp del]
+declare aexp_max_constant_tail.simps [simp del]
+
+lemma max_constant_iteration_correct: 
+"(max_constant_iteration, s') 
+    \<Rightarrow>\<^bsup>max_constant_iteration_time (s' ''a'')\<^esup>
+    (let s = s' ''a'';
+         h = hd_nat s; 
+         t = tl_nat s; 
+         c = hd_nat h;  
+         e1 = nth_nat (Suc 0) h ; 
+         e2 = nth_nat (Suc (Suc 0)) h; 
+         e3 = nth_nat (Suc (Suc (Suc 0))) h;
+         e4 = nth_nat (Suc (Suc (Suc (Suc 0)))) h in 
+       s'(''a'' := 
+          (if c = 0 then (add_res_nat 0 t) 
+           else if c = 1 then (add_res_nat (aexp_max_constant_tail e1) t)
+           else if c = 2 then (push_con_nat e1 s) 
+           else if c = 3 then (push_con_nat e2 s)
+           else if c = 4 then (add_res_nat (max e3 e4) t)
+           else if c = 5 then (push_con_nat e1 s) 
+           else if c = 6 then (add_res_nat e2 t)
+           else e1),
+         ''b'' := 0,
+         ''c'' := 0,
+         ''d'' := 0,
+         ''e'' := 0,
+         ''f'' := 0,
+         ''g'' := 0,
+         ''h'' := 0,
+         ''i'' := 0,
+         ''j'' := 0,
+         ''k'' := 0,
+         ''l'' := 0,
+         ''m'' := 0,
+         ''n'' := 0,
+         ''max_constant'' := (if c < 7 then 1 else 0),
+         ''fst_nat'' := 0,
+         ''snd_nat'' := 0,
+         ''nth_nat'' := 0,
+         ''cons'' := 0,
+         ''triangle'' := 0,
+         ''prod_encode'' := 0,
+         ''aexp_max_constant'' := 0,
+         ''atomExp_to_constant'' := 0,
+         ''add_res'' := 0,
+         ''push_con'' := 0))"
+proof -
+  let ?c = "hd_nat (hd_nat (s' ''a''))"
+  have "?c = 0 \<or> ?c = 1 \<or> ?c = 2 \<or> ?c = 3 \<or> ?c = 4 \<or> ?c = 5 \<or> ?c = 6 \<or> ?c > 6"
+    by auto
+  thus ?thesis
+    unfolding max_constant_iteration_def max_constant_iteration_time_def
+      max_constant_iteration_second_part_def max_constant_iteration_second_part_time_def
+    apply(elim disjE)
+    by(fastforce 
+        simp: Let_def 
+        intro: 
+          aexp_max_constant_IMP_Minus_correct IMP_Minus_max_a_min_b_correct
+          add_res_nat_IMP_Minus_correct push_con_IMP_Minus_correct
+        intro!: 
+          terminates_in_state_intro[OF Seq'
+          [OF max_constant_iteration_first_part_correct
+            Seq'[OF Seq'[OF Big_StepT.Assign] zero_variables_correct]]])+
+qed
+
+end 

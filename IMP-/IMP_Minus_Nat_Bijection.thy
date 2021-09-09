@@ -322,4 +322,24 @@ qed auto
 declare cons_list_IMP_Minus.simps [simp del]
 declare cons_list_IMP_Minus_time.simps [simp del]
 
+fun zero_variables :: "vname list \<Rightarrow> Com.com" where
+"zero_variables [] = Com.SKIP" |
+"zero_variables (a # as) = (a ::= (A (N 0)) ;; zero_variables as)"
+
+definition zero_variables_time where "zero_variables_time vs \<equiv>
+  1 + 2 * length vs"
+
+lemma zero_variables_correct:
+  "(zero_variables vs, s) 
+    \<Rightarrow>\<^bsup>zero_variables_time vs\<^esup> (\<lambda>v. (if v \<in> set vs then 0 else s v))"
+proof (induction vs arbitrary: s)
+  case (Cons a vs)
+  show ?case
+    by(fastforce 
+        intro: terminates_in_state_intro[OF Seq[OF Big_StepT.Assign Cons.IH]] 
+        simp: zero_variables_time_def)
+qed (auto simp: zero_variables_time_def)
+
+declare zero_variables.simps [simp del]
+
 end
