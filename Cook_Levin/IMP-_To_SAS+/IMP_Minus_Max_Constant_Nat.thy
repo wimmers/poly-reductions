@@ -21,25 +21,25 @@ lemma sub_atomExp_to_constant[simp]: "atomExp_to_constant_nat (atomExp_encode x)
   done
 
 
-fun aexp_max_constant_nat:: "nat \<Rightarrow> nat" where
+definition aexp_max_constant_nat:: "nat \<Rightarrow> nat" where
 "aexp_max_constant_nat n = (if hd_nat n \<le>2 \<and> 1 \<le> hd_nat n 
 then max (atomExp_to_constant_nat (nth_nat (Suc 0) n)) (atomExp_to_constant_nat (nth_nat (Suc (Suc 0)) n))
 else atomExp_to_constant_nat (nth_nat (Suc 0) n))"
 
-fun aexp_max_constant_tail:: "nat \<Rightarrow> nat" where
+definition aexp_max_constant_tail:: "nat \<Rightarrow> nat" where
 "aexp_max_constant_tail n = (if hd_nat n \<le>2 \<and> 1 \<le> hd_nat n 
 then max (atomExp_to_constant_tail (nth_nat (Suc 0) n)) (atomExp_to_constant_tail (nth_nat (Suc (Suc 0)) n))
 else atomExp_to_constant_tail (nth_nat (Suc 0) n))"
 
 lemma subtail_aexp_max_constant:
 "aexp_max_constant_tail n = aexp_max_constant_nat n"
-  using aexp_max_constant_nat.simps aexp_max_constant_tail.simps 
+  using aexp_max_constant_nat_def aexp_max_constant_tail_def
 atomExp_to_constant_tail_def by presburger
 
 
 lemma sub_aexp_max_constant:"aexp_max_constant_nat (aexp_encode x) = aexp_max_constant x"
   apply (cases x)
-      apply (auto simp only: aexp_max_constant_nat.simps aexp_encode.simps
+      apply (auto simp only: aexp_max_constant_nat_def aexp_encode.simps
                 sub_nth  sub_hd head.simps nth.simps
               sub_snd sub_fst snd_def fst_def sub_atomExp_to_constant)
       apply auto
@@ -80,6 +80,26 @@ fun max_con_encode :: "max_con \<Rightarrow> nat" where
 "max_con_encode (While_f c n) = list_encode[6, com_encode c ,n]"|
 "max_con_encode (Bot n) = list_encode[7,n]"
 
+fun max_con_decode :: "nat \<Rightarrow> max_con" where 
+"max_con_decode n = (case list_decode n of 
+    [0] \<Rightarrow> SKIP |
+    [Suc 0,aexp] \<Rightarrow> Assign (aexp_decode aexp)|
+    [Suc (Suc 0), c1 , c2] \<Rightarrow> Seq_0  (com_decode c1) (com_decode c2)|
+    [Suc (Suc ( Suc 0)), c1 , c2, n] \<Rightarrow> Seq_m (com_decode c1) (com_decode c2) n|
+    [Suc (Suc (Suc (Suc 0))), c1 , c2, n, m] \<Rightarrow> Seq_f  (com_decode c1) (com_decode c2) n m|
+    [Suc (Suc (Suc (Suc (Suc 0)))), c] \<Rightarrow> While_0  (com_decode c) |
+    [Suc (Suc (Suc (Suc (Suc (Suc 0))))), c,n] \<Rightarrow> While_f  (com_decode c) n |
+    [Suc (Suc (Suc (Suc (Suc (Suc (Suc 0)))))),n] \<Rightarrow> Bot  n | x \<Rightarrow> Bot 0
+)"
+value "max_con_decode (0##0##0)"
+lemma max_con_id:
+"max_con_decode (max_con_encode x) = x"
+  apply(cases x)
+         apply (auto simp add: max_con_decode.simps max_con_encode.simps list_encode_inverse
+              aexp_id com_id
+            simp del: aexp_decode.simps com_decode.simps )
+  done
+
 
 fun push_con :: "Com.com \<Rightarrow> max_con list \<Rightarrow> max_con list " where 
 "push_con Com.com.SKIP s = SKIP # s"|
@@ -94,7 +114,7 @@ lemma push_con_Nil:
   apply auto
   done
 
-fun push_con_nat :: "nat \<Rightarrow> nat \<Rightarrow> nat" where 
+definition push_con_nat :: "nat \<Rightarrow> nat \<Rightarrow> nat" where 
 "push_con_nat c s = (let con = hd_nat c; e1 = nth_nat (Suc 0) c; e2 =nth_nat (Suc (Suc 0)) c;
     e3 = nth_nat (Suc (Suc (Suc 0))) c in
      if con = 0 then (0##0) ## s else 
@@ -109,7 +129,7 @@ lemma sub_push_con :
 "push_con_nat (com_encode c) (list_encode (map max_con_encode s))
 = list_encode (map max_con_encode (push_con c s)) "
   apply(cases c)
-  apply (auto simp add: sub_hd sub_cons sub_tl cons0  simp del: list_encode.simps)
+  apply (auto simp add: push_con_nat_def sub_hd sub_cons sub_tl cons0  simp del: list_encode.simps)
   done
 
 fun add_res :: "nat \<Rightarrow> max_con list \<Rightarrow> max_con list" where 
@@ -117,7 +137,7 @@ fun add_res :: "nat \<Rightarrow> max_con list \<Rightarrow> max_con list" where
 "add_res n (Seq_0 c1 c2 # s) = Seq_m c1 c2 n # s"|
 "add_res n (Seq_m c1 c2 n0 #s) = Seq_f c1 c2 n0 n # s "|
 "add_res n (While_0 c #s) = While_f c n # s"|
-"add_res n s = s"
+"add_res n s = [Bot n]"
 
 lemma add_res_Nil:
 "add_res n s \<noteq> []"
@@ -130,14 +150,14 @@ lemma add_res_Nil:
   done
 
 
-fun add_res_nat :: "nat \<Rightarrow> nat \<Rightarrow> nat" where 
+definition add_res_nat :: "nat \<Rightarrow> nat \<Rightarrow> nat" where 
 "add_res_nat n s = (
   if s = 0 then  (7##n##0) ## 0
 else (let h =hd_nat s; t =tl_nat s; c = hd_nat h; e1 = nth_nat (Suc 0) h ; e2 = nth_nat (Suc (Suc 0)) h;
 e3 = nth_nat (Suc (Suc (Suc 0))) h in
 if c = 2 then (3##e1##e2##n##0)##t else 
 if c = 3 then (4##e1##e2##e3##n##0)##t else 
-if c = 5 then (6##e1##n##0)##t else s   )
+if c = 5 then (6##e1##n##0)##t else  (7##n##0) ## 0  )
 
 )"
 
@@ -145,7 +165,7 @@ lemma sub_add_res:
 "add_res_nat n (list_encode (map max_con_encode s))
 = list_encode (map max_con_encode (add_res n s))"
   apply (cases s)
-   apply (auto simp add:cons0 sub_cons non_empty_not_zero sub_hd sub_tl
+   apply (auto simp add:cons0 add_res_nat_def sub_cons non_empty_not_zero sub_hd sub_tl
            simp del: list_encode.simps(2))
   subgoal for a xs
     apply(cases a)
@@ -153,7 +173,69 @@ lemma sub_add_res:
     done
   done
 
-function max_constant_stack :: "max_con list \<Rightarrow> nat" where 
+fun size_e :: "Com.com \<Rightarrow> nat" where 
+"size_e Com.com.SKIP = 1 "|
+"size_e (Com.com.Assign v a)  = 1"|
+"size_e (Com.com.Seq c1 c2) = Suc (size_e c1 + size_e c2)"|
+"size_e (Com.com.If v c1 c2) = Suc (size_e c1 + size_e c2)"|
+"size_e (Com.com.While v c) = Suc (size_e c)"
+
+fun size_stack_rev :: "max_con list \<Rightarrow> nat" where
+"size_stack_rev (Seq_0 c1 c2# s) =  (if s = [] then Suc (2* (size_e c1 + size_e c2)) else  Suc (2 * size_e c2) + size_stack_rev s )  "|
+"size_stack_rev (Seq_m c1 c2 n#s) = (if s = [] then  Suc (2 * size_e c2) else  Suc (size_stack_rev s)) "|
+"size_stack_rev (While_0 c #s)  = (if s = [] then Suc (2* size_e c) else Suc (size_stack_rev s) )"|
+"size_stack_rev (Bot x # s) = (if s =[] then 0 else Suc (size_stack_rev s))"|
+"size_stack_rev (_#s) = (if s = [] then 1 else Suc (size_stack_rev s))"|
+"size_stack_rev [] = 1"
+
+lemma size_stack_0:"(size_stack_rev x = 0) = (\<exists>n. x = [Bot n]) "
+  apply(cases x)
+   apply auto
+  subgoal for a xs
+    apply (cases a)
+           apply (auto split :if_splits)
+    done
+ subgoal for a xs
+    apply (cases a)
+           apply (auto split :if_splits)
+   done
+  done
+
+  
+fun size_stack :: "max_con list \<Rightarrow> nat" where 
+"size_stack s = size_stack_rev (rev s)"
+
+lemma size_pos:"size_e c >0"
+  apply(induct c)
+      apply auto
+  done
+lemma 
+size_stack_mono :" x \<noteq> [] \<Longrightarrow>y \<noteq>  [] \<Longrightarrow> size_stack_rev y < size_stack_rev x
+ \<Longrightarrow> size_stack_rev (s @ y) < size_stack_rev (s @ x) "
+  apply(induct s )
+   apply auto
+  subgoal for a xs
+    apply (cases a)
+           apply (auto)
+    done
+  done
+
+
+
+lemma add_res_less:"\<forall>x. s \<noteq> [Bot x] \<and> a \<noteq> Bot x \<Longrightarrow> size_stack (add_res r s) < size_stack (a#s) "
+  apply(cases s)
+   apply auto
+   apply (cases a)
+  apply auto
+  subgoal for a xs
+    apply (cases a)
+    using size_stack_mono size_stack_0 nat_less_le    apply (auto )
+    done
+done
+
+lemma list_encode_0:"(list_encode xs = 0) =  (xs = [])"
+  by (metis list_encode.simps(1) list_encode_inverse)
+function (domintros) max_constant_stack  :: "max_con list \<Rightarrow> nat" where 
 "max_constant_stack (Bot x # s) = x"|
 "max_constant_stack (SKIP # s) = max_constant_stack (add_res 0 s)"|
 "max_constant_stack (Assign v # s) = max_constant_stack (add_res (aexp_max_constant v) s)"|
@@ -161,13 +243,61 @@ function max_constant_stack :: "max_con list \<Rightarrow> nat" where
 "max_constant_stack (Seq_m c1 c2 n0 # s) = max_constant_stack (push_con c2  (Seq_m c1 c2 n0 # s))"|
 "max_constant_stack (Seq_f _ _ n m #s) = max_constant_stack (add_res (max n m) s)"|
 "max_constant_stack (While_0 c# s) = max_constant_stack (push_con c (While_0 c# s)) "|
-"max_constant_stack (While_f _  n# s) = max_constant_stack (add_res n s)"
-  sorry
-termination sorry
+"max_constant_stack (While_f _  n# s) = max_constant_stack (add_res n s)"|
+"max_constant_stack [] = 0"
+  by pat_completeness  auto
+
+lemma max_const_stack_term:"All max_constant_stack_dom"
+proof  (relation "measure size_stack", goal_cases)
+case 1
+  then show ?case by auto
+next
+  case (2 s)
+  then show ?case using add_res_less apply auto
+    by (metis Suc_less_SucD add_res.simps length_Cons length_append_singleton less_Suc_eq_0_disj
+ list.size max_con.distinct not_less_less_Suc_eq rev_singleton_conv size_stack_0)
+        
+next
+  case (3 v s)
+  then show ?case using add_res_less apply auto
+    by (metis Suc_less_SucD add_res.simps length_Cons length_append_singleton less_Suc_eq_0_disj
+ list.size max_con.distinct not_less_less_Suc_eq rev_singleton_conv size_stack_0)
+next
+  case (4 c1 c2 s)
+  then show ?case apply  (cases c1)
+      using size_stack_mono by auto
+next
+  case (5 c1 c2 n0 s)
+  then show ?case apply  (cases c2)
+      using size_stack_mono by auto
+next
+  case (6 uu uv n m s)
+  then show ?case using add_res_less apply auto
+    by (metis Suc_less_SucD add_res.simps length_Cons length_append_singleton less_Suc_eq_0_disj
+ list.size max_con.distinct not_less_less_Suc_eq rev_singleton_conv size_stack_0)
+next
+  case (7 c s)
+  then show ?case apply  (cases c)
+      using size_stack_mono by auto
+next
+  case (8 uw n s)
+  then show ?case using add_res_less apply auto
+    by (metis Suc_less_SucD add_res.simps length_Cons length_append_singleton less_Suc_eq_0_disj
+ list.size max_con.distinct not_less_less_Suc_eq rev_singleton_conv size_stack_0)
+qed
+
+termination using max_const_stack_term by auto
 
 
-function max_constant_stack_nat :: "nat \<Rightarrow> nat" where 
-" max_constant_stack_nat s = (let h = hd_nat s; t = tl_nat s;
+
+ 
+
+
+
+   
+
+function (domintros) max_constant_stack_nat :: "nat \<Rightarrow> nat" where 
+" max_constant_stack_nat s = (if s= 0 then 0 else let h = hd_nat s; t = tl_nat s;
   c = hd_nat h; e1 = nth_nat (Suc 0) h; e2 = nth_nat (Suc (Suc 0)) h;
  e3 = nth_nat (Suc (Suc (Suc 0))) h ; e4 = nth_nat (Suc (Suc (Suc (Suc 0)))) h in 
  if c = 0 then  max_constant_stack_nat (add_res_nat 0 t) 
@@ -178,58 +308,190 @@ else if c = 4 then   max_constant_stack_nat (add_res_nat (max e3 e4) t)
 else if c = 5 then   max_constant_stack_nat (push_con_nat e1 s) 
 else if c = 6 then  max_constant_stack_nat (add_res_nat e2 t)
 else e1)"
-  sorry
-termination sorry
-
-lemma list_encode_0:"(list_encode xs = 0) =  (xs = [])"
-  by (metis list_encode.simps(1) list_encode_inverse)
+  by pat_completeness auto
 
 
+thm "max_constant_stack_nat.domintros"
+
+lemma max_constant_stack_nat_term:
+  "max_constant_stack_nat_dom (list_encode (map max_con_encode x))"
+proof (induct x rule: max_constant_stack.induct)
+case (1 x s)
+  then show ?case by 
+  (auto intro:
+       max_constant_stack_nat.domintros[of "list_encode (list_encode [7, x] # map max_con_encode s)"]
+     simp del: list_encode.simps(2) simp add: sub_hd)
+next
+  case (2 s)
+  then show ?case by (auto intro: max_constant_stack_nat.domintros[of "list_encode (list_encode [0] # map max_con_encode s)"]  
+              simp add: sub_add_res Let_def sub_hd sub_tl add_res_Nil push_con_Nil list_encode_0
+          simp del: list_encode.simps 
+                add_res.simps push_con.simps  )
+next
+  case (3 v s)
+  then show ?case 
+    by (auto intro : 
+        max_constant_stack_nat.domintros[of "list_encode (list_encode [Suc 0, aexp_encode v] # map max_con_encode s)"]
+              simp add: subtail_aexp_max_constant sub_aexp_max_constant  sub_add_res Let_def sub_hd sub_tl add_res_Nil push_con_Nil list_encode_0 aexp_id
+          simp del: list_encode.simps 
+                add_res.simps  push_con.simps aexp_max_constant.simps
+                    )
+next
+  case (4 c1 c2 s)
+  then show ?case  
+      using  max_constant_stack_nat.domintros[of  "list_encode (list_encode [2, com_encode c1, com_encode c2] # map max_con_encode s)"]
+    apply (auto simp add: sub_add_res Let_def sub_hd sub_tl add_res_Nil push_con_Nil list_encode_0
+      simp del: list_encode.simps
+                add_res.simps push_con.simps aexp_max_constant.simps )
+    apply (simp only: sub_push_con  flip: max_con_encode.simps list.map)
+    done
+next
+case (5 c1 c2 n0 s)
+  then show ?case 
+    using  max_constant_stack_nat.domintros[of  "list_encode (map max_con_encode (Seq_m c1 c2 n0 # s))"]
+    apply( simp add: sub_add_res Let_def sub_hd sub_tl add_res_Nil push_con_Nil list_encode_0
+          del: list_encode.simps 
+                add_res.simps  push_con.simps aexp_max_constant.simps
+                    )
+    apply (simp only: sub_push_con  flip: max_con_encode.simps list.map)
+    done
+next
+  case (6 uu uv n m s)
+  then show ?case  by( auto intro: max_constant_stack_nat.domintros[of "list_encode
+       (list_encode [4, com_encode uu, com_encode uv, n, m] # map max_con_encode s)"]
+         simp add: subtail_aexp_max_constant sub_aexp_max_constant  sub_add_res Let_def sub_hd sub_tl add_res_Nil push_con_Nil list_encode_0
+          simp del: list_encode.simps 
+                add_res.simps  push_con.simps aexp_max_constant.simps
+                   )
+next
+  case (7 c s)
+  then show ?case       
+    using max_constant_stack_nat.domintros[of"list_encode (map max_con_encode (While_0 c # s))" ]
+    apply( simp add: sub_add_res Let_def sub_hd sub_tl add_res_Nil push_con_Nil list_encode_0
+          del: list_encode.simps 
+                add_res.simps  push_con.simps aexp_max_constant.simps
+                    )
+    apply (simp only: sub_push_con  flip: max_con_encode.simps list.map)
+    done
+next
+  case (8 uw n s)
+  then show ?case 
+    by (auto  intro: max_constant_stack_nat.domintros[of "list_encode (list_encode [6, com_encode uw, n] # map max_con_encode s)"]
+        simp add: subtail_aexp_max_constant sub_aexp_max_constant  sub_add_res Let_def sub_hd sub_tl add_res_Nil push_con_Nil list_encode_0
+        simp  del: list_encode.simps
+                add_res.simps  push_con.simps aexp_max_constant.simps
+                     )
+next
+  case 9
+  then show ?case by (auto intro: max_constant_stack_nat.domintros)
+qed
+
+lemma max_constant_stack_nat_simps: 
+  assumes " s = list_encode (map max_con_encode s')"
+  shows
+" max_constant_stack_nat s =
+ (if s = 0 then 0
+     else let h = hd_nat s; t = tl_nat s; c = hd_nat h; e1 = nth_nat (Suc 0) h;
+              e2 = nth_nat (Suc (Suc 0)) h; e3 = nth_nat (Suc (Suc (Suc 0))) h;
+              e4 = nth_nat (Suc (Suc (Suc (Suc 0)))) h
+          in if c = 0 then max_constant_stack_nat (add_res_nat 0 t)
+             else if c = 1
+                  then max_constant_stack_nat (add_res_nat (aexp_max_constant_tail e1) t)
+                  else if c = 2 then max_constant_stack_nat (push_con_nat e1 s)
+                       else if c = 3 then max_constant_stack_nat (push_con_nat e2 s)
+                            else if c = 4
+                                 then max_constant_stack_nat (add_res_nat (max e3 e4) t)
+                                 else if c = 5
+                                      then max_constant_stack_nat (push_con_nat e1 s)
+                                      else if c = 6
+                                           then max_constant_stack_nat (add_res_nat e2 t)
+                                           else e1)"
+  using max_constant_stack_nat.psimps[of s] max_constant_stack_nat_term[of s'] assms
+  by auto
+
+                  
+thm "max_constant_stack_nat.psimps"
 lemma sub_max_constant_stack:
-"s \<noteq> [] \<Longrightarrow> max_constant_stack_nat (list_encode (map max_con_encode s))
+"max_constant_stack_nat (list_encode (map max_con_encode s))
 = max_constant_stack s "
-  apply(induct s rule:max_constant_stack.induct)
-         apply(subst max_constant_stack_nat.simps)
-         apply( simp add: Let_def sub_hd sub_tl 
-          del: list_encode.simps(2) max_constant_stack_nat.simps )
- apply(subst max_constant_stack_nat.simps)
-        apply( simp add: sub_add_res Let_def sub_hd sub_tl add_res_Nil push_con_Nil list_encode_0
-          del: list_encode.simps max_constant_stack_nat.simps
-                add_res.simps add_res_nat.simps push_con_nat.simps push_con.simps  )
- apply(subst max_constant_stack_nat.simps)
+proof (induct s rule:max_constant_stack.induct)
+case (1 x s)
+  then show ?case  apply(subst max_constant_stack_nat_simps)
+                      apply blast
+       apply (auto simp add:list_encode_0 Let_def sub_hd sub_tl 
+          simp del: list_encode.simps(2) max_constant_stack_nat.psimps )
+    done
+next
+  case (2 s)
+  then show ?case  apply(subst max_constant_stack_nat_simps)
+    apply blast
+        apply(auto simp add: sub_add_res Let_def sub_hd sub_tl add_res_Nil push_con_Nil list_encode_0
+         simp del: list_encode.simps max_constant_stack_nat.psimps
+                add_res.simps   push_con.simps  )
+    done
+next
+  case (3 v s)
+  then show ?case apply(subst max_constant_stack_nat_simps)
+    apply blast
         apply( simp add: subtail_aexp_max_constant sub_aexp_max_constant  sub_add_res Let_def sub_hd sub_tl add_res_Nil push_con_Nil list_encode_0
-          del: list_encode.simps max_constant_stack_nat.simps
-                add_res.simps add_res_nat.simps push_con_nat.simps push_con.simps aexp_max_constant.simps
-                    aexp_max_constant_nat.simps aexp_max_constant_tail.simps )
- apply(subst max_constant_stack_nat.simps)
-      apply( simp add: sub_add_res Let_def sub_hd sub_tl add_res_Nil push_con_Nil list_encode_0
-          del: list_encode.simps max_constant_stack_nat.simps
-                add_res.simps add_res_nat.simps push_con_nat.simps push_con.simps aexp_max_constant.simps
-                    aexp_max_constant_nat.simps aexp_max_constant_tail.simps )
-      apply (simp only: sub_push_con  flip: max_con_encode.simps list.map)
- apply(subst max_constant_stack_nat.simps)
-      apply( simp add: sub_add_res Let_def sub_hd sub_tl add_res_Nil push_con_Nil list_encode_0
-          del: list_encode.simps max_constant_stack_nat.simps
-                add_res.simps add_res_nat.simps push_con_nat.simps push_con.simps aexp_max_constant.simps
-                    aexp_max_constant_nat.simps aexp_max_constant_tail.simps )
-     apply (simp only: sub_push_con  flip: max_con_encode.simps list.map)
- apply(subst max_constant_stack_nat.simps)
+          del: list_encode.simps 
+                add_res.simps  push_con.simps aexp_max_constant.simps)
+    done
+next
+  case (4 c1 c2 s)
+  then show ?case  apply(subst max_constant_stack_nat_simps)
+    apply blast
         apply( simp add: subtail_aexp_max_constant sub_aexp_max_constant  sub_add_res Let_def sub_hd sub_tl add_res_Nil push_con_Nil list_encode_0
-          del: list_encode.simps max_constant_stack_nat.simps
-                add_res.simps add_res_nat.simps push_con_nat.simps push_con.simps aexp_max_constant.simps
-                    aexp_max_constant_nat.simps aexp_max_constant_tail.simps )
- apply(subst max_constant_stack_nat.simps)
+          del: list_encode.simps 
+                add_res.simps  push_con.simps aexp_max_constant.simps)
+    apply (simp only: sub_push_con  flip: max_con_encode.simps list.map)
+    done
+next
+  case (5 c1 c2 n0 s)
+  then show ?case  apply(subst max_constant_stack_nat_simps)
+    apply blast
       apply( simp add: sub_add_res Let_def sub_hd sub_tl add_res_Nil push_con_Nil list_encode_0
-          del: list_encode.simps max_constant_stack_nat.simps
-                add_res.simps add_res_nat.simps push_con_nat.simps push_con.simps aexp_max_constant.simps
-                    aexp_max_constant_nat.simps aexp_max_constant_tail.simps )
-     apply (simp only: sub_push_con  flip: max_con_encode.simps list.map)
- apply(subst max_constant_stack_nat.simps)
+          del: list_encode.simps
+                add_res.simps  push_con.simps aexp_max_constant.simps
+                    )
+    apply (simp only: sub_push_con  flip: max_con_encode.simps list.map)
+    done
+
+next
+  case (6 uu uv n m s)
+  then show ?case  apply(subst max_constant_stack_nat_simps)
+    apply blast
         apply( simp add: subtail_aexp_max_constant sub_aexp_max_constant  sub_add_res Let_def sub_hd sub_tl add_res_Nil push_con_Nil list_encode_0
-          del: list_encode.simps max_constant_stack_nat.simps
-                add_res.simps add_res_nat.simps push_con_nat.simps push_con.simps aexp_max_constant.simps
-                    aexp_max_constant_nat.simps aexp_max_constant_tail.simps )
-  done
+          del: list_encode.simps
+                add_res.simps  push_con.simps aexp_max_constant.simps
+                   )
+    done
+next
+  case (7 c s)
+  then show ?case  apply(subst max_constant_stack_nat_simps)
+    apply blast
+      apply( simp add: sub_add_res Let_def sub_hd sub_tl add_res_Nil push_con_Nil list_encode_0
+          del: list_encode.simps 
+                add_res.simps  push_con.simps aexp_max_constant.simps
+                    )
+    apply (simp only: sub_push_con  flip: max_con_encode.simps list.map)
+    done
+next
+  case (8 uw n s)
+  then show ?case apply(subst max_constant_stack_nat_simps)
+    apply blast
+        apply( simp add: subtail_aexp_max_constant sub_aexp_max_constant  sub_add_res Let_def sub_hd sub_tl add_res_Nil push_con_Nil list_encode_0
+          del: list_encode.simps 
+                add_res.simps  push_con.simps aexp_max_constant.simps
+                     )
+    done
+next
+  case 9
+  then show ?case apply(subst max_constant_stack_nat_simps)
+     apply blast 
+    apply auto
+    done
+qed
 
 
 lemma max_constant_stack_correct:
@@ -322,7 +584,7 @@ lemma push_var_Nil:
   apply auto
   done
 
-fun push_var_nat :: "nat \<Rightarrow> nat \<Rightarrow> nat" where 
+definition push_var_nat :: "nat \<Rightarrow> nat \<Rightarrow> nat" where 
 "push_var_nat c s = (let con = hd_nat c; e1 = nth_nat (Suc 0) c; e2 =nth_nat (Suc (Suc 0)) c;
     e3 = nth_nat (Suc (Suc (Suc 0))) c in
      if con = 0 then (0##0) ## s else 
@@ -337,7 +599,7 @@ lemma sub_push_var :
 "push_var_nat (com_encode c) (list_encode (map all_var_encode s))
 = list_encode (map all_var_encode (push_var c s)) "
   apply(cases c)
-  apply (auto simp add: sub_hd sub_cons sub_tl cons0  simp del: list_encode.simps)
+  apply (auto simp add: sub_hd sub_cons sub_tl cons0 push_var_nat_def simp del: list_encode.simps)
   done
 
 fun add_var :: " vname list \<Rightarrow> all_var list \<Rightarrow> all_var list" where 
@@ -360,7 +622,7 @@ lemma add_var_Nil:
   done
 
 
-fun add_var_nat :: "nat \<Rightarrow> nat \<Rightarrow> nat" where 
+definition add_var_nat :: "nat \<Rightarrow> nat \<Rightarrow> nat" where 
 "add_var_nat n s = (
   if s = 0 then  (10##n##0) ## 0
 else (let h =hd_nat s; t =tl_nat s; c = hd_nat h; e1 = nth_nat (Suc 0) h ; e2 = nth_nat (Suc (Suc 0)) h;
@@ -377,13 +639,64 @@ lemma sub_add_var:
 "add_var_nat (vname_list_encode n) (list_encode (map all_var_encode s))
 = list_encode (map all_var_encode (add_var n s))"
   apply (cases s)
-   apply (auto simp add:cons0 sub_cons non_empty_not_zero sub_hd sub_tl
+   apply (auto simp add:cons0 add_var_nat_def sub_cons non_empty_not_zero sub_hd sub_tl
            simp del: list_encode.simps(2))
   subgoal for a xs
     apply(cases a)
            apply( auto simp add: Let_def sub_hd cons0 sub_cons sub_tl  simp del: list_encode.simps(2))
     done
   done
+
+fun size_stack_rev_var :: "all_var list \<Rightarrow> nat" where
+"size_stack_rev_var (Seq_0 c1 c2# s) =  (if s = [] then Suc (2* (size_e c1 + size_e c2)) else  Suc (2 * size_e c2) + size_stack_rev_var s )  "|
+"size_stack_rev_var (Seq_m c1 c2 n#s) = (if s = [] then  Suc (2 * size_e c2) else  Suc (size_stack_rev_var s)) "|
+"size_stack_rev_var (If_0 _ c1 c2# s) =  (if s = [] then Suc (2* (size_e c1 + size_e c2)) else  Suc (2 * size_e c2) + size_stack_rev_var s )  "|
+"size_stack_rev_var (If_m _ c1 c2 n#s) = (if s = [] then  Suc (2 * size_e c2) else  Suc (size_stack_rev_var s)) "|
+"size_stack_rev_var (While_0 _ c #s)  = (if s = [] then Suc (2* size_e c) else Suc (size_stack_rev_var s) )"|
+"size_stack_rev_var (Bot x # s) = (if s =[] then 0 else Suc (size_stack_rev_var s))"|
+"size_stack_rev_var (_#s) = (if s = [] then 1 else Suc (size_stack_rev_var s))"|
+"size_stack_rev_var [] = 1"
+
+fun size_stack_var :: "all_var list \<Rightarrow> nat" where 
+"size_stack_var s = size_stack_rev_var (rev s)"
+
+lemma 
+size_stack_var_mono :" x \<noteq> [] \<Longrightarrow>y \<noteq>  [] \<Longrightarrow> size_stack_rev_var y < size_stack_rev_var x
+ \<Longrightarrow> size_stack_rev_var (s @ y) < size_stack_rev_var (s @ x) "
+  apply(induct s )
+   apply auto
+  subgoal for a xs
+    apply (cases a)
+           apply (auto)
+    done
+  done
+
+lemma size_stack_var_0:"(size_stack_rev_var x = 0) = (\<exists>n. x = [Bot n]) "
+  apply(cases x)
+   apply auto
+  subgoal for a xs
+    apply (cases a)
+           apply (auto split :if_splits)
+    done
+ subgoal for a xs
+    apply (cases a)
+           apply (auto split :if_splits)
+   done
+  done
+
+
+lemma add_res_less_var:
+"\<forall>x. s \<noteq> [Bot x] \<and> a \<noteq> Bot x \<Longrightarrow> size_stack_var (add_var r s) < size_stack_var (a#s) "
+  apply(cases s)
+   apply auto
+   apply (cases a)
+  apply (auto simp add: size_stack_var_mono)
+  subgoal for a xs
+    apply (cases a)
+    using size_stack_var_mono size_stack_var_0 nat_less_le    apply (auto )
+    done
+  done
+
 
 function all_variables_stack :: "all_var list \<Rightarrow>vname list" where 
 "all_variables_stack (Bot x # s) = x"|
@@ -396,12 +709,63 @@ function all_variables_stack :: "all_var list \<Rightarrow>vname list" where
 "all_variables_stack (If_m v c1 c2 n0 # s) =all_variables_stack (push_var c2  (If_m v c1 c2 n0 # s))"|
 "all_variables_stack (If_f v _ _ n m #s) = all_variables_stack (add_var (v # n @ m) s)"|
 "all_variables_stack (While_0 v c# s) = all_variables_stack (push_var c (While_0 v c# s)) "|
-"all_variables_stack (While_f v _  n# s) = all_variables_stack (add_var (v#n) s)"
-  sorry
-termination sorry
+"all_variables_stack (While_f v _  n# s) = all_variables_stack (add_var (v#n) s)"|
+"all_variables_stack [] = []"
+  by pat_completeness auto
+termination 
+proof  (relation "measure size_stack_var",goal_cases)
+case 1
+  then show ?case by auto
+next
+  case (2 s)
+  then show ?case using add_res_less_var  apply auto
+    by (metis add_var.simps
+ all_var.distinct append_self_conv2 gr0I last_snoc rev_singleton_conv size_stack_var_0)
+next
+  case (3 v a s)
+  then show ?case using add_res_less_var  apply auto
+    by (metis add_var.simps
+ all_var.distinct append_self_conv2 gr0I last_snoc rev_singleton_conv size_stack_var_0)
+next
+  case (4 c1 c2 s)
+  then show ?case apply (cases c1) 
+    using size_stack_var_mono by auto
+next
+  case (5 c1 c2 n0 s)
+  then show ?case  apply (cases c2) 
+    using size_stack_var_mono by auto
+next
+  case (6 uu uv n m s)
+  then show ?case using add_res_less_var  apply auto
+    by (metis add_var.simps
+ all_var.distinct append_self_conv2 gr0I last_snoc rev_singleton_conv size_stack_var_0)
+next
+  case (7 v c1 c2 s)
+  then show ?case  apply (cases c1) 
+    using size_stack_var_mono by auto
+next
+  case (8 v c1 c2 n0 s)
+  then show ?case  apply (cases c2) 
+    using size_stack_var_mono by auto
+next
+  case (9 v uw ux n m s)
+  then show ?case using add_res_less_var  apply auto
+    by (metis add_var.simps
+ all_var.distinct append_self_conv2 gr0I last_snoc rev_singleton_conv size_stack_var_0)
+next
+  case (10 v c s)
+  then show ?case  apply (cases c) 
+    using size_stack_var_mono by auto
+next
+  case (11 v uy n s)
+  then show ?case using add_res_less_var  apply auto
+    by (metis add_var.simps
+ all_var.distinct append_self_conv2 gr0I last_snoc rev_singleton_conv size_stack_var_0)
+qed
 
-function all_variables_stack_nat :: "nat \<Rightarrow> nat" where 
-"  all_variables_stack_nat s = (let h = hd_nat s; t = tl_nat s;
+
+function (domintros) all_variables_stack_nat :: "nat \<Rightarrow> nat" where 
+"  all_variables_stack_nat s = (if s =0 then 0 else let h = hd_nat s; t = tl_nat s;
   c = hd_nat h; e1 = nth_nat (Suc 0) h; e2 = nth_nat (Suc (Suc 0)) h;
  e3 = nth_nat (Suc (Suc (Suc 0))) h ; e4 = nth_nat (Suc (Suc (Suc (Suc 0)))) h; e5 = 
   nth_nat (Suc (Suc (Suc (Suc (Suc  0))))) h in 
@@ -416,8 +780,132 @@ else if c = 7 then   all_variables_stack_nat (add_var_nat (e1 ## append_nat e4 e
 else if c = 8 then   all_variables_stack_nat (push_var_nat e2 s)
 else if c = 9 then  all_variables_stack_nat (add_var_nat (e1 ## e3) t)
 else e1)"
-  sorry
-termination sorry
+  by pat_completeness auto
+
+lemma vname_list_encode_Nil: "vname_list_encode [] = 0" 
+  apply (auto simp add: vname_list_encode_def)
+  done
+
+lemma all_variables_stack_nat_term: "all_variables_stack_nat_dom (list_encode (map all_var_encode x))"
+proof (induct x rule: all_variables_stack.induct)
+case (1 x s)
+  then show ?case  
+    by (auto intro: all_variables_stack_nat.domintros 
+      [of "list_encode (list_encode [10, vname_list_encode x] # map all_var_encode s)"]
+          simp add: Let_def sub_hd sub_tl 
+          simp del: list_encode.simps(2))
+next
+  case (2 s)
+  then show ?case 
+    using all_variables_stack_nat.domintros[
+of "list_encode (list_encode [vname_list_encode []] # map all_var_encode s)"
+]
+    apply(
+ simp add: sub_add_var Let_def sub_hd sub_tl add_var_Nil push_var_Nil list_encode_0
+                  flip: vname_list_encode_Nil
+          del: list_encode.simps 
+                add_var.simps push_var.simps  )
+    apply (auto simp only:  vname_list_encode_Nil)
+    done
+
+next
+  case (3 v a s)
+  then show ?case  using all_variables_stack_nat.domintros[
+of "list_encode
+       (list_encode [Suc 0, vname_encode v, aexp_encode a] # map all_var_encode s)"
+]
+    apply( simp add: subtail_aexp_vars sub_cons vname_list_encode_def  sub_aexp_vars  sub_add_res Let_def sub_hd sub_tl add_res_Nil push_con_Nil list_encode_0
+          del: list_encode.simps 
+                add_var.simps  push_var.simps )
+  apply(simp add: sub_add_var add_var_Nil flip:list.map vname_list_encode_def  del: list_encode.simps 
+                add_var.simps push_var.simps )
+    done
+next
+  case (4 c1 c2 s)
+  then show ?case  using all_variables_stack_nat.domintros[
+of "list_encode (list_encode [2, com_encode c1, com_encode c2] # map all_var_encode s)"]
+    apply(simp add: sub_add_res Let_def sub_hd sub_tl add_var_Nil push_var_Nil list_encode_0
+          del: list_encode.simps
+                add_var.simps  push_var.simps )
+    apply (simp only: sub_push_var  flip: all_var_encode.simps list.map)
+    done
+next
+  case (5 c1 c2 n0 s)
+  then show ?case using all_variables_stack_nat.domintros[
+of "list_encode (list_encode [3, com_encode c1, com_encode c2, vname_list_encode n0] # map all_var_encode s)"]
+    apply(simp add: sub_add_res Let_def sub_hd sub_tl add_var_Nil push_var_Nil list_encode_0
+          del: list_encode.simps
+                add_var.simps  push_var.simps )
+    apply (simp only: sub_push_var  flip: all_var_encode.simps list.map)
+    done
+next
+  case (6 uu uv n m s)
+  then show ?case using all_variables_stack_nat.domintros[
+of "list_encode (list_encode [4, com_encode uu, com_encode uv, list_encode (map vname_encode n),
+          list_encode (map vname_encode m)] # map all_var_encode s)"]
+    apply( simp add: subtail_aexp_vars sub_cons vname_list_encode_def sub_append  sub_aexp_vars  sub_add_res Let_def sub_hd sub_tl add_res_Nil push_con_Nil list_encode_0
+          del: list_encode.simps
+                add_var.simps  push_var.simps )
+  apply(simp add: sub_add_var add_var_Nil flip:list.map vname_list_encode_def map_append  del: list_encode.simps 
+                add_var.simps  push_var.simps )
+    done
+next
+  case (7 v c1 c2 s)
+  then show ?case  using all_variables_stack_nat.domintros[
+of "list_encode (list_encode [5, vname_encode v, com_encode c1, com_encode c2]#
+        map all_var_encode s)"]
+    apply(simp add: sub_add_res Let_def sub_hd sub_tl add_var_Nil push_var_Nil list_encode_0
+          del: list_encode.simps 
+                add_var.simps  push_var.simps )
+    apply (simp only: sub_push_var  flip: all_var_encode.simps list.map)
+    done
+next
+  case (8 v c1 c2 n0 s)
+  then show ?case    using all_variables_stack_nat.domintros[
+of "list_encode (list_encode  [6, vname_encode v, com_encode c1, com_encode c2, vname_list_encode n0]#
+        map all_var_encode s)"]
+    apply(simp add: sub_add_res Let_def sub_hd sub_tl add_var_Nil push_var_Nil list_encode_0
+          del: list_encode.simps 
+                add_var.simps  push_var.simps )
+    apply (simp only: sub_push_var  flip: all_var_encode.simps list.map)
+    done
+next
+  case (9 v uw ux n m s)
+  then show ?case  using all_variables_stack_nat.domintros[
+of "list_encode (list_encode   [7, vname_encode v, com_encode uw, com_encode ux,
+          list_encode (map vname_encode n), list_encode (map vname_encode m)]#
+        map all_var_encode s)"]
+    apply( simp add: subtail_aexp_vars sub_cons vname_list_encode_def sub_append  sub_aexp_vars  sub_add_res Let_def sub_hd sub_tl add_res_Nil push_con_Nil list_encode_0
+          del: list_encode.simps 
+                add_var.simps  push_var.simps )
+  apply(simp add: sub_add_var add_var_Nil flip:list.map vname_list_encode_def map_append  del: list_encode.simps 
+                add_var.simps  push_var.simps )
+    done
+next
+  case (10 v c s)
+  then show ?case   using all_variables_stack_nat.domintros[
+of "list_encode (list_encode   [8, vname_encode v, com_encode c] #
+        map all_var_encode s)"]
+    apply(simp add: sub_add_res Let_def sub_hd sub_tl add_var_Nil push_var_Nil list_encode_0
+          del: list_encode.simps 
+                add_var.simps  push_var.simps )
+    apply (simp only: sub_push_var  flip: all_var_encode.simps list.map)
+    done
+next
+  case (11 v uy n s)
+  then show ?case  using all_variables_stack_nat.domintros[
+of "list_encode (list_encode    [9, vname_encode v, com_encode uy, list_encode (map vname_encode n)] #
+        map all_var_encode s)"]
+    apply( simp add: subtail_aexp_vars sub_cons vname_list_encode_def sub_append  sub_aexp_vars  sub_add_res Let_def sub_hd sub_tl add_res_Nil push_con_Nil list_encode_0
+          del: list_encode.simps
+                add_var.simps push_var.simps )
+  apply(simp add: sub_add_var add_var_Nil flip:list.map vname_list_encode_def map_append  del: list_encode.simps
+                add_var.simps  push_var.simps )
+    done
+next
+  case 12
+  then show ?case by (auto intro:all_variables_stack_nat.domintros)
+qed
 
 
 lemma all_variables_stack_correct:
@@ -425,72 +913,135 @@ lemma all_variables_stack_correct:
   apply(induct c arbitrary: s)
   apply auto
   done
-lemma vname_list_encode_Nil: "vname_list_encode [] = 0" 
-  apply (auto simp add: vname_list_encode_def)
-  done
+
 
 lemma sub_all_variables_stack:
 "s \<noteq> [] \<Longrightarrow> all_variables_stack_nat (list_encode (map all_var_encode s))
 = vname_list_encode (all_variables_stack s) "
-  apply(induct s rule: all_variables_stack.induct)
-         apply(subst all_variables_stack_nat.simps)
-         apply( simp add: Let_def sub_hd sub_tl 
-          del: list_encode.simps(2) all_variables_stack_nat.simps )
- apply(subst all_variables_stack_nat.simps)
+proof (induct s rule: all_variables_stack.induct)
+case (1 x s)
+  then show ?case apply(subst all_variables_stack_nat.psimps)
+  using all_variables_stack_nat_term apply blast
+         apply( simp add: list_encode_0 vname_list_encode_Nil Let_def sub_hd sub_tl 
+          del: list_encode.simps(2) )
+done
+next
+  case (2 s)
+  then show ?case  apply(subst all_variables_stack_nat.psimps)
+  using all_variables_stack_nat_term apply blast
            apply( simp add: sub_add_var Let_def sub_hd sub_tl add_var_Nil push_var_Nil list_encode_0
                   flip: vname_list_encode_Nil
-          del: list_encode.simps all_variables_stack_nat.simps
-                add_var.simps add_var_nat.simps push_var_nat.simps push_var.simps  )
- apply(subst all_variables_stack_nat.simps)
-        apply( simp add: subtail_aexp_vars sub_cons vname_list_encode_def  sub_aexp_vars  sub_add_res Let_def sub_hd sub_tl add_res_Nil push_con_Nil list_encode_0
-          del: list_encode.simps all_variables_stack_nat.simps
-                add_var.simps add_var_nat.simps push_var_nat.simps push_var.simps )
-  apply(simp add: sub_add_var add_var_Nil flip:list.map vname_list_encode_def  del: list_encode.simps all_variables_stack_nat.simps
-                add_var.simps add_var_nat.simps push_var_nat.simps push_var.simps )
- apply(subst all_variables_stack_nat.simps)
-      apply(simp add: sub_add_res Let_def sub_hd sub_tl add_var_Nil push_var_Nil list_encode_0
-          del: list_encode.simps all_variables_stack_nat.simps
-                add_var.simps add_var_nat.simps push_var_nat.simps push_var.simps )
-      apply (simp only: sub_push_var  flip: all_var_encode.simps list.map)
- apply(subst all_variables_stack_nat.simps)
-      apply(simp add: sub_add_res Let_def sub_hd sub_tl add_var_Nil push_var_Nil list_encode_0
-          del: list_encode.simps all_variables_stack_nat.simps
-                add_var.simps add_var_nat.simps push_var_nat.simps push_var.simps )
-        apply (simp only: sub_push_var  flip: all_var_encode.simps list.map)
- apply(subst all_variables_stack_nat.simps)
-        apply( simp add: subtail_aexp_vars sub_cons vname_list_encode_def sub_append  sub_aexp_vars  sub_add_res Let_def sub_hd sub_tl add_res_Nil push_con_Nil list_encode_0
-          del: list_encode.simps all_variables_stack_nat.simps
-                add_var.simps add_var_nat.simps push_var_nat.simps push_var.simps )
-  apply(simp add: sub_add_var add_var_Nil flip:list.map vname_list_encode_def map_append  del: list_encode.simps all_variables_stack_nat.simps
-                add_var.simps add_var_nat.simps push_var_nat.simps push_var.simps )
-apply(subst all_variables_stack_nat.simps)
-      apply(simp add: sub_add_res Let_def sub_hd sub_tl add_var_Nil push_var_Nil list_encode_0
-          del: list_encode.simps all_variables_stack_nat.simps
-                add_var.simps add_var_nat.simps push_var_nat.simps push_var.simps )
-      apply (simp only: sub_push_var  flip: all_var_encode.simps list.map)
- apply(subst all_variables_stack_nat.simps)
-      apply(simp add: sub_add_res Let_def sub_hd sub_tl add_var_Nil push_var_Nil list_encode_0
-          del: list_encode.simps all_variables_stack_nat.simps
-                add_var.simps add_var_nat.simps push_var_nat.simps push_var.simps )
-        apply (simp only: sub_push_var  flip: all_var_encode.simps list.map)
- apply(subst all_variables_stack_nat.simps)
-        apply( simp add: subtail_aexp_vars sub_cons vname_list_encode_def sub_append  sub_aexp_vars  sub_add_res Let_def sub_hd sub_tl add_res_Nil push_con_Nil list_encode_0
-          del: list_encode.simps all_variables_stack_nat.simps
-                add_var.simps add_var_nat.simps push_var_nat.simps push_var.simps )
-  apply(simp add: sub_add_var add_var_Nil flip:list.map vname_list_encode_def map_append  del: list_encode.simps all_variables_stack_nat.simps
-                add_var.simps add_var_nat.simps push_var_nat.simps push_var.simps )
- apply(subst all_variables_stack_nat.simps)
-      apply(simp add: sub_add_res Let_def sub_hd sub_tl add_var_Nil push_var_Nil list_encode_0
-          del: list_encode.simps all_variables_stack_nat.simps
-                add_var.simps add_var_nat.simps push_var_nat.simps push_var.simps )
-        apply (simp only: sub_push_var  flip: all_var_encode.simps list.map)
- apply(subst all_variables_stack_nat.simps)
-        apply( simp add: subtail_aexp_vars sub_cons vname_list_encode_def sub_append  sub_aexp_vars  sub_add_res Let_def sub_hd sub_tl add_res_Nil push_con_Nil list_encode_0
-          del: list_encode.simps all_variables_stack_nat.simps
-                add_var.simps add_var_nat.simps push_var_nat.simps push_var.simps )
-  apply(simp add: sub_add_var add_var_Nil flip:list.map vname_list_encode_def map_append  del: list_encode.simps all_variables_stack_nat.simps
-                add_var.simps add_var_nat.simps push_var_nat.simps push_var.simps )
+          del: list_encode.simps 
+                add_var.simps  push_var.simps  )
+            apply (simp add : list_encode_0 vname_list_encode_Nil)
+
   done
+
+next
+  case (3 v a s)
+  then show ?case  apply(subst all_variables_stack_nat.psimps)
+ using all_variables_stack_nat_term apply blast
+        apply( simp add: subtail_aexp_vars sub_cons vname_list_encode_def  sub_aexp_vars  sub_add_res Let_def sub_hd sub_tl add_res_Nil push_con_Nil list_encode_0
+          del: list_encode.simps
+                add_var.simps push_var.simps )
+  apply(simp add: sub_add_var add_var_Nil flip:list.map vname_list_encode_def  del: list_encode.simps 
+                add_var.simps  push_var.simps )
+              done
+next
+  case (4 c1 c2 s)
+  then show ?case         
+    apply(subst all_variables_stack_nat.psimps)
+ using all_variables_stack_nat_term apply blast
+      apply(simp add: sub_add_res Let_def sub_hd sub_tl add_var_Nil push_var_Nil list_encode_0
+          del: list_encode.simps
+                add_var.simps  push_var.simps )
+  apply (simp only: sub_push_var  flip: all_var_encode.simps list.map)
+  done
+
+next
+case (5 c1 c2 n0 s)
+  then show ?case   apply(subst all_variables_stack_nat.psimps)
+ using all_variables_stack_nat_term apply blast
+      apply(simp add: sub_add_res Let_def sub_hd sub_tl add_var_Nil push_var_Nil list_encode_0
+          del: list_encode.simps 
+                add_var.simps  push_var.simps )
+  apply (simp only: sub_push_var  flip: all_var_encode.simps list.map)
+done
+next
+  case (6 uu uv n m s)
+  then show ?case       apply(subst all_variables_stack_nat.psimps)
+ using all_variables_stack_nat_term apply blast
+        apply( simp add: subtail_aexp_vars sub_cons vname_list_encode_def sub_append  sub_aexp_vars  sub_add_res Let_def sub_hd sub_tl add_res_Nil push_con_Nil list_encode_0
+          del: list_encode.simps
+                add_var.simps  push_var.simps )
+       apply(simp add: sub_add_var add_var_Nil flip:list.map vname_list_encode_def map_append  del: list_encode.simps )
+
+  done
+next
+  case (7 v c1 c2 s)
+  then show ?case 
+      apply(subst all_variables_stack_nat.psimps)
+ using all_variables_stack_nat_term apply blast
+      apply(simp add: sub_add_res Let_def sub_hd sub_tl add_var_Nil push_var_Nil list_encode_0
+          del: list_encode.simps 
+                add_var.simps  push_var.simps )
+  apply (simp only: sub_push_var  flip: all_var_encode.simps list.map)
+  done
+
+next
+  case (8 v c1 c2 n0 s)
+  then show ?case   apply(subst all_variables_stack_nat.psimps)
+ using all_variables_stack_nat_term apply blast
+      apply(simp add: sub_add_res Let_def sub_hd sub_tl add_var_Nil push_var_Nil list_encode_0
+          del: list_encode.simps 
+                add_var.simps push_var.simps )
+     apply (simp only: sub_push_var  flip: all_var_encode.simps list.map)
+done
+next
+  case (9 v uw ux n m s)
+  then show ?case   apply(subst all_variables_stack_nat.psimps)
+ using all_variables_stack_nat_term apply blast
+        apply( simp add: subtail_aexp_vars sub_cons vname_list_encode_def sub_append  sub_aexp_vars  sub_add_res Let_def sub_hd sub_tl add_res_Nil push_con_Nil list_encode_0
+          del: list_encode.simps 
+                add_var.simps push_var.simps )
+  apply(simp add: sub_add_var add_var_Nil flip:list.map vname_list_encode_def map_append  del: list_encode.simps 
+                add_var.simps  push_var.simps )
+  done
+
+next
+  case (10 v c s)
+  then show ?case  apply(subst all_variables_stack_nat.psimps)
+  using all_variables_stack_nat_term apply blast
+      apply(simp add: sub_add_res Let_def sub_hd sub_tl add_var_Nil push_var_Nil list_encode_0
+          del: list_encode.simps 
+                add_var.simps  push_var.simps )
+  apply (simp only: sub_push_var  flip: all_var_encode.simps list.map)
+  done
+
+next
+  case (11 v uy n s)
+  then show ?case  apply(subst all_variables_stack_nat.psimps)
+ using all_variables_stack_nat_term apply blast
+        apply( simp add: subtail_aexp_vars sub_cons vname_list_encode_def sub_append  sub_aexp_vars  sub_add_res Let_def sub_hd sub_tl add_res_Nil push_con_Nil list_encode_0
+          del: list_encode.simps 
+                add_var.simps push_var.simps )
+  apply(simp add: sub_add_var add_var_Nil flip:list.map vname_list_encode_def map_append  del: list_encode.simps
+                add_var.simps push_var.simps )
+  done
+
+next
+  case 12
+  then show ?case   apply auto
+done
+qed
+
+             
+           
+          
+
+
+      
+
 
 definition all_variables_t :: "Com.com \<Rightarrow> vname list" where 
 " all_variables_t c =  all_variables_stack (push_var c [])"

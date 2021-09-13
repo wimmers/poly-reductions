@@ -220,14 +220,15 @@ fun push_to_stack_op :: "com \<Rightarrow> com_op list \<Rightarrow> com_op list
 "push_to_stack_op (com.If v c1 c2) s = If v c1 c2 #s"|
 "push_to_stack_op (com.While v c) s = While v c #s"
 
-fun push_to_stack_op_nat :: "nat \<Rightarrow> nat \<Rightarrow> nat" where 
+definition push_to_stack_op_nat :: "nat \<Rightarrow> nat \<Rightarrow> nat" where 
 "push_to_stack_op_nat c s = (c ## s)"
 
 lemma sub_push_to_stack_op :
 "push_to_stack_op_nat (comm_encode c) (list_encode (map com_op_encode  s))
  = list_encode (map com_op_encode (push_to_stack_op c s)) "
   apply(cases c)
-      apply(auto simp add: sub_cons  simp del:list_encode.simps)
+      apply(auto simp add:  push_to_stack_op_nat_def 
+sub_cons  simp del:list_encode.simps)
   done
 
 fun add_res_to_stack_op :: "operator list \<Rightarrow> com_op list \<Rightarrow> com_op list" where 
@@ -235,7 +236,7 @@ fun add_res_to_stack_op :: "operator list \<Rightarrow> com_op list \<Rightarrow
 "add_res_to_stack_op op (Seq_0 c1 c2 # s) = Seq_f c1 c2 op # s"|
 "add_res_to_stack_op op s = s"
 
-fun add_res_to_stack_op_nat :: "nat \<Rightarrow> nat \<Rightarrow> nat" where 
+definition add_res_to_stack_op_nat :: "nat \<Rightarrow> nat \<Rightarrow> nat" where 
 "add_res_to_stack_op_nat op s = (if s = 0 then (6 ## op ## 0)##0
 else if hd_nat (hd_nat s) = 2 then (5 ## (nth_nat (Suc 0) (hd_nat s)) ## (nth_nat (Suc (Suc 0)) (hd_nat s)) ## op ## 0)## (tl_nat s)
 else s)"
@@ -247,7 +248,7 @@ lemma sub_add_res_to_stack:
 "add_res_to_stack_op_nat (list_encode (map operator_encode op)) (list_encode (map com_op_encode s))
  = list_encode (map com_op_encode (add_res_to_stack_op op s))"
    apply(cases s)
-  apply (auto simp add: sub_hd list_encode_0  sub_cons cons0  simp del: list_encode.simps  )
+  apply (auto simp add: sub_hd add_res_to_stack_op_nat_def list_encode_0  sub_cons cons0  simp del: list_encode.simps  )
   subgoal for a xs
     apply(cases a)
       apply (auto simp add: sub_nth sub_tl sub_hd list_encode_0  sub_cons cons0  simp del: list_encode.simps  )
@@ -258,7 +259,59 @@ lemma sub_add_res_to_stack:
     done
   done
 
-  
+fun size_e :: "com \<Rightarrow> nat" where 
+"size_e com.SKIP = 1 "|
+"size_e (com.Assign v a)  = 1"|
+"size_e (com.Seq c1 c2) = Suc (size_e c1)"|
+"size_e (com.If v c1 c2) = 1"|
+"size_e (com.While v c) = 1"
+
+fun stack_size_rev :: "com_op list \<Rightarrow> nat" where 
+"stack_size_rev (Seq_0 c1 c2 # s ) = (if s = [] then Suc (2 * size_e c1) else 
+  Suc (stack_size_rev s))"|
+"stack_size_rev (Bot x # s) = (if s = [] then 0 else Suc (stack_size_rev s))"|
+"stack_size_rev (_ #s) = (if s = [] then 1 else Suc (stack_size_rev s))"|
+"stack_size_rev [] = 1"
+
+fun stack_size :: "com_op list \<Rightarrow> nat" where 
+"stack_size s = stack_size_rev (rev s)"
+
+lemma 
+stack_size_mono :" x \<noteq> [] \<Longrightarrow>y \<noteq>  [] \<Longrightarrow> stack_size_rev y < stack_size_rev x
+ \<Longrightarrow> stack_size_rev (s @ y) < stack_size_rev (s @ x) "
+  apply(induct s )
+   apply auto
+  subgoal for a xs
+    apply (cases a)
+           apply (auto)
+    done
+  done
+
+lemma stack_size_0:"(stack_size_rev x = 0) = (\<exists>n. x = [Bot n]) "
+  apply(cases x)
+   apply auto
+  subgoal for a xs
+    apply (cases a)
+           apply (auto split :if_splits)
+    done
+ subgoal for a xs
+    apply (cases a)
+           apply (auto split :if_splits)
+   done
+  done
+
+lemma add_res_less:
+"\<forall>x. s \<noteq> [Bot x] \<and> a \<noteq> Bot x \<Longrightarrow> stack_size (add_res_to_stack_op r s) < stack_size (a#s) "
+  apply(cases s)
+   apply auto
+   apply (cases a)
+  apply (auto simp add: stack_size_mono)
+  subgoal for a xs
+    apply (cases a)
+    using stack_size_mono stack_size_0 nat_less_le    apply (auto )
+    done
+  done
+
 function com_to_operators_stack :: "com_op list \<Rightarrow> operator list" where 
 "com_to_operators_stack (Bot x # s) = x "|
 "com_to_operators_stack (SKIP# s) = com_to_operators_stack (add_res_to_stack_op [] s)"|
@@ -291,9 +344,58 @@ com_to_operators_stack (add_res_to_stack_op  (let i = PCV (com.While vs c) ;
         effect_of = [(PC, k)]\<rparr> 
       # map (\<lambda> v. 
       \<lparr> precondition_of = [(PC, i), (VN v, EV One)], 
-         effect_of = [(PC, j)]\<rparr>) vs) s)"
-  sorry
-termination sorry
+         effect_of = [(PC, j)]\<rparr>) vs) s)"|
+"com_to_operators_stack [] = []"
+  by pat_completeness auto
+termination
+proof (relation "measure stack_size",goal_cases)
+case 1
+then show ?case by auto
+next
+  case (2 s)
+  then show ?case using add_res_less apply auto
+    by (metis add_res_to_stack_op.simps butlast.simps(2) butlast_snoc com_op.distinct 
+neq0_conv not_Cons_self2 rev_singleton_conv stack_size_0)
+
+    
+next
+  case (3 v b s)
+   then show ?case using add_res_less apply auto
+     by (smt One_nat_def Zero_not_Suc add_res_to_stack_op.simps(3) 
+last_ConsL last_snoc less_nat_zero_code linorder_neqE_nat rev_singleton_conv 
+stack_size_0 stack_size_rev.simps(4))
+      
+next
+  case (4 c1 c2 s)
+  then show ?case using add_res_less apply auto
+     by (smt One_nat_def Zero_not_Suc add_res_to_stack_op.simps
+last_ConsL last_snoc less_nat_zero_code linorder_neqE_nat rev_singleton_conv 
+stack_size_0 stack_size_rev.simps)
+
+next
+  case (5 c1 c2 s)
+  then show ?case using stack_size_mono  by (cases c1) auto
+
+next
+  case (6 c1 c2 ops s)
+  then show ?case using add_res_less apply auto
+     by (smt One_nat_def Zero_not_Suc add_res_to_stack_op.simps
+last_ConsL last_snoc less_nat_zero_code linorder_neqE_nat rev_singleton_conv 
+stack_size_0 stack_size_rev.simps)
+next
+case (7 vs c1 c2 s)
+then show ?case using add_res_less apply auto
+     by (smt One_nat_def Zero_not_Suc add_res_to_stack_op.simps
+last_ConsL last_snoc less_nat_zero_code linorder_neqE_nat rev_singleton_conv 
+stack_size_0 stack_size_rev.simps)
+next
+  case (8 vs c s)
+  then show ?case using add_res_less apply auto
+     by (smt One_nat_def Zero_not_Suc add_res_to_stack_op.simps
+last_ConsL last_snoc less_nat_zero_code linorder_neqE_nat rev_singleton_conv 
+stack_size_0 stack_size_rev.simps)
+qed
+
 
 lemma com_to_operators_stack_correct:
 "com_to_operators_stack (push_to_stack_op c s) = com_to_operators_stack (add_res_to_stack_op (
@@ -312,9 +414,8 @@ lemma subtailnat_com_to_operators:
   done
 
 
-
-function com_to_operators_stack_nat :: "nat \<Rightarrow> nat" where 
-"com_to_operators_stack_nat s = (let c = hd_nat s ; t = tl_nat s in  
+function (domintros) com_to_operators_stack_nat :: "nat \<Rightarrow> nat" where 
+"com_to_operators_stack_nat s = ( if s = 0 then 0 else let c = hd_nat s ; t = tl_nat s in  
 (if hd_nat c = 0 then com_to_operators_stack_nat (add_res_to_stack_op_nat 0 t) else 
 if hd_nat c = 1 then com_to_operators_stack_nat (add_res_to_stack_op_nat ((
                         ((prod_encode(0,prod_encode(1,c)))##0)
@@ -331,21 +432,20 @@ else if hd_nat c = 2 then (let c1 = nth_nat (Suc 0) c; c2= nth_nat (Suc (Suc 0))
 else  com_to_operators_stack_nat (push_to_stack_op_nat c1 s)))
 else if hd_nat c = 3 then 
 (let i = prod_encode (1, c); vs = nth_nat (Suc 0) c ; c1 = nth_nat (Suc (Suc 0)) c ; c2 = nth_nat (Suc (Suc (Suc 0))) c
-   in com_to_operators_stack_nat (add_res_to_stack_op_nat (( ((prod_encode(0, i)) ## map_com_to_operators2_tail (remdups_nat vs))## 
+   in com_to_operators_stack_nat (add_res_to_stack_op_nat (( ((prod_encode(0, i)) ## map_com_to_operators2_tail (remdups_tail vs))## 
         ((prod_encode(0, prod_encode(1, c2)))##0)## 0)
       ## map_com_to_operators3_tail i c1 vs ) t ) )
 else  if hd_nat c = 4 then (let i = prod_encode(1,c) ;  vs = nth_nat (Suc 0) c ; c' = nth_nat (Suc (Suc 0)) c ; 
   j = prod_encode(1, (2##c'## c##0)); k = prod_encode(1, 0##0) in 
-  com_to_operators_stack_nat (add_res_to_stack_op_nat (( ((prod_encode(0, i)) ##  map_com_to_operators2_tail (remdups_nat vs))## 
+  com_to_operators_stack_nat (add_res_to_stack_op_nat (( ((prod_encode(0, i)) ##  map_com_to_operators2_tail (remdups_tail vs))## 
         (((prod_encode(0, k))##0))##0) 
       ## map_com_to_operators4_tail i j vs) t))
 else if hd_nat c = 5 then 
 (let ops = nth_nat (Suc (Suc (Suc 0))) c; c2 = nth_nat (Suc (Suc 0)) c ; c1 = nth_nat (Suc 0) c  in  com_to_operators_stack_nat (add_res_to_stack_op_nat  (map_com_to_operators_tail (2 ## c1 ##c2 ## 0) c2 ops) t))
 else nth_nat (Suc 0) c
 ))
-"  
- sorry
-termination sorry
+"  by pat_completeness auto
+ 
 
 
 
@@ -415,52 +515,76 @@ lemma list_update_nat_zero: "list_update_nat 0 0 n = 0"
   apply auto
   done
 
-lemma sub_com_to_operators_stack:
-"s \<noteq> [] \<Longrightarrow> com_to_operators_stack_nat (list_encode (map  com_op_encode s))
-= list_encode (map operator_encode(com_to_operators_stack s))"
-  apply(induct s rule: com_to_operators_stack.induct)
-        apply(auto simp only:add_res_not_Nil push_stack_not_Nil sub_hd sub_tl Let_def 
-                  simp del: list_encode.simps )
-        apply(subst com_to_operators_stack_nat.simps)
+lemma  simp_op_id:"\<lparr>sas_plus_operator.precondition_of =
+                       sas_plus_operator.precondition_of a,
+                       effect_of = effect_of a\<rparr> = a"
+  by auto
+lemma ev_zero_encode:"prod_encode (0,0) = domain_element_encode (EV Zero)"
+  apply auto
+  done
+lemma com_to_operators_term:
+"com_to_operators_stack_nat_dom (list_encode (map  com_op_encode s))"
+proof (induct s rule: com_to_operators_stack.induct)
+case (1 x s)
+  then show ?case using com_to_operators_stack_nat.domintros[of 
+        "list_encode
+       (list_encode [6, list_encode (map operator_encode x)] # map com_op_encode s)"]
         apply(simp only: list.simps head.simps tail.simps com_op_encode.simps cons0 sub_cons sub_nth
                         nth.simps com_to_operators_stack.simps
                         add_res_not_Nil push_stack_not_Nil sub_hd sub_tl Let_def 
                    del: list_encode.simps )    
-        apply simp
-         apply(subst com_to_operators_stack_nat.simps)
+done
+next
+  case (2 s)
+  then show ?case using com_to_operators_stack_nat.domintros[of 
+        "list_encode
+       (list_encode [0] # map com_op_encode s)"]
         apply(simp only: list.simps head.simps tail.simps com_op_encode.simps cons0 sub_cons sub_nth
                         nth.simps com_to_operators_stack.simps
                         add_res_not_Nil push_stack_not_Nil sub_hd sub_tl Let_def 
                    del: list_encode.simps )  
        apply (simp only: sub_add_res_to_stack list_encode_eq  Nil_is_map_op   flip: list_encode.simps  )
-       apply simp
-         apply(subst com_to_operators_stack_nat.simps)
-        apply(simp only: list.simps head.simps tail.simps com_op_encode.simps cons0 sub_cons sub_nth
+    apply simp
+done
+next
+  case (3 v b s)
+  then show ?case  using com_to_operators_stack_nat.domintros[of 
+        "list_encode
+       (list_encode [1, vname_encode v, bit_encode b] # map com_op_encode s)"]
+        apply(simp only: One_nat_def non_empty_positive list.simps head.simps tail.simps com_op_encode.simps cons0 sub_cons sub_nth
                         nth.simps com_to_operators_stack.simps
                         add_res_not_Nil push_stack_not_Nil sub_hd sub_tl Let_def 
                    del: list_encode.simps ) 
-  apply(simp only:  flip: comm_encode.simps del:list_encode.simps)
+         
+  apply(simp only:   flip: comm_encode.simps One_nat_def del:list_encode.simps)
       apply (simp only:sub_hd  head.simps sub_cons cons0 sub_map sub_nth
                                       nth.simps  flip: domain_element_encode.simps  variable_encode.simps sas_assignment_encode.simps comm_encode.simps )
-      apply (simp only:sub_hd sub_add_res_to_stack op_singleton operator_encode_simps  sas_singleton sas_couple  head.simps sub_cons cons0 sub_map sub_nth variable_encode.simps(1)
+      apply (simp only: nth.simps  sub_hd sub_add_res_to_stack op_singleton operator_encode_simps  sas_singleton sas_couple  head.simps sub_cons cons0 sub_map sub_nth variable_encode.simps(1)
                                       nth.simps  flip:  domain_element_encode.simps  sas_assignment_encode.simps comm_encode.simps )
-      apply simp
-     apply(subst com_to_operators_stack_nat.simps)
-  subgoal for c1 c2 s
-    apply (cases "c1=com.SKIP")
-        apply(auto simp only: list.simps head.simps tail.simps com_op_encode.simps cons0 sub_cons sub_nth
-                        nth.simps com_to_operators_stack.simps
-                        add_res_not_Nil push_stack_not_Nil sub_hd sub_tl Let_def 
-                   del: list_encode.simps ) 
-  apply(simp only:   flip: comm_encode.simps del:list_encode.simps)
-      apply ( simp only:sub_hd  head.simps sub_cons cons0 sub_map sub_nth
-                                      nth.simps   flip: domain_element_encode.simps  variable_encode.simps sas_assignment_encode.simps comm_encode.simps )
-      apply ( simp only:sub_hd sub_add_res_to_stack op_singleton operator_encode_simps  sas_singleton sas_couple  head.simps sub_cons cons0 sub_map sub_nth variable_encode.simps(1)
-                                      nth.simps   flip:  domain_element_encode.simps  sas_assignment_encode.simps comm_encode.simps )
-     apply simp
-    apply (auto simp only:sub_push_to_stack_op  comm_inj_simps simp flip: com_op_encode.simps(3) comm_encode.simps(1) list.map(2) split: if_splits)
     done
-         apply(subst com_to_operators_stack_nat.simps)
+next
+  case (4 c1 c2 s)
+  then show ?case  using com_to_operators_stack_nat.domintros[of 
+        "list_encode
+       (list_encode [2, comm_encode c1, comm_encode c2] # map com_op_encode s)"]
+    apply (cases "c1=com.SKIP")
+        apply(auto simp only: non_empty_positive list.simps head.simps tail.simps com_op_encode.simps cons0 sub_cons sub_nth
+                        nth.simps com_to_operators_stack.simps
+                        add_res_not_Nil push_stack_not_Nil sub_hd sub_tl Let_def  
+                   simp del: list_encode.simps ) 
+  apply( simp only:    flip: comm_encode.simps One_nat_def  del:list_encode.simps)
+      apply (auto  simp only:sub_hd  head.simps sub_cons cons0 sub_map sub_nth
+                                      nth.simps  simp flip:  domain_element_encode.simps  variable_encode.simps sas_assignment_encode.simps comm_encode.simps )[1]
+      apply ( auto simp only: sub_hd sub_add_res_to_stack sub_push_to_stack_op op_singleton operator_encode_simps  sas_singleton sas_couple  head.simps sub_cons cons0 sub_map sub_nth variable_encode.simps(1)
+                                      nth.simps   simp  flip:  domain_element_encode.simps  sas_assignment_encode.simps )
+    apply (auto simp only:sub_push_to_stack_op sub_add_res_to_stack list_encode_0 comm_inj_simps simp flip: One_nat_def com_op_encode.simps(3) comm_encode.simps(1) list.map(2) split: if_splits)
+    apply auto
+    done
+next
+  case (5 c1 c2 ops s)
+  then show ?case   using com_to_operators_stack_nat.domintros[of 
+        "list_encode
+       (list_encode  [5, comm_encode c1, comm_encode c2, list_encode (map operator_encode ops)] # map com_op_encode s)"]
         apply(simp only: list.simps head.simps tail.simps com_op_encode.simps cons0 sub_cons sub_nth
                         nth.simps com_to_operators_stack.simps
                         add_res_not_Nil push_stack_not_Nil sub_hd sub_tl Let_def 
@@ -474,7 +598,7 @@ lemma sub_com_to_operators_stack:
       apply (auto simp only: sub_hd list_encode_eq suc_eq list_encode_empty comm_encode_eq head.simps sub_cons cons0 sub_map sub_map_dec sub_nth com_to_operators.simps
                          sub_list_update sas_plus_operator.simps sas_assignment_list_encode_def list.map prod_encode_eq  nth.simps sub_pc_to_com Let_def comp_def operator_encode_def
   domain_element_encode.simps  variable_encode.simps  sas_assignment_encode.simps
-    map_map list_encode_inverse sub_remdups  comm_encode.simps submap_com_to_operators
+    map_map list_encode_inverse subtail_remdups sub_remdups  comm_encode.simps submap_com_to_operators
   simp flip: comm_encode.simps
                           del: list_encode.simps hd_nat_def cons_def pc_to_com_nat_def map_nat.simps nth_nat.simps list_update_nat.simps split:if_splits)
   apply (auto simp only:sub_pc_to_com simp flip:  sas_assignment_list_encode_def  comm_encode.simps )
@@ -487,9 +611,16 @@ lemma sub_com_to_operators_stack:
                              [variable_encode PC := (PC, PCV (pc_to_com (effect_of x);; _))]\<rparr>"
 
  ] )
-     apply(auto simp only:sub_add_res_to_stack simp flip: map_map)
-  apply(subst com_to_operators_stack_nat.simps)
-        apply(simp only:  sub_remdups vname_list_encode_def list.simps head.simps tail.simps com_op_encode.simps cons0 sub_cons sub_nth
+    apply(auto simp only:sub_add_res_to_stack simp_op_id simp flip: map_map)
+    apply auto
+    done
+
+next
+  case (6 vs c1 c2 s)
+  then show ?case  using com_to_operators_stack_nat.domintros[of 
+        "list_encode
+       (list_encode   [3, list_encode (map vname_encode vs), comm_encode c1, comm_encode c2] # map com_op_encode s)"]
+        apply(simp only: non_empty_positive subtail_remdups sub_remdups vname_list_encode_def list.simps head.simps tail.simps com_op_encode.simps cons0 sub_cons sub_nth
                         nth.simps com_to_operators_stack.simps
                         add_res_not_Nil push_stack_not_Nil sub_hd sub_tl Let_def 
                    del: list_encode.simps ) 
@@ -500,19 +631,24 @@ lemma sub_com_to_operators_stack:
                                       nth.simps  flip: domain_element_encode.simps  variable_encode.simps sas_assignment_encode.simps comm_encode.simps del: list_encode.simps )
       apply (simp only:sub_hd sub_add_res_to_stack op_singleton operator_encode_simps  sas_singleton sas_couple  head.simps sub_cons cons0 sub_map sub_nth variable_encode.simps(1)
                                       nth.simps   variable_encode.simps  flip:  bit_encode.simps domain_element_encode.simps  sas_assignment_encode.simps comm_encode.simps )
-   apply(subst (4) bit_encode.simps) 
-   apply( simp only: flip: domain_element_encode.simps)
+    apply( simp only: bit_encode.simps  flip:One_nat_def domain_element_encode.simps)
+    apply (simp only:  flip: bit_encode.simps)
   using vname_inj
    apply(simp only: remdups_map  map_map comp_def flip: variable_encode.simps sas_assignment_encode.simps)
-   apply(simp only: bit_encode.simps(1) cons0 sub_cons sub_map flip: domain_element_encode.simps comp_def[of sas_assignment_encode "\<lambda>x. (VN x, EV Zero)"] map_map list.map(2))
+  apply(simp only: ev_zero_encode  bit_encode.simps(1) cons0 sub_cons sub_map flip:  sas_assignment_encode.simps domain_element_encode.simps )
+  apply (simp only:  flip: sas_assignment_encode.simps   variable_encode.simps  comp_def[of sas_assignment_encode "\<lambda>x. (VN x, EV Zero)"] map_map list.map(2))
    apply( simp only: sub_map vname_list_encode_def map_map comp_def sas_singleton sas_couple operator_encode_simps sub_cons flip: variable_encode.simps sas_assignment_encode.simps  sas_assignment_list_encode_def ) 
-  apply( simp only: sub_add_res_to_stack flip: map_map list.map(2) comp_def [of operator_encode "\<lambda>x. \<lparr>sas_plus_operator.precondition_of =
+  apply( simp only: sub_add_res_to_stack flip: map_map list.map comp_def [of operator_encode "\<lambda>x. \<lparr>sas_plus_operator.precondition_of =
                                                 [(PC, PCV (IF _\<noteq>0 THEN _ ELSE _)), (VN x, EV One)],
                                                 effect_of = [(PC, PCV _)]\<rparr>" ])
-   apply simp
-
-apply(subst com_to_operators_stack_nat.simps)
-        apply(simp only:  sub_remdups vname_list_encode_def list.simps head.simps tail.simps com_op_encode.simps cons0 sub_cons sub_nth
+  apply simp
+ done
+next
+  case (7 vs c s)
+  then show ?case  using com_to_operators_stack_nat.domintros[of 
+        "list_encode
+       (list_encode   [4, list_encode (map vname_encode vs), comm_encode c] # map com_op_encode s)"]
+       apply(simp only: subtail_remdups sub_remdups vname_list_encode_def list.simps head.simps tail.simps com_op_encode.simps cons0 sub_cons sub_nth
                         nth.simps com_to_operators_stack.simps
                         add_res_not_Nil push_stack_not_Nil sub_hd sub_tl Let_def 
                    del: list_encode.simps ) 
@@ -523,17 +659,176 @@ apply(subst com_to_operators_stack_nat.simps)
                                       nth.simps  flip: domain_element_encode.simps  variable_encode.simps sas_assignment_encode.simps comm_encode.simps del: list_encode.simps )
       apply (simp only:sub_hd sub_add_res_to_stack op_singleton operator_encode_simps  sas_singleton sas_couple  head.simps sub_cons cons0 sub_map sub_nth variable_encode.simps(1)
                                       nth.simps   variable_encode.simps  flip:  bit_encode.simps domain_element_encode.simps  sas_assignment_encode.simps comm_encode.simps )
-   apply(subst (8) bit_encode.simps) 
+      apply( simp only: bit_encode.simps  flip:One_nat_def domain_element_encode.simps)
+    apply (simp only:  flip: bit_encode.simps)
+  using vname_inj
+   apply(simp only: remdups_map  map_map comp_def flip: variable_encode.simps sas_assignment_encode.simps)
+  apply(simp only: ev_zero_encode  bit_encode.simps(1) cons0 sub_cons sub_map flip:  sas_assignment_encode.simps domain_element_encode.simps )
+  apply (simp only:  flip: sas_assignment_encode.simps   variable_encode.simps  comp_def[of sas_assignment_encode "\<lambda>x. (VN x, EV Zero)"] map_map list.map(2))
+   apply( simp only: sub_map vname_list_encode_def map_map comp_def sas_singleton sas_couple operator_encode_simps sub_cons flip: variable_encode.simps sas_assignment_encode.simps  sas_assignment_list_encode_def )
+  apply( simp only: sub_add_res_to_stack flip: map_map list.map(2) comp_def [of operator_encode "\<lambda>x.\<lparr>sas_plus_operator.precondition_of =
+                                                     [(PC, PCV (WHILE _\<noteq>0 DO _ )), (VN x, EV One)],
+                                                     effect_of = [(PC, PCV (_;; WHILE _\<noteq>0 DO _))]\<rparr>" ])
+  apply simp
+  done
+next
+  case 8
+  then show ?case by (auto intro: com_to_operators_stack_nat.domintros)
+qed
+
+lemma sub_com_to_operators_stack:
+" com_to_operators_stack_nat (list_encode (map  com_op_encode s))
+= list_encode (map operator_encode(com_to_operators_stack s))"
+proof (induct s rule: com_to_operators_stack.induct)
+case (1 x s)
+  then show ?case apply(subst com_to_operators_stack_nat.psimps)
+    using  com_to_operators_term apply blast
+        apply(simp only: list.simps head.simps tail.simps com_op_encode.simps cons0 sub_cons sub_nth
+                        nth.simps com_to_operators_stack.simps
+                        add_res_not_Nil push_stack_not_Nil sub_hd sub_tl Let_def 
+                   del: list_encode.simps )    
+    apply simp
+done
+next
+  case (2 s)
+  then show ?case  apply(subst com_to_operators_stack_nat.psimps)
+    using  com_to_operators_term apply blast
+        apply(simp only: list.simps head.simps tail.simps com_op_encode.simps cons0 sub_cons sub_nth
+                        nth.simps com_to_operators_stack.simps
+                        add_res_not_Nil push_stack_not_Nil sub_hd sub_tl Let_def 
+                   del: list_encode.simps )  
+       apply (simp only: sub_add_res_to_stack list_encode_eq  Nil_is_map_op   flip: list_encode.simps  )
+    apply simp
+done
+next
+  case (3 v b s)
+  then show ?case  apply(subst com_to_operators_stack_nat.psimps)
+    using  com_to_operators_term apply blast
+        apply(simp only: list.simps head.simps tail.simps com_op_encode.simps cons0 sub_cons sub_nth
+                        nth.simps com_to_operators_stack.simps
+                        add_res_not_Nil push_stack_not_Nil sub_hd sub_tl Let_def 
+                   del: list_encode.simps ) 
+  apply(simp only:  flip: comm_encode.simps del:list_encode.simps)
+      apply (simp only:sub_hd  head.simps sub_cons cons0 sub_map sub_nth
+                                      nth.simps  flip: domain_element_encode.simps  variable_encode.simps sas_assignment_encode.simps comm_encode.simps )
+      apply (simp only:sub_hd sub_add_res_to_stack op_singleton operator_encode_simps  sas_singleton sas_couple  head.simps sub_cons cons0 sub_map sub_nth variable_encode.simps(1)
+                                      nth.simps  flip:  domain_element_encode.simps  sas_assignment_encode.simps comm_encode.simps )
+    apply simp
+    done
+next
+  case (4 c1 c2 s)
+  then show ?case apply(subst com_to_operators_stack_nat.psimps)
+    using  com_to_operators_term apply blast
+    apply (cases "c1=com.SKIP")
+        apply(auto simp only: list.simps head.simps tail.simps com_op_encode.simps cons0 sub_cons sub_nth
+                        nth.simps com_to_operators_stack.simps
+                        add_res_not_Nil push_stack_not_Nil sub_hd sub_tl Let_def 
+                   del: list_encode.simps ) 
+  apply(simp only:   flip: comm_encode.simps del:list_encode.simps)
+      apply ( simp only:sub_hd  head.simps sub_cons cons0 sub_map sub_nth
+                                      nth.simps   flip: domain_element_encode.simps  variable_encode.simps sas_assignment_encode.simps comm_encode.simps )
+      apply ( simp only:sub_hd sub_add_res_to_stack op_singleton operator_encode_simps  sas_singleton sas_couple  head.simps sub_cons cons0 sub_map sub_nth variable_encode.simps(1)
+                                      nth.simps   flip:  domain_element_encode.simps  sas_assignment_encode.simps comm_encode.simps )
+     apply simp
+    apply (auto simp only:sub_push_to_stack_op list_encode_0 comm_inj_simps simp flip: com_op_encode.simps(3) comm_encode.simps(1) list.map(2) split: if_splits)
+    done
+next
+  case (5 c1 c2 ops s)
+  then show ?case apply(subst com_to_operators_stack_nat.psimps)
+    using  com_to_operators_term apply blast
+        apply(simp only: list.simps head.simps tail.simps com_op_encode.simps cons0 sub_cons sub_nth
+                        nth.simps com_to_operators_stack.simps
+                        add_res_not_Nil push_stack_not_Nil sub_hd sub_tl Let_def 
+                   del: list_encode.simps ) 
+    apply(simp only:subtail_map_com_to_operators
+        submap_com_to_operators   sub_nth nth.simps  flip: comm_encode.simps del:list_encode.simps)
+      apply (simp only:sub_hd sub_list_update  head.simps sub_cons cons0 sub_map sub_nth
+                                      nth.simps  flip: domain_element_encode.simps  variable_encode.simps sas_assignment_encode.simps comm_encode.simps del: list_encode.simps )
+      apply (simp only:sub_hd sub_add_res_to_stack op_singleton operator_encode_simps  sas_singleton sas_couple  head.simps sub_cons cons0 sub_map sub_nth variable_encode.simps(1)
+                                      nth.simps  flip:  domain_element_encode.simps  sas_assignment_encode.simps comm_encode.simps )
+      apply (auto simp only: sub_hd list_encode_eq suc_eq list_encode_empty comm_encode_eq head.simps sub_cons cons0 sub_map sub_map_dec sub_nth com_to_operators.simps
+                         sub_list_update sas_plus_operator.simps sas_assignment_list_encode_def list.map prod_encode_eq  nth.simps sub_pc_to_com Let_def comp_def operator_encode_def
+  domain_element_encode.simps  variable_encode.simps  sas_assignment_encode.simps
+    map_map list_encode_inverse subtail_remdups sub_remdups  comm_encode.simps submap_com_to_operators
+  simp flip: comm_encode.simps
+                          del: list_encode.simps hd_nat_def cons_def pc_to_com_nat_def map_nat.simps nth_nat.simps list_update_nat.simps split:if_splits)
+  apply (auto simp only:sub_pc_to_com simp flip:  sas_assignment_list_encode_def  comm_encode.simps )
+    apply (auto simp only:  operator_encode_simps sas_assignment_list_encode_def list.simps map_update 
+            sas_assignment_encode.simps variable_encode.simps domain_element_encode.simps  simp flip:  sas_assignment_encode.simps sas_assignment_list_encode_def map_update  variable_encode.simps domain_element_encode.simps comm_encode.simps)
+     apply (auto simp only:  simp flip:comp_def[of operator_encode 
+"\<lambda>x.  \<lparr>sas_plus_operator.precondition_of = (sas_plus_operator.precondition_of x)
+                           [variable_encode PC := (PC, PCV (_;; _))],
+                           effect_of = (effect_of x)
+                             [variable_encode PC := (PC, PCV (pc_to_com (effect_of x);; _))]\<rparr>"
+
+ ] )
+     apply(auto simp only:sub_add_res_to_stack simp_op_id simp flip: map_map)
+    done
+
+next
+  case (6 vs c1 c2 s)
+  then show ?case apply(subst com_to_operators_stack_nat.psimps)
+    using  com_to_operators_term apply blast
+        apply(simp only: subtail_remdups sub_remdups vname_list_encode_def list.simps head.simps tail.simps com_op_encode.simps cons0 sub_cons sub_nth
+                        nth.simps com_to_operators_stack.simps
+                        add_res_not_Nil push_stack_not_Nil sub_hd sub_tl Let_def 
+                   del: list_encode.simps ) 
+    apply(simp only:subtail_map_com_to_operators2
+        submap_com_to_operators2  subtail_map_com_to_operators3
+        submap_com_to_operators3   sub_nth nth.simps  flip: comm_encode.simps  vname_list_encode_def del:list_encode.simps)
+      apply (simp only:sub_hd sub_list_update  head.simps sub_cons cons0 sub_map sub_nth
+                                      nth.simps  flip: domain_element_encode.simps  variable_encode.simps sas_assignment_encode.simps comm_encode.simps del: list_encode.simps )
+      apply (simp only:sub_hd sub_add_res_to_stack op_singleton operator_encode_simps  sas_singleton sas_couple  head.simps sub_cons cons0 sub_map sub_nth variable_encode.simps(1)
+                                      nth.simps   variable_encode.simps  flip:  bit_encode.simps domain_element_encode.simps  sas_assignment_encode.simps comm_encode.simps )
+   apply(subst (6) bit_encode.simps) 
    apply( simp only: flip: domain_element_encode.simps)
   using vname_inj
    apply(simp only: remdups_map  map_map comp_def flip: variable_encode.simps sas_assignment_encode.simps)
    apply(simp only: bit_encode.simps(1) cons0 sub_cons sub_map flip: domain_element_encode.simps comp_def[of sas_assignment_encode "\<lambda>x. (VN x, EV Zero)"] map_map list.map(2))
    apply( simp only: sub_map vname_list_encode_def map_map comp_def sas_singleton sas_couple operator_encode_simps sub_cons flip: variable_encode.simps sas_assignment_encode.simps  sas_assignment_list_encode_def ) 
+  apply( simp only: sub_add_res_to_stack flip: map_map list.map(2) comp_def [of operator_encode "\<lambda>x. \<lparr>sas_plus_operator.precondition_of =
+                                                [(PC, PCV (IF _\<noteq>0 THEN _ ELSE _)), (VN x, EV One)],
+                                                effect_of = [(PC, PCV _)]\<rparr>" ])
+   apply simp
+done
+next
+  case (7 vs c s)
+  then show ?case apply(subst com_to_operators_stack_nat.psimps)
+    using  com_to_operators_term apply blast
+        apply(simp only: subtail_remdups sub_remdups vname_list_encode_def list.simps head.simps tail.simps com_op_encode.simps cons0 sub_cons sub_nth
+                        nth.simps com_to_operators_stack.simps
+                        add_res_not_Nil push_stack_not_Nil sub_hd sub_tl Let_def 
+                   del: list_encode.simps ) 
+    apply(simp only:subtail_map_com_to_operators4
+        submap_com_to_operators4  subtail_map_com_to_operators2
+        submap_com_to_operators2   sub_nth nth.simps  flip: comm_encode.simps  vname_list_encode_def del:list_encode.simps)
+      apply (simp only:sub_hd sub_list_update  head.simps sub_cons cons0 sub_map sub_nth
+                                      nth.simps  flip: domain_element_encode.simps  variable_encode.simps sas_assignment_encode.simps comm_encode.simps del: list_encode.simps )
+      apply (simp only:sub_hd sub_add_res_to_stack op_singleton operator_encode_simps  sas_singleton sas_couple  head.simps sub_cons cons0 sub_map sub_nth variable_encode.simps(1)
+                                      nth.simps   variable_encode.simps  flip:  bit_encode.simps domain_element_encode.simps  sas_assignment_encode.simps comm_encode.simps )
+   apply(subst (10) bit_encode.simps) 
+   apply( simp only: flip: domain_element_encode.simps)
+  using vname_inj
+   apply(simp only: remdups_map map_map comp_def flip: variable_encode.simps sas_assignment_encode.simps)
+   apply(simp only: bit_encode.simps(1) cons0 sub_cons sub_map flip: domain_element_encode.simps comp_def[of sas_assignment_encode "\<lambda>x. (VN x, EV Zero)"] map_map list.map(2))
+   apply( simp only: sub_map vname_list_encode_def map_map comp_def sas_singleton sas_couple operator_encode_simps sub_cons flip: variable_encode.simps sas_assignment_encode.simps  sas_assignment_list_encode_def ) 
   apply( simp only: sub_add_res_to_stack flip: map_map list.map(2) comp_def [of operator_encode "\<lambda>x.\<lparr>sas_plus_operator.precondition_of =
                                                      [(PC, PCV (WHILE _\<noteq>0 DO _ )), (VN x, EV One)],
                                                      effect_of = [(PC, PCV (_;; WHILE _\<noteq>0 DO _))]\<rparr>" ])
-   apply simp
+  apply simp
   done
+next
+  case 8
+  then show ?case apply(subst com_to_operators_stack_nat.psimps)
+    using  com_to_operators_term apply blast
+    apply auto
+    done
+qed
+
+                
+        
+        
+     
 
 definition com_to_operators_nat:: "nat \<Rightarrow> nat" where 
 "com_to_operators_nat c = com_to_operators_stack_nat (push_to_stack_op_nat c 0)"

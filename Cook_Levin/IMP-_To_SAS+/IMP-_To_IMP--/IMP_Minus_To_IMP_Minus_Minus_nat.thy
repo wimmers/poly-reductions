@@ -145,6 +145,52 @@ lemma IMPm_IMPmm_list_id:
   apply auto
   done
 
+fun size_e :: "Com.com \<Rightarrow> nat" where 
+"size_e Com.com.SKIP = 1 "|
+"size_e (Com.com.Assign v a)  = 1"|
+"size_e (Com.com.Seq c1 c2) = Suc (size_e c1 + size_e c2)"|
+"size_e (Com.com.If v c1 c2) = Suc (size_e c1 + size_e c2)"|
+"size_e (Com.com.While v c) = Suc (size_e c)"
+
+fun size_stack_rev :: "IMPm_IMPmm list \<Rightarrow> nat" where
+"size_stack_rev (Seq_0 c1 c2 _# s) =  (if s = [] then Suc (2* (size_e c1 + size_e c2)) else  Suc (2 * size_e c2) + size_stack_rev s )  "|
+"size_stack_rev (Seq_m c1 c2 _ _#s) = (if s = [] then  Suc (2 * size_e c2) else  Suc (size_stack_rev s)) "|
+"size_stack_rev (If_0 _ c1 c2 _# s) =  (if s = [] then Suc (2* (size_e c1 + size_e c2)) else  Suc (2 * size_e c2) + size_stack_rev s )  "|
+"size_stack_rev (If_m _ c1 c2  _ _#s) = (if s = [] then  Suc (2 * size_e c2) else  Suc (size_stack_rev s)) "|
+"size_stack_rev (While_0 _ c _ #s)  = (if s = [] then Suc (2* size_e c) else Suc (size_stack_rev s) )"|
+"size_stack_rev (Bot x # s) = (if s =[] then 0 else Suc (size_stack_rev s))"|
+"size_stack_rev (_#s) = (if s = [] then 1 else Suc (size_stack_rev s))"|
+"size_stack_rev [] = 1"
+
+fun size_stack :: "IMPm_IMPmm list \<Rightarrow> nat" where 
+"size_stack s = size_stack_rev (rev s)"
+
+lemma 
+size_stack_mono :" x \<noteq> [] \<Longrightarrow>y \<noteq>  [] \<Longrightarrow> size_stack_rev y < size_stack_rev x
+ \<Longrightarrow> size_stack_rev (s @ y) < size_stack_rev (s @ x) "
+  apply(induct s )
+   apply auto
+  subgoal for a xs
+    apply (cases a)
+           apply (auto)
+    done
+  done
+
+lemma size_stack_var_0:"(size_stack_rev x = 0) = (\<exists>n. x = [Bot n]) "
+  apply(cases x)
+   apply auto
+  subgoal for a xs
+    apply (cases a)
+           apply (auto split :if_splits)
+    done
+ subgoal for a xs
+    apply (cases a)
+           apply (auto split :if_splits)
+   done
+  done
+
+
+
 fun push_on_stack :: "IMP_Minus_com \<Rightarrow> nat \<Rightarrow> IMPm_IMPmm list \<Rightarrow> IMPm_IMPmm list" where 
 "push_on_stack Com.SKIP n stack = SKIP n # stack "|
 "push_on_stack (Com.Assign v aexp) n stack =  ( Assign v aexp n) # stack "|
@@ -152,7 +198,7 @@ fun push_on_stack :: "IMP_Minus_com \<Rightarrow> nat \<Rightarrow> IMPm_IMPmm l
 "push_on_stack (Com.If v c1 c2) n stack =  (If_0 v c1 c2 n) # stack "|
 "push_on_stack (Com.While v c) n stack =  (While_0 v c n) # stack "
 
-fun push_on_stack_nat :: "nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat" where 
+definition push_on_stack_nat :: "nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat" where 
 "push_on_stack_nat c n s = (if hd_nat c = 0 then (1##n##0)##s else 
 if hd_nat c = 1 then (2## (nth_nat (Suc 0) c) ## (nth_nat (Suc (Suc 0)) c) ## n ## 0)## s else 
 if hd_nat c = 2 then (3## (nth_nat (Suc 0) c) ## (nth_nat (Suc (Suc 0)) c) ## n ## 0)## s else 
@@ -164,14 +210,14 @@ lemma sub_push_on_stack:
 "push_on_stack_nat (com_encode c) n (IMPm_IMPmm_list_encode s) = 
 IMPm_IMPmm_list_encode (push_on_stack c n s)"
   apply(cases c)
-      apply (auto simp only: push_on_stack_nat.simps push_on_stack.simps sub_hd head.simps com_encode.simps
+      apply (auto simp only: push_on_stack_nat_def push_on_stack.simps sub_hd head.simps com_encode.simps
              IMPm_IMPmm_list_encode_def sub_cons cons0 sub_nth nth.simps)
   apply auto
   done
 
 
 
-      
+       
            
 fun add_result_to_stack :: "IMP_Minus_Minus_com \<Rightarrow> IMPm_IMPmm list \<Rightarrow> IMPm_IMPmm list" where 
 "add_result_to_stack c [] = [Bot c]"|
@@ -182,7 +228,7 @@ fun add_result_to_stack :: "IMP_Minus_Minus_com \<Rightarrow> IMPm_IMPmm list \<
 "add_result_to_stack c (While_0 v c' n # stack ) = While_f v c' n c #stack"|
 "add_result_to_stack c s = s"
 
-fun add_result_to_stack_nat :: "nat \<Rightarrow> nat \<Rightarrow> nat" where 
+definition add_result_to_stack_nat :: "nat \<Rightarrow> nat \<Rightarrow> nat" where 
 "add_result_to_stack_nat c s = (if s = 0 then (0##c##0)##0
 else (let h = hd_nat s; con = hd_nat h; t = tl_nat s  in 
   if con = 3 then ((4## (nth_nat (Suc 0) h) ## (nth_nat (Suc (Suc 0)) h) ## (nth_nat (Suc (Suc (Suc 0))) h) ## c ## 0) ## t) 
@@ -199,7 +245,7 @@ lemma sub_add_result_to_stack:
   apply(cases s)
       apply (auto simp only: map_is_Nil_conv
       list_encode_non_empty  
-      list.simps add_result_to_stack_nat.simps add_result_to_stack.simps sub_hd head.simps comm_encode.simps
+      list.simps add_result_to_stack_nat_def add_result_to_stack.simps sub_hd head.simps comm_encode.simps
              IMPm_IMPmm_list_encode_def sub_cons cons0 sub_nth nth.simps)
     
    apply (auto simp del: list_encode.simps)
@@ -208,6 +254,19 @@ lemma sub_add_result_to_stack:
    apply (auto simp add: Let_def sub_tl sub_cons sub_nth sub_hd list.simps simp del: list_encode.simps)
     done
   done
+
+lemma add_res_less:
+"\<forall>x. s \<noteq> [Bot x] \<and> a \<noteq> Bot x \<Longrightarrow> size_stack (add_result_to_stack r s) < size_stack (a#s) "
+  apply(cases s)
+   apply auto
+   apply (cases a)
+  apply (auto simp add: size_stack_var_mono)
+  subgoal for a xs
+    apply (cases a)
+    using size_stack_mono size_stack_var_0 nat_less_le    apply (auto )
+    done
+  done
+
 
 function IMP_Minus_to_IMP_Minus_Minus_stack :: "IMPm_IMPmm list \<Rightarrow> IMP_Minus_Minus_com" where 
 "IMP_Minus_to_IMP_Minus_Minus_stack (Seq_0 c1 c2 n #stack) = 
@@ -230,13 +289,68 @@ function IMP_Minus_to_IMP_Minus_Minus_stack :: "IMPm_IMPmm list \<Rightarrow> IM
   IMP_Minus_to_IMP_Minus_Minus_stack (add_result_to_stack ( IMP_Minus_Minus_Com.If (var_bit_list n v) c1  c2) stack)"|
 "IMP_Minus_to_IMP_Minus_Minus_stack (While_f v _ n c # stack) = 
   IMP_Minus_to_IMP_Minus_Minus_stack (add_result_to_stack (IMP_Minus_Minus_Com.While (var_bit_list n v) c) stack)"|
-"IMP_Minus_to_IMP_Minus_Minus_stack (Bot res # stack) =  res"
-  sorry
-termination sorry
+"IMP_Minus_to_IMP_Minus_Minus_stack (Bot res # stack) =  res"|
+"IMP_Minus_to_IMP_Minus_Minus_stack [] =  com.SKIP"
+  by pat_completeness  auto
+termination 
+proof  (relation "measure size_stack",goal_cases)
+case 1
+then show ?case by auto
+next
+  case (2 c1 c2 n stack)
+  then show ?case   using size_stack_mono by (cases c1)  auto
+next
+  case (3 c1 c2 n c3 stack)
+  then show ?case  using size_stack_mono by (cases c2)  auto
+next
+  case (4 v c1 c2 n stack)
+  then show ?case  using size_stack_mono by (cases c1)  auto
+next
+  case (5 v c1 c2 n c3 stack)
+  then show ?case  using size_stack_mono by (cases c2)  auto
+next
+  case (6 v c n stack)
+  then show ?case  using size_stack_mono by (cases c)  auto
+next
+  case (7 uu stack)
+  then show ?case using add_res_less apply auto
+    by (metis IMP_Minus_To_IMP_Minus_Minus_nat.size_stack_var_0 
+IMPm_IMPmm.distinct One_nat_def Suc_less_SucD Suc_mono add_result_to_stack.simps
+gr0I length_Cons length_append_singleton list.size(3) rev_singleton_conv zero_less_one)
+    
+next
+  case (8 v aexp n stack)
+  then show ?case  using add_res_less apply auto
+    by (metis IMP_Minus_To_IMP_Minus_Minus_nat.size_stack_var_0 
+IMPm_IMPmm.distinct One_nat_def Suc_less_SucD Suc_mono add_result_to_stack.simps
+gr0I length_Cons length_append_singleton list.size(3) rev_singleton_conv zero_less_one)
+
+next
+case (9 uv uw ux c1 c2 stack)
+  then show ?case  using add_res_less apply auto
+    by (metis IMP_Minus_To_IMP_Minus_Minus_nat.size_stack_var_0 
+IMPm_IMPmm.distinct One_nat_def Suc_less_SucD Suc_mono add_result_to_stack.simps
+gr0I length_Cons length_append_singleton list.size(3) rev_singleton_conv zero_less_one)
+
+next
+  case (10 v uy uz n c1 c2 stack)
+  then show ?case  using add_res_less apply auto
+    by (metis IMP_Minus_To_IMP_Minus_Minus_nat.size_stack_var_0 
+IMPm_IMPmm.distinct One_nat_def Suc_less_SucD Suc_mono add_result_to_stack.simps
+gr0I length_Cons length_append_singleton list.size(3) rev_singleton_conv zero_less_one)
+
+next
+  case (11 v va n c stack)
+  then show ?case  using add_res_less apply auto
+    by (metis IMP_Minus_To_IMP_Minus_Minus_nat.size_stack_var_0 
+IMPm_IMPmm.distinct One_nat_def Suc_less_SucD Suc_mono add_result_to_stack.simps
+gr0I length_Cons length_append_singleton list.size(3) rev_singleton_conv zero_less_one)
+
+qed
 
 
-function IMP_Minus_to_IMP_Minus_Minus_stack_nat :: "nat \<Rightarrow> nat" where 
-"IMP_Minus_to_IMP_Minus_Minus_stack_nat s  = ( let h = hd_nat s ; c = hd_nat h ; t = tl_nat s in
+function (domintros) IMP_Minus_to_IMP_Minus_Minus_stack_nat :: "nat \<Rightarrow> nat" where 
+"IMP_Minus_to_IMP_Minus_Minus_stack_nat s  = ( if s = 0 then 0##0 else let h = hd_nat s ; c = hd_nat h ; t = tl_nat s in
   if c = 3  then  IMP_Minus_to_IMP_Minus_Minus_stack_nat (push_on_stack_nat (nth_nat (Suc 0) h) (nth_nat (Suc (Suc (Suc 0))) h) s)
 else if c = 4 then IMP_Minus_to_IMP_Minus_Minus_stack_nat (push_on_stack_nat (nth_nat (Suc (Suc 0)) h) (nth_nat (Suc (Suc (Suc 0))) h) s) 
 else if c = 6 then IMP_Minus_to_IMP_Minus_Minus_stack_nat (push_on_stack_nat (nth_nat (Suc (Suc 0)) h) (nth_nat (Suc (Suc (Suc (Suc 0)))) h) s)
@@ -255,8 +369,7 @@ else if c = 10 then IMP_Minus_to_IMP_Minus_Minus_stack_nat (add_result_to_stack_
 else nth_nat (Suc 0) h
 
 )"
-  sorry
-termination sorry
+  by pat_completeness auto
 
 lemma push_non_empty : "push_on_stack c n s \<noteq> []"
   apply(cases c)
@@ -271,66 +384,238 @@ lemma add_result_non_empty: "add_result_to_stack c s \<noteq> []"
     done 
   done
 
+lemma IMP_Minus_To_IMP_Minus_Minus_term:
+"IMP_Minus_to_IMP_Minus_Minus_stack_nat_dom (IMPm_IMPmm_list_encode c)"
+proof (induct c rule:IMP_Minus_to_IMP_Minus_Minus_stack.induct)
+case (1 c1 c2 n stack)
+  then show ?case  using IMP_Minus_to_IMP_Minus_Minus_stack_nat.domintros[of
+"list_encode
+       (list_encode [3, com_encode c1, com_encode c2, n] # map IMPm_IMPmm_encode stack)"]
+    apply(simp only: Let_def sub_hd head.simps sub_nth nth.simps sub_push_on_stack sub_nth nth.simps
+IMPm_IMPmm_list_encode_def list.simps IMPm_IMPmm_encode.simps)
+    apply( simp only: sub_push_on_stack flip:IMPm_IMPmm_encode.simps list.simps IMPm_IMPmm_list_encode_def)
+    done
+next
+  case (2 c1 c2 n c3 stack)
+  then show ?case using IMP_Minus_to_IMP_Minus_Minus_stack_nat.domintros[of
+"list_encode
+       (list_encode [4, com_encode c1, com_encode c2, n, comm_encode c3] # map IMPm_IMPmm_encode stack)"]
+    apply(simp only: Let_def sub_hd head.simps sub_nth nth.simps sub_push_on_stack sub_nth nth.simps
+IMPm_IMPmm_list_encode_def list.simps IMPm_IMPmm_encode.simps)
+    apply( simp only: sub_push_on_stack flip:IMPm_IMPmm_encode.simps list.simps IMPm_IMPmm_list_encode_def)
+    done
+next
+  case (3 v c1 c2 n stack)
+  then show ?case  using IMP_Minus_to_IMP_Minus_Minus_stack_nat.domintros[of
+"list_encode
+       (list_encode [6, vname_encode v, com_encode c1, com_encode c2, n] # map IMPm_IMPmm_encode stack)"]
+    
+    apply(simp only: Let_def sub_hd head.simps sub_nth nth.simps sub_push_on_stack sub_nth nth.simps
+IMPm_IMPmm_list_encode_def list.simps IMPm_IMPmm_encode.simps)
+    apply( simp only: sub_push_on_stack flip:IMPm_IMPmm_encode.simps list.simps IMPm_IMPmm_list_encode_def)
+    done
+next
+  case (4 v c1 c2 n c3 stack)
+  then show ?case  using IMP_Minus_to_IMP_Minus_Minus_stack_nat.domintros[of
+"list_encode
+       (list_encode [7, vname_encode v, com_encode c1, com_encode c2, n, comm_encode c3] # map IMPm_IMPmm_encode stack)"]   
+    apply(simp only: Let_def sub_hd head.simps sub_nth nth.simps sub_push_on_stack sub_nth nth.simps
+IMPm_IMPmm_list_encode_def list.simps IMPm_IMPmm_encode.simps)
+            apply( simp only: sub_push_on_stack flip:IMPm_IMPmm_encode.simps list.simps IMPm_IMPmm_list_encode_def)
+
+    done
+  next
+    case (5 v c n stack)
+    then show ?case  using IMP_Minus_to_IMP_Minus_Minus_stack_nat.domintros[of
+"list_encode
+       (list_encode [9, vname_encode v, com_encode c, n] # map IMPm_IMPmm_encode stack)"]   
+ apply(simp only: Let_def sub_hd head.simps sub_nth nth.simps sub_push_on_stack sub_nth nth.simps
+IMPm_IMPmm_list_encode_def list.simps IMPm_IMPmm_encode.simps)
+            apply( simp only: sub_add_result_to_stack sub_push_on_stack flip:IMPm_IMPmm_encode.simps list.simps IMPm_IMPmm_list_encode_def)
+      done
+next
+  case (6 uu stack)
+  then show ?case  using IMP_Minus_to_IMP_Minus_Minus_stack_nat.domintros[of
+"list_encode
+       (list_encode [1, uu] # map IMPm_IMPmm_encode stack)"]
+    apply(simp only: Let_def cons0 sub_cons sub_hd sub_tl tail.simps head.simps sub_nth nth.simps sub_push_on_stack sub_add_result_to_stack sub_nth nth.simps
+IMPm_IMPmm_list_encode_def list.simps IMPm_IMPmm_encode.simps  flip: comm_encode.simps )
+    apply( simp only:sub_add_result_to_stack  flip: IMPm_IMPmm_list_encode_def )
+    done
+next
+  case (7 v aexp n stack)
+  then show ?case   using IMP_Minus_to_IMP_Minus_Minus_stack_nat.domintros[of
+"list_encode
+       (list_encode [2, vname_encode v, aexp_encode aexp, n] # map IMPm_IMPmm_encode stack)"]
+    
+    apply(simp only: Let_def cons0 sub_cons sub_hd sub_tl tail.simps head.simps sub_nth nth.simps sub_push_on_stack sub_add_result_to_stack sub_nth nth.simps
+IMPm_IMPmm_list_encode_def list.simps IMPm_IMPmm_encode.simps  flip: comm_encode.simps )
+       apply( simp only:sub_add_result_to_stack sub_assignment_to_binary  flip: IMPm_IMPmm_list_encode_def )
+done
+  next
+  case (8 uv uw ux c1 c2 stack)
+  then show ?case using IMP_Minus_to_IMP_Minus_Minus_stack_nat.domintros[of
+"list_encode
+       (list_encode [5, com_encode uv, com_encode uw, ux, comm_encode c1, comm_encode c2] #
+         map IMPm_IMPmm_encode stack)"]
+        
+    apply(simp only: sub_var_bit_list sub_add_result_to_stack  Let_def cons0 sub_cons sub_hd sub_tl tail.simps head.simps sub_nth nth.simps sub_push_on_stack sub_add_result_to_stack sub_nth nth.simps
+IMPm_IMPmm_list_encode_def list.simps IMPm_IMPmm_encode.simps  )
+    apply(simp only: sub_add_result_to_stack flip: IMPm_IMPmm_list_encode_def comm_encode.simps)
+    done
+next
+  case (9 v uy uz n c1 c2 stack)
+  then show ?case   using IMP_Minus_to_IMP_Minus_Minus_stack_nat.domintros[of
+"list_encode
+       (list_encode [8, vname_encode v, com_encode uy, com_encode uz, n, comm_encode c1,
+          comm_encode c2] #
+         map IMPm_IMPmm_encode stack)"]
+    
+    apply(simp only: sub_var_bit_list sub_add_result_to_stack  Let_def cons0 sub_cons sub_hd sub_tl tail.simps head.simps sub_nth nth.simps sub_push_on_stack sub_add_result_to_stack sub_nth nth.simps
+IMPm_IMPmm_list_encode_def list.simps IMPm_IMPmm_encode.simps  )
+  apply(simp only: sub_add_result_to_stack flip: IMPm_IMPmm_list_encode_def comm_encode.simps)
+    done
+next
+  case (10 v va n c stack)
+  then show ?case   using IMP_Minus_to_IMP_Minus_Minus_stack_nat.domintros[of
+"list_encode
+       (list_encode [10, vname_encode v, com_encode va, n, comm_encode c] #
+         map IMPm_IMPmm_encode stack)"]
+    
+    apply(simp only: sub_var_bit_list sub_add_result_to_stack  Let_def cons0 sub_cons sub_hd sub_tl tail.simps head.simps sub_nth nth.simps sub_push_on_stack sub_add_result_to_stack sub_nth nth.simps
+IMPm_IMPmm_list_encode_def list.simps IMPm_IMPmm_encode.simps  )
+  apply(simp only: sub_add_result_to_stack flip: IMPm_IMPmm_list_encode_def comm_encode.simps)
+    done
+next
+  case (11 res stack)
+  then show ?case   using IMP_Minus_to_IMP_Minus_Minus_stack_nat.domintros[of
+"list_encode
+       (list_encode [0, comm_encode res] #
+         map IMPm_IMPmm_encode stack)"]
+    apply(simp only: sub_var_bit_list sub_add_result_to_stack  Let_def cons0 sub_cons sub_hd sub_tl tail.simps head.simps sub_nth nth.simps sub_push_on_stack sub_add_result_to_stack sub_nth nth.simps
+IMPm_IMPmm_list_encode_def list.simps IMPm_IMPmm_encode.simps  )
+done         
+next
+  case 12
+  then show ?case by (auto intro: IMP_Minus_to_IMP_Minus_Minus_stack_nat.domintros
+simp add:IMPm_IMPmm_list_encode_def)
+qed
+
+lemma IMPm_IMPmm_list_encode_0: "(IMPm_IMPmm_list_encode xs = 0) = (xs = [])"
+  by (auto simp add: IMPm_IMPmm_list_encode_def list_encode_0)
 lemma subtailnat_IMP_Minus_to_IMP_Minus_Minus_stack:
-"s \<noteq> []  \<Longrightarrow> IMP_Minus_to_IMP_Minus_Minus_stack_nat (IMPm_IMPmm_list_encode s)
+" IMP_Minus_to_IMP_Minus_Minus_stack_nat (IMPm_IMPmm_list_encode s)
 = comm_encode (IMP_Minus_to_IMP_Minus_Minus_stack s) "
-  apply(induct s rule: IMP_Minus_to_IMP_Minus_Minus_stack.induct )
-  apply(subst IMP_Minus_to_IMP_Minus_Minus_stack_nat.simps)
+proof (induct s rule: IMP_Minus_to_IMP_Minus_Minus_stack.induct )
+case (1 c1 c2 n stack)
+  then show ?case apply(subst IMP_Minus_to_IMP_Minus_Minus_stack_nat.psimps)
+  using  IMP_Minus_To_IMP_Minus_Minus_term apply blast
+            apply(simp only: Let_def sub_hd head.simps sub_nth nth.simps sub_push_on_stack sub_nth nth.simps
+IMPm_IMPmm_list_encode_def list.simps IMPm_IMPmm_encode.simps)
+            apply( simp only: sub_push_on_stack  flip:IMPm_IMPmm_encode.simps list.simps IMPm_IMPmm_list_encode_def)
+            apply (auto simp add: push_non_empty  IMPm_IMPmm_list_encode_0) done
+next
+  case (2 c1 c2 n c3 stack)
+  then show ?case  apply(subst IMP_Minus_to_IMP_Minus_Minus_stack_nat.psimps)
+using  IMP_Minus_To_IMP_Minus_Minus_term apply blast
+            apply(simp only: Let_def sub_hd head.simps sub_nth nth.simps sub_push_on_stack sub_nth nth.simps
+IMPm_IMPmm_list_encode_def list.simps IMPm_IMPmm_encode.simps)
+          apply( simp only: sub_push_on_stack IMPm_IMPmm_list_encode_0 flip:IMPm_IMPmm_encode.simps list.simps IMPm_IMPmm_list_encode_def)
+           apply (auto) done
+next
+  case (3 v c1 c2 n stack)
+  then show ?case  apply(subst IMP_Minus_to_IMP_Minus_Minus_stack_nat.psimps)
+using  IMP_Minus_To_IMP_Minus_Minus_term apply blast
             apply(simp only: Let_def sub_hd head.simps sub_nth nth.simps sub_push_on_stack sub_nth nth.simps
 IMPm_IMPmm_list_encode_def list.simps IMPm_IMPmm_encode.simps)
             apply( simp only: sub_push_on_stack flip:IMPm_IMPmm_encode.simps list.simps IMPm_IMPmm_list_encode_def)
-            apply (auto simp del: IMP_Minus_to_IMP_Minus_Minus_stack_nat.simps simp add: push_non_empty )
- apply(subst IMP_Minus_to_IMP_Minus_Minus_stack_nat.simps)
+          apply (auto simp add: IMPm_IMPmm_list_encode_0  ) done
+next
+  case (4 v c1 c2 n c3 stack)
+  then show ?case apply(subst IMP_Minus_to_IMP_Minus_Minus_stack_nat.psimps)
+using  IMP_Minus_To_IMP_Minus_Minus_term apply blast
             apply(simp only: Let_def sub_hd head.simps sub_nth nth.simps sub_push_on_stack sub_nth nth.simps
 IMPm_IMPmm_list_encode_def list.simps IMPm_IMPmm_encode.simps)
             apply( simp only: sub_push_on_stack flip:IMPm_IMPmm_encode.simps list.simps IMPm_IMPmm_list_encode_def)
-           apply (auto simp del: IMP_Minus_to_IMP_Minus_Minus_stack_nat.simps simp add: push_non_empty )
- apply(subst IMP_Minus_to_IMP_Minus_Minus_stack_nat.simps)
-            apply(simp only: Let_def sub_hd head.simps sub_nth nth.simps sub_push_on_stack sub_nth nth.simps
-IMPm_IMPmm_list_encode_def list.simps IMPm_IMPmm_encode.simps)
-            apply( simp only: sub_push_on_stack flip:IMPm_IMPmm_encode.simps list.simps IMPm_IMPmm_list_encode_def)
-          apply (auto simp del: IMP_Minus_to_IMP_Minus_Minus_stack_nat.simps simp add: push_non_empty )
- apply(subst IMP_Minus_to_IMP_Minus_Minus_stack_nat.simps)
-            apply(simp only: Let_def sub_hd head.simps sub_nth nth.simps sub_push_on_stack sub_nth nth.simps
-IMPm_IMPmm_list_encode_def list.simps IMPm_IMPmm_encode.simps)
-            apply( simp only: sub_push_on_stack flip:IMPm_IMPmm_encode.simps list.simps IMPm_IMPmm_list_encode_def)
-         apply (auto simp del: IMP_Minus_to_IMP_Minus_Minus_stack_nat.simps simp add: push_non_empty )
- apply(subst IMP_Minus_to_IMP_Minus_Minus_stack_nat.simps)
+          apply (auto simp add: IMPm_IMPmm_list_encode_0  ) done
+next
+  case (5 v c n stack)
+  then show ?case apply(subst IMP_Minus_to_IMP_Minus_Minus_stack_nat.psimps)
+using  IMP_Minus_To_IMP_Minus_Minus_term apply blast
             apply(simp only: Let_def sub_hd head.simps sub_nth nth.simps sub_push_on_stack sub_nth nth.simps
 IMPm_IMPmm_list_encode_def list.simps IMPm_IMPmm_encode.simps)
             apply( simp only: sub_add_result_to_stack sub_push_on_stack flip:IMPm_IMPmm_encode.simps list.simps IMPm_IMPmm_list_encode_def)
-        apply (auto simp del: IMP_Minus_to_IMP_Minus_Minus_stack_nat.simps simp add: push_non_empty add_result_non_empty)
- apply(subst IMP_Minus_to_IMP_Minus_Minus_stack_nat.simps)
+          apply (auto simp add: IMPm_IMPmm_list_encode_0  ) done
+next
+  case (6 uu stack)
+  then show ?case apply(subst IMP_Minus_to_IMP_Minus_Minus_stack_nat.psimps)
+using  IMP_Minus_To_IMP_Minus_Minus_term apply blast
             apply(simp only: Let_def cons0 sub_cons sub_hd sub_tl tail.simps head.simps sub_nth nth.simps sub_push_on_stack sub_add_result_to_stack sub_nth nth.simps
 IMPm_IMPmm_list_encode_def list.simps IMPm_IMPmm_encode.simps  flip: comm_encode.simps )
        apply( simp only:sub_add_result_to_stack  flip: IMPm_IMPmm_list_encode_def )
-        apply (auto simp del: IMP_Minus_to_IMP_Minus_Minus_stack_nat.simps simp add: push_non_empty add_result_non_empty)
-apply(subst IMP_Minus_to_IMP_Minus_Minus_stack_nat.simps)
+          apply (auto simp add: IMPm_IMPmm_list_encode_0  ) done
+next
+  case (7 v aexp n stack)
+  then show ?case  apply(subst IMP_Minus_to_IMP_Minus_Minus_stack_nat.psimps)
+using  IMP_Minus_To_IMP_Minus_Minus_term apply blast
             apply(simp only: Let_def cons0 sub_cons sub_hd sub_tl tail.simps head.simps sub_nth nth.simps sub_push_on_stack sub_add_result_to_stack sub_nth nth.simps
 IMPm_IMPmm_list_encode_def list.simps IMPm_IMPmm_encode.simps  flip: comm_encode.simps )
        apply( simp only:sub_add_result_to_stack sub_assignment_to_binary  flip: IMPm_IMPmm_list_encode_def )
-        apply (auto simp del: IMP_Minus_to_IMP_Minus_Minus_stack_nat.simps simp add: push_non_empty add_result_non_empty)
-apply(subst IMP_Minus_to_IMP_Minus_Minus_stack_nat.simps)
+          apply (auto simp add: IMPm_IMPmm_list_encode_0  ) done
+next
+  case (8 uv uw ux c1 c2 stack)
+  then show ?case apply(subst IMP_Minus_to_IMP_Minus_Minus_stack_nat.psimps)
+using  IMP_Minus_To_IMP_Minus_Minus_term apply blast
             apply(simp only: Let_def cons0 sub_cons sub_hd sub_tl tail.simps head.simps sub_nth nth.simps sub_push_on_stack sub_add_result_to_stack sub_nth nth.simps
 IMPm_IMPmm_list_encode_def list.simps IMPm_IMPmm_encode.simps  flip: comm_encode.simps )
        apply( simp only:sub_add_result_to_stack sub_assignment_to_binary  flip: IMPm_IMPmm_list_encode_def )
-        apply (auto simp del: IMP_Minus_to_IMP_Minus_Minus_stack_nat.simps simp add: push_non_empty add_result_non_empty)
-apply(subst IMP_Minus_to_IMP_Minus_Minus_stack_nat.simps)
+ apply (auto simp add: IMPm_IMPmm_list_encode_0  ) done
+next
+  case (9 v uy uz n c1 c2 stack)
+  then show ?case apply(subst IMP_Minus_to_IMP_Minus_Minus_stack_nat.psimps)
+using  IMP_Minus_To_IMP_Minus_Minus_term apply blast
             apply(simp only: sub_var_bit_list sub_add_result_to_stack  Let_def cons0 sub_cons sub_hd sub_tl tail.simps head.simps sub_nth nth.simps sub_push_on_stack sub_add_result_to_stack sub_nth nth.simps
 IMPm_IMPmm_list_encode_def list.simps IMPm_IMPmm_encode.simps  )
   apply(simp only: sub_add_result_to_stack flip: IMPm_IMPmm_list_encode_def comm_encode.simps)
-          apply (auto simp del: IMP_Minus_to_IMP_Minus_Minus_stack_nat.simps simp add: push_non_empty add_result_non_empty)
-apply(subst IMP_Minus_to_IMP_Minus_Minus_stack_nat.simps)
+  apply (auto simp add: IMPm_IMPmm_list_encode_0  )
+done
+next
+  case (10 v va n c stack)
+  then show ?case apply(subst IMP_Minus_to_IMP_Minus_Minus_stack_nat.psimps)
+using  IMP_Minus_To_IMP_Minus_Minus_term apply blast
             apply(simp only: sub_var_bit_list sub_add_result_to_stack  Let_def cons0 sub_cons sub_hd sub_tl tail.simps head.simps sub_nth nth.simps sub_push_on_stack sub_add_result_to_stack sub_nth nth.simps
 IMPm_IMPmm_list_encode_def list.simps IMPm_IMPmm_encode.simps  )
   apply(simp only: sub_add_result_to_stack flip: IMPm_IMPmm_list_encode_def comm_encode.simps)
-          apply (auto simp del: IMP_Minus_to_IMP_Minus_Minus_stack_nat.simps simp add: push_non_empty add_result_non_empty)
-apply(subst IMP_Minus_to_IMP_Minus_Minus_stack_nat.simps)
+          apply (auto simp add: IMPm_IMPmm_list_encode_0  ) done
+next
+  case (11 res stack)
+  then show ?case apply(subst IMP_Minus_to_IMP_Minus_Minus_stack_nat.psimps)
+using  IMP_Minus_To_IMP_Minus_Minus_term apply blast
             apply(simp only: sub_var_bit_list sub_add_result_to_stack  Let_def cons0 sub_cons sub_hd sub_tl tail.simps head.simps sub_nth nth.simps sub_push_on_stack sub_add_result_to_stack sub_nth nth.simps
 IMPm_IMPmm_list_encode_def list.simps IMPm_IMPmm_encode.simps  )
   apply(simp only: sub_add_result_to_stack flip: IMPm_IMPmm_list_encode_def comm_encode.simps)
-          apply (auto simp del: IMP_Minus_to_IMP_Minus_Minus_stack_nat.simps simp add: push_non_empty add_result_non_empty)
+  apply (auto simp add: IMPm_IMPmm_list_encode_0  ) done
+next
+  case 12
+  then show ?case  apply(subst IMP_Minus_to_IMP_Minus_Minus_stack_nat.psimps)
+  using  IMP_Minus_To_IMP_Minus_Minus_term apply blast
+    apply (auto simp add: IMPm_IMPmm_list_encode_0 cons_def  )
   done
+qed
+
+             
+           
+        
+        
+       
+      
+    
+    
+         
+   
+  
+  
+
 
 lemma IMP_Minus_to_IMP_Minus_Minus_stack_correct:
 "IMP_Minus_to_IMP_Minus_Minus_stack (push_on_stack c n stack) 
