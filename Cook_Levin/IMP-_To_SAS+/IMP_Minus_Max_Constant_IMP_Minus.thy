@@ -105,6 +105,7 @@ lemma aexp_max_constant_IMP_Minus_correct:
       ''atomExp_to_constant'' := 0,
       ''aexp_max_constant'' := aexp_max_constant_tail (s ''a''))"
   unfolding aexp_max_constant_IMP_Minus_def aexp_max_constant_IMP_Minus_time_def
+    aexp_max_constant_tail_def
   apply(cases "3 - fst_nat (s ''a'' - Suc 0)"; cases "fst_nat (s ''a'' - Suc 0)")
      apply simp
   apply(fastforce simp: numeral_eq_Suc hd_nat_def 
@@ -298,7 +299,7 @@ definition add_res_nat_third_part where "add_res_nat_third_part \<equiv>
            IF ''a'' \<noteq>0
            THEN
            (
-            ''add_res'' ::= (A (V ''e''))
+            ''add_res'' ::= (A (V ''l''))
            )
            ELSE
            (
@@ -307,7 +308,7 @@ definition add_res_nat_third_part where "add_res_nat_third_part \<equiv>
         )
         ELSE
         (
-          ''add_res'' ::= (A (V ''e'')) ;;
+          ''add_res'' ::= (A (V ''l'')) ;;
           Com.SKIP ;; Com.SKIP ;; Com.SKIP
         )
       )
@@ -328,7 +329,7 @@ definition add_res_nat_third_part where "add_res_nat_third_part \<equiv>
     )
     ELSE
     (
-      ''add_res'' ::= (A (V ''e'')) ;;
+      ''add_res'' ::= (A (V ''l'')) ;;
       Com.SKIP ;; Com.SKIP ;; Com.SKIP ;;
       Com.SKIP ;; Com.SKIP ;; Com.SKIP ;;
       Com.SKIP ;; Com.SKIP ;; Com.SKIP
@@ -342,14 +343,7 @@ definition add_res_nat_third_part where "add_res_nat_third_part \<equiv>
     Com.SKIP ;; Com.SKIP ;; Com.SKIP ;;
     Com.SKIP ;; Com.SKIP ;; Com.SKIP
   );;
-  ''a'' ::= (A (N 0)) ;;
-  ''e'' ::= (A (N 0)) ;;
-  ''h'' ::= (A (N 0)) ;;
-  ''k'' ::= (A (N 0)) ;;
-  ''l'' ::= (A (N 0)) ;;
-  ''m'' ::= (A (N 0)) ;;
-  ''n'' ::= (A (N 0)) ;;
-  ''cons'' ::= (A (N 0))"
+  zero_variables [''a'', ''e'', ''h'', ''k'', ''l'', ''m'', ''n'', ''cons'']"
 
 definition add_res_nat_IMP_Minus where "add_res_nat_IMP_Minus \<equiv>
   add_res_nat_first_part ;;
@@ -359,7 +353,8 @@ definition add_res_nat_IMP_Minus where "add_res_nat_IMP_Minus \<equiv>
 definition add_res_nat_IMP_Minus_time where "add_res_nat_IMP_Minus_time n s \<equiv>
   add_res_nat_first_part_time n s
   + add_res_nat_second_part_time n s
-  + 31"
+  + 15
+  + zero_variables_time [''a'', ''e'', ''h'', ''k'', ''l'', ''m'', ''n'', ''cons'']"
 
 lemma add_res_nat_IMP_Minus_correct:
   "(add_res_nat_IMP_Minus, s)
@@ -391,9 +386,9 @@ proof(cases "s ''b''")
     unfolding add_res_nat_IMP_Minus_def add_res_nat_IMP_Minus_time_def
     apply(rule terminates_in_time_state_intro[OF Seq'
           [OF add_res_nat_second_part_correct]])
-    unfolding add_res_nat_third_part_def Let_def
+    unfolding add_res_nat_third_part_def Let_def add_res_nat_def
     using \<open>s ''b'' = 0\<close> 
-    by(fastforce)+
+    by(fastforce intro: zero_variables_correct)+
 next
   case (Suc nat)
   let ?c = "hd_nat (hd_nat (s ''b''))"
@@ -402,12 +397,14 @@ next
   then show ?thesis
     apply(elim disjE)
     unfolding add_res_nat_IMP_Minus_def add_res_nat_IMP_Minus_time_def
-    unfolding add_res_nat_third_part_def Let_def
-    using \<open>s ''b'' = Suc nat\<close> 
+    unfolding add_res_nat_third_part_def Let_def add_res_nat_def
+    using \<open>s ''b'' = Suc nat\<close>  
+          apply simp
+    using \<open>s ''b'' = Suc nat\<close>  
     by (fastforce 
-        intro!: terminates_in_time_state_intro[OF Seq'
-          [OF add_res_nat_second_part_correct]]
-        simp: Let_def)+
+         intro!: terminates_in_time_state_intro[OF Seq'[OF 
+            add_res_nat_second_part_correct Seq'[OF _ zero_variables_correct]]]
+         simp: Let_def)+
 qed
 
 definition push_con_first_part where "push_con_first_part \<equiv>
@@ -622,7 +619,7 @@ proof -
     by auto
   thus ?thesis
     apply(elim disjE)
-    unfolding push_con_IMP_Minus_def push_con_IMP_Minus_time_def 
+    unfolding push_con_IMP_Minus_def push_con_IMP_Minus_time_def push_con_nat_def
     by(rule terminates_in_state_intro[OF Seq'
           [OF  push_con_second_part_correct]] ;
         fastforce 
@@ -718,58 +715,67 @@ else e1*)
 
 definition max_constant_iteration_second_part where "max_constant_iteration_second_part \<equiv>
   ''max_constant'' ::= (A (N 1)) ;;
-  IF ''h'' \<noteq>0 THEN
-  (
-    ''a'' ::= ((V ''h'') \<ominus> (N 1)) ;;
-    IF ''a'' \<noteq>0 THEN
+  IF ''e'' \<noteq>0 THEN
+    IF ''h'' \<noteq>0 THEN
     (
-      ''a'' ::= ((V ''h'') \<ominus> (N 2)) ;;
+      ''a'' ::= ((V ''h'') \<ominus> (N 1)) ;;
       IF ''a'' \<noteq>0 THEN
       (
-        ''a'' ::= ((V ''h'') \<ominus> (N 3)) ;;
+        ''a'' ::= ((V ''h'') \<ominus> (N 2)) ;;
         IF ''a'' \<noteq>0 THEN
         (
-          ''a'' ::= ((V ''h'') \<ominus> (N 4)) ;;
+          ''a'' ::= ((V ''h'') \<ominus> (N 3)) ;;
           IF ''a'' \<noteq>0 THEN
           (
-            ''a'' ::= ((V ''h'') \<ominus> (N 5)) ;;
+            ''a'' ::= ((V ''h'') \<ominus> (N 4)) ;;
             IF ''a'' \<noteq>0 THEN
             (
-              ''a'' ::= ((V ''h'') \<ominus> (N 6)) ;;
+              ''a'' ::= ((V ''h'') \<ominus> (N 5)) ;;
               IF ''a'' \<noteq>0 THEN
               (
-                ''a'' ::= (A (V ''i'')) ;;
-                ''max_constant'' ::= (A (N 0))
+                ''a'' ::= ((V ''h'') \<ominus> (N 6)) ;;
+                IF ''a'' \<noteq>0 THEN
+                (
+                  ''a'' ::= (A (V ''i'')) ;;
+                  ''max_constant'' ::= (A (N 0))
+                )
+                ELSE
+                (
+                  ''a'' ::= (A (V ''j'')) ;;
+                  ''b'' ::= (A (V ''g'')) ;;
+                  add_res_nat_IMP_Minus ;;
+                  ''a'' ::= (A (V ''add_res''))
+                )
               )
               ELSE
               (
-                ''a'' ::= (A (V ''j'')) ;;
-                ''b'' ::= (A (V ''g'')) ;;
-                add_res_nat_IMP_Minus ;;
-                ''a'' ::= (A (V ''add_res''))
+                ''a'' ::= (A (V ''i'')) ;;
+                ''b'' ::= (A (V ''e'')) ;;
+                push_con_IMP_Minus ;;
+                ''a'' ::= (A (V ''push_con''))
               )
             )
             ELSE
             (
-              ''a'' ::= (A (V ''i'')) ;;
-              ''b'' ::= (A (V ''e'')) ;;
-              push_con_IMP_Minus ;;
-              ''a'' ::= (A (V ''push_con''))
+              ''a'' ::= (A (V ''k'')) ;;
+              ''b'' ::= (A (V ''l'')) ;;
+              IMP_Minus_max_a_min_b ;;
+              ''b'' ::= (A (V ''g'')) ;;
+              add_res_nat_IMP_Minus ;;
+              ''a'' ::= (A (V ''add_res''))
             )
           )
           ELSE
           (
-            ''a'' ::= (A (V ''k'')) ;;
-            ''b'' ::= (A (V ''l'')) ;;
-            IMP_Minus_max_a_min_b ;;
-            ''b'' ::= (A (V ''g'')) ;;
-            add_res_nat_IMP_Minus ;;
-            ''a'' ::= (A (V ''add_res''))
+            ''a'' ::= (A (V ''j'')) ;;
+            ''b'' ::= (A (V ''e'')) ;;
+            push_con_IMP_Minus ;;
+            ''a'' ::= (A (V ''push_con''))
           )
         )
         ELSE
         (
-          ''a'' ::= (A (V ''j'')) ;;
+          ''a'' ::= (A (V ''i'')) ;;
           ''b'' ::= (A (V ''e'')) ;;
           push_con_IMP_Minus ;;
           ''a'' ::= (A (V ''push_con''))
@@ -778,27 +784,24 @@ definition max_constant_iteration_second_part where "max_constant_iteration_seco
       ELSE
       (
         ''a'' ::= (A (V ''i'')) ;;
-        ''b'' ::= (A (V ''e'')) ;;
-        push_con_IMP_Minus ;;
-        ''a'' ::= (A (V ''push_con''))
+        aexp_max_constant_IMP_Minus ;;
+        ''a'' ::= (A (V ''aexp_max_constant'')) ;;
+        ''b'' ::= (A (V ''g'')) ;;
+        add_res_nat_IMP_Minus ;;
+        ''a'' ::= (A (V ''add_res''))
       )
     )
     ELSE
     (
-      ''a'' ::= (A (V ''i'')) ;;
-      aexp_max_constant_IMP_Minus ;;
-      ''a'' ::= (A (V ''aexp_max_constant'')) ;;
+      ''a'' ::= (A (N 0)) ;;
       ''b'' ::= (A (V ''g'')) ;;
       add_res_nat_IMP_Minus ;;
       ''a'' ::= (A (V ''add_res''))
     )
-  )
   ELSE
   (
     ''a'' ::= (A (N 0)) ;;
-    ''b'' ::= (A (V ''g'')) ;;
-    add_res_nat_IMP_Minus ;;
-    ''a'' ::= (A (V ''add_res''))
+    ''max_constant'' ::= (A (N 0))
   ) ;;
   zero_variables [''d'', ''e'', ''f'', ''g'', ''h'', ''i'', ''j'', ''k'', ''l'', ''m'', ''n'',
     ''nth_nat'', ''aexp_max_constant'', ''add_res'', ''cons'', ''triangle'',
@@ -814,7 +817,9 @@ definition max_constant_iteration_second_part_time where
        e2 = nth_nat (Suc (Suc 0)) h; 
        e3 = nth_nat (Suc (Suc (Suc 0))) h;
        e4 = nth_nat (Suc (Suc (Suc (Suc 0)))) h in 
-      (if c = 0 then  1 + 6 + (add_res_nat_IMP_Minus_time 0 t) 
+      (if s = 0 then 1 + 4 
+       else 1 + 
+       (if c = 0 then 1 + 6 + (add_res_nat_IMP_Minus_time 0 t) 
        else if c = 1 then 4 + 8 
           + (add_res_nat_IMP_Minus_time (aexp_max_constant_tail e1) t)
           + (aexp_max_constant_IMP_Minus_time e1)
@@ -823,7 +828,7 @@ definition max_constant_iteration_second_part_time where
        else if c = 4 then 13 + 8 + 11 + (add_res_nat_IMP_Minus_time (max e3 e4) t)
        else if c = 5 then 16 + 6 + (push_con_IMP_Minus_time e1 s) 
        else if c = 6 then 19 + 6 + (add_res_nat_IMP_Minus_time e2 t)
-       else 19 + 4))
+       else 19 + 4)))
   + zero_variables_time [''d'', ''e'', ''f'', ''g'', ''h'', ''i'', ''j'', ''k'', ''l'', ''m'', ''n'',
     ''nth_nat'', ''aexp_max_constant'', ''add_res'', ''cons'', ''triangle'',
         ''prod_encode'', ''add_res'', ''atomExp_to_constant'', ''push_con'']"
@@ -835,10 +840,6 @@ definition max_constant_iteration where "max_constant_iteration \<equiv>
 definition max_constant_iteration_time where "max_constant_iteration_time s \<equiv>
   max_constant_iteration_first_part_time s 
   + max_constant_iteration_second_part_time s"
-
-declare add_res_nat.simps [simp del]
-declare push_con_nat.simps [simp del]
-declare aexp_max_constant_tail.simps [simp del]
 
 lemma max_constant_iteration_correct: 
 "(max_constant_iteration, s') 
@@ -852,14 +853,15 @@ lemma max_constant_iteration_correct:
          e3 = nth_nat (Suc (Suc (Suc 0))) h;
          e4 = nth_nat (Suc (Suc (Suc (Suc 0)))) h in 
        s'(''a'' := 
-          (if c = 0 then (add_res_nat 0 t) 
+          (if s = 0 then 0
+           else (if c = 0 then (add_res_nat 0 t) 
            else if c = 1 then (add_res_nat (aexp_max_constant_tail e1) t)
            else if c = 2 then (push_con_nat e1 s) 
            else if c = 3 then (push_con_nat e2 s)
            else if c = 4 then (add_res_nat (max e3 e4) t)
            else if c = 5 then (push_con_nat e1 s) 
            else if c = 6 then (add_res_nat e2 t)
-           else e1),
+           else e1)),
          ''b'' := 0,
          ''c'' := 0,
          ''d'' := 0,
@@ -873,7 +875,7 @@ lemma max_constant_iteration_correct:
          ''l'' := 0,
          ''m'' := 0,
          ''n'' := 0,
-         ''max_constant'' := (if c < 7 then 1 else 0),
+         ''max_constant'' := (if s \<noteq> 0 \<and> c < 7 then 1 else 0),
          ''fst_nat'' := 0,
          ''snd_nat'' := 0,
          ''nth_nat'' := 0,
@@ -884,7 +886,23 @@ lemma max_constant_iteration_correct:
          ''atomExp_to_constant'' := 0,
          ''add_res'' := 0,
          ''push_con'' := 0))"
-proof -
+proof (cases "s' ''a''")
+  case 0
+  then show ?thesis
+     unfolding max_constant_iteration_def max_constant_iteration_time_def
+      max_constant_iteration_second_part_def max_constant_iteration_second_part_time_def
+    by(fastforce 
+        simp: Let_def 
+        intro: 
+          aexp_max_constant_IMP_Minus_correct IMP_Minus_max_a_min_b_correct
+          add_res_nat_IMP_Minus_correct push_con_IMP_Minus_correct
+        intro!: 
+          terminates_in_state_intro[OF Seq'
+          [OF max_constant_iteration_first_part_correct
+            Seq'[OF Seq'[OF Big_StepT.Assign] zero_variables_correct]]])
+next
+  case (Suc nat)
+
   let ?c = "hd_nat (hd_nat (s' ''a''))"
   have "?c = 0 \<or> ?c = 1 \<or> ?c = 2 \<or> ?c = 3 \<or> ?c = 4 \<or> ?c = 5 \<or> ?c = 6 \<or> ?c > 6"
     by auto
@@ -892,6 +910,7 @@ proof -
     unfolding max_constant_iteration_def max_constant_iteration_time_def
       max_constant_iteration_second_part_def max_constant_iteration_second_part_time_def
     apply(elim disjE)
+    using Suc
     by(fastforce 
         simp: Let_def 
         intro: 
@@ -902,5 +921,205 @@ proof -
           [OF max_constant_iteration_first_part_correct
             Seq'[OF Seq'[OF Big_StepT.Assign] zero_variables_correct]]])+
 qed
+
+function (domintros) max_constant_loop_time :: "nat \<Rightarrow> nat" where
+"max_constant_loop_time s = 
+  1 + max_constant_iteration_time s + 
+  (if s = 0 then 2 
+   else (let h = hd_nat s;
+         t = tl_nat s;
+         c = hd_nat h;
+         e1 = nth_nat (Suc 0) h;
+         e2 = nth_nat (Suc (Suc 0)) h;
+         e3 = nth_nat (Suc (Suc (Suc 0))) h;
+         e4 = nth_nat (Suc (Suc (Suc (Suc 0)))) h in 
+      if c = 0 then max_constant_loop_time (add_res_nat 0 t) 
+      else if c = 1 then max_constant_loop_time (add_res_nat (aexp_max_constant_tail e1) t)
+      else if c = 2 then max_constant_loop_time (push_con_nat e1 s) 
+      else if c = 3 then max_constant_loop_time (push_con_nat e2 s)
+      else if c = 4 then max_constant_loop_time (add_res_nat (max e3 e4) t)
+      else if c = 5 then max_constant_loop_time (push_con_nat e1 s) 
+      else if c = 6 then max_constant_loop_time (add_res_nat e2 t)
+      else 2))"
+  by pat_completeness auto
+
+lemma max_constant_stack_nat_domain_then_max_constant_loop_time_domain:
+  "max_constant_stack_nat_dom x \<Longrightarrow> max_constant_loop_time_dom x"
+proof(induction x rule: max_constant_stack_nat.pinduct)
+  case (1 s)
+
+  show ?case 
+  proof (cases s)
+    case 0
+    then show ?thesis
+      using max_constant_loop_time.domintros[where ?s=s]
+      by auto
+  next
+    case (Suc nat)
+    show ?thesis
+      by(fastforce intro: 
+          max_constant_loop_time.domintros[where ?s=s]
+          "1.IH"[where ?x="hd_nat s", simplified])
+  qed
+qed
+
+lemma max_constant_loop_correct:
+   "max_constant_stack_nat_dom s \<Longrightarrow> s' ''a'' = s \<Longrightarrow> 
+    0 < s' ''max_constant'' \<Longrightarrow>
+(WHILE ''max_constant''\<noteq>0 DO max_constant_iteration, s') 
+    \<Rightarrow>\<^bsup>max_constant_loop_time s\<^esup>
+      s'(''a'' := max_constant_stack_nat s,
+         ''b'' := 0,
+         ''c'' := 0,
+         ''d'' := 0,
+         ''e'' := 0,
+         ''f'' := 0,
+         ''g'' := 0,
+         ''h'' := 0,
+         ''i'' := 0,
+         ''j'' := 0,
+         ''k'' := 0,
+         ''l'' := 0,
+         ''m'' := 0,
+         ''n'' := 0,
+         ''max_constant'' := 0,
+         ''fst_nat'' := 0,
+         ''snd_nat'' := 0,
+         ''nth_nat'' := 0,
+         ''cons'' := 0,
+         ''triangle'' := 0,
+         ''prod_encode'' := 0,
+         ''aexp_max_constant'' := 0,
+         ''atomExp_to_constant'' := 0,
+         ''add_res'' := 0,
+         ''push_con'' := 0)"
+proof(induction s arbitrary: s' rule: max_constant_stack_nat.pinduct)
+  case (1 s)
+  
+  let ?c = "hd_nat (hd_nat s)"
+
+  show ?case
+  proof (cases "s \<noteq> 0 \<and> ?c < 7")
+    case True
+
+    hence "?c = 0 \<or> ?c = 1 \<or> ?c = 2 \<or> ?c = 3 \<or> ?c = 4 \<or> ?c = 5 \<or> ?c = 6" 
+      by auto
+
+    then show ?thesis
+      apply(elim disjE)
+      using \<open>0 < s' ''max_constant''\<close>
+        \<open>s \<noteq> 0 \<and> hd_nat (hd_nat s) < 7\<close> \<open>s' ''a'' = s\<close>
+        max_constant_loop_time.psimps
+        max_constant_stack_nat.psimps
+        max_constant_stack_nat_domain_then_max_constant_loop_time_domain
+        \<open>max_constant_stack_nat_dom s\<close>
+            apply -
+            apply (fastforce
+              simp: Let_def
+              intro!: 
+                terminates_in_state_intro
+                [OF Big_StepT.WhileTrue[OF _ max_constant_iteration_correct "1.IH"(1)]])
+           apply (fastforce
+              simp: Let_def
+              intro!: 
+                terminates_in_state_intro
+                [OF Big_StepT.WhileTrue[OF _ max_constant_iteration_correct "1.IH"(2)]])
+          apply (fastforce
+            simp: Let_def
+            intro!: 
+            terminates_in_state_intro
+            [OF Big_StepT.WhileTrue[OF _ max_constant_iteration_correct "1.IH"(3)]])
+         apply (fastforce
+          simp: Let_def
+          intro!: 
+          terminates_in_state_intro
+          [OF Big_StepT.WhileTrue[OF _ max_constant_iteration_correct "1.IH"(4)]])
+        apply (fastforce
+          simp: Let_def
+          intro!: 
+          terminates_in_state_intro
+          [OF Big_StepT.WhileTrue[OF _ max_constant_iteration_correct "1.IH"(5)]])
+       apply (fastforce
+          simp: Let_def
+          intro!: 
+          terminates_in_state_intro
+          [OF Big_StepT.WhileTrue[OF _ max_constant_iteration_correct "1.IH"(6)]])
+      by (fastforce
+          simp: Let_def
+          intro!: 
+          terminates_in_state_intro
+          [OF Big_StepT.WhileTrue[OF _ max_constant_iteration_correct "1.IH"(7)]])
+  next
+    case False
+
+    show ?thesis
+    proof(cases s)
+      case 0
+      thus ?thesis
+        using 
+          \<open>0 < s' ''max_constant''\<close>
+          max_constant_loop_time.psimps[OF max_constant_loop_time.domintros]
+          max_constant_stack_nat.psimps[OF max_constant_stack_nat.domintros]
+          \<open>s' ''a'' = s\<close>
+        by (auto intro!: terminates_in_state_intro[OF Big_StepT.WhileTrue
+              [OF _ max_constant_iteration_correct Big_StepT.WhileFalse]])
+    next
+      case (Suc nat)
+      hence "s \<noteq> 0" "?c > 6"
+        using \<open>\<not> (s \<noteq> 0 \<and> ?c < 7)\<close>
+        by auto
+      thus ?thesis
+        using 
+          \<open>0 < s' ''max_constant''\<close>
+          max_constant_loop_time.psimps[OF max_constant_loop_time.domintros]
+          max_constant_stack_nat.psimps[OF max_constant_stack_nat.domintros]
+          \<open>s' ''a'' = s\<close>
+        by (auto intro!: terminates_in_state_intro[OF Big_StepT.WhileTrue
+              [OF _ max_constant_iteration_correct Big_StepT.WhileFalse]])
+    qed
+  qed
+qed
+
+definition max_constant_IMP_Minus where "max_constant_IMP_Minus \<equiv>
+  ''max_constant'' ::= (A (N 1)) ;;
+  WHILE ''max_constant''\<noteq>0 DO max_constant_iteration ;;
+  ''max_constant'' ::= (A (V ''a'')) ;;
+  ''a'' ::= (A (N 0))" 
+
+definition max_constant_time where "max_constant_time s \<equiv>
+  6 + max_constant_loop_time s" 
+
+lemma max_constant_IMP_Minus_correct: 
+"max_constant_stack_nat_dom (s ''a'') \<Longrightarrow> 
+    0 < s' ''max_constant'' \<Longrightarrow>
+(max_constant_IMP_Minus, s) 
+    \<Rightarrow>\<^bsup>max_constant_time (s ''a'')\<^esup>
+       s(''a'' := 0,
+         ''b'' := 0,
+         ''c'' := 0,
+         ''d'' := 0,
+         ''e'' := 0,
+         ''f'' := 0,
+         ''g'' := 0,
+         ''h'' := 0,
+         ''i'' := 0,
+         ''j'' := 0,
+         ''k'' := 0,
+         ''l'' := 0,
+         ''m'' := 0,
+         ''n'' := 0,
+         ''max_constant'' := max_constant_stack_nat (s ''a''),
+         ''fst_nat'' := 0,
+         ''snd_nat'' := 0,
+         ''nth_nat'' := 0,
+         ''cons'' := 0,
+         ''triangle'' := 0,
+         ''prod_encode'' := 0,
+         ''aexp_max_constant'' := 0,
+         ''atomExp_to_constant'' := 0,
+         ''add_res'' := 0,
+         ''push_con'' := 0)"
+  unfolding max_constant_IMP_Minus_def max_constant_time_def 
+  by(fastforce intro!: terminates_in_state_intro[OF Seq] max_constant_loop_correct)
 
 end 
