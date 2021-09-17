@@ -21,6 +21,8 @@ definition atomExp_to_constant_IMP_Minus where "atomExp_to_constant_IMP_Minus \<
 definition atomExp_to_constant_IMP_Minus_time where "atomExp_to_constant_IMP_Minus_time x \<equiv>
   11 + 2 * IMP_Minus_fst_nat_time x"
 
+(*lemma atomExp_to_constant_IMP_Minus_time_polynomial: "poly atomExp_to_constant_IMP_Minus_time"*)
+
 lemma atomExp_to_constant_IMP_Minus_correct:
   "(atomExp_to_constant_IMP_Minus, s) \<Rightarrow>\<^bsup>atomExp_to_constant_IMP_Minus_time (s ''a'')\<^esup> 
     s(''a'' := 0,

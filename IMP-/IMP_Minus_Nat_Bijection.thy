@@ -342,4 +342,130 @@ qed (auto simp: zero_variables_time_def)
 
 declare zero_variables.simps [simp del]
 
+(*"reverse_nat_acc acc e  n f =
+  (if n = 0 then acc 
+   else reverse_nat_acc ((hd_nat n) ## acc) (tl_nat n) )"*)
+
+definition reverse_nat_acc_IMP_Minus_iteration where "reverse_nat_acc_IMP_Minus_iteration \<equiv>
+  ''a'' ::= ((V ''f'') \<ominus> (N 1)) ;;
+  IMP_Minus_fst_nat ;;
+  
+  cons_IMP_Minus (V ''fst_nat'') (V ''e'') ;;
+
+  ''a'' ::= ((V ''f'') \<ominus> (N 1)) ;;
+  IMP_Minus_snd_nat ;;
+  
+  ''e'' ::= (A (V ''cons'')) ;;
+  ''f'' ::= (A (V ''snd_nat'')) ;;
+
+  zero_variables [''a'', ''b'', ''c'', ''d'', ''fst_nat'', ''snd_nat'', ''cons'']"
+
+definition reverse_nat_acc_IMP_Minus_iteration_time where 
+  "reverse_nat_acc_IMP_Minus_iteration_time acc n \<equiv>
+    8 + IMP_Minus_fst_nat_time (n - 1) + cons_IMP_Minus_time (hd_nat n) acc
+    + IMP_Minus_fst_nat_time (n - 1)
+    + zero_variables_time [''a'', ''b'', ''c'', ''d'', ''fst_nat'', ''snd_nat'', ''cons'']"
+
+(*"reverse_nat_acc acc e  n f =
+  (if n = 0 then acc 
+   else reverse_nat_acc ((hd_nat n) ## acc) (tl_nat n) )"*)
+
+lemma reverse_nat_acc_IMP_Minus_iteration_correct: 
+  "(reverse_nat_acc_IMP_Minus_iteration, s) 
+    \<Rightarrow>\<^bsup>reverse_nat_acc_IMP_Minus_iteration_time (s ''e'') (s ''f'')\<^esup>
+    s(''a'' := 0,
+      ''b'' := 0,
+      ''c'' := 0,
+      ''d'' := 0,
+      ''e'' := ((hd_nat (s ''f'')) ## (s ''e'')),
+      ''f'' := (tl_nat (s ''f'')),
+      ''triangle'' := 0,
+      ''prod_encode'' := 0,
+      ''cons'' := 0,
+      ''fst_nat'' := 0,
+      ''snd_nat'' := 0)"
+  unfolding reverse_nat_acc_IMP_Minus_iteration_def 
+    reverse_nat_acc_IMP_Minus_iteration_time_def
+  by(fastforce 
+       simp: hd_nat_def tl_nat_def 
+       intro!: terminates_in_time_state_intro[OF Seq']
+       intro: IMP_Minus_fst_nat_correct IMP_Minus_snd_nat_correct zero_variables_correct
+       cons_IMP_Minus_correct)
+
+(* WHILE ''f'' \<noteq>0 DO reverse_nat_acc_IMP_Minus_loop_iteration *)
+
+fun reverse_nat_acc_IMP_Minus_loop_time where 
+"reverse_nat_acc_IMP_Minus_loop_time acc n = 
+  (if n = 0 then 2 
+   else 1 + reverse_nat_acc_IMP_Minus_iteration_time acc n + 
+    reverse_nat_acc_IMP_Minus_loop_time ((hd_nat n) ## acc) (tl_nat n))"
+
+lemma reverse_nat_acc_IMP_Minus_loop_correct[intro]: 
+  "(WHILE ''f'' \<noteq>0 DO reverse_nat_acc_IMP_Minus_iteration, s) 
+    \<Rightarrow>\<^bsup>reverse_nat_acc_IMP_Minus_loop_time (s ''e'') (s ''f'')\<^esup>
+    (if s ''f'' \<noteq> 0 then
+      s(''a'' := 0,
+        ''b'' := 0,
+        ''c'' := 0,
+        ''d'' := 0,
+        ''e'' := reverse_nat_acc (s ''e'') (s ''f''),
+        ''f'' := 0,
+        ''triangle'' := 0,
+        ''prod_encode'' := 0,
+        ''cons'' := 0,
+        ''fst_nat'' := 0,
+        ''snd_nat'' := 0)
+      else s)"
+proof(induction "s ''e''" "s ''f''" arbitrary: s rule: reverse_nat_acc.induct)
+  case 1
+  then show ?case
+  proof(cases "s ''f''")
+    case 0
+    then show ?thesis
+      by (fastforce intro: terminates_in_time_state_intro[OF Big_StepT.WhileFalse])
+  next
+    case (Suc nat)
+        
+    then show ?thesis
+      by(fastforce intro!: terminates_in_time_state_intro[OF
+        Big_StepT.WhileTrue[OF _ reverse_nat_acc_IMP_Minus_iteration_correct 1(1)]])
+  qed
+qed
+
+definition "reverse_nat_acc_IMP_Minus" where "reverse_nat_acc_IMP_Minus \<equiv>
+  ''e'' ::= (A (V ''a'')) ;;
+  ''f'' ::= (A (V ''b'')) ;;
+  WHILE ''f'' \<noteq>0 DO reverse_nat_acc_IMP_Minus_iteration ;;
+  ''reverse_nat_acc'' ::= (A (V ''e'')) ;;
+  zero_variables [''a'', ''b'', ''c'', ''d'', ''fst_nat'', ''snd_nat'', ''cons'', ''e'',
+    ''triangle'', ''prod_encode'']"
+
+definition reverse_nat_acc_IMP_Minus_time where "reverse_nat_acc_IMP_Minus_time acc n \<equiv>
+  6 + reverse_nat_acc_IMP_Minus_loop_time acc n
+  + zero_variables_time 
+    [''a'', ''b'', ''c'', ''d'', ''fst_nat'', ''snd_nat'', ''cons'', ''e'',
+      ''triangle'', ''prod_encode'']"
+
+lemma reverse_nat_acc_IMP_Minus_correct:
+  "(reverse_nat_acc_IMP_Minus, s) 
+    \<Rightarrow>\<^bsup>reverse_nat_acc_IMP_Minus_time (s ''a'') (s ''b'')\<^esup>
+      s(''a'' := 0,
+        ''b'' := 0,
+        ''c'' := 0,
+        ''d'' := 0,
+        ''e'' := 0,
+        ''f'' := 0,
+        ''triangle'' := 0,
+        ''prod_encode'' := 0,
+        ''cons'' := 0,
+        ''fst_nat'' := 0,
+        ''snd_nat'' := 0,
+        ''reverse_nat_acc'' := reverse_nat_acc (s ''a'') (s ''b''))"
+  unfolding reverse_nat_acc_IMP_Minus_def reverse_nat_acc_IMP_Minus_time_def
+  apply(cases "s ''b''") 
+  by(fastforce 
+      intro!: HOL.ext terminates_in_time_state_intro[OF Seq'] 
+      zero_variables_correct reverse_nat_acc_IMP_Minus_loop_correct
+      intro:  reverse_nat_acc_IMP_Minus_loop_correct)+
+  
 end
