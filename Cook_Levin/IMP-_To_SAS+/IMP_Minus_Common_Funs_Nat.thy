@@ -23,4 +23,36 @@ lemma "append_acc acc xs = reverse_nat_acc acc xs"
 *)
 
 
+
+
+
+subsection \<open>elemof\<close>
+
+(* Registers:
+  e: e
+  f: list
+  a: "result"
+*)
+definition elemof_IMP_Minus_iteration where "elemof_IMP_Minus_iteration \<equiv>
+  ''a'' ::= ((V ''f'') \<ominus> (N 1)) ;;
+  IMP_Minus_fst_nat ;;
+  ''a'' ::= ((V ''fst_nat'') \<ominus> (V ''e'')) ;;
+  ''b'' ::= ((V ''e'') \<ominus> (V ''fst_nat'')) ;;
+  ''a'' ::= ((V ''a'') \<oplus> (V ''b'')) ;;
+  IF ''a''\<noteq>0 THEN
+    ''a'' ::= ((V ''f'') \<ominus> (N 1)) ;;
+    IMP_Minus_snd_nat ;;
+
+    ''f'' ::= (A (V ''snd_nat''))
+  ELSE (
+    ''a'' ::= (A (N 1));;
+    ''f'' ::= (A (N 0))
+  ) ;;
+  zero_variables [''b'', ''c'', ''fst_nat'', ''snd_nat'']"
+(*
+WHILE 0/=l DO
+  if hd_nat l = e then r = 1; BREAK
+  else l = tl_nat l
+*)
+
 end
