@@ -55,4 +55,13 @@ WHILE 0/=l DO
   else l = tl_nat l
 *)
 
+definition elemof_IMP_Minus_iteration_time where
+"elemof_IMP_Minus_iteration_time e l \<equiv>
+  2 + IMP_Minus_fst_nat_time (l - 1) + 2 + 2 + 2 +
+  (if e = hd_nat l then  2 + 2 + 1
+  else
+    2 + IMP_Minus_fst_nat_time (l - 1) + 2 + 1
+) +
+  zero_variables_time [''b'', ''c'', ''fst_nat'', ''snd_nat'']"
+
 end
