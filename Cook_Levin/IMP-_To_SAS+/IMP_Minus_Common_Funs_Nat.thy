@@ -164,4 +164,8 @@ next
     done
 qed
 
+
+definition elemof_IMP_Minus_loop where "elemof_IMP_Minus_loop \<equiv>
+  (WHILE ''f'' \<noteq>0 DO elemof_IMP_Minus_iteration)"
+
 end
