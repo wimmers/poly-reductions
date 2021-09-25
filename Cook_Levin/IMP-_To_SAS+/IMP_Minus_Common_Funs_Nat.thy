@@ -168,4 +168,9 @@ qed
 definition elemof_IMP_Minus_loop where "elemof_IMP_Minus_loop \<equiv>
   (WHILE ''f'' \<noteq>0 DO elemof_IMP_Minus_iteration)"
 
+fun elemof_IMP_Minus_loop_time :: "nat \<Rightarrow> nat \<Rightarrow> nat" where
+  "elemof_IMP_Minus_loop_time e 0 = 2"
+| "elemof_IMP_Minus_loop_time e l = 1 + elemof_IMP_Minus_iteration_time e l
+ + elemof_IMP_Minus_loop_time e (if e = hd_nat l then 0 else (tl_nat l))"
+
 end
