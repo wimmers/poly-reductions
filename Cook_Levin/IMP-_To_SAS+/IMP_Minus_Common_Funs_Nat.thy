@@ -322,60 +322,22 @@ lemma elemof_IMP_Minus_correct:
    apply(fastforce intro!: terminates_in_time_state_intro[OF Big_StepT.Assign])
 
 proof-
-
-     have a: "(if s ''b'' = 0 then 0
-        else if hd_nat (s ''b'') = s ''a'' then 1
-             else elemof (s ''a'') (tl_nat (s ''b'')))
-= elemof (s ''a'') (s ''b'')" by simp 
-
-
-     have "(\<lambda>v. if v = ''a'' \<or> v = ''b'' \<or> v = ''c'' \<or> v = ''fst_nat'' \<or> v = ''snd_nat'' then 0 else (s(''e'' := s ''a'', ''f'' := s ''b'')) v)
-=
- (s(''a'' := 0, ''b'' := 0, ''c'' := 0, ''fst_nat'' := 0, ''snd_nat'' := 0,
-''e'' := s ''a'', ''f'' := s ''b''))
-" by auto
-     then have "(\<lambda>v. if v = ''a'' \<or> v = ''b'' \<or> v = ''c'' \<or> v = ''fst_nat'' \<or> v = ''snd_nat'' then 0 else (s(''e'' := s ''a'', ''f'' := s ''b'')) v)
+  let ?s1 = "(\<lambda>v. if v = ''a'' \<or> v = ''b'' \<or> v = ''c'' \<or> v = ''fst_nat'' \<or> v = ''snd_nat'' then 0 else (s(''e'' := s ''a'', ''f'' := s ''b'')) v)
      (''a'' := if s ''b'' = 0 then 0 else if hd_nat (s ''b'') = s ''a'' then 1 else elemof (s ''a'') (tl_nat (s ''b'')), ''b'' := 0, ''c'' := 0,
       ''f'' := 0, ''fst_nat'' := 0, ''snd_nat'' := 0,
       ''elemof'' :=
         if s ''b'' = 0 then 0
         else if hd_nat (s ''b'') = s ''a'' then 1
-             else elemof (s ''a'') (tl_nat (s ''b'')))
-=
- (s(''a'' := 0, ''b'' := 0, ''c'' := 0, ''fst_nat'' := 0, ''snd_nat'' := 0,
-''e'' := s ''a'', ''f'' := s ''b''))
-     (''a'' := if s ''b'' = 0 then 0 else if hd_nat (s ''b'') = s ''a'' then 1 else elemof (s ''a'') (tl_nat (s ''b'')), ''b'' := 0, ''c'' := 0,
-      ''f'' := 0, ''fst_nat'' := 0, ''snd_nat'' := 0,
-      ''elemof'' :=
-        if s ''b'' = 0 then 0
-        else if hd_nat (s ''b'') = s ''a'' then 1
-             else elemof (s ''a'') (tl_nat (s ''b'')))
-" (is "?s1 = _") by simp
-     also have "\<dots> =
- s(''e'' := s ''a'',
-''a'' := if s ''b'' = 0 then 0 else
-if hd_nat (s ''b'') = s ''a'' then 1 else elemof (s ''a'') (tl_nat (s ''b'')),
-''b'' := 0, ''c'' := 0,
-      ''f'' := 0, ''fst_nat'' := 0, ''snd_nat'' := 0,
-      ''elemof'' :=
-        if s ''b'' = 0 then 0
-        else if hd_nat (s ''b'') = s ''a'' then 1
-             else elemof (s ''a'') (tl_nat (s ''b'')))
-" by simp
+             else elemof (s ''a'') (tl_nat (s ''b'')))"
 
-
-     also have "\<dots> =
+     let ?s2 = "
  s(''e'' := s ''a'',
 ''a'' := if s ''b'' = 0 then 0 else
 if hd_nat (s ''b'') = s ''a'' then 1 else elemof (s ''a'') (tl_nat (s ''b'')),
 ''b'' := 0, ''c'' := 0,
       ''f'' := 0, ''fst_nat'' := 0, ''snd_nat'' := 0,
       ''elemof'' := elemof (s ''a'') (s ''b''))
-" (is "_ = ?s2")
-       using a by simp
-
-     finally have "?s1 = ?s2"
-       by simp
+"
 
      have "(\<lambda>v. if v \<in> set [''a'', ''b'', ''c'', ''e'', ''f'', ''fst_nat'', ''snd_nat''] then 0
       else (?s1) v) =
