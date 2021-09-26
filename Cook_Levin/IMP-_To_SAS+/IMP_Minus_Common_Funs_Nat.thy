@@ -278,4 +278,18 @@ elemof_IMP_Minus_iteration_correct ih iht[symmetric] refl
   qed
 qed
 
+
+
+(* Registers:
+  a: e
+  b: l
+*)
+definition elemof_IMP_Minus where "elemof_IMP_Minus \<equiv>
+  ''e'' ::= (A (V ''a'')) ;;
+  ''f'' ::= (A (V ''b'')) ;;
+  zero_variables [''a'', ''b'', ''c'', ''fst_nat'', ''snd_nat''] ;;
+  elemof_IMP_Minus_loop ;;
+  ''elemof'' ::= (A (V ''a'')) ;;
+  zero_variables [''a'', ''b'', ''c'', ''e'', ''f'', ''fst_nat'', ''snd_nat'']"
+
 end
