@@ -158,7 +158,7 @@ next
         ])
     using False
     apply simp
-    apply(fastforce simp add: False tl_nat_def
+    apply(fastforce simp add: tl_nat_def
         intro: terminates_in_time_state_intro[OF zero_variables_correct]
         )
     done
