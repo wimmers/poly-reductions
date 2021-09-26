@@ -292,4 +292,11 @@ definition elemof_IMP_Minus where "elemof_IMP_Minus \<equiv>
   ''elemof'' ::= (A (V ''a'')) ;;
   zero_variables [''a'', ''b'', ''c'', ''e'', ''f'', ''fst_nat'', ''snd_nat'']"
 
+definition elemof_IMP_Minus_time :: "nat \<Rightarrow> nat \<Rightarrow> nat" where
+  "elemof_IMP_Minus_time e l = 2 + 2
+ + zero_variables_time [''a'', ''b'', ''c'', ''fst_nat'', ''snd_nat'']
+ + elemof_IMP_Minus_loop_time e l + 2
+ + zero_variables_time [''a'', ''b'', ''c'', ''e'', ''f'', ''fst_nat'', ''snd_nat'']
+"
+
 end
