@@ -75,31 +75,19 @@ lemma elemof_IMP_Minus_iteration_correct:
     ''snd_nat'' := 0)"
 proof(cases "hd_nat (s ''f'') = s ''e''")
   case True
-  then have 1: "fst_nat (s ''f'' - Suc 0) - s ''e'' +
+  then have "fst_nat (s ''f'' - Suc 0) - s ''e'' +
         (s ''e'' -
          fst_nat (s ''f'' - Suc 0)) = 0" 
     using hd_nat_def by auto
-
-  show ?thesis
+  then show ?thesis
     unfolding elemof_IMP_Minus_iteration_def
-        elemof_IMP_Minus_iteration_time_def
-    apply(rule Seq')+
-    apply(fastforce
+      elemof_IMP_Minus_iteration_time_def
+    by (fastforce simp: True
         intro: terminates_in_time_state_intro[OF Big_StepT.Assign]
-        )
-    apply(fastforce
-        intro: terminates_in_time_state_intro[OF IMP_Minus_fst_nat_correct]
-        )
-    apply(fastforce
-        intro: terminates_in_time_state_intro[OF Big_StepT.Assign]
+        terminates_in_time_state_intro[OF Big_StepT.IfFalse]
+        terminates_in_time_state_intro[OF zero_variables_correct]
+        terminates_in_time_state_intro[OF IMP_Minus_fst_nat_correct]
         )+
-     apply(fastforce simp: True 1
-        intro: terminates_in_time_state_intro[OF Big_StepT.IfFalse]
-        )
-    apply(fastforce simp add: True
-        intro: terminates_in_time_state_intro[OF zero_variables_correct]
-        )
-    done
 next
   case False
   then have 1: "fst_nat (s ''f'' - Suc 0) - s ''e'' +
