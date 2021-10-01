@@ -18,9 +18,24 @@ lemma "append_acc acc xs = reverse_nat_acc acc xs"
 = reverse_nat_acc 0 (reverse_nat_acc (reverse_nat_acc 0 xs) ys)
 *)
 
-(*
--- stop -- usage of function --
+(* Registers:
+e: xs
+f: ys
 *)
+definition append_tail_IMP_Minus where "append_tail_IMP_Minus \<equiv>
+  ''a'' ::= (A (N 0)) ;;
+  ''b'' ::= (A (V ''e'')) ;;
+  ''append_tail'' ::= (A (V ''f'')) ;;
+  reverse_nat_acc_IMP_Minus ;;
+  ''a'' ::= (A (V ''reverse_nat_acc'')) ;;
+  ''b'' ::= (A (V ''append_tail'')) ;;
+  reverse_nat_acc_IMP_Minus ;;
+  ''a'' ::= (A (N 0)) ;;
+  ''b'' ::= (A (V ''reverse_nat_acc'')) ;;
+  reverse_nat_acc_IMP_Minus ;;
+  ''append_tail'' ::= (A (V ''reverse_nat_acc'')) ;;
+  zero_variables [''a'', ''b'', ''c'', ''d'', ''e'', ''f'', ''fst_nat'', ''snd_nat'', ''cons'',
+    ''triangle'', ''prod_encode'', ''reverse_nat_acc'']"
 
 
 
