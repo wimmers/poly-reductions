@@ -49,7 +49,93 @@ definition append_tail_IMP_Minus_time where
 + zero_variables_time [''a'', ''b'', ''c'', ''d'', ''e'', ''f'', ''fst_nat'', ''snd_nat'', ''cons'',
     ''triangle'', ''prod_encode'', ''reverse_nat_acc'']"
 
+lemma x: "
+(\<lambda> v . if v = st then 0 else s v)
+= (s(st := 0))
+" by auto
 
+lemma append_tail_IMP_Minus_correct:
+  "(append_tail_IMP_Minus, s)
+    \<Rightarrow>\<^bsup>append_tail_IMP_Minus_time (s ''e'') (s ''f'')\<^esup>
+  s(''a'':=0, ''b'':=0, ''c'':=0, ''d'':=0, ''e'':=0, ''f'':=0,
+    ''fst_nat'':=0, ''snd_nat'':=0, ''cons'':=0,
+    ''triangle'':=0, ''prod_encode'':=0, ''reverse_nat_acc'':=0,
+    ''append_tail'':= append_tail (s ''e'') (s ''f''))"
+  unfolding append_tail_IMP_Minus_def append_tail_IMP_Minus_time_def
+  apply(rule Seq')+
+             apply(simp add: numeral_2_eq_2)
+             apply(rule terminates_in_state_intro[OF Big_StepT.Assign])
+             apply (rule refl)
+            apply(simp add: numeral_2_eq_2)
+            apply(rule terminates_in_state_intro[OF Big_StepT.Assign])
+            apply simp
+           apply(simp add: numeral_2_eq_2)
+           apply(rule terminates_in_state_intro[OF Big_StepT.Assign])
+           apply simp
+          apply(rule terminates_in_time_state_intro[OF reverse_nat_acc_IMP_Minus_correct])
+           apply simp apply (simp del: reverse_nat_acc.simps)
+         apply(rule terminates_in_time_state_intro[OF Big_StepT.Assign])
+          apply simp apply (simp del: reverse_nat_acc.simps)
+        apply(rule terminates_in_time_state_intro[OF Big_StepT.Assign])
+         apply simp apply (simp del: reverse_nat_acc.simps)
+       apply(rule terminates_in_time_state_intro[OF reverse_nat_acc_IMP_Minus_correct])
+
+        apply (simp) apply (simp del: reverse_nat_acc.simps)
+      apply(rule terminates_in_time_state_intro[OF Big_StepT.Assign])
+       apply simp apply (simp del: reverse_nat_acc.simps)
+     apply(rule terminates_in_time_state_intro[OF Big_StepT.Assign])
+      apply simp apply (simp del: reverse_nat_acc.simps)
+    apply(rule terminates_in_time_state_intro[OF reverse_nat_acc_IMP_Minus_correct])
+     apply simp apply (simp del: reverse_nat_acc.simps)
+   apply(rule terminates_in_time_state_intro[OF Big_StepT.Assign])
+    apply simp apply (simp del: reverse_nat_acc.simps)
+  apply(rule terminates_in_state_intro[OF zero_variables_correct])
+  apply (subst append_tail_def)
+  apply(subst revapp)
+  apply(subst reverse_nat_def)
+  apply(subst reverse_nat_def)
+  using x fun_upd_twist
+proof -
+  have " (\<lambda>v. if v \<in> set [''a'', ''b'', ''c'', ''d'', ''e'', ''f'', ''fst_nat'', ''snd_nat'', ''cons'', ''triangle'', ''prod_encode'', ''reverse_nat_acc''] then 0
+          else (s(''a'' := 0, ''b'' := 0, ''c'' := 0, ''d'' := 0, ''e'' := 0, ''f'' := 0, ''triangle'' := 0, ''prod_encode'' := 0, ''cons'' := 0, ''fst_nat'' := 0, ''snd_nat'' := 0,
+                  ''reverse_nat_acc'' := reverse_nat_acc 0 (reverse_nat_acc (reverse_nat_acc 0 (s ''e'')) (s ''f'')),
+                  ''append_tail'' := reverse_nat_acc 0 (reverse_nat_acc (reverse_nat_acc 0 (s ''e'')) (s ''f''))))
+                v)
+=
+(\<lambda>v. if v = ''reverse_nat_acc'' then 0
+          else (s(''a'' := 0, ''b'' := 0, ''c'' := 0, ''d'' := 0, ''e'' := 0, ''f'' := 0,
+ ''fst_nat'' := 0, ''snd_nat'' := 0, ''cons'' := 0, ''triangle'' := 0, ''prod_encode'' := 0,
+  ''append_tail'' := reverse_nat_acc 0 (reverse_nat_acc (reverse_nat_acc 0 (s ''e'')) (s ''f''))
+))
+v)
+" by auto
+
+  also have "\<dots> =
+  (s(''a'' := 0, ''b'' := 0, ''c'' := 0, ''d'' := 0, ''e'' := 0, ''f'' := 0,
+ ''fst_nat'' := 0, ''snd_nat'' := 0, ''cons'' := 0, ''triangle'' := 0, ''prod_encode'' := 0,
+  ''append_tail'' := reverse_nat_acc 0 (reverse_nat_acc (reverse_nat_acc 0 (s ''e'')) (s ''f'')),
+''reverse_nat_acc'' := 0
+))
+" using x[of "''reverse_nat_acc''" ]  .
+
+  also have "\<dots> =
+  (s(''a'' := 0, ''b'' := 0, ''c'' := 0, ''d'' := 0, ''e'' := 0, ''f'' := 0,
+ ''fst_nat'' := 0, ''snd_nat'' := 0, ''cons'' := 0, ''triangle'' := 0, ''prod_encode'' := 0,
+''reverse_nat_acc'' := 0,
+  ''append_tail'' := reverse_nat_acc 0 (reverse_nat_acc (reverse_nat_acc 0 (s ''e'')) (s ''f''))
+))
+" by (simp add: fun_upd_twist)
+
+
+  finally show "(\<lambda>v. if v \<in> set [''a'', ''b'', ''c'', ''d'', ''e'', ''f'', ''fst_nat'', ''snd_nat'', ''cons'', ''triangle'', ''prod_encode'', ''reverse_nat_acc''] then 0
+          else (s(''a'' := 0, ''b'' := 0, ''c'' := 0, ''d'' := 0, ''e'' := 0, ''f'' := 0, ''triangle'' := 0, ''prod_encode'' := 0, ''cons'' := 0, ''fst_nat'' := 0, ''snd_nat'' := 0,
+                  ''reverse_nat_acc'' := reverse_nat_acc 0 (reverse_nat_acc (reverse_nat_acc 0 (s ''e'')) (s ''f'')),
+                  ''append_tail'' := reverse_nat_acc 0 (reverse_nat_acc (reverse_nat_acc 0 (s ''e'')) (s ''f''))))
+                v) =
+    s(''a'' := 0, ''b'' := 0, ''c'' := 0, ''d'' := 0, ''e'' := 0, ''f'' := 0, ''fst_nat'' := 0, ''snd_nat'' := 0, ''cons'' := 0, ''triangle'' := 0, ''prod_encode'' := 0,
+      ''reverse_nat_acc'' := 0, ''append_tail'' := reverse_nat_acc 0 (reverse_nat_acc (reverse_nat_acc 0 (s ''e'')) (s ''f'')))"
+    by simp
+qed
 
 
 subsection \<open>elemof\<close>
