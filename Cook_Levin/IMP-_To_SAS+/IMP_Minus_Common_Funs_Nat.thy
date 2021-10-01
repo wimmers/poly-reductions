@@ -8,7 +8,7 @@ text\<open>Goal of this subsection is *append_tail*, which is defined in terms
   of reverse_nat and append_acc, both of which, in turn, are defined in
   terms of -- or can be related to -- *reverse_nat_acc*.\<close>
 
-lemma "append_acc acc xs = reverse_nat_acc acc xs"
+lemma revapp: "append_acc acc xs = reverse_nat_acc acc xs"
   by(induction xs arbitrary: acc rule: append_acc.induct) simp+
 
 (*
