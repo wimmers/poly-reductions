@@ -56,13 +56,11 @@ WHILE 0/=l DO
 *)
 
 definition elemof_IMP_Minus_iteration_time where
-"elemof_IMP_Minus_iteration_time e l \<equiv>
+  "elemof_IMP_Minus_iteration_time e l \<equiv>
   8 + IMP_Minus_fst_nat_time (l - 1) +
   (if e = hd_nat l then 5
-  else
-    5 + IMP_Minus_fst_nat_time (l - 1)
-) +
-  zero_variables_time [''b'', ''c'', ''fst_nat'', ''snd_nat'']"
+  else 5 + IMP_Minus_fst_nat_time (l - 1))
+  + zero_variables_time [''b'', ''c'', ''fst_nat'', ''snd_nat'']"
 
 lemma elemof_IMP_Minus_iteration_correct:
   "(elemof_IMP_Minus_iteration, s)
@@ -107,8 +105,8 @@ fun elemof_IMP_Minus_loop_time :: "nat \<Rightarrow> nat \<Rightarrow> nat" wher
 
 lemma elemof_IMP_Minus_loop_correct:
   assumes "s ''a'' = 0" "s ''b'' = 0" "s ''c'' = 0" "s ''fst_nat'' = 0" "s ''snd_nat'' = 0"
-    shows
-  "(elemof_IMP_Minus_loop, s)
+  shows
+    "(elemof_IMP_Minus_loop, s)
     \<Rightarrow>\<^bsup>elemof_IMP_Minus_loop_time (s ''e'') (s ''f'')\<^esup>
   s(''a'' := elemof (s ''e'') (s ''f''),
     ''b'' := 0,
@@ -116,7 +114,7 @@ lemma elemof_IMP_Minus_loop_correct:
     ''f'' := 0,
     ''fst_nat'' := 0,
     ''snd_nat'' := 0 )"
-using assms
+  using assms
 proof(induction "s ''e''" "s ''f''" arbitrary: s rule: elemof.induct)
   case 1
   then show ?case
