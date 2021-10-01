@@ -121,80 +121,29 @@ proof(induction "s ''e''" "s ''f''" arbitrary: s rule: elemof.induct)
   case 1
   then show ?case
   proof(cases "s ''f''")
-    case 0
-    then have "elemof (s ''e'') (s ''f'') = 0" by simp
-    then have a1: "s =
-s(''a'' := elemof (s ''e'') (s ''f''), ''b'' := 0, ''c'' := 0, ''f'' := 0, ''fst_nat'' := 0, ''snd_nat'' := 0)"
-      using 0 1 by auto
-
-    from 0 have a2: "Suc (Suc 0) = elemof_IMP_Minus_loop_time (s ''e'') (s ''f'')"
-      by simp
-
-    show ?thesis
+    case 0 then show ?thesis
       unfolding elemof_IMP_Minus_loop_def
-      using
-       terminates_in_time_state_intro[OF Big_StepT.WhileFalse a2,
-  of s "''f''", OF 0,
-of "s(''a'' := elemof (s ''e'') (s ''f''), ''b'' := 0, ''c'' := 0, ''f'' := 0, ''fst_nat'' := 0, ''snd_nat'' := 0)"
-elemof_IMP_Minus_iteration, OF a1
-] by simp
-
+      by(auto simp: numeral_2_eq_2 1
+          intro!: terminates_in_state_intro[OF Big_StepT.WhileFalse])
   next
     case (Suc nat)
-    then have b1: "s ''f'' \<noteq> 0" by simp
     show ?thesis
     proof(cases "hd_nat (s ''f'') = s ''e''")
       case True
       then show ?thesis unfolding elemof_IMP_Minus_loop_def
         using Suc
-          terminates_in_time_state_intro[OF Big_StepT.WhileTrue[of s], OF b1
-elemof_IMP_Minus_iteration_correct Big_StepT.WhileFalse ]
+          terminates_in_time_state_intro[OF Big_StepT.WhileTrue[of s], OF _
+            elemof_IMP_Minus_iteration_correct Big_StepT.WhileFalse ]
         by simp
     next
       case False
-      let ?s1 = "(s ( ''a'' := if s ''e'' = hd_nat (s ''f'') then 1 else 0,
-                      ''b'' := 0, ''c'' := 0,
-                      ''f'' := if s ''e'' = hd_nat (s ''f'') then 0 else tl_nat (s ''f''),
-                      ''fst_nat'' := 0, ''snd_nat'' := 0))"
-
-      have ih: "(WHILE ''f''\<noteq>0 DO elemof_IMP_Minus_iteration, ?s1)
-        \<Rightarrow>\<^bsup> elemof_IMP_Minus_loop_time (?s1 ''e'') (?s1 ''f'') \<^esup>
-  ?s1(''a'' := elemof (?s1 ''e'') (?s1 ''f''), ''b'' := 0, ''c'' := 0, ''f'' := 0,
-  ''fst_nat'' := 0, ''snd_nat'' := 0)" using 1(1)[OF b1 False, of ?s1] False
-        unfolding elemof_IMP_Minus_loop_def by simp
-
-      have iht: " elemof_IMP_Minus_loop_time (s ''e'') (s ''f'') = 
- 1 + elemof_IMP_Minus_iteration_time (s ''e'') (s ''f'')
- + elemof_IMP_Minus_loop_time (?s1 ''e'') (?s1 ''f'')"
-        using Suc
-        by simp
-
-      from False b1 have "elemof (s ''e'') (tl_nat (s ''f'')) = elemof (s ''e'') (s ''f'')" by simp
-
-      then have "s(
-          ''a'' := if s ''e'' = hd_nat (s ''f'') then 1 else 0, ''b'' := 0, ''c'' := 0,
-          ''f'' := if s ''e'' = hd_nat (s ''f'') then 0 else tl_nat (s ''f''),
-    ''fst_nat'' := 0, ''snd_nat'' := 0,
-    ''a'' := elemof
-       ((s(''a'' := if s ''e'' = hd_nat (s ''f'') then 1 else 0, ''b'' := 0, ''c'' := 0,
-           ''f'' := if s ''e'' = hd_nat (s ''f'') then 0 else tl_nat (s ''f''), ''fst_nat'' := 0, ''snd_nat'' := 0))
-         ''e'')
-       ((s(''a'' := if s ''e'' = hd_nat (s ''f'') then 1 else 0, ''b'' := 0, ''c'' := 0,
-           ''f'' := if s ''e'' = hd_nat (s ''f'') then 0 else tl_nat (s ''f''), ''fst_nat'' := 0, ''snd_nat'' := 0))
-         ''f''),
-    ''b'' := 0, ''c'' := 0, ''f'' := 0, ''fst_nat'' := 0, ''snd_nat'' := 0)
-= s(
-    ''a'' := elemof (s ''e'') (s ''f''),
-    ''b'' := 0, ''c'' := 0, ''f'' := 0, ''fst_nat'' := 0, ''snd_nat'' := 0)" using False by simp
-
-
-      then
       show ?thesis unfolding elemof_IMP_Minus_loop_def
-        using
-terminates_in_time_state_intro[OF Big_StepT.WhileTrue[of s], OF b1
-elemof_IMP_Minus_iteration_correct ih iht[symmetric] refl
-] by blast
-
+        apply(rule terminates_in_state_intro[OF Big_StepT.WhileTrue])
+            apply(simp add: Suc)
+           apply(rule elemof_IMP_Minus_iteration_correct)
+          apply(subst elemof_IMP_Minus_loop_def[symmetric])
+          apply(rule 1(1))
+        using False Suc by auto
     qed
   qed
 qed
