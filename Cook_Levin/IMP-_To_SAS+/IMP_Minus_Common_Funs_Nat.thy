@@ -39,13 +39,10 @@ definition append_tail_IMP_Minus where "append_tail_IMP_Minus \<equiv>
 
 definition append_tail_IMP_Minus_time where
   "append_tail_IMP_Minus_time xs ys \<equiv>
-2 + 2 + 2
+16
 + reverse_nat_acc_IMP_Minus_time 0 xs
-+ 2 + 2
 + reverse_nat_acc_IMP_Minus_time (reverse_nat_acc 0 xs) ys
-+ 2 + 2
 + reverse_nat_acc_IMP_Minus_time 0 (reverse_nat_acc (reverse_nat_acc 0 xs) ys)
-+ 2
 + zero_variables_time [''a'', ''b'', ''c'', ''d'', ''e'', ''f'', ''fst_nat'', ''snd_nat'', ''cons'',
     ''triangle'', ''prod_encode'', ''reverse_nat_acc'']"
 
