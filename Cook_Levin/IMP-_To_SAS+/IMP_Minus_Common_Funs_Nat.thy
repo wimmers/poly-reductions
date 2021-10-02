@@ -49,11 +49,6 @@ definition append_tail_IMP_Minus_time where
 + zero_variables_time [''a'', ''b'', ''c'', ''d'', ''e'', ''f'', ''fst_nat'', ''snd_nat'', ''cons'',
     ''triangle'', ''prod_encode'', ''reverse_nat_acc'']"
 
-lemma x: "
-(\<lambda> v . if v = st then 0 else s v)
-= (s(st := 0))
-" by auto
-
 lemma append_tail_IMP_Minus_correct:
   "(append_tail_IMP_Minus, s)
     \<Rightarrow>\<^bsup>append_tail_IMP_Minus_time (s ''e'') (s ''f'')\<^esup>
