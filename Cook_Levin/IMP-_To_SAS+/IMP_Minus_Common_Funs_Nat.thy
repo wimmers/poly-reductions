@@ -238,4 +238,9 @@ definition list_from_acc_IMP_Minus_iteration where
   ''f'' ::= ((V ''f'') \<ominus> (N 1))
 "
 
+definition list_from_acc_IMP_Minus_iteration_time where
+  "list_from_acc_IMP_Minus_iteration_time h t \<equiv>
+  cons_IMP_Minus_time h t + 6
+"
+
 end
