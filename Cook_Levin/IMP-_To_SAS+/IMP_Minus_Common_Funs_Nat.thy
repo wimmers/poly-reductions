@@ -261,4 +261,10 @@ lemma list_from_acc_IMP_Minus_iteration_correct:
       intro!: terminates_in_time_state_intro[OF Seq']
       intro: cons_IMP_Minus_correct)+
 
+fun list_from_acc_IMP_Minus_loop_time where
+  "list_from_acc_IMP_Minus_loop_time acc s 0 = 2"
+| "list_from_acc_IMP_Minus_loop_time acc s (Suc n) =
+  1 + list_from_acc_IMP_Minus_iteration_time s acc
+  + list_from_acc_IMP_Minus_loop_time (s##acc) (s+1) n"
+
 end
