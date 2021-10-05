@@ -223,4 +223,19 @@ lemma elemof_IMP_Minus_correct:
 
 subsection \<open>remdups_tail\<close>
 
+subsection \<open>list_from_acc\<close>
+
+(* Registers:
+acc: d
+s: e
+n: f
+*)
+definition list_from_acc_IMP_Minus_iteration where
+  "list_from_acc_IMP_Minus_iteration \<equiv>
+  cons_IMP_Minus (V ''e'') (V ''d'') ;;
+  ''d'' ::= (A (V ''cons'')) ;;
+  ''e'' ::= ((V ''e'') \<oplus> (N 1)) ;;
+  ''f'' ::= ((V ''f'') \<ominus> (N 1))
+"
+
 end
