@@ -267,4 +267,55 @@ fun list_from_acc_IMP_Minus_loop_time where
   1 + list_from_acc_IMP_Minus_iteration_time s acc
   + list_from_acc_IMP_Minus_loop_time (s##acc) (s+1) n"
 
+lemma list_from_acc_loop_correct:
+  assumes "s ''cons'' = s ''d''"
+    "s ''a'' = 0" "s ''b'' = 0" "s ''c'' = 0"
+    "s ''triangle'' = 0" "s ''prod_encode'' = 0" 
+  shows "(WHILE ''f''\<noteq>0 DO list_from_acc_IMP_Minus_iteration, s)
+  \<Rightarrow>\<^bsup>list_from_acc_IMP_Minus_loop_time (s ''d'') (s ''e'') (s ''f'') \<^esup>
+    s(''a'' := 0,
+      ''b'' := 0,
+      ''c'' := 0,
+      ''d'' := list_from_acc (s ''d'') (s ''e'') (s ''f''),
+      ''e'' := (s ''e'') + (s ''f''),
+      ''f'' := 0,
+      ''triangle'' := 0,
+      ''prod_encode'' := 0,
+      ''cons'' := list_from_acc (s ''d'') (s ''e'') (s ''f'')
+    )"
+  using assms
+proof(induct "s ''d''" "s ''e''" "s ''f''" arbitrary: s rule: list_from_acc.induct)
+  case 1
+  show ?case
+  proof(cases "s ''f''")
+    case 0
+    then show ?thesis
+      by(auto simp add: 1 intro!: terminates_in_time_state_intro[OF Big_StepT.WhileFalse])
+  next
+    case (Suc nat)
+    show ?thesis
+      apply(rule terminates_in_state_intro[OF Big_StepT.WhileTrue])
+          apply(simp add: Suc)
+         apply(rule list_from_acc_IMP_Minus_iteration_correct)
+        apply(simp add: 1 Suc)
+        apply(rule 1(1))
+                 apply(simp add: Suc)
+                apply(simp add: 1 Suc)
+               apply(simp add: 1 Suc)
+              apply(simp add: 1 Suc)
+             apply(simp add: 1 Suc)
+            apply(simp add: 1 Suc)
+           apply(simp add: 1 Suc)
+          apply(simp add: 1 Suc)
+         apply(simp add: 1 Suc)
+        apply(simp add: 1 Suc)
+       apply (subst Suc)
+       apply(subst list_from_acc_IMP_Minus_loop_time.simps(2))
+       apply simp
+      apply(simp add: 1 Suc)
+      done
+  qed
+qed
+
+
 end
