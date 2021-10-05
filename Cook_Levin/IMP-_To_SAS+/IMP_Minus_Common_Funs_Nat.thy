@@ -288,31 +288,15 @@ proof(induct "s ''d''" "s ''e''" "s ''f''" arbitrary: s rule: list_from_acc.indu
   case 1
   show ?case
   proof(cases "s ''f''")
-    case 0
-    then show ?thesis
+    case 0 then show ?thesis
       by(auto simp add: 1 intro!: terminates_in_time_state_intro[OF Big_StepT.WhileFalse])
   next
     case (Suc nat)
     show ?thesis
-      apply(rule terminates_in_state_intro[OF Big_StepT.WhileTrue])
-          apply(simp add: Suc)
-         apply(rule list_from_acc_IMP_Minus_iteration_correct)
-        apply(simp add: 1 Suc)
-        apply(rule 1(1))
-                 apply(simp add: Suc)
-                apply(simp add: 1 Suc)
-               apply(simp add: 1 Suc)
-              apply(simp add: 1 Suc)
-             apply(simp add: 1 Suc)
-            apply(simp add: 1 Suc)
-           apply(simp add: 1 Suc)
-          apply(simp add: 1 Suc)
-         apply(simp add: 1 Suc)
-        apply(simp add: 1 Suc)
-       apply (subst Suc)
-       apply(subst list_from_acc_IMP_Minus_loop_time.simps(2))
-       apply simp
-      apply(simp add: 1 Suc)
+      apply(rule terminates_in_time_state_intro[OF Big_StepT.WhileTrue])
+           apply(fastforce
+          simp add: 1 Suc
+          intro: 1(1) list_from_acc_IMP_Minus_iteration_correct)+
       done
   qed
 qed
