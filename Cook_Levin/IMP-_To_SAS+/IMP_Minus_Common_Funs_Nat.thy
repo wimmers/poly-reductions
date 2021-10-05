@@ -221,4 +221,6 @@ lemma elemof_IMP_Minus_correct:
       )+
 
 
+subsection \<open>remdups_tail\<close>
+
 end
