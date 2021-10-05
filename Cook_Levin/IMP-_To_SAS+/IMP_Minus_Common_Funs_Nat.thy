@@ -243,4 +243,22 @@ definition list_from_acc_IMP_Minus_iteration_time where
   cons_IMP_Minus_time h t + 6
 "
 
+lemma list_from_acc_IMP_Minus_iteration_correct:
+  "(list_from_acc_IMP_Minus_iteration, s)
+  \<Rightarrow>\<^bsup>list_from_acc_IMP_Minus_iteration_time (s ''e'') (s ''d'') \<^esup>
+    s(''a'' := 0,
+      ''b'' := 0,
+      ''c'' := 0,
+      ''d'' := (s ''e'')##(s ''d''),
+      ''e'' := (s ''e'') + 1,
+      ''f'' := (s ''f'') - 1,
+      ''triangle'' := 0,
+      ''prod_encode'' := 0,
+      ''cons'' := (s ''e'')##(s ''d'')
+    )"
+  unfolding list_from_acc_IMP_Minus_iteration_def list_from_acc_IMP_Minus_iteration_time_def
+  by(fastforce
+      intro!: terminates_in_time_state_intro[OF Seq']
+      intro: cons_IMP_Minus_correct)+
+
 end
