@@ -368,4 +368,11 @@ lemma concat_acc_IMP_Minus_iteration_correct:
       append_tail_IMP_Minus_correct
       zero_variables_correct)+
 
+fun concat_acc_IMP_Minus_loop_time where
+  "concat_acc_IMP_Minus_loop_time acc 0 = 2"
+| "concat_acc_IMP_Minus_loop_time acc n = 1
++ concat_acc_IMP_Minus_iteration_time acc n
++ concat_acc_IMP_Minus_loop_time (append_tail (reverse_nat (hd_nat n)) acc) (tl_nat n)
+"
+
 end
