@@ -302,4 +302,39 @@ proof(induct "s ''d''" "s ''e''" "s ''f''" arbitrary: s rule: list_from_acc.indu
 qed
 
 
+subsection \<open>concat_acc\<close>
+
+(*
+WHILE n \<noteq> 0
+  acc := append_tail (reverse_nat (hd_nat n)) acc ;
+  n = tl_nat n ;
+
+WHILE n \<noteq> 0
+  $fst = hd_nat n ;             -- $ABC fst
+  $rev = reverse_nat $fst ;     -- $ABCDEF fst snd cons triangle prod_encode
+  $app = append_tail $rev acc ; -- $ABCDEF fst snd cons triangle prod_encode rev app
+  acc := $app ;
+  $snd = tl_nat n ;             -- $ABC snd
+  n = $snd ;
+*)
+
+definition concat_acc_IMP_Minus_iteration where
+  "concat_acc_IMP_Minus_iteration \<equiv>
+  ''a'' ::= ((V ''n'') \<ominus> (N 1)) ;;
+  IMP_Minus_fst_nat ;;
+  ''a'' ::= (A (N 0)) ;;
+  ''b'' ::= (A (V ''fst_nat'')) ;;
+  reverse_nat_acc_IMP_Minus ;;
+  ''e'' ::= (A (V ''reverse_nat_acc'')) ;;
+  ''f'' ::= (A (V ''acc'')) ;;
+  append_tail_IMP_Minus ;;
+  ''acc'' ::= (A (V ''append_tail'')) ;;
+  ''a'' ::= ((V ''n'') \<ominus> (N 1)) ;;
+  IMP_Minus_snd_nat ;;
+  ''n'' ::= (A (V ''snd_nat'')) ;;
+  zero_variables [''a'', ''b'', ''c'', ''d'', ''e'', ''f'',
+    ''fst_nat'', ''snd_nat'', ''cons'', ''triangle'', ''prod_encode'',
+    ''reverse_nat_acc'', ''append_tail'']
+  "
+
 end
