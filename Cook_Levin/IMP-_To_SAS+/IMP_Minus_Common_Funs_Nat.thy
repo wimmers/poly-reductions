@@ -349,4 +349,23 @@ definition concat_acc_IMP_Minus_iteration_time where
     ''reverse_nat_acc'', ''append_tail'']
 "
 
+lemma concat_acc_IMP_Minus_iteration_correct:
+  "(concat_acc_IMP_Minus_iteration, s)
+    \<Rightarrow>\<^bsup>concat_acc_IMP_Minus_iteration_time (s ''acc'') (s ''n'')\<^esup>
+  s(''a'' := 0, ''b'' := 0, ''c'' := 0, ''d'' := 0, ''e'' := 0, ''f'' := 0,
+  ''fst_nat'' := 0, ''snd_nat'' := 0, ''cons'' := 0,
+  ''triangle'' := 0, ''prod_encode'' := 0,
+  ''reverse_nat_acc'' := 0, ''append_tail'' := 0,
+  ''acc'' := append_tail (reverse_nat (hd_nat (s ''n''))) (s ''acc''),
+  ''n'' := tl_nat (s ''n'')
+)"
+  unfolding concat_acc_IMP_Minus_iteration_def
+    concat_acc_IMP_Minus_iteration_time_def
+  by(fastforce simp: hd_nat_def tl_nat_def reverse_nat_def
+      intro!: ext terminates_in_time_state_intro[OF Seq']
+      intro: IMP_Minus_fst_nat_correct IMP_Minus_snd_nat_correct
+      reverse_nat_acc_IMP_Minus_correct
+      append_tail_IMP_Minus_correct
+      zero_variables_correct)+
+
 end
