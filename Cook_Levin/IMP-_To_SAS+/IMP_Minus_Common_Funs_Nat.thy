@@ -375,4 +375,35 @@ fun concat_acc_IMP_Minus_loop_time where
 + concat_acc_IMP_Minus_loop_time (append_tail (reverse_nat (hd_nat n)) acc) (tl_nat n)
 "
 
+lemma concat_acc_IMP_Minus_correct:
+  assumes "s ''a'' = 0" "s ''b'' = 0" "s ''c'' = 0" "s ''d'' = 0" "s ''e'' = 0" "s ''f'' = 0"
+    "s ''fst_nat'' = 0" "s ''snd_nat'' = 0" "s ''cons'' = 0"
+    "s ''triangle'' = 0" "s ''prod_encode'' = 0"
+    "s ''reverse_nat_acc'' = 0" "s ''append_tail'' = 0"
+  shows "(WHILE ''n''\<noteq>0 DO concat_acc_IMP_Minus_iteration, s)
+    \<Rightarrow>\<^bsup>concat_acc_IMP_Minus_loop_time (s ''acc'') (s ''n'')\<^esup>
+s(''a'':=0, ''b'':=0, ''c'':=0, ''d'':=0, ''e'':=0, ''f'':=0,
+''fst_nat'' := 0, ''snd_nat'' := 0, ''cons'' := 0,
+  ''triangle'' := 0, ''prod_encode'' := 0,
+  ''reverse_nat_acc'' := 0, ''append_tail'' := 0,
+  ''acc'' := concat_acc (s ''acc'') (s ''n''),
+  ''n'' := 0)"
+  using assms
+proof(induct "s ''acc''" "s ''n''" arbitrary: s rule: concat_acc.induct)
+  case 1
+  show ?case proof(cases "s ''n''")
+    case 0
+    then show ?thesis
+      by(auto simp add: 1
+          intro!: terminates_in_time_state_intro[OF Big_StepT.WhileFalse]
+          )
+    next
+    case (Suc nat)
+    show ?thesis
+      apply(rule terminates_in_time_state_intro[OF Big_StepT.WhileTrue])
+           apply(fastforce simp: Suc intro: 1(1) concat_acc_IMP_Minus_iteration_correct)+
+      done
+  qed
+qed
+
 end
