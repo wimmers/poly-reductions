@@ -337,4 +337,16 @@ definition concat_acc_IMP_Minus_iteration where
     ''reverse_nat_acc'', ''append_tail'']
   "
 
+definition concat_acc_IMP_Minus_iteration_time where
+  "concat_acc_IMP_Minus_iteration_time acc n \<equiv>
+  16
++ IMP_Minus_fst_nat_time (n - 1)
++ reverse_nat_acc_IMP_Minus_time 0 (hd_nat n)
++ append_tail_IMP_Minus_time (reverse_nat_acc 0 (hd_nat n)) acc
++ IMP_Minus_fst_nat_time (n - 1)
++ zero_variables_time [''a'', ''b'', ''c'', ''d'', ''e'', ''f'',
+    ''fst_nat'', ''snd_nat'', ''cons'', ''triangle'', ''prod_encode'',
+    ''reverse_nat_acc'', ''append_tail'']
+"
+
 end
