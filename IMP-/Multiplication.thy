@@ -37,11 +37,11 @@ lemma max_a_min_b_IMP_Minus_correct[intro]:
 proof(cases "s (add_prefix p ''a'') \<le> s (add_prefix p ''b'')")
   case True
   then show ?thesis
-    by(force 
+    by(fastforce 
         simp: max_a_min_b_IMP_Minus_def numeral_eq_Suc
         max_a_min_b_IMP_Minus_time_def
         assign_t_simp
-        intro!: Seq[OF Big_StepT.Assign Big_StepT.IfFalse])
+        intro!: terminates_in_time_state_intro[OF Seq[OF Big_StepT.Assign Big_StepT.IfFalse]])
 next
   case False
   show ?thesis 
@@ -132,4 +132,27 @@ lemma IMP_minus_mul_correct[intro]:
   by(fastforce
       intro!: terminates_in_time_state_intro[OF Seq']
       intro: mul_loop_correct)
+
+fun zero_variables where
+"zero_variables [] = SKIP" |
+"zero_variables (a # as) = (a ::= (A (N 0)) ;; zero_variables as)"
+
+definition zero_variables_time where "zero_variables_time vs \<equiv>
+  1 + 2 * length vs"
+
+lemma zero_variables_correct[intro]:
+  "(zero_variables vs p, s) 
+    \<Rightarrow>\<^bsup>zero_variables_time vs\<^esup> 
+      state_transformer p (map (\<lambda>v. (v, 0)) vs) s"
+proof (induction vs arbitrary: s)
+  case (Cons a vs)
+  show ?case
+    by(auto 
+        intro!: terminates_in_state_intro[OF Seq[OF Big_StepT.Assign Cons.IH]] 
+        simp: zero_variables_time_def map_add_def
+        split: option.splits
+        dest!: map_of_SomeD)
+qed (auto simp: zero_variables_time_def)
+
+declare zero_variables.simps [simp del]
 end

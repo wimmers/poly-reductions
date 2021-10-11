@@ -25,6 +25,13 @@ proof (induction x arbitrary: p)
     by (cases p) auto
 qed auto
 
+lemma drop_add_prefix[simp]:
+  "drop (2 + 2 * length p) (add_prefix p x) = x"
+  unfolding add_prefix_def
+  by auto
+
+declare drop_add_prefix[simplified, simp]
+
 lemma concat_map_eq_iff[simp]:
   "(concat (map (\<lambda>i. [i, y]) p) = concat (map (\<lambda>i. [i, y]) p'))
     \<longleftrightarrow> p = p'"
@@ -100,6 +107,11 @@ definition state_transformer :: "string \<Rightarrow> (vname * nat) list \<Right
    want to compute that when composing state transformers *) 
 abbreviation state_transformer' where "state_transformer' p vs s \<equiv>
   state_transformer p (vs (\<lambda>v. s (add_prefix p v))) s"
+
+lemma state_transformer_no_update[simp]:
+  "state_transformer p [] s = s"
+  unfolding state_transformer_def
+  by auto
 
 lemma state_transformer_commutes:
   assumes "p \<noteq> p'"
@@ -193,10 +205,10 @@ lemma state_transformer_same_prefix_equal_intro[intro]:
 lemma state_transformer_same_prefix_equal_commutes[simp]:
   assumes "p \<noteq> p'"
   shows "state_transformer p vs (state_transformer p' vs' s) = 
-    state_transformer p' vs'' (state_transformer p vs''' s)
+    state_transformer p' vs'' (state_transformer p vs''' s')
     \<longleftrightarrow> 
       state_transformer p vs (state_transformer p' vs' s) = 
-      state_transformer p vs''' (state_transformer p' vs'' s)"
+      state_transformer p vs''' (state_transformer p' vs'' s')"
   using state_transformer_commutes'[OF \<open>p \<noteq> p'\<close>]
   by simp
 
@@ -277,6 +289,101 @@ next
   thus "state_transformer p vs s = state_transformer p vs' s"
     by auto
 qed
+
+lemma state_transformers_of_x_same_prefix_equal_iff[simp]:
+  "state_transformer p vs s x = state_transformer p vs' s' x \<longleftrightarrow>
+    (x \<in> set (map ((add_prefix p) \<circ> fst) (vs @ vs')) \<longrightarrow>
+              (map_of vs (drop (2 + 2 * length p) x) = map_of vs' (drop (2 + 2 * length p) x)) 
+            \<or> (map_of vs (drop (2 + 2 * length p) x) = None 
+               \<and> map_of vs' (drop (2 + 2 * length p) x) = Some (s x))
+            \<or> (map_of vs' (drop (2 + 2 * length p) x) = None 
+               \<and> map_of vs (drop (2 + 2 * length p) x) = Some (s' x)))
+          \<and> (x \<notin> set (map ((add_prefix p) \<circ> fst) (vs @ vs')) \<longrightarrow>
+             s x = s' x)"
+proof
+  assume "state_transformer p vs s x = state_transformer p vs' s' x"
+
+  have "x \<in> set (map ((add_prefix p) \<circ> fst) (vs @ vs')) \<Longrightarrow> 
+   (map_of vs (drop (2 + 2 * length p) x) = map_of vs' (drop (2 + 2 * length p) x)) 
+            \<or> (map_of vs (drop (2 + 2 * length p) x) = None 
+               \<and> map_of vs' (drop (2 + 2 * length p) x) = Some (s x))
+            \<or> (map_of vs' (drop (2 + 2 * length p) x) = None 
+               \<and> map_of vs (drop (2 + 2 * length p) x) = Some (s' x))"
+  proof -
+    assume "x \<in> set (map ((add_prefix p) \<circ> fst) (vs @ vs'))"
+    then obtain x' where "x = add_prefix p x'" "x' \<in> set (map fst (vs @ vs'))"
+      by auto
+    thus ?thesis
+      using \<open>state_transformer p vs s x = state_transformer p vs' s' x\<close> 
+      unfolding state_transformer_def
+      by(auto split: option.splits)
+  qed
+
+  moreover have "x \<notin> set (map ((add_prefix p) \<circ> fst) (vs @ vs')) \<Longrightarrow> s x = s' x"
+  proof -
+    assume "x \<notin> set (map ((add_prefix p) \<circ> fst) (vs @ vs'))"
+    hence "state_transformer p vs s x = s x" "state_transformer p vs' s' x = s' x" 
+      unfolding state_transformer_def
+      by(force dest!: map_of_SomeD split: option.splits)+
+    thus "s x = s' x"
+      using \<open>state_transformer p vs s x = state_transformer p vs' s' x\<close>
+      by simp
+  qed
+
+  ultimately show " 
+          (x \<in> set (map ((add_prefix p) \<circ> fst) (vs @ vs')) \<longrightarrow>
+              (map_of vs (drop (2 + 2 * length p) x) = map_of vs' (drop (2 + 2 * length p) x)) 
+            \<or> (map_of vs (drop (2 + 2 * length p) x) = None 
+               \<and> map_of vs' (drop (2 + 2 * length p) x) = Some (s x))
+            \<or> (map_of vs' (drop (2 + 2 * length p) x) = None 
+               \<and> map_of vs (drop (2 + 2 * length p) x) = Some (s' x)))
+          \<and> (x \<notin> set (map ((add_prefix p) \<circ> fst) (vs @ vs')) \<longrightarrow>
+             s x = s' x)"
+    by simp
+next
+  assume *: "
+          (x \<in> set (map ((add_prefix p) \<circ> fst) (vs @ vs')) \<longrightarrow>
+              (map_of vs (drop (2 + 2 * length p) x) = map_of vs' (drop (2 + 2 * length p) x)) 
+            \<or> (map_of vs (drop (2 + 2 * length p) x) = None 
+               \<and> map_of vs' (drop (2 + 2 * length p) x) = Some (s x))
+            \<or> (map_of vs' (drop (2 + 2 * length p) x) = None 
+               \<and> map_of vs (drop (2 + 2 * length p) x) = Some (s' x)))
+          \<and> (x \<notin> set (map ((add_prefix p) \<circ> fst) (vs @ vs')) \<longrightarrow>
+             s x = s' x)"
+
+  have "state_transformer p vs s x = state_transformer p vs' s' x" 
+  proof(cases "x \<in> set (map ((add_prefix p) \<circ> fst) (vs @ vs'))")
+    case True
+    then obtain x' where "x = add_prefix p x'"
+      by auto
+    then show ?thesis
+      unfolding state_transformer_def
+      using * True \<open>x = add_prefix p x'\<close>
+      apply(auto split: option.splits)
+      by (metis option.distinct weak_map_of_SomeI)+
+  next
+    case False
+    thus ?thesis
+      unfolding state_transformer_def
+      using * False
+      by(auto simp: rev_image_eqI dest!: map_of_SomeD split: option.splits)
+  qed
+  thus "state_transformer p vs s x = state_transformer p vs' s' x"
+    by auto
+qed
+
+lemma state_transformers_same_prefix_equal_iff'[simp]:
+  "state_transformer p vs s = state_transformer p vs' s'
+    \<longleftrightarrow> (\<forall>x. 
+          (x \<in> set (map ((add_prefix p) \<circ> fst) (vs @ vs')) \<longrightarrow>
+              (map_of vs (drop (2 + 2 * length p) x) = map_of vs' (drop (2 + 2 * length p) x)) 
+            \<or> (map_of vs (drop (2 + 2 * length p) x) = None 
+               \<and> map_of vs' (drop (2 + 2 * length p) x) = Some (s x))
+            \<or> (map_of vs' (drop (2 + 2 * length p) x) = None 
+               \<and> map_of vs (drop (2 + 2 * length p) x) = Some (s' x)))
+          \<and> (x \<notin> set (map ((add_prefix p) \<circ> fst) (vs @ vs')) \<longrightarrow>
+             s x = s' x))"
+  by(auto simp: fun_eq_iff)
 
 lemma state_transformer_of_same_prefix[simp]: "state_transformer p vs s (add_prefix p v)
   = (case (map_of (map (\<lambda>(i, j). (add_prefix p i, j)) vs)) (add_prefix p v) of
@@ -378,6 +485,9 @@ abbreviation write_subprogram_param where "write_subprogram_param p' a  b \<equi
 abbreviation read_subprogram_param where "read_subprogram_param a p' b \<equiv> 
   (\<lambda>p. Assign (add_prefix p a) (aexp_add_prefix (p' @ p) b))"
 
+abbreviation read_write_subprogram_param where "read_write_subprogram_param p' a p'' b \<equiv>
+  (\<lambda>p. Assign (add_prefix (p' @ p) a) (aexp_add_prefix (p'' @ p) b))"
+
 unbundle no_com_syntax
 
 bundle pcom_syntax
@@ -386,6 +496,7 @@ notation pcom_SKIP ("SKIP" [] 61) and
          pcom_Assign ("_ ::= _" [1000, 61] 61) and
          write_subprogram_param ("[_] _ ::= _" [1000, 61, 61] 61) and
          read_subprogram_param ("_ ::= [_] _" [1000, 61, 61] 61) and
+         read_write_subprogram_param ("[_] _ ::= [_] _" [1000, 61, 61, 61] 61) and
          pcom_Seq ("_;;/ _"  [60, 61] 60) and
          pcom_If ("(IF _/\<noteq>0 THEN _/ ELSE _)"  [0, 0, 61] 61) and
          pcom_While ("(WHILE _/\<noteq>0 DO _)"  [0, 61] 61)
@@ -397,6 +508,7 @@ no_notation pcom_SKIP ("SKIP" [] 61) and
             pcom_Assign ("_ ::= _" [1000, 61] 61) and
             write_subprogram_param ("[_] _ ::= _" [1000, 61, 61] 61) and
             read_subprogram_param ("_ ::= [_] _" [1000, 61, 61] 61) and
+            read_write_subprogram_param ("[_] _ ::= [_] _" [1000, 61, 61, 61] 61) and
             pcom_Seq ("_;;/ _"  [60, 61] 60) and
             pcom_If ("(IF _/\<noteq>0 THEN _/ ELSE _)"  [0, 0, 61] 61) and
             pcom_While ("(WHILE _/\<noteq>0 DO _)"  [0, 61] 61)
