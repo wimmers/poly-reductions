@@ -6,49 +6,53 @@ theory IMP_Minus_Nat_Bijection
 begin
 
 unbundle IMP_Minus_Minus_Com.no_com_syntax
+unbundle Com.no_com_syntax
 
-definition IMP_Minus_triangle where "IMP_Minus_triangle \<equiv>
-  ''b'' ::= ((V ''a'') \<oplus> (N 1)) ;;
-  IMP_minus_mul ;;
-  ''triangle'' ::= ((V ''c'') \<then>) ;;
-  ''c'' ::= (A (N 0))"
+definition triangle_IMP_Minus where "triangle_IMP_Minus \<equiv>
+  [''a''] ''a'' ::= (A (V ''a'')) ;;
+  [''a''] ''b'' ::= ((V ''a'') \<oplus> (N 1)) ;;
+  invoke_subprogram ''a'' mul_IMP_minus ;;
+  ''triangle'' ::= [''a''] ((V ''c'') \<then>) ;;
+  ''a'' ::= (A (N 0))"
 
-lemma IMP_Minus_triangle_correct: 
-   "(IMP_Minus_triangle, s) 
-      \<Rightarrow>\<^bsup>mul_time (1 + s ''a'') + 6\<^esup> 
-      s(''a'' := 0,
-        ''b'' := 0,
-        ''c'' := 0,
-        ''d'' := 0,
-        ''triangle'' := triangle (s ''a''))"
-  unfolding IMP_Minus_triangle_def triangle_def 
-  by(force
-      intro: terminates_in_state_intro[OF Seq[OF Seq]]
-        IMP_minus_mul_correct)
+definition triangle_IMP_Minus_time where "triangle_IMP_Minus_time x \<equiv>
+  mul_IMP_Minus_time (1 + x) + 8"
 
-definition IMP_Minus_prod_encode where "IMP_Minus_prod_encode \<equiv>
-  ''prod_encode'' ::= (A (V ''a'')) ;;
-  ''a'' ::= ((V ''a'') \<oplus> (V ''b'')) ;;
-  IMP_Minus_triangle ;;
-  ''prod_encode'' ::= ((V ''triangle'') \<oplus> (V ''prod_encode'')) ;;
-  ''triangle'' ::= (A (N 0))"
+abbreviation triangle_IMP_Minus_state_transformer where 
+  "triangle_IMP_Minus_state_transformer p n  \<equiv>
+    state_transformer p [(''triangle'', triangle n), (''a'', 0)] \<circ> 
+    mul_IMP_Minus_state_transformer (''a'' @ p) n (n + 1)"
 
-definition IMP_Minus_prod_encode_time where "IMP_Minus_prod_encode_time x y \<equiv>
-  mul_time (1 + x + y) + 14"
+lemma triangle_IMP_Minus_correct[intro]: 
+   "(triangle_IMP_Minus p, s) 
+      \<Rightarrow>\<^bsup>triangle_IMP_Minus_time (s (add_prefix p ''a''))\<^esup> 
+      triangle_IMP_Minus_state_transformer p (s (add_prefix p ''a'')) s"
+  unfolding triangle_IMP_Minus_def triangle_def triangle_IMP_Minus_time_def
+  by (fastforce intro!: terminates_in_time_state_intro[OF Seq])
 
-lemma IMP_Minus_prod_encode_correct: 
-  "(IMP_Minus_prod_encode, s) 
-      \<Rightarrow>\<^bsup>IMP_Minus_prod_encode_time (s ''a'') (s ''b'')\<^esup> 
-      s(''a'' := 0,
-        ''b'' := 0,
-        ''c'' := 0,
-        ''d'' := 0,
-        ''triangle'' := 0,
-        ''prod_encode'' := prod_encode (s ''a'', s ''b''))"
-  unfolding IMP_Minus_prod_encode_def prod_encode_def IMP_Minus_prod_encode_time_def
-  by(force
-      intro: terminates_in_state_intro[OF Seq[OF Seq]]
-        IMP_Minus_triangle_correct)
+definition prod_encode_IMP_Minus where "prod_encode_IMP_Minus \<equiv>
+  [''a''] ''a'' ::= ((V ''a'') \<oplus> (V ''b'')) ;;
+  invoke_subprogram ''a'' triangle_IMP_Minus ;;
+  ''prod_encode'' ::= [''a''] (A (V ''triangle'')) ;;
+  [''a''] ''triangle'' ::= (A (N 0)) ;;
+  ''prod_encode'' ::= ((V ''a'') \<oplus> (V ''prod_encode'')) ;;
+  zero_variables [''a'', ''b'']"
+
+definition prod_encode_IMP_Minus_time where "prod_encode_IMP_Minus_time x y \<equiv>
+  triangle_IMP_Minus_time (x + y) + 8 + zero_variables_time [''a'', ''b'']"
+
+abbreviation prod_encode_IMP_Minus_state_transformer where 
+  "prod_encode_IMP_Minus_state_transformer p x y \<equiv>
+    state_transformer p [(''prod_encode'', prod_encode (x, y)), (''a'', 0), (''b'', 0)] \<circ>
+    state_transformer (''a'' @ p) [(''triangle'', 0)] \<circ> 
+    triangle_IMP_Minus_state_transformer (''a'' @ p) (x + y)"
+
+lemma prod_encode_IMP_Minus_correct[intro]: 
+  "(prod_encode_IMP_Minus p, s) 
+      \<Rightarrow>\<^bsup>prod_encode_IMP_Minus_time (s (add_prefix p ''a'')) (s (add_prefix p ''b''))\<^esup> 
+      prod_encode_IMP_Minus_state_transformer p (s (add_prefix p ''a'')) (s (add_prefix p ''b'')) s"
+  unfolding prod_encode_IMP_Minus_def prod_encode_def prod_encode_IMP_Minus_time_def
+  by(fastforce intro!: terminates_in_time_state_intro[OF Seq])
 
 fun prod_decode_aux_iterations :: "nat \<Rightarrow> nat \<Rightarrow> nat"
   where "prod_decode_aux_iterations k m =
@@ -61,14 +65,18 @@ definition prod_decode_aux_iteration where "prod_decode_aux_iteration \<equiv>
   ''b'' ::= ((V ''b'') \<ominus> (V ''a'')) ;;
   ''c'' ::= ((V ''b'') \<ominus> (V ''a''))"
 
+abbreviation prod_decode_aux_loop_state_transformer 
+  where "prod_decode_aux_loop_state_transformer p x y \<equiv>
+    state_transformer p [(''a'', fst (prod_decode_aux x y)
+                               + snd (prod_decode_aux x y)),
+                         (''b'', fst (prod_decode_aux x y)),
+                         (''c'', 0)]"
+
 lemma prod_decode_aux_loop_correct: 
-  "s ''a'' = k \<Longrightarrow> s ''b'' = m \<Longrightarrow> s ''c'' = m - k 
-  \<Longrightarrow> (WHILE ''c'' \<noteq>0 DO prod_decode_aux_iteration, s) 
-      \<Rightarrow>\<^bsup>2 + 7 * prod_decode_aux_iterations (s ''a'') (s ''b'')\<^esup> 
-    s(''a'' := fst (prod_decode_aux (s ''a'') (s ''b''))
-         + snd (prod_decode_aux (s ''a'') (s ''b'')),
-      ''b'' := fst (prod_decode_aux (s ''a'') (s ''b'')),
-      ''c'' := 0)"
+  "s (add_prefix p ''a'') = k \<Longrightarrow> s (add_prefix p ''b'') = m \<Longrightarrow> s (add_prefix p ''c'') = m - k 
+  \<Longrightarrow> ((WHILE ''c'' \<noteq>0 DO prod_decode_aux_iteration) p, s) 
+      \<Rightarrow>\<^bsup>2 + 7 * prod_decode_aux_iterations k m\<^esup> 
+      (if m - k \<noteq> 0 then prod_decode_aux_loop_state_transformer p k m s else s)"
 proof(induction k m arbitrary: s rule: prod_decode_aux.induct)
   case (1 k m)
   then show ?case
@@ -76,31 +84,24 @@ proof(induction k m arbitrary: s rule: prod_decode_aux.induct)
     case 0
     then show ?thesis
       using 1 terminates_in_state_intro[OF Big_StepT.WhileFalse]
-      by(auto simp: fun_eq_iff prod_decode_aux.simps numeral_eq_Suc 
+      by(auto simp:  prod_decode_aux.simps numeral_eq_Suc 
           prod_decode_aux_iterations.simps)
   next
     case (Suc nat)
 
-    have first_iteration: "(prod_decode_aux_iteration, s) \<Rightarrow>\<^bsup> 6 \<^esup> 
-      s(''a'' := Suc k,
-        ''b'' := m - (Suc k),
-        ''c'' := (m - (Suc k)) - Suc k)"
-      unfolding prod_decode_aux_iteration_def
-      using \<open>s ''a'' = k\<close>  \<open>s ''b'' = m\<close>
-      by(auto 
-          simp: numeral_eq_Suc fun_eq_iff 
-          intro!: terminates_in_state_intro[OF Seq[OF Seq]])
-
     show ?thesis
-      using terminates_in_state_intro[OF Big_StepT.WhileTrue[OF _ first_iteration "1.IH"]]
-        prod_decode_aux_iterations.simps[where ?k = "s ''a''"]
-        prod_decode_aux.simps[where ?k = "s ''a''"]
-        \<open>s ''a'' = k\<close>  \<open>s ''b'' = m\<close> \<open>s ''c'' = m - k\<close> \<open>m - k = Suc nat\<close>
-      by(auto simp: fun_eq_iff)
+      apply(rule terminates_in_time_state_intro[OF Big_StepT.WhileTrue[OF _ _ "1.IH"]])
+      unfolding prod_decode_aux_iteration_def
+      using \<open>s (add_prefix p ''a'') = k\<close>  \<open>s (add_prefix p ''b'') = m\<close>  
+        \<open>s (add_prefix p ''c'') = m - k\<close> \<open>m - k = Suc nat\<close>
+        prod_decode_aux_iterations.simps[where ?k = k]
+        prod_decode_aux.simps[where ?k = k]
+        prod_decode_aux.simps[where ?k = "(Suc (s (add_prefix p ''a'')))"]
+      by fastforce+
   qed
 qed
 
-definition IMP_Minus_fst_nat where "IMP_Minus_fst_nat \<equiv>
+definition fst_nat_IMP_Minus where "fst_nat_IMP_Minus \<equiv>
   ''b'' ::= (A (V ''a'')) ;; 
   ''a'' ::= (A (N 0)) ;;
   ''c'' ::= ((V ''b'') \<ominus> (V ''a'')) ;;
@@ -109,22 +110,25 @@ definition IMP_Minus_fst_nat where "IMP_Minus_fst_nat \<equiv>
   ''a'' ::= (A (N 0)) ;;
   ''b'' ::= (A (N 0))"
 
-definition IMP_Minus_fst_nat_time where "IMP_Minus_fst_nat_time x \<equiv>
+definition fst_nat_IMP_Minus_time where "fst_nat_IMP_Minus_time x \<equiv>
   14 + 7 * prod_decode_aux_iterations 0 x"
 
-lemma IMP_Minus_fst_nat_correct: 
-  "(IMP_Minus_fst_nat, s) 
-      \<Rightarrow>\<^bsup>IMP_Minus_fst_nat_time (s ''a'')\<^esup> 
-    s(''a'' := 0,
-      ''b'' := 0,
-      ''c'' := 0,
-      ''fst_nat'' := fst_nat (s ''a''))"
-  unfolding IMP_Minus_fst_nat_def fst_nat_def prod_decode_def IMP_Minus_fst_nat_time_def
-  by (force intro!: 
-      terminates_in_state_intro[OF Seq]
-      prod_decode_aux_loop_correct)
+abbreviation fst_nat_IMP_Minus_state_transformer where "fst_nat_IMP_Minus_state_transformer p x
+  \<equiv> state_transformer p [(''a'', 0),
+                          (''b'', 0),
+                          (''c'', 0),
+                          (''fst_nat'', fst_nat x)]"
 
-definition IMP_Minus_snd_nat where "IMP_Minus_snd_nat \<equiv>
+lemma fst_nat_IMP_Minus_correct[intro]: 
+  "(fst_nat_IMP_Minus p, s) 
+      \<Rightarrow>\<^bsup>fst_nat_IMP_Minus_time (s (add_prefix p ''a''))\<^esup> 
+    fst_nat_IMP_Minus_state_transformer p (s (add_prefix p ''a'')) s"
+  unfolding fst_nat_IMP_Minus_def fst_nat_def fst_nat_IMP_Minus_time_def
+  by (fastforce simp: prod_decode_def prod_decode_aux.simps[of 0 0] 
+      intro!: prod_decode_aux_loop_correct
+      terminates_in_time_state_intro[OF Seq'])
+
+definition snd_nat_IMP_Minus where "snd_nat_IMP_Minus \<equiv>
   ''b'' ::= (A (V ''a'')) ;; 
   ''a'' ::= (A (N 0)) ;;
   ''c'' ::= ((V ''b'') \<ominus> (V ''a'')) ;;
@@ -133,28 +137,34 @@ definition IMP_Minus_snd_nat where "IMP_Minus_snd_nat \<equiv>
   ''a'' ::= (A (N 0)) ;;
   ''b'' ::= (A (N 0))"
 
-lemma IMP_Minus_snd_nat_correct: 
-  "(IMP_Minus_snd_nat, s) 
-      \<Rightarrow>\<^bsup>IMP_Minus_fst_nat_time (s ''a'')\<^esup> 
-    s(''a'' := 0,
-      ''b'' := 0,
-      ''c'' := 0,
-      ''snd_nat'' := snd_nat (s ''a''))"
-  unfolding IMP_Minus_snd_nat_def snd_nat_def prod_decode_def IMP_Minus_fst_nat_time_def
-  by (force intro!: 
-      terminates_in_state_intro[OF Seq]
-      prod_decode_aux_loop_correct)
+definition snd_nat_IMP_Minus_time where "snd_nat_IMP_Minus_time x \<equiv>
+  14 + 7 * prod_decode_aux_iterations 0 x"
+
+abbreviation snd_nat_IMP_Minus_state_transformer where "snd_nat_IMP_Minus_state_transformer p x
+  \<equiv> state_transformer p [(''a'', 0),
+                          (''b'', 0),
+                          (''c'', 0),
+                          (''snd_nat'', snd_nat x)]"
+
+lemma snd_nat_IMP_Minus_correct[intro]: 
+  "(snd_nat_IMP_Minus p, s) 
+      \<Rightarrow>\<^bsup>snd_nat_IMP_Minus_time (s (add_prefix p ''a''))\<^esup> 
+    snd_nat_IMP_Minus_state_transformer p (s (add_prefix p ''a'')) s"
+  unfolding snd_nat_IMP_Minus_def snd_nat_def snd_nat_IMP_Minus_time_def
+  by (fastforce simp: prod_decode_def prod_decode_aux.simps[of 0 0] 
+      intro!: prod_decode_aux_loop_correct
+      terminates_in_time_state_intro[OF Seq'])
 
 definition nth_nat_iteration where "nth_nat_iteration \<equiv>
-  ''a'' ::= ((V ''a'') \<ominus> (N 1)) ;;
-  IMP_Minus_snd_nat ;;
-  ''a'' ::= (A (V ''snd_nat'')) ;;
-  ''snd_nat'' ::= (A (N 0)) ;;
+  [''a''] ''a'' ::= ((V ''a'') \<ominus> (N 1)) ;;
+  invoke_subprogram ''a'' snd_nat_IMP_Minus ;;
+  ''a'' ::= [''a''] (A (V ''snd_nat'')) ;;
+  [''a''] ''snd_nat'' ::= (A (N 0)) ;;
   ''nth_nat'' ::= ((V ''nth_nat'') \<ominus> (N 1))"
 
 fun nth_nat_loop_time :: "nat \<Rightarrow> nat \<Rightarrow> nat" where
 "nth_nat_loop_time 0 x = 2" |
-"nth_nat_loop_time (Suc n) x = 9 + IMP_Minus_fst_nat_time (x - 1) 
+"nth_nat_loop_time (Suc n) x = 9 + snd_nat_IMP_Minus_time (x - 1) 
   + nth_nat_loop_time n (tl_nat x)"
 
 fun drop_n_nat :: "nat \<Rightarrow> nat\<Rightarrow> nat" where 
@@ -166,15 +176,21 @@ lemma nth_nat_is_hd_of_drop_n_nat:
   by (induction n arbitrary: x)
     (auto simp: hd_nat_def)
 
+abbreviation nth_nat_loop_state_transformer where "nth_nat_loop_state_transformer p k x \<equiv>
+  (if k = 0 then (\<lambda>s. s)
+   else 
+        state_transformer p [
+        (''a'', drop_n_nat k x),
+        (''nth_nat'',  0)]
+        \<circ> state_transformer (''a'' @ p) [
+          (''snd_nat'', 0)]
+        \<circ> snd_nat_IMP_Minus_state_transformer (''a'' @ p) 0)"
+
 lemma nth_nat_loop_correct:
-  "s ''nth_nat'' = k
-  \<Longrightarrow> (WHILE ''nth_nat'' \<noteq>0 DO nth_nat_iteration, s) 
-      \<Rightarrow>\<^bsup>nth_nat_loop_time (s ''nth_nat'') (s ''a'') \<^esup>
-      s(''a'' := drop_n_nat k (s ''a''),
-        ''b'' := (if k > 0 then 0 else s ''b''),
-        ''c'' := (if k > 0 then 0 else s ''c''),
-        ''snd_nat'' := (if k > 0 then 0 else s ''snd_nat''),
-        ''nth_nat'' := 0)"
+  "s (add_prefix p ''nth_nat'') = k
+  \<Longrightarrow> ((WHILE ''nth_nat'' \<noteq>0 DO nth_nat_iteration) p, s) 
+      \<Rightarrow>\<^bsup>nth_nat_loop_time k (s (add_prefix p ''a''))\<^esup>
+      nth_nat_loop_state_transformer p k (s (add_prefix p ''a'')) s "
 proof(induction k arbitrary: s)
   case 0
   then show ?case
@@ -182,23 +198,11 @@ proof(induction k arbitrary: s)
         intro!: terminates_in_state_intro[OF Big_StepT.WhileFalse])
 next
   case (Suc k)
-
-  have first_iteration: "(nth_nat_iteration, s)
-    \<Rightarrow>\<^bsup> 8 + IMP_Minus_fst_nat_time ((s ''a'') - 1) \<^esup>
-      s(''a'' := tl_nat (s ''a''),
-        ''b'' := 0,
-        ''c'' := 0,
-        ''snd_nat'' := 0,
-        ''nth_nat'' := k)"
-    unfolding nth_nat_iteration_def tl_nat_def
-    using \<open>s ''nth_nat'' = Suc k\<close>
-    by(force intro!: terminates_in_state_intro[OF Seq]
-        IMP_Minus_snd_nat_correct)
-
   show ?case
-    using \<open>s ''nth_nat'' = Suc k\<close>
-    by (force intro!: terminates_in_state_intro
-          [OF Big_StepT.WhileTrue[OF _ first_iteration Suc.IH]])
+    apply(rule terminates_in_time_state_intro[OF Big_StepT.WhileTrue[OF _ _ Suc.IH]])
+    using \<open>s (add_prefix p ''nth_nat'') = Suc k\<close>
+    unfolding nth_nat_iteration_def
+    by (fastforce simp: tl_nat_def)+
 qed
 
 
@@ -206,67 +210,70 @@ definition nth_nat_IMP_Minus where "nth_nat_IMP_Minus \<equiv>
   ''nth_nat'' ::= (A (V ''a'')) ;;
   ''a'' ::= (A (V ''b'')) ;;
   WHILE ''nth_nat'' \<noteq>0 DO nth_nat_iteration ;;
-  ''snd_nat'' ::= (A (N 0)) ;;
-  ''a'' ::= ((V ''a'') \<ominus> (N 1)) ;;
-  IMP_Minus_fst_nat ;;
-  ''nth_nat'' ::= (A (V ''fst_nat'')) ;;
-  ''fst_nat'' ::= (A (N 0))"
+  [''b''] ''a'' ::= ((V ''a'') \<ominus> (N 1)) ;;
+  invoke_subprogram ''b'' fst_nat_IMP_Minus ;;
+  ''nth_nat'' ::= [''b''] (A (V ''fst_nat'')) ;;
+  [''b''] ''fst_nat'' ::= (A (N 0)) ;;
+  zero_variables [''a'', ''b'']"
 
 definition nth_nat_IMP_Minus_time where "nth_nat_IMP_Minus_time n x \<equiv>
-  12 + nth_nat_loop_time n x + IMP_Minus_fst_nat_time ((drop_n_nat n x) - 1)"
+  10 + nth_nat_loop_time n x + fst_nat_IMP_Minus_time ((drop_n_nat n x) - 1)
+  + zero_variables_time [''a'', ''b'']"
+
+abbreviation nth_nat_IMP_Minus_state_transformer where "nth_nat_IMP_Minus_state_transformer p k x
+  \<equiv> state_transformer p [(''nth_nat'', nth_nat k x), (''a'', 0), (''b'', 0)]
+     \<circ> state_transformer (''b'' @ p) [(''fst_nat'', 0)]
+     \<circ> fst_nat_IMP_Minus_state_transformer (''b'' @ p) 0
+     \<circ> nth_nat_loop_state_transformer p k x"
 
 lemma nth_nat_IMP_Minus_correct:
-  "(nth_nat_IMP_Minus, s) \<Rightarrow>\<^bsup>nth_nat_IMP_Minus_time (s ''a'') (s ''b'') \<^esup>
-    s(''a'' := 0,
-      ''b'' := 0,
-      ''c'' := 0,
-      ''fst_nat'' := 0,
-      ''snd_nat'' := 0,
-      ''nth_nat'' := nth_nat (s ''a'') (s ''b''))"
-  apply(cases "s ''a'' = 0")
+  "(nth_nat_IMP_Minus p, s) 
+    \<Rightarrow>\<^bsup>nth_nat_IMP_Minus_time (s (add_prefix p ''a'')) (s (add_prefix p ''b''))\<^esup>
+    nth_nat_IMP_Minus_state_transformer p (s (add_prefix p ''a'')) (s (add_prefix p ''b'')) s"
   unfolding nth_nat_IMP_Minus_def nth_nat_IMP_Minus_time_def tl_nat_def 
-  by (fastforce simp: hd_nat_def nth_nat_is_hd_of_drop_n_nat
-            intro!: terminates_in_state_intro[OF Seq] 
-              IMP_Minus_fst_nat_correct nth_nat_loop_correct)+
+  by (cases "s (add_prefix p ''a'') = 0") (fastforce 
+      simp: hd_nat_def nth_nat_is_hd_of_drop_n_nat
+      intro!: terminates_in_time_state_intro[OF Seq']
+      intro: nth_nat_loop_correct)+
 
-definition cons_IMP_Minus :: "atomExp \<Rightarrow> atomExp \<Rightarrow> Com.com" 
-  where "cons_IMP_Minus h t \<equiv> 
-    ''a'' ::= (A h) ;;
-    ''b'' ::= (A t) ;;
-    IMP_Minus_prod_encode ;;
-    ''cons'' ::= ((V ''prod_encode'') \<oplus> (N 1)) ;;
-    ''prod_encode'' ::= (A (N 0))"
+definition cons_IMP_Minus
+  where "cons_IMP_Minus \<equiv> 
+    [''a''] ''a'' ::= (A (V ''a'')) ;;
+    [''a''] ''b'' ::= (A (V ''b'')) ;;
+    invoke_subprogram ''a'' prod_encode_IMP_Minus ;;
+    ''cons'' ::= [''a''] ((V ''prod_encode'') \<oplus> (N 1)) ;;
+    [''a''] ''prod_encode'' ::= (A (N 0)) ;;
+    zero_variables [''a'', ''b'']"
 
 definition cons_IMP_Minus_time where "cons_IMP_Minus_time h t \<equiv>
-  8 + IMP_Minus_prod_encode_time h t"
+  8 + prod_encode_IMP_Minus_time h t + zero_variables_time [''a'', ''b'']"
 
-lemma cons_IMP_Minus_correct:
-  "t \<noteq> (V ''a'') \<Longrightarrow>
-    (cons_IMP_Minus h t, s) \<Rightarrow>\<^bsup>cons_IMP_Minus_time (atomVal h s) (atomVal t s)\<^esup>
-    s(''a'' := 0,
-      ''b'' := 0,
-      ''c'' := 0,
-      ''d'' := 0,
-      ''triangle'' := 0,
-      ''prod_encode'' := 0,
-      ''cons'' := (atomVal h s) ## (atomVal t s))"
+abbreviation cons_IMP_Minus_state_transformer where "cons_IMP_Minus_state_transformer p h t
+  \<equiv> state_transformer p [(''cons'', h ## t), (''a'', 0), (''b'', 0)]
+    \<circ> state_transformer (''a'' @ p) [(''prod_encode'', 0)]
+    \<circ> prod_encode_IMP_Minus_state_transformer (''a'' @ p) h t"
+
+lemma cons_IMP_Minus_correct[intro]:
+  "(cons_IMP_Minus p, s) 
+    \<Rightarrow>\<^bsup>cons_IMP_Minus_time (s (add_prefix p ''a'')) (s (add_prefix p ''b''))\<^esup>
+     cons_IMP_Minus_state_transformer p (s (add_prefix p ''a'')) (s (add_prefix p ''b'')) s"
   unfolding cons_IMP_Minus_def cons_IMP_Minus_time_def cons_def
-  by (cases t) (fastforce intro!: terminates_in_state_intro[OF Seq] IMP_Minus_prod_encode_correct)+
+  by (fastforce intro!: terminates_in_time_state_intro[OF Seq'])
 
-fun cons_list_IMP_Minus :: "atomExp list \<Rightarrow> Com.com" where
-"cons_list_IMP_Minus [] = Com.SKIP" |
+fun cons_list_IMP_Minus :: "vname list \<Rightarrow> pcom" where
+"cons_list_IMP_Minus [] = SKIP" |
 "cons_list_IMP_Minus (a # as) = (if as = [] 
   then 
-    ''cons'' ::= (A a) ;;
-    ''a'' ::= (A (N 0)) ;;
-    ''b'' ::= (A (N 0)) ;;
-    ''c'' ::= (A (N 0)) ;;
-    ''d'' ::= (A (N 0)) ;;
-    ''triangle'' ::= (A (N 0)) ;;
-    ''prod_encode'' ::= (A (N 0))
+    ''cons_list'' ::= [''a''] (A (V a)) ;;
+    [''a''] a ::= (A (N 0))
   else
     cons_list_IMP_Minus as ;;
-    cons_IMP_Minus a (V ''cons''))"
+    [''b''] ''a'' ::= [''a''] (A (V a)) ;; 
+    [''b''] ''b'' ::= (A (V ''cons_list'')) ;;
+    invoke_subprogram ''b'' cons_IMP_Minus ;;
+    ''cons_list'' ::= [''b''] (A (V ''cons'')) ;;
+    [''b''] ''cons'' ::= (A (N 0)) ;;
+    [''a''] a ::= (A (N 0)))" (* TODO: don't zero here: will break if variable names not distinct*)
 
 fun cons_list :: "nat list \<Rightarrow> nat" where
 "cons_list [] = 0" |
@@ -279,68 +286,51 @@ fun cons_list_IMP_Minus_time :: "nat list \<Rightarrow> nat" where
 "cons_list_IMP_Minus_time [] = 1" | 
 "cons_list_IMP_Minus_time (a # as) = 
   (if as = [] 
-   then 14
-   else cons_list_IMP_Minus_time as + cons_IMP_Minus_time a (cons_list as))"
+   then 4
+   else cons_list_IMP_Minus_time as + 10 + cons_IMP_Minus_time a (cons_list as))"
+                                                  
+fun cons_list_IMP_Minus_state_transformer where 
+  "cons_list_IMP_Minus_state_transformer p [] vs = (\<lambda>s. s)" |
+  "cons_list_IMP_Minus_state_transformer p (a # as) vs = (if as = [] then
+    state_transformer p [(''cons_list'', a)]
+    else
+      state_transformer p [(''cons_list'', cons_list (a # as))]
+      \<circ> cons_IMP_Minus_state_transformer (''b'' @ p) 0 0
+    )
+    \<circ> state_transformer (''a'' @ p) (map (\<lambda>v. (v, 0)) vs)"
 
-lemma cons_list_IMP_Minus_correct:
-  "as \<noteq> [] 
-    \<Longrightarrow> (\<forall>i \<in> set as. i \<notin> V ` { ''cons'', ''a'', ''b'', ''c'', ''d'', ''triangle'', ''prod_encode''}) 
-    \<Longrightarrow> (cons_list_IMP_Minus as, s) \<Rightarrow>\<^bsup>cons_list_IMP_Minus_time (map (\<lambda>i. atomVal i s) as)\<^esup>
-      s(''a'' := 0,
-        ''b'' := 0,
-        ''c'' := 0,
-        ''d'' := 0,
-        ''triangle'' := 0,
-        ''prod_encode'' := 0,
-        ''cons'' := cons_list (map (\<lambda>i. atomVal i s) as))"
-proof(induction as arbitrary: s)
-  case (Cons a as)
+lemma cons_list_IMP_Minus_correct[intro]:
+    "(cons_list_IMP_Minus vs p, s) 
+      \<Rightarrow>\<^bsup>cons_list_IMP_Minus_time (map (\<lambda>i. s (add_prefix (''a'' @ p) i)) vs)\<^esup>
+      cons_list_IMP_Minus_state_transformer p (map (\<lambda>i. s (add_prefix (''a'' @ p) i)) vs) vs s"
+proof(induction vs arbitrary: s)
+  case (Cons v vs)
   then show ?case
-  proof (cases as)
+  proof (cases vs)
     case Nil
     then show ?thesis
-      by (fastforce intro!: terminates_in_time_state_intro[OF Seq'])
+      by (auto 
+          simp: state_transformer_commutes'
+          intro!: terminates_in_time_state_intro[OF Seq'])
   next
     case (Cons b bs)
-
-    hence "as \<noteq> []" by simp
-    have *: "(\<forall>i \<in> set as. i \<notin> V ` { ''cons'', ''a'', ''b'', ''c'', ''d'',
-       ''triangle'', ''prod_encode''})"
-      using \<open>\<forall>i\<in>set (a # as). i \<notin> V ` {''cons'', ''a'', ''b'', ''c'', ''d'', ''triangle'',
-             ''prod_encode''}\<close>
-      by simp
-
-    show ?thesis
-      apply(cases a; rule terminates_in_state_intro)
-      using \<open>as \<noteq> []\<close> 
-        \<open>\<forall>i\<in>set (a # as). i \<notin> V ` {''cons'', ''a'', ''b'', ''c'', ''d'', ''triangle'',
-           ''prod_encode''}\<close> 
+    thus ?thesis
+      apply auto
+      subgoal
+        apply(rule terminates_in_time_state_intro[OF Seq'])
+        apply(rule Seq')+
+                 apply fastforce+
+        using Cons local.Cons
+      apply(auto)
+      using state_transformer_same_prefix_equal_commutes 
+      using local.Cons apply fastforce
+      apply(rule cons_IMP_Minus_correct)
       by(fastforce intro!: Cons.IH[OF _ *] cons_IMP_Minus_correct)+
   qed
 qed auto
 
 declare cons_list_IMP_Minus.simps [simp del]
 declare cons_list_IMP_Minus_time.simps [simp del]
-
-fun zero_variables :: "vname list \<Rightarrow> Com.com" where
-"zero_variables [] = Com.SKIP" |
-"zero_variables (a # as) = (a ::= (A (N 0)) ;; zero_variables as)"
-
-definition zero_variables_time where "zero_variables_time vs \<equiv>
-  1 + 2 * length vs"
-
-lemma zero_variables_correct:
-  "(zero_variables vs, s) 
-    \<Rightarrow>\<^bsup>zero_variables_time vs\<^esup> (\<lambda>v. (if v \<in> set vs then 0 else s v))"
-proof (induction vs arbitrary: s)
-  case (Cons a vs)
-  show ?case
-    by(fastforce 
-        intro: terminates_in_state_intro[OF Seq[OF Big_StepT.Assign Cons.IH]] 
-        simp: zero_variables_time_def)
-qed (auto simp: zero_variables_time_def)
-
-declare zero_variables.simps [simp del]
 
 (*"reverse_nat_acc acc e  n f =
   (if n = 0 then acc 
