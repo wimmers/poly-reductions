@@ -287,8 +287,129 @@ fun cons_list_IMP_Minus_time :: "nat list \<Rightarrow> nat" where
 "cons_list_IMP_Minus_time (a # as) = 
   (if as = [] 
    then 4
-   else cons_list_IMP_Minus_time as + 10 + cons_IMP_Minus_time a (cons_list as))"
-                                                  
+   else cons_list_IMP_Minus_time as + 2 + 2 + cons_IMP_Minus_time a (cons_list as)) + 2 + 2 + 2"
+
+fun cons_list_IMP_Minus_state_transformer where 
+  "cons_list_IMP_Minus_state_transformer p [] vs = (\<lambda>s. s)" |
+  "cons_list_IMP_Minus_state_transformer p (a # as) (v#vs) = (if as = [] then
+    state_transformer (''a'' @ p) [(v, 0)]
+  \<circ> state_transformer p [(''cons_list'', a)]
+    else
+  (\<lambda> s0 .
+      let s1 = cons_list_IMP_Minus_state_transformer p as vs s0;
+          s2 = s1(add_prefix (''b'' @ p) ''a'' := aval (aexp_add_prefix (''a'' @ p) (A (V v))) s1);
+          s3 = s2(add_prefix (''b'' @ p) ''b'' := aval (aexp_add_prefix p (A (V ''cons_list''))) s2);
+          s4 = cons_IMP_Minus_state_transformer (''b'' @ p)
+                (s3 (add_prefix (''b'' @ p) ''a''))
+                (s3 (add_prefix (''b'' @ p) ''b'')) s3;
+          s5 = s4(add_prefix p ''cons_list'' := aval (aexp_add_prefix (''b'' @ p) (A (V ''cons''))) s4);
+          s6 = s5(add_prefix (''b'' @ p) ''cons'' := aval (aexp_add_prefix p (A (N 0))) s5);
+          s7 = s6(add_prefix (''a'' @ p) v := aval (aexp_add_prefix p (A (N 0))) s6)
+  in s7 )
+  )
+"
+
+lemma cons_list_IMP_Minus_correct[intro]:
+assumes "distinct vs"
+shows
+    "(cons_list_IMP_Minus vs p, s) 
+      \<Rightarrow>\<^bsup>cons_list_IMP_Minus_time (map (\<lambda>i. s (add_prefix (''a'' @ p) i)) vs)\<^esup>
+      cons_list_IMP_Minus_state_transformer p (map (\<lambda>i. s (add_prefix (''a'' @ p) i)) vs) vs s"
+  using assms
+proof(induction vs arbitrary: s)
+  case ConsV: (Cons v vs)
+  show ?case
+  proof (cases vs)
+    case Nil
+    then show ?thesis
+      sorry
+  next
+    case ConsB: (Cons b bs)
+    define arg where "arg \<equiv> add_prefix (''a'' @ p)"
+
+    have "b \<noteq> v" using ConsB ConsV by auto
+
+    have d: "distinct vs" using ConsV by simp
+    define s1 where "s1 =
+      cons_list_IMP_Minus_state_transformer p (map (\<lambda>i. s (arg i)) vs) vs s"
+    define s2 where "s2 =
+      s1(add_prefix (''b'' @ p) ''a'' := aval (aexp_add_prefix (''a'' @ p) (A (V v))) s1)"
+    define s3 where "s3 =
+      s2(add_prefix (''b'' @ p) ''b'' := aval (aexp_add_prefix p (A (V ''cons_list''))) s2)"
+    define s4 where "s4 =
+      cons_IMP_Minus_state_transformer (''b'' @ p)
+                (s3 (add_prefix (''b'' @ p) ''a''))
+                (s3 (add_prefix (''b'' @ p) ''b'')) s3"
+    define s5 where "s5 =
+      s4(add_prefix p ''cons_list'' := aval (aexp_add_prefix (''b'' @ p) (A (V ''cons''))) s4)"
+    define s6 where "s6 =
+      s5(add_prefix (''b'' @ p) ''cons'' := aval (aexp_add_prefix p (A (N 0))) s5)"
+    define s7 where "s7 =
+      s6(add_prefix (''a'' @ p) v := aval (aexp_add_prefix p (A (N 0))) s6)"
+
+    have c0: "cons_list_IMP_Minus_state_transformer p (map (\<lambda>i. s (arg i)) vs) vs s (arg v)
+      = s (arg v)" sorry
+    have c1: "(s3 (add_prefix (''b'' @ p) ''a'')) = (s (arg v))"
+        sorry
+    have c2: "(s3 (add_prefix (''b'' @ p) ''b'')) = (cons_list (map (\<lambda>i. s (arg i)) vs))" sorry
+
+    show ?thesis
+      apply(subst arg_def[symmetric])+
+
+      apply(subst cons_list_IMP_Minus.simps(2))
+      apply(subst ConsB)
+      apply(subst List.list.simps(3))
+      apply(subst HOL.if_False)
+      apply(subst List.list.map(2))
+      apply(subst cons_list_IMP_Minus_time.simps(2))
+      apply(subst ConsB)
+      apply(subst ConsB)
+      apply(subst ConsB[symmetric])
+      apply(subst List.list.map(2))
+      apply(subst List.list.simps(3))
+      apply(subst HOL.if_False)
+      apply(rule Seq')+
+            apply(subst arg_def)
+            apply(rule ConsV)
+            apply(simp add: d)
+
+           apply(subst arg_def[symmetric])
+           apply(subst s1_def[symmetric])
+
+           apply(rule terminates_in_time_state_intro[OF Big_StepT.Assign])
+            apply simp  apply(rule refl)
+          apply(subst s2_def[symmetric])
+          apply(rule terminates_in_time_state_intro[OF Big_StepT.Assign])
+           apply simp apply (rule refl)
+         apply(subst s3_def[symmetric])
+         apply(rule terminates_in_time_state_intro[OF cons_IMP_Minus_correct])
+          apply simp
+          apply(subst c1[symmetric]) apply(subst c2[symmetric]) apply simp
+         apply(rule refl)
+        apply(subst s4_def[symmetric])
+
+        apply(rule terminates_in_time_state_intro[OF Big_StepT.Assign])
+         apply simp
+        apply (rule refl)
+       apply(subst s5_def[symmetric])
+
+       apply(rule terminates_in_time_state_intro[OF Big_StepT.Assign])
+        apply simp apply (rule refl)
+      apply(subst s6_def[symmetric])
+
+      apply(rule terminates_in_time_state_intro[OF Big_StepT.Assign])
+       apply simp
+      apply(subst s7_def[symmetric])
+      apply(subst List.list.map)
+      apply(subst cons_list_IMP_Minus_state_transformer.simps(2))
+      apply(subst ConsB)
+      apply(subst List.list.map)
+      apply(subst List.list.simps(3))
+      apply(subst HOL.if_False)
+      apply(subst Let_def)+
+      apply(simp add: s7_def s6_def s5_def s4_def s3_def s2_def s1_def)
+      done
+
 fun cons_list_IMP_Minus_state_transformer where 
   "cons_list_IMP_Minus_state_transformer p [] vs = (\<lambda>s. s)" |
   "cons_list_IMP_Minus_state_transformer p (a # as) vs = (if as = [] then
