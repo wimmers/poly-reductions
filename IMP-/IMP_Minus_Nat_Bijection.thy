@@ -330,6 +330,7 @@ proof(induction vs arbitrary: s)
     have "b \<noteq> v" using ConsB ConsV by auto
 
     have d: "distinct vs" using ConsV by simp
+
     define s1 where "s1 =
       cons_list_IMP_Minus_state_transformer p (map (\<lambda>i. s (arg i)) vs) vs s"
     define s2 where "s2 =
@@ -347,11 +348,10 @@ proof(induction vs arbitrary: s)
     define s7 where "s7 =
       s6(add_prefix (''a'' @ p) v := aval (aexp_add_prefix p (A (N 0))) s6)"
 
-    have c0: "cons_list_IMP_Minus_state_transformer p (map (\<lambda>i. s (arg i)) vs) vs s (arg v)
-      = s (arg v)" sorry
     have c1: "(s3 (add_prefix (''b'' @ p) ''a'')) = (s (arg v))"
         sorry
-    have c2: "(s3 (add_prefix (''b'' @ p) ''b'')) = (cons_list (map (\<lambda>i. s (arg i)) vs))" sorry
+      have c2: "(s3 (add_prefix (''b'' @ p) ''b'')) = (cons_list (map (\<lambda>i. s (arg i)) vs))"
+        sorry
 
     show ?thesis
       apply(subst arg_def[symmetric])+
@@ -379,11 +379,14 @@ proof(induction vs arbitrary: s)
            apply(rule terminates_in_time_state_intro[OF Big_StepT.Assign])
             apply simp  apply(rule refl)
           apply(subst s2_def[symmetric])
+
           apply(rule terminates_in_time_state_intro[OF Big_StepT.Assign])
            apply simp apply (rule refl)
          apply(subst s3_def[symmetric])
+
          apply(rule terminates_in_time_state_intro[OF cons_IMP_Minus_correct])
           apply simp
+
           apply(subst c1[symmetric]) apply(subst c2[symmetric]) apply simp
          apply(rule refl)
         apply(subst s4_def[symmetric])
@@ -409,53 +412,10 @@ proof(induction vs arbitrary: s)
       apply(subst Let_def)+
       apply(simp add: s7_def s6_def s5_def s4_def s3_def s2_def s1_def)
       done
-
-fun cons_list_IMP_Minus_state_transformer where 
-  "cons_list_IMP_Minus_state_transformer p [] vs = (\<lambda>s. s)" |
-  "cons_list_IMP_Minus_state_transformer p (a # as) vs = (if as = [] then
-    state_transformer p [(''cons_list'', a)]
-    else
-      state_transformer p [(''cons_list'', cons_list (a # as))]
-      \<circ> cons_IMP_Minus_state_transformer (''b'' @ p) 0 0
-    )
-    \<circ> state_transformer (''a'' @ p) (map (\<lambda>v. (v, 0)) vs)"
-
-lemma cons_list_IMP_Minus_correct[intro]:
-    "(cons_list_IMP_Minus vs p, s) 
-      \<Rightarrow>\<^bsup>cons_list_IMP_Minus_time (map (\<lambda>i. s (add_prefix (''a'' @ p) i)) vs)\<^esup>
-      cons_list_IMP_Minus_state_transformer p (map (\<lambda>i. s (add_prefix (''a'' @ p) i)) vs) vs s"
-proof(induction vs arbitrary: s)
-  case (Cons v vs)
-  then show ?case
-  proof (cases vs)
-    case Nil
-    then show ?thesis
-      by (auto 
-          simp: state_transformer_commutes'
-          intro!: terminates_in_time_state_intro[OF Seq'])
-  next
-    case (Cons b bs)
-    thus ?thesis
-      apply auto
-      subgoal
-        apply(rule terminates_in_time_state_intro[OF Seq'])
-        apply(rule Seq')+
-                 apply fastforce+
-        using Cons local.Cons
-      apply(auto)
-      using state_transformer_same_prefix_equal_commutes 
-      using local.Cons apply fastforce
-      apply(rule cons_IMP_Minus_correct)
-      by(fastforce intro!: Cons.IH[OF _ *] cons_IMP_Minus_correct)+
   qed
-qed auto
+qed simp
 
-declare cons_list_IMP_Minus.simps [simp del]
-declare cons_list_IMP_Minus_time.simps [simp del]
 
-(*"reverse_nat_acc acc e  n f =
-  (if n = 0 then acc 
-   else reverse_nat_acc ((hd_nat n) ## acc) (tl_nat n) )"*)
 
 definition reverse_nat_acc_IMP_Minus_iteration where "reverse_nat_acc_IMP_Minus_iteration \<equiv>
   ''a'' ::= ((V ''f'') \<ominus> (N 1)) ;;
