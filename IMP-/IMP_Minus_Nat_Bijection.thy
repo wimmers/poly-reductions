@@ -348,8 +348,9 @@ proof(induction vs arbitrary: s)
     define s7 where "s7 =
       s6(add_prefix (''a'' @ p) v := aval (aexp_add_prefix p (A (N 0))) s6)"
 
-      have c2: "(s3 (add_prefix (''b'' @ p) ''b'')) = (cons_list (map (\<lambda>i. s (arg i)) vs))"
-        sorry
+(*
+    have "cons_list_IMP_Minus_state_transformer p (map (\<lambda>i. s (arg i)) bs) bs s (arg b) = (s (arg b))" sorry
+*)
     have "cons_list_IMP_Minus_state_transformer p (map (\<lambda>i. s (arg i)) vs) vs s (arg v) = s (arg v)"
       using ConsV(2)
     proof(induct vs)
@@ -415,6 +416,154 @@ proof(induction vs arbitrary: s)
 
     then have c1: "(s3 (add_prefix (''b'' @ p) ''a'')) = (s (arg v))"
       by (auto simp: s3_def s2_def s1_def arg_def)
+
+    have c2a: "(s3 (add_prefix (''b'' @ p) ''b''))
+       = cons_list_IMP_Minus_state_transformer p (map (\<lambda>i. s (arg i)) vs) vs
+          s (add_prefix p ''cons_list'')"
+      using s1_def s2_def s3_def by simp
+
+    have c2b: "(vs = [] \<Longrightarrow> s (add_prefix p ''cons_list'') = 0) \<Longrightarrow>
+      cons_list_IMP_Minus_state_transformer p (map (\<lambda>i. s (arg i)) vs) vs
+          s (add_prefix p ''cons_list'') =
+ (cons_list (map (\<lambda>i. s (arg i)) vs))"
+    proof(induct vs rule: cons_list_IMP_Minus.induct)
+      case 1
+      then show ?case by simp
+    next
+      case (2 b bs)
+      then show ?case
+      proof(cases bs)
+        case Nil
+        then show ?thesis by auto
+      next
+        case (Cons c cs)
+        then have ih: "cons_list_IMP_Minus_state_transformer p (map (\<lambda>i. s (arg i)) bs) bs s (add_prefix p ''cons_list'') = cons_list (map (\<lambda>i. s (arg i)) bs)"
+          using 2 by simp
+        show ?thesis
+          apply(subst List.list.map(2))
+          apply(subst cons_list_IMP_Minus_state_transformer.simps(2))
+          apply(subst Cons)
+          apply(subst List.list.map(2))
+          apply(subst List.list.simps(3))
+          apply(subst HOL.if_False)
+        proof -
+          (*same as vs version*)
+          have "distinct (b # bs)" using ConsV(2) ConsB by simp
+          then have c2_0: "cons_list_IMP_Minus_state_transformer p (map (\<lambda>i. s (arg i)) bs) bs s (arg b)
+      = s (arg b)"
+          proof(induct bs)
+            case Nil
+            then show ?case by simp
+          next
+            case (Cons c' cs')
+            then have x1: "b \<noteq> c'" by simp
+            have ih: "cons_list_IMP_Minus_state_transformer p (map (\<lambda>i. s (arg i)) cs') cs' s (arg b) = s (arg b)"
+              using Cons by simp
+            show ?case
+              apply(subst List.list.map(2))
+              apply(subst cons_list_IMP_Minus_state_transformer.simps(2))
+              apply(cases cs')
+              subgoal
+                apply(auto simp: arg_def x1)
+                done
+            proof -
+              fix d ds
+              assume ConsC: "cs' = d#ds"
+              then have "(if map (\<lambda>i. s (arg i)) cs' = [] then state_transformer (''a'' @ p) [(c', 0)] \<circ> state_transformer p [(''cons_list'', s (arg c'))]
+        else (\<lambda>s0. let s1 = cons_list_IMP_Minus_state_transformer p (map (\<lambda>i. s (arg i)) cs') cs' s0;
+                        s2 = s1(add_prefix (''b'' @ p) ''a'' := aval (aexp_add_prefix (''a'' @ p) (A (V c'))) s1);
+                        s3 = s2(add_prefix (''b'' @ p) ''b'' := aval (aexp_add_prefix p (A (V ''cons_list''))) s2);
+                        s4 = cons_IMP_Minus_state_transformer (''b'' @ p) (s3 (add_prefix (''b'' @ p) ''a'')) (s3 (add_prefix (''b'' @ p) ''b'')) s3;
+                        s5 = s4(add_prefix p ''cons_list'' := aval (aexp_add_prefix (''b'' @ p) (A (V ''cons''))) s4);
+                        s6 = s5(add_prefix (''b'' @ p) ''cons'' := aval (aexp_add_prefix p (A (N 0))) s5); s7 = s6(add_prefix (''a'' @ p) c' := aval (aexp_add_prefix p (A (N 0))) s6)
+                    in s7))
+        s (arg b) =
+(let s1 = cons_list_IMP_Minus_state_transformer p (map (\<lambda>i. s (arg i)) cs') cs' s;
+                        s2 = s1(add_prefix (''b'' @ p) ''a'' := aval (aexp_add_prefix (''a'' @ p) (A (V c'))) s1);
+                        s3 = s2(add_prefix (''b'' @ p) ''b'' := aval (aexp_add_prefix p (A (V ''cons_list''))) s2);
+                        s4 = cons_IMP_Minus_state_transformer (''b'' @ p) (s3 (add_prefix (''b'' @ p) ''a'')) (s3 (add_prefix (''b'' @ p) ''b'')) s3;
+                        s5 = s4(add_prefix p ''cons_list'' := aval (aexp_add_prefix (''b'' @ p) (A (V ''cons''))) s4);
+                        s6 = s5(add_prefix (''b'' @ p) ''cons'' := aval (aexp_add_prefix p (A (N 0))) s5); s7 = s6(add_prefix (''a'' @ p) c' := aval (aexp_add_prefix p (A (N 0))) s6)
+                    in s7) (arg b)
+" by simp
+              also have "\<dots> =
+(let s1 = cons_list_IMP_Minus_state_transformer p (map (\<lambda>i. s (arg i)) cs') cs' s;
+                        s2 = s1(add_prefix (''b'' @ p) ''a'' := aval (aexp_add_prefix (''a'' @ p) (A (V c'))) s1);
+                        s3 = s2(add_prefix (''b'' @ p) ''b'' := aval (aexp_add_prefix p (A (V ''cons_list''))) s2);
+                        s4 = cons_IMP_Minus_state_transformer (''b'' @ p) (s3 (add_prefix (''b'' @ p) ''a'')) (s3 (add_prefix (''b'' @ p) ''b'')) s3;
+                        s5 = s4(add_prefix p ''cons_list'' := aval (aexp_add_prefix (''b'' @ p) (A (V ''cons''))) s4);
+                        s6 = s5(add_prefix (''b'' @ p) ''cons'' := aval (aexp_add_prefix p (A (N 0))) s5); s7 = s6(add_prefix (''a'' @ p) c' := aval (aexp_add_prefix p (A (N 0))) s6)
+                    in s7 (arg b))
+" 
+                by metis
+              also have "\<dots> = s (arg b)" using ih by (auto simp: arg_def x1)
+
+              finally show "(if map (\<lambda>i. s (arg i)) cs' = [] then state_transformer (''a'' @ p) [(c', 0)] \<circ> state_transformer p [(''cons_list'', s (arg c'))]
+        else (\<lambda>s0. let s1 = cons_list_IMP_Minus_state_transformer p (map (\<lambda>i. s (arg i)) cs') cs' s0;
+                        s2 = s1(add_prefix (''b'' @ p) ''a'' := aval (aexp_add_prefix (''a'' @ p) (A (V c'))) s1);
+                        s3 = s2(add_prefix (''b'' @ p) ''b'' := aval (aexp_add_prefix p (A (V ''cons_list''))) s2);
+                        s4 = cons_IMP_Minus_state_transformer (''b'' @ p) (s3 (add_prefix (''b'' @ p) ''a'')) (s3 (add_prefix (''b'' @ p) ''b'')) s3;
+                        s5 = s4(add_prefix p ''cons_list'' := aval (aexp_add_prefix (''b'' @ p) (A (V ''cons''))) s4);
+                        s6 = s5(add_prefix (''b'' @ p) ''cons'' := aval (aexp_add_prefix p (A (N 0))) s5); s7 = s6(add_prefix (''a'' @ p) c' := aval (aexp_add_prefix p (A (N 0))) s6)
+                    in s7))
+        s (arg b) =
+       s (arg b)" by simp
+            qed
+          qed
+
+          have "(let s1 = cons_list_IMP_Minus_state_transformer p (map (\<lambda>i. s (arg i)) bs) bs s; s2 = s1(add_prefix (''b'' @ p) ''a'' := aval (aexp_add_prefix (''a'' @ p) (A (V b))) s1);
+         s3 = s2(add_prefix (''b'' @ p) ''b'' := aval (aexp_add_prefix p (A (V ''cons_list''))) s2);
+         s4 = cons_IMP_Minus_state_transformer (''b'' @ p) (s3 (add_prefix (''b'' @ p) ''a'')) (s3 (add_prefix (''b'' @ p) ''b'')) s3;
+         s5 = s4(add_prefix p ''cons_list'' := aval (aexp_add_prefix (''b'' @ p) (A (V ''cons''))) s4); s6 = s5(add_prefix (''b'' @ p) ''cons'' := aval (aexp_add_prefix p (A (N 0))) s5);
+         s7 = s6(add_prefix (''a'' @ p) b := aval (aexp_add_prefix p (A (N 0))) s6)
+     in s7)
+     (add_prefix p ''cons_list'') =
+(let s1 = cons_list_IMP_Minus_state_transformer p (map (\<lambda>i. s (arg i)) bs) bs s; s2 = s1(add_prefix (''b'' @ p) ''a'' := aval (aexp_add_prefix (''a'' @ p) (A (V b))) s1);
+         s3 = s2(add_prefix (''b'' @ p) ''b'' := aval (aexp_add_prefix p (A (V ''cons_list''))) s2);
+         s4 = cons_IMP_Minus_state_transformer (''b'' @ p) (s3 (add_prefix (''b'' @ p) ''a'')) (s3 (add_prefix (''b'' @ p) ''b'')) s3;
+         s5 = s4(add_prefix p ''cons_list'' := aval (aexp_add_prefix (''b'' @ p) (A (V ''cons''))) s4); s6 = s5(add_prefix (''b'' @ p) ''cons'' := aval (aexp_add_prefix p (A (N 0))) s5);
+         s7 = s6(add_prefix (''a'' @ p) b := aval (aexp_add_prefix p (A (N 0))) s6)
+     in s7 (add_prefix p ''cons_list''))
+     " by metis
+          also have "\<dots> =
+(let s1 = cons_list_IMP_Minus_state_transformer p (map (\<lambda>i. s (arg i)) bs) bs s
+     in (s1 (add_prefix (''a'' @ p) b))
+              ##  (s1 (add_prefix p ''cons_list''))
+)
+" by simp
+          also have "\<dots> =
+(let s1 = cons_list_IMP_Minus_state_transformer p (map (\<lambda>i. s (arg i)) bs) bs s
+     in (s (arg b))
+              ##  (cons_list (map (\<lambda>i. s (arg i)) bs))
+)
+" using ih arg_def c2_0 by simp
+
+          also have "\<dots> =
+(let s1 = cons_list_IMP_Minus_state_transformer p (map (\<lambda>i. s (arg i)) bs) bs s
+     in  (cons_list ((s (arg b)) # map (\<lambda>i. s (arg i)) bs))
+)
+" using Cons by simp
+
+          also have "\<dots> =
+(let s1 = cons_list_IMP_Minus_state_transformer p (map (\<lambda>i. s (arg i)) bs) bs s
+     in  (cons_list (map (\<lambda>i. s (arg i)) (b#bs) ))
+)
+" using Cons by simp
+          finally show "(let s1 = cons_list_IMP_Minus_state_transformer p (map (\<lambda>i. s (arg i)) bs) bs s; s2 = s1(add_prefix (''b'' @ p) ''a'' := aval (aexp_add_prefix (''a'' @ p) (A (V b))) s1);
+         s3 = s2(add_prefix (''b'' @ p) ''b'' := aval (aexp_add_prefix p (A (V ''cons_list''))) s2);
+         s4 = cons_IMP_Minus_state_transformer (''b'' @ p) (s3 (add_prefix (''b'' @ p) ''a'')) (s3 (add_prefix (''b'' @ p) ''b'')) s3;
+         s5 = s4(add_prefix p ''cons_list'' := aval (aexp_add_prefix (''b'' @ p) (A (V ''cons''))) s4); s6 = s5(add_prefix (''b'' @ p) ''cons'' := aval (aexp_add_prefix p (A (N 0))) s5);
+         s7 = s6(add_prefix (''a'' @ p) b := aval (aexp_add_prefix p (A (N 0))) s6)
+     in s7)
+     (add_prefix p ''cons_list'') =
+    cons_list (map (\<lambda>i. s (arg i)) (b # bs))" by simp
+
+        qed
+      qed
+    qed
+
+    have c2: "(s3 (add_prefix (''b'' @ p) ''b'')) = (cons_list (map (\<lambda>i. s (arg i)) vs))"
+      using c2a c2b ConsB by auto
 
     show ?thesis
       apply(subst arg_def[symmetric])+
