@@ -322,6 +322,9 @@ proof(induction vs arbitrary: s)
   proof (cases vs)
     case Nil
     then show ?thesis
+      apply(auto
+          simp: state_transformer_commutes'
+          intro!: terminates_in_time_state_intro[OF Seq'])
       sorry
   next
     case ConsB: (Cons b bs)
