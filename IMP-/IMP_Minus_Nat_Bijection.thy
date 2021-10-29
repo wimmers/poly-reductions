@@ -285,9 +285,9 @@ fun cons_list :: "nat list \<Rightarrow> nat" where
 fun cons_list_IMP_Minus_time :: "nat list \<Rightarrow> nat" where
 "cons_list_IMP_Minus_time [] = 1" | 
 "cons_list_IMP_Minus_time (a # as) = 
-  (if as = [] 
+  (if as = []
    then 4
-   else cons_list_IMP_Minus_time as + 2 + 2 + cons_IMP_Minus_time a (cons_list as)) + 2 + 2 + 2"
+   else cons_list_IMP_Minus_time as + 2 + 2 + cons_IMP_Minus_time a (cons_list as) + 2 + 2 + 2)"
 
 (*
 fun cons_list_IMP_Minus_state_transformer where 
@@ -390,7 +390,7 @@ proof(induct vs)
         "\<lambda> s2. state_transformer (''b'' @ p) [(''b'', s2 (add_prefix p ''cons_list''))] s2"
         "\<lambda> s3. cons_IMP_Minus_state_transformer (''b'' @ p) (s3 (add_prefix (''b'' @ p) ''a'')) (s3 (add_prefix (''b'' @ p) ''b'')) s3"
         "\<lambda> s4. state_transformer p [(''cons_list'', s4 (add_prefix (''b'' @ p) ''cons''))] s4"
-        "state_transformer (''b'' @ p) [(''cons'', 0)]" "state_transformer (''a'' @ p) [(b', 0)]" "ar v"] 
+        "state_transformer (''b'' @ p) [(''cons'', 0)]" "state_transformer (''a'' @ p) [(b', 0)]" ] 
     by (auto simp: arg_def)
 qed simp
 
@@ -407,10 +407,7 @@ proof(induction vs arbitrary: s)
   proof (cases vs)
     case Nil
     then show ?thesis
-      apply(auto
-          simp: state_transformer_commutes'
-          intro!: terminates_in_time_state_intro[OF Seq'])
-      sorry
+      by(auto intro!: terminates_in_time_state_intro[OF Seq'])
   next
     case ConsB: (Cons b bs)
     define arg where "arg \<equiv> add_prefix (''a'' @ p)"
