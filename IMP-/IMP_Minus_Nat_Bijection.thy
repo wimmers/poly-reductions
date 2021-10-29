@@ -289,40 +289,6 @@ fun cons_list_IMP_Minus_time :: "nat list \<Rightarrow> nat" where
    then 4
    else cons_list_IMP_Minus_time as + 2 + 2 + cons_IMP_Minus_time a (cons_list as) + 2 + 2 + 2)"
 
-(*
-fun cons_list_IMP_Minus_state_transformer where 
-  "cons_list_IMP_Minus_state_transformer p [] vs = (\<lambda>s. s)" |
-  "cons_list_IMP_Minus_state_transformer p (a # as) (v#vs) = (if as = [] then
-    state_transformer p [(''cons_list'', a)]
-    else
-      state_transformer p [(''cons_list'', cons_list (a # as))]
-      \<circ> cons_IMP_Minus_state_transformer (''b'' @ p) a (cons_list as)
-    )
-    \<circ> state_transformer (''a'' @ p) [(v, 0)]"
-*)
-(*
-fun cons_list_IMP_Minus_state_transformer where 
-  "cons_list_IMP_Minus_state_transformer p [] vs = (\<lambda>s. s)" |
-  "cons_list_IMP_Minus_state_transformer p (a # as) (v#vs) = (if as = [] then
-    state_transformer (''a'' @ p) [(v, 0)]
-  \<circ> state_transformer p [(''cons_list'', a)]
-    else
-      let cons_list_s = cons_list_IMP_Minus_state_transformer p as vs ;
-          b_a_assign = state_transformer (''b'' @ p) [(''a'', a)] ;
-          b_b_assign = state_transformer (''b'' @ p) [(''b'', cons_list as)];
-          cons_sub = cons_IMP_Minus_state_transformer (''b'' @ p) a (cons_list as) ;
-          cons_list_assign = state_transformer p [(''cons_list'', cons a (cons_list as) )];
-          b_cons_assign = state_transformer (''b'' @ p) [(''cons'',0)] ;
-          a_a_assign = state_transformer (''a'' @ p) [(v, 0)]
-  in a_a_assign \<circ> b_cons_assign
-    \<circ> cons_list_assign
-    \<circ> cons_sub
-    \<circ> b_b_assign
-    \<circ> b_a_assign
-    \<circ> cons_list_s
-  )
-"
-*)
 fun cons_list_IMP_Minus_state_transformer where 
   "cons_list_IMP_Minus_state_transformer p [] vs = (\<lambda>s. s)" |
   "cons_list_IMP_Minus_state_transformer p (a # as) (v#vs) = (if as = [] then
@@ -340,34 +306,6 @@ fun cons_list_IMP_Minus_state_transformer where
   in s7 )
   )
 "
-
-(*
-fun cons_list_IMP_Minus_state_transformer where 
-  "cons_list_IMP_Minus_state_transformer p [] vs = (\<lambda>s. s)" |
-  "cons_list_IMP_Minus_state_transformer p (a # as) (v#vs) = (if as = [] then
-    state_transformer p [(''cons_list'', a)]
-    else
-      let cons_list_rec = cons_list_IMP_Minus_state_transformer p as vs ;
-          b_a_var = a ;
-          s2 = state_transformer (''b'' @ p) [(''a'', b_a_var)] ;
-          b_b_var = cons_list_rec ;
-          cons_var = cons a cons_list_rec ;
-          cons_list_var = cons_var ;
-          cons_var = 0 ;
-          a_a_var = 0
-  in
-    state_transformer (''b'' @ p) [(''a'', b_a_var)]  
-    o
-    cons_list_rec
-  )
-"
-*)
-(*
-      state_transformer p [(''cons_list'', cons_list (a # as))]
-      \<circ> cons_IMP_Minus_state_transformer (''b'' @ p) a (cons_list as)
-    )
-    \<circ> state_transformer (''a'' @ p) [(v, 0)]"
-*)
 
 lemma auxxx: "(let s1 = t1; s2 = t2 s1; s3 = t3 s2; s4 = t4 s3;
                 s5 = t5 s4; s6 = t6 s5; s7 = t7 s6 in s7) a
