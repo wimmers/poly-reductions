@@ -310,8 +310,8 @@ fun cons_list_IMP_Minus_state_transformer where
 "
 
 lemma cons_list_IMP_Minus_correct[intro]:
-assumes "distinct vs"
-shows
+  assumes "distinct vs"
+  shows
     "(cons_list_IMP_Minus vs p, s) 
       \<Rightarrow>\<^bsup>cons_list_IMP_Minus_time (map (\<lambda>i. s (add_prefix (''a'' @ p) i)) vs)\<^esup>
       cons_list_IMP_Minus_state_transformer p (map (\<lambda>i. s (add_prefix (''a'' @ p) i)) vs) vs s"
@@ -348,9 +348,6 @@ proof(induction vs arbitrary: s)
     define s7 where "s7 =
       s6(add_prefix (''a'' @ p) v := aval (aexp_add_prefix p (A (N 0))) s6)"
 
-(*
-    have "cons_list_IMP_Minus_state_transformer p (map (\<lambda>i. s (arg i)) bs) bs s (arg b) = (s (arg b))" sorry
-*)
     have "cons_list_IMP_Minus_state_transformer p (map (\<lambda>i. s (arg i)) vs) vs s (arg v) = s (arg v)"
       using ConsV(2)
     proof(induct vs)
@@ -526,29 +523,11 @@ proof(induction vs arbitrary: s)
      in s7 (add_prefix p ''cons_list''))
      " by metis
           also have "\<dots> =
-(let s1 = cons_list_IMP_Minus_state_transformer p (map (\<lambda>i. s (arg i)) bs) bs s
-     in (s1 (add_prefix (''a'' @ p) b))
-              ##  (s1 (add_prefix p ''cons_list''))
+(let s1 = cons_list_IMP_Minus_state_transformer p (map (\<lambda>i. s (arg i)) bs') bs' s
+     in  (cons_list (map (\<lambda>i. s (arg i)) (b'#bs') ))
 )
-" by simp
-          also have "\<dots> =
-(let s1 = cons_list_IMP_Minus_state_transformer p (map (\<lambda>i. s (arg i)) bs) bs s
-     in (s (arg b))
-              ##  (cons_list (map (\<lambda>i. s (arg i)) bs))
-)
-" using ih arg_def c2_0 by simp
+" using Cons ih arg_def c2_0 by simp
 
-          also have "\<dots> =
-(let s1 = cons_list_IMP_Minus_state_transformer p (map (\<lambda>i. s (arg i)) bs) bs s
-     in  (cons_list ((s (arg b)) # map (\<lambda>i. s (arg i)) bs))
-)
-" using Cons by simp
-
-          also have "\<dots> =
-(let s1 = cons_list_IMP_Minus_state_transformer p (map (\<lambda>i. s (arg i)) bs) bs s
-     in  (cons_list (map (\<lambda>i. s (arg i)) (b#bs) ))
-)
-" using Cons by simp
           finally show "(let s1 = cons_list_IMP_Minus_state_transformer p (map (\<lambda>i. s (arg i)) bs) bs s; s2 = s1(add_prefix (''b'' @ p) ''a'' := aval (aexp_add_prefix (''a'' @ p) (A (V b))) s1);
          s3 = s2(add_prefix (''b'' @ p) ''b'' := aval (aexp_add_prefix p (A (V ''cons_list''))) s2);
          s4 = cons_IMP_Minus_state_transformer (''b'' @ p) (s3 (add_prefix (''b'' @ p) ''a'')) (s3 (add_prefix (''b'' @ p) ''b'')) s3;
@@ -591,14 +570,10 @@ proof(induction vs arbitrary: s)
            apply(rule terminates_in_time_state_intro[OF Big_StepT.Assign])
             apply simp  apply(rule refl)
           apply(subst s2_def[symmetric])
-
           apply(rule terminates_in_time_state_intro[OF Big_StepT.Assign])
            apply simp apply (rule refl)
          apply(subst s3_def[symmetric])
-
          apply(rule terminates_in_time_state_intro[OF cons_IMP_Minus_correct])
-          apply simp
-
           apply(subst c1[symmetric]) apply(subst c2[symmetric]) apply simp
          apply(rule refl)
         apply(subst s4_def[symmetric])
