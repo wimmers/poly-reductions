@@ -73,6 +73,9 @@ inductive_cases Seq_tE[elim!]: "(c1;;c2,s1) \<Rightarrow>\<^bsup> p \<^esup> s3"
 inductive_cases If_tE[elim!]: "(IF b \<noteq>0 THEN c1 ELSE c2,s) \<Rightarrow>\<^bsup> x \<^esup> t"
 inductive_cases While_tE[elim]: "(WHILE b \<noteq>0 DO c,s) \<Rightarrow>\<^bsup> x \<^esup> t"
 
+lemma Seq': "\<lbrakk> (c1,s1) \<Rightarrow>\<^bsup> x \<^esup> s2;  (c2,s2) \<Rightarrow>\<^bsup> y \<^esup> s3  \<rbrakk> \<Longrightarrow> (c1;;c2, s1) \<Rightarrow>\<^bsup> x + y \<^esup> s3"
+  by auto
+
 text "Rule inversion use examples:"
 lemma "(IF b \<noteq>0 THEN SKIP ELSE SKIP, s) \<Rightarrow>\<^bsup> x \<^esup> t \<Longrightarrow> t = s"
   by blast
@@ -106,6 +109,29 @@ done
 
 lemma bigstep_det: "(c1, s) \<Rightarrow>\<^bsup> p1 \<^esup> t1 \<Longrightarrow> (c1, s) \<Rightarrow>\<^bsup> p \<^esup> t \<Longrightarrow> p1=p \<and> t1=t"
   using big_step_t_determ2 by simp
+
+lemma seq_assign_t_simp:
+  "((c ;; x ::= a, s) \<Rightarrow>\<^bsup> Suc(Suc t) \<^esup>  s') 
+  \<longleftrightarrow> (\<exists>s''. (c, s) \<Rightarrow>\<^bsup> t \<^esup> s'' \<and> s' = s''(x := aval a s''))"
+proof
+  assume "(c;; x ::= a, s) \<Rightarrow>\<^bsup> Suc (Suc t) \<^esup> s'"
+  then obtain s'' where "(c, s) \<Rightarrow>\<^bsup> t \<^esup> s''" by auto
+  have "s' = s''(x := aval a s'')" using \<open>(c;; x ::= a, s) \<Rightarrow>\<^bsup> Suc (Suc t) \<^esup> s'\<close>
+    using bigstep_det \<open>(c, s) \<Rightarrow>\<^bsup> t \<^esup> s''\<close> 
+    by blast
+  thus "\<exists>s''. (c, s) \<Rightarrow>\<^bsup> t \<^esup> s'' \<and> s' = s''(x := aval a s'')"
+    using \<open>(c, s) \<Rightarrow>\<^bsup> t \<^esup> s''\<close> 
+    by blast
+qed auto
+
+lemma seq_assign_t_intro: "(c, s) \<Rightarrow>\<^bsup> t \<^esup> s'' \<Longrightarrow> s' = s''(x := aval a s'')
+  \<Longrightarrow>(c ;; x ::= a, s) \<Rightarrow>\<^bsup> Suc(Suc t) \<^esup>  s'"
+  using seq_assign_t_simp 
+  by auto
+
+lemma seq_is_noop[simp]: "(SKIP, s) \<Rightarrow>\<^bsup>t\<^esup> s' \<longleftrightarrow> (t = Suc 0 \<and> s = s')" by auto
+
+lemma seq_skip[simp]: "(c ;; SKIP, s) \<Rightarrow>\<^bsup>Suc t\<^esup> s' \<longleftrightarrow> (c, s) \<Rightarrow>\<^bsup>t\<^esup> s'" by auto
 
 subsection "Progress property"
 text "every command costs time"
@@ -170,6 +196,13 @@ proof -
   moreover from b bigstepT_the_cost have "(THE n. \<exists>a. (IF b \<noteq>0 THEN c1 ELSE c2, s) \<Rightarrow>\<^bsup> n \<^esup> a) = p+1" by simp
   ultimately show ?thesis by simp
 qed
-    
+
+
+lemma terminates_in_state_intro: "(c, s) \<Rightarrow>\<^bsup>t\<^esup> s' \<Longrightarrow> s' = s'' \<Longrightarrow> (c, s) \<Rightarrow>\<^bsup>t\<^esup> s''"
+  by simp
+
+lemma terminates_in_time_state_intro: "(c, s) \<Rightarrow>\<^bsup>t\<^esup> s' \<Longrightarrow> t = t' \<Longrightarrow> s' = s'' 
+  \<Longrightarrow> (c, s) \<Rightarrow>\<^bsup>t'\<^esup> s''"
+  by simp
 
 end

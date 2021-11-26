@@ -154,10 +154,9 @@ proof (induction c1 s1 c2 s2 rule: small_step_induct)
       case (V x2)
       then show ?thesis
         using \<open>finite (range s)\<close> Parity
-        apply(auto simp only: intro!: Max_insert_le_when)
-        apply auto
-        apply(rule le_trans[where ?j="s x2"])
-        by(auto simp add: numeral_2_eq_2 intro!: trans_le_add1)
+        by(fastforce simp add: numeral_2_eq_2 
+                     intro!: trans_le_add1 Max_insert_le_when
+                     intro: le_trans[where ?j="s x2"])
     qed
   next
     case (RightShift x1)
@@ -172,10 +171,9 @@ proof (induction c1 s1 c2 s2 rule: small_step_induct)
       case (V x2)
       then show ?thesis
         using \<open>finite (range s)\<close> RightShift
-        apply(auto simp only: intro!: Max_insert_le_when)
-        apply auto
-        apply(rule le_trans[where ?j="s x2"])
-        by(auto simp add: numeral_2_eq_2 intro!: trans_le_add1)
+        by(fastforce simp add: numeral_2_eq_2 
+                     intro!: trans_le_add1 Max_insert_le_when 
+                     intro: le_trans[where ?j="s x2"])
     qed
   qed
 next
@@ -213,54 +211,43 @@ text \<open> We show that there always is a linear bound for the memory consumpt
 lemma linear_bound: "(c1, s1) \<Rightarrow>\<^bsup>t\<^esup> s2 \<Longrightarrow> finite (range s1)
   \<Longrightarrow> is_memory_bound c1 s1 ((num_variables c1) 
       * (t + bit_length (max 1 (max (Max (range s1)) (max_constant c1)))))"
-  apply (simp only: is_memory_bound_def)
-proof
+proof -
   let ?b = "(num_variables c1) 
       * (t + bit_length (max 1 (max (Max (range s1)) (max_constant c1))))"
 
   assume "(c1, s1) \<Rightarrow>\<^bsup>t\<^esup> s2" "finite (range s1)"
-  fix t'
-  show "\<forall>c' s'.
-             (c1, s1) \<rightarrow>\<^bsup>t'\<^esup> (c', s') \<longrightarrow>
-             state_memory c' s' \<le> ?b"
-  proof
-    fix c'
-    show "\<forall>s'. (c1, s1) \<rightarrow>\<^bsup>t'\<^esup> (c', s') \<longrightarrow>
-               state_memory c' s' \<le> ?b"
-    proof 
-      fix s'
-      show "(c1, s1) \<rightarrow>\<^bsup>t'\<^esup> (c', s') \<longrightarrow>
-               state_memory c' s' \<le> ?b"
-      proof
-        assume "(c1, s1) \<rightarrow>\<^bsup>t'\<^esup> (c', s')"
 
-        hence "finite (range s')"
-          using \<open>finite (range s1)\<close> finite_range_stays_finite
-          by auto
+  have "(c1, s1) \<rightarrow>\<^bsup>t'\<^esup> (c', s') \<Longrightarrow> state_memory c' s' \<le> ?b" for t' c' s'
+  proof -
+    assume "(c1, s1) \<rightarrow>\<^bsup>t'\<^esup> (c', s')"
 
-        have "Max (range s') \<le> (2 ^ t') * (max (Max (range s1)) (max_constant c1))"
-          using Max_increase \<open>(c1, s1) \<rightarrow>\<^bsup>t'\<^esup> (c', s')\<close> \<open>finite (range s1)\<close> 
-          by auto
-        also have "... \<le> (2 ^ t) * (max (Max (range s1)) (max_constant c1))"
-          using small_step_cant_run_longer_than_big_step
-            \<open>(c1, s1) \<Rightarrow>\<^bsup>t\<^esup> s2\<close> \<open>(c1, s1) \<rightarrow>\<^bsup>t'\<^esup> (c', s')\<close>
-          by simp
+    hence "finite (range s')"
+      using \<open>finite (range s1)\<close> finite_range_stays_finite
+      by auto
 
-        finally have "state_memory c' s' \<le> num_variables c' 
+    have "Max (range s') \<le> (2 ^ t') * (max (Max (range s1)) (max_constant c1))"
+      using Max_increase \<open>(c1, s1) \<rightarrow>\<^bsup>t'\<^esup> (c', s')\<close> \<open>finite (range s1)\<close> 
+      by auto
+    also have "... \<le> (2 ^ t) * (max (Max (range s1)) (max_constant c1))"
+      using small_step_cant_run_longer_than_big_step
+        \<open>(c1, s1) \<Rightarrow>\<^bsup>t\<^esup> s2\<close> \<open>(c1, s1) \<rightarrow>\<^bsup>t'\<^esup> (c', s')\<close>
+      by simp
+
+    finally have "state_memory c' s' \<le> num_variables c' 
           * bit_length ((2 ^ t) * (max (Max (range s1)) (max_constant c1)))" 
-          using Max_register_bounds_state_memory[OF \<open>finite (range s')\<close>]
-          by (meson bit_length_monotonic dual_order.trans mult_le_cancel1)
-        also have "... \<le>  num_variables c' 
+      using Max_register_bounds_state_memory[OF \<open>finite (range s')\<close>]
+      by (meson bit_length_monotonic dual_order.trans mult_le_cancel1)
+    also have "... \<le>  num_variables c' 
           * bit_length ((2 ^ t) * (max 1 (max (Max (range s1)) (max_constant c1))))"
-          using bit_length_monotonic
-          by simp          
+      using bit_length_monotonic
+      by simp          
 
-        finally show "state_memory c' s' \<le> ?b"
-          using num_variables_not_increasing[OF \<open>(c1, s1) \<rightarrow>\<^bsup>t'\<^esup> (c', s')\<close>] order_trans
-          by(fastforce simp: bit_length_of_power_of_two)
-      qed
-    qed
+    finally show "state_memory c' s' \<le> ?b"
+      using num_variables_not_increasing[OF \<open>(c1, s1) \<rightarrow>\<^bsup>t'\<^esup> (c', s')\<close>] order_trans
+      by(fastforce simp: bit_length_of_power_of_two)
   qed
+
+  thus ?thesis by(auto simp: is_memory_bound_def)
 qed
 
 end
