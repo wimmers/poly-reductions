@@ -15,8 +15,33 @@ definition triangle_IMP_Minus where "triangle_IMP_Minus \<equiv>
   ''triangle'' ::= [''a''] ((V ''c'') \<then>) ;;
   ''a'' ::= (A (N 0))"
 
+thm add.commute
+lemma comp_add:"(\<lambda>x::'a::ab_semigroup_add. f (x +c)) = f o ((+) c)"
+  by (auto simp add: comp_def add.commute[symmetric])
+
+lemma poly_const:"poly ((+) c)"
+proof -
+  have 1:"poly (\<lambda>x. x)"
+    by (rule poly_linear)
+  have 2:"poly (\<lambda>x. c)" by simp
+  have "((+)c) = (\<lambda>x . x + c)"  by auto
+  moreover from 1 2 have "poly (\<lambda>x. x + c) " by auto
+  ultimately show ?thesis by auto
+qed
+find_theorems poly  "(o)" 
+
+lemma poly_shift: "poly f \<Longrightarrow> poly (\<lambda>x. f(x + c))"
+  by (subst comp_add) (auto intro: poly_const)
+
+   
+  
+
+lemma "poly (f o g) \<Longrightarrow> poly ((\<lambda>x. f(x + c)) o g)"
+  oops
 definition triangle_IMP_Minus_time where "triangle_IMP_Minus_time x \<equiv>
   mul_IMP_Minus_time (1 + x) + 8"
+lemma "poly (triangle_IMP_Minus_time o exp2)"
+  unfolding triangle_IMP_Minus_time_def 
 
 abbreviation triangle_IMP_Minus_state_transformer where 
   "triangle_IMP_Minus_state_transformer p n  \<equiv>
@@ -128,6 +153,40 @@ lemma fst_nat_IMP_Minus_correct[intro]:
       intro!: prod_decode_aux_loop_correct
       terminates_in_time_state_intro[OF Seq'])
 
+definition hd_IMP where "hd_IMP \<equiv>
+  [''fst''] ''a'' ::=  (V ''xs'' \<ominus> N 1) ;;
+  invoke_subprogram ''fst'' fst_nat_IMP_Minus ;;
+  ''ans'' ::= [''fst''] A (V ''fst_nat'');;
+  ''xs'' ::= A (N 0)
+"
+
+
+abbreviation hd_state_transformer where 
+"hd_state_transformer p xs \<equiv> 
+state_transformer p [(''ans'',hd_nat xs) , (''xs'',0)] o
+fst_nat_IMP_Minus_state_transformer (''fst''@ p) (xs -1)
+"
+
+definition hd_time where "
+hd_time x \<equiv> fst_nat_IMP_Minus_time (x-1) + 6 "
+
+lemma hd_nat_IMP_Minus_correct[intro]: 
+  "(hd_IMP p, s) 
+      \<Rightarrow>\<^bsup>  hd_time (s (add_prefix p ''xs''))\<^esup> 
+   hd_state_transformer p (s (add_prefix p ''xs'')) s"
+  unfolding hd_IMP_def hd_time_def  hd_nat_def
+  apply (rule terminates_in_time_state_intro)
+    apply (rule Big_StepT.Seq)+
+  by fastforce+
+  
+  
+  
+fun f::"real\<Rightarrow>real" where "f x = x^3  -4x^2 + x+3"
+
+value "f (-2)"
+value "f (4)"
+value "f ((-2* f(4) + 4*f(-2))/ (f(4)-f(-2)))"
+
 definition snd_nat_IMP_Minus where "snd_nat_IMP_Minus \<equiv>
   ''b'' ::= (A (V ''a'')) ;; 
   ''a'' ::= (A (N 0)) ;;
@@ -154,6 +213,32 @@ lemma snd_nat_IMP_Minus_correct[intro]:
   by (fastforce simp: prod_decode_def prod_decode_aux.simps[of 0 0] 
       intro!: prod_decode_aux_loop_correct
       terminates_in_time_state_intro[OF Seq'])
+
+definition tl_IMP where "tl_IMP \<equiv>
+  [''snd''] ''a'' ::=  (V ''xs'' \<ominus> N 1) ;;
+  invoke_subprogram ''snd'' snd_nat_IMP_Minus ;;
+  ''ans'' ::= [''snd''] A (V ''snd_nat'');;
+  ''xs'' ::= A (N 0)
+"
+
+
+abbreviation tl_state_transformer where 
+"tl_state_transformer p xs \<equiv> 
+state_transformer p [(''ans'',tl_nat xs) , (''xs'',0)] o
+snd_nat_IMP_Minus_state_transformer (''snd''@ p) (xs -1)
+"
+
+definition tl_time where "
+tl_time x \<equiv> snd_nat_IMP_Minus_time (x-1) + 6 "
+
+lemma tl_nat_IMP_Minus_correct[intro]: 
+  "(tl_IMP p, s) 
+      \<Rightarrow>\<^bsup>  tl_time (s (add_prefix p ''xs''))\<^esup> 
+   tl_state_transformer p (s (add_prefix p ''xs'')) s"
+  unfolding tl_IMP_def tl_time_def  tl_nat_def 
+  apply (rule terminates_in_time_state_intro)
+    apply (rule Big_StepT.Seq)+
+  by fastforce+
 
 definition nth_nat_iteration where "nth_nat_iteration \<equiv>
   [''a''] ''a'' ::= ((V ''a'') \<ominus> (N 1)) ;;

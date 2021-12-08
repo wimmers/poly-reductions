@@ -2,7 +2,7 @@
 
 theory Multiplication
   imports Big_Step_Small_Step_Equivalence "HOL-Library.Discrete"
-    Canonical_State_Transformers
+    Canonical_State_Transformers "../Lib/Polynomial_Growth_Functions"
 begin
 
 unbundle no_com_syntax
@@ -114,8 +114,63 @@ definition mul_IMP_minus where "mul_IMP_minus =
   ''a'' ::= A (N 0) ;;
   ''d'' ::= A (N 0)" 
 
-definition mul_IMP_Minus_time where "mul_IMP_Minus_time y 
+definition mul_IMP_Minus_time :: "nat \<Rightarrow> nat" where "mul_IMP_Minus_time y 
   \<equiv> 12 * (if y = 0 then 0 else 1 + Discrete.log y) + 8"
+
+definition exp2::"nat\<Rightarrow>nat"  where "exp2 y \<equiv> 2^y"
+
+lemma log_exp_id: "Discrete.log  (exp2 x) = id x"
+  apply(induct x)
+  unfolding exp2_def by auto
+
+
+lemma exp2_0: "exp2 x \<noteq> 0"
+  unfolding exp2_def
+  by auto
+
+lemma poly_general_form:"poly (\<lambda>x. a*x+b)"
+proof
+  show "poly ((*) a)"
+  proof (induct a)
+    case 0
+    then show ?case by auto
+  next
+    case (Suc a)
+    have distrib_add: "((*) (Suc a)) = (\<lambda>x. (*) a x + x)" by auto
+    from Suc have "poly (\<lambda>x. (*) a x)" by simp
+    moreover have "poly (\<lambda>x. x)"  by (simp add: poly_linear)
+    ultimately have "poly  (\<lambda>x. (*) a x + x)" by (simp add: poly_add)
+    with distrib_add show ?case by simp 
+  qed
+next
+  show "poly (\<lambda>x. b)" by simp
+qed
+
+lemma poly_intro: "(\<forall>x. f x = a*x + b) \<Longrightarrow> poly f"
+proof -
+  assume "\<forall>x. f x = a*x + b"
+  hence "f = (\<lambda>x . a*x+b)" by auto
+  with poly_general_form show "poly f" by auto
+qed
+
+lemma "poly (mul_IMP_Minus_time o exp2)"
+  unfolding mul_IMP_Minus_time_def comp_def log_exp_id
+  apply (auto simp add: exp2_0 )
+  apply (rule poly_intro)
+  by (auto simp add:algebra_simps)
+
+definition polye:: "(nat \<Rightarrow>nat) \<Rightarrow> bool" where 
+"polye f \<equiv> poly (f o exp2)"
+
+lemma polye_comp1: 
+"poly g \<Longrightarrow> polye f \<Longrightarrow> polye (g o f)"
+  unfolding polye_def 
+  by (simp add: comp_assoc poly_compose)
+
+lemma polye_comp2: 
+"mono f \<Longrightarrow> polye f \<Longrightarrow> polye (\<lambda>x . f (x + b))"
+  unfolding polye_def  exp2_def comp_def
+  oops
 
 abbreviation mul_IMP_Minus_state_transformer where "mul_IMP_Minus_state_transformer p a b \<equiv>
   state_transformer p  

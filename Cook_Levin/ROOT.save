@@ -5,7 +5,6 @@ session Cook_Levin = "HOL-Analysis" +
     "Poly_Reductions_Lib"
     "IMP_Minus"
     "HOL-Real_Asymp"
-    "Landau_Symbols"
     "Verified_SAT_Based_AI_Planning"
   directories
     "Complexity_classes"
