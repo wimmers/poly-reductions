@@ -218,6 +218,7 @@ definition tl_IMP where "tl_IMP \<equiv>
   [''snd''] ''a'' ::=  (V ''xs'' \<ominus> N 1) ;;
   invoke_subprogram ''snd'' snd_nat_IMP_Minus ;;
   ''ans'' ::= [''snd''] A (V ''snd_nat'');;
+  [''snd''] ''snd_nat'' ::= A (N 0);;
   ''xs'' ::= A (N 0)
 "
 
@@ -225,11 +226,12 @@ definition tl_IMP where "tl_IMP \<equiv>
 abbreviation tl_state_transformer where 
 "tl_state_transformer p xs \<equiv> 
 state_transformer p [(''ans'',tl_nat xs) , (''xs'',0)] o
+state_transformer (''snd'' @ p) [(''snd_nat'',0)] o
 snd_nat_IMP_Minus_state_transformer (''snd''@ p) (xs -1)
 "
 
 definition tl_time where "
-tl_time x \<equiv> snd_nat_IMP_Minus_time (x-1) + 6 "
+tl_time x \<equiv> snd_nat_IMP_Minus_time (x-1) + 8 "
 
 lemma tl_nat_IMP_Minus_correct[intro]: 
   "(tl_IMP p, s) 

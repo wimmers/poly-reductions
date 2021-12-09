@@ -102,6 +102,7 @@ definition state_transformer :: "string \<Rightarrow> (vname * nat) list \<Right
     (Some y) \<Rightarrow> y |
     None \<Rightarrow> s v))"
 
+lemma "state_transformer p xs o state_transformer p ys = state_transformer "
 (* Only use for intermediate states. State transformer definitions of sub-programs
    should not depend on the state before the program invocation, because we do not
    want to compute that when composing state transformers *) 
