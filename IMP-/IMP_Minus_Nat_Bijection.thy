@@ -42,7 +42,7 @@ definition triangle_IMP_Minus_time where "triangle_IMP_Minus_time x \<equiv>
   mul_IMP_Minus_time (1 + x) + 8"
 lemma "poly (triangle_IMP_Minus_time o exp2)"
   unfolding triangle_IMP_Minus_time_def 
-
+  oops
 abbreviation triangle_IMP_Minus_state_transformer where 
   "triangle_IMP_Minus_state_transformer p n  \<equiv>
     state_transformer p [(''triangle'', triangle n), (''a'', 0)] \<circ> 
