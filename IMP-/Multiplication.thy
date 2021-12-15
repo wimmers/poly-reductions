@@ -7,7 +7,8 @@ begin
 
 unbundle no_com_syntax
 
-definition max_a_min_b_IMP_Minus where "max_a_min_b_IMP_Minus = 
+(*
+definition max_a_min_b_IMP_Minus where "max_a_min_b_IMP_Minus =
   ''c'' ::= ((V ''a'') \<ominus> (V ''b'')) ;;
   IF ''c''\<noteq>0 
   THEN
@@ -48,7 +49,169 @@ next
     unfolding max_a_min_b_IMP_Minus_def max_a_min_b_IMP_Minus_time_def
     using False
     by (fastforce intro!: terminates_in_time_state_intro[OF Seq'])+
+qed*)
+
+record mul_state = mul_a::nat mul_b::nat mul_c::nat mul_d::nat
+
+definition "mul_state_upd s \<equiv>
+      let
+        mul_d = (mul_b s) mod 2;
+        mul_c = (if mul_d \<noteq> 0 then mul_c s + mul_a s else mul_c s);
+        mul_a = mul_a s + mul_a s;
+        mul_b = (mul_b s) div 2;
+        ret = \<lparr>mul_a = mul_a, mul_b = mul_b, mul_c = mul_c, mul_d = mul_d\<rparr>
+      in
+        ret
+"
+
+function mul_imp:: "mul_state \<Rightarrow> mul_state" where
+"mul_imp s = 
+  (if mul_b s \<noteq> 0 then \<comment> \<open>While b \<noteq> 0\<close>
+    (
+      let
+        next_iteration = mul_imp (mul_state_upd s)
+      in
+        next_iteration
+    )
+  else
+    (
+      let
+        ret = s
+      in
+        ret
+    )
+  )"
+  by pat_completeness auto
+termination
+  by  (relation "measure (\<lambda>s. mul_b s)") (auto simp: mul_state_upd_def Let_def split: if_splits)
+
+lemma mul_imp_correct: "mul_c (mul_imp s) = mul_c s + mul_a s * mul_b s"
+proof (induction s rule: mul_imp.induct)
+  case (1 s)
+  then show ?case
+    apply(subst mul_imp.simps)
+    apply (auto simp: mul_state_upd_def Let_def simp del: mul_imp.simps split: if_splits)
+    by (metis (no_types, lifting) One_nat_def add.commute add_mult_distrib2 distrib_right mult.right_neutral mult_2 mult_div_mod_eq)
+qed 
+
+function mul_imp_time:: "mul_state \<Rightarrow> nat \<Rightarrow> nat" where
+"mul_imp_time s t = 
+(
+    (if mul_b s \<noteq> 0 then \<comment> \<open>While b \<noteq> 0\<close>
+      (
+        let
+          t = t + 1; \<comment> \<open>To account for while loop condition checking\<close>
+          mul_d = (mul_b s) mod 2::nat;
+          t = t + 2;
+          mul_c = (if mul_d \<noteq> 0 then mul_c s + mul_a s else mul_c s);
+          t = t + 1 + (if mul_d \<noteq> 0 then 2 else 2);
+          mul_a = mul_a s + mul_a s;
+          t = t + 2;
+          mul_b = mul_b s div 2;
+          t = t + 2;
+          next_iteration = mul_imp_time (mul_state_upd s) t
+        in
+          next_iteration
+      )
+    else
+      (
+         \<comment> \<open>To account for the two steps of checking the condition and skipping the loop\<close>
+        let
+          t = t + 2;
+          ret = t
+        in
+          ret
+      )
+    )
+)"
+  by pat_completeness auto
+termination
+  by  (relation "measure (\<lambda>(s, t). mul_b s)") (auto simp: mul_state_upd_def Let_def split: if_splits)
+
+lemma mul_imp_time_acc: "(mul_imp_time s (Suc t)) = Suc (mul_imp_time s t)"
+  by (induction s "t" arbitrary:  rule: mul_imp_time.induct)
+     (auto simp add: mul_state_upd_def Let_def eval_nat_numeral split: if_splits)
+
+definition mul_IMP_minus where
+"mul_IMP_minus \<equiv>
+  (\<comment> \<open>if b \<noteq> 0 then\<close>
+   WHILE ''b''\<noteq>0 DO
+        \<comment> \<open>d = b mod 2;\<close>
+        (''d'' ::= ((V ''b'') \<doteq>1);;
+        \<comment> \<open>c = (if d \<noteq> 0 then c + a else c);\<close>
+        IF ''d''\<noteq>0 THEN ''c'' ::= ((V ''c'') \<oplus> (V ''a'')) ELSE ''c'' ::= A (V ''c'');;
+        \<comment> \<open>a = a + a;\<close>
+        ''a'' ::= ((V ''a'') \<oplus> (V ''a''));;
+        \<comment> \<open>b = b div 2;\<close>
+        ''b'' ::= ((V ''b'') \<then>))
+  )"
+
+definition mul_IMP_Minus_state_transformer where "mul_IMP_Minus_state_transformer p s \<equiv>
+  state_transformer p  
+    [(''a'', mul_a s),(''b'',  mul_b s),(''c'',  mul_c s),(''d'', mul_d s)]"
+
+definition "mul_imp_to_HOL_state p s =
+  \<lparr>mul_a = s (add_prefix p ''a''), mul_b = (s (add_prefix p ''b'')),
+   mul_c = (s (add_prefix p ''c'')), mul_d =  (s (add_prefix p ''d''))\<rparr>"
+
+lemma mul_IMP_minus_correct: 
+  shows
+   "(mul_IMP_minus p, s) 
+    \<Rightarrow>\<^bsup>(mul_imp_time (mul_imp_to_HOL_state p s) 0)\<^esup> 
+      mul_IMP_Minus_state_transformer p (mul_imp (mul_imp_to_HOL_state p s)) s"
+proof(induction "mul_imp_to_HOL_state p s" arbitrary: s rule: mul_imp.induct)
+  case 1
+  then show ?case
+    apply(subst mul_IMP_Minus_state_transformer_def)
+    apply(subst mul_imp.simps)
+    apply(subst mul_imp_time.simps)
+    apply(subst Let_def)+
+    apply(subst mul_IMP_minus_def)
+    apply(rule WhileI[where y = "mul_imp_time (mul_state_upd (mul_imp_to_HOL_state p s)) 0"])
+     apply(intro conjI)
+       apply(rule Seq')
+       apply(rule Seq')
+         apply(rule Seq')
+           apply(rule Big_StepT.Assign)
+         apply(rule IfI)
+                apply(rule Big_StepT.Assign)
+                   apply(rule Big_StepT.Assign)
+            apply rule
+            apply rule
+            apply(rule Big_StepT.Assign)
+       apply(rule Big_StepT.Assign)
+  apply(dest_com)
+  apply(simp add: mul_imp_to_HOL_state_def)
+         apply(simp add: mul_state_upd_def mul_imp_to_HOL_state_def)
+        apply(auto simp add: Let_def mul_state_upd_def mul_imp_to_HOL_state_def
+                   simp del: mul_imp.simps mul_imp_time.simps split: if_splits)[1]
+        apply(auto simp add: Let_def mul_state_upd_def mul_imp_to_HOL_state_def
+                   simp del: mul_imp.simps mul_imp_time.simps split: if_splits)[1]
+    apply (simp add: mul_state_upd_def mul_IMP_Minus_state_transformer_def)
+    apply (simp add: mul_state_upd_def mul_IMP_Minus_state_transformer_def)
+    apply (simp add: mul_state_upd_def mul_IMP_Minus_state_transformer_def)
+    apply (simp add: mul_IMP_minus_def)
+        apply(auto simp add: Let_def mul_state_upd_def mul_imp_to_HOL_state_def state_transformer_def
+                   simp del: mul_imp_time.simps split: if_splits)[1]
+        apply(auto simp add: Let_def mul_state_upd_def mul_imp_to_HOL_state_def state_transformer_def
+                   simp del: mul_imp_time.simps split: if_splits)[1]
+    apply(subst mul_imp_time_acc)+
+        apply(auto simp add: Let_def mul_state_upd_def mul_imp_to_HOL_state_def
+                   simp del: mul_imp.simps mul_imp_time.simps split: if_splits)[1]
+    apply(subst mul_imp_time_acc)+
+        apply(auto simp add: Let_def mul_state_upd_def mul_imp_to_HOL_state_def
+                   simp del: mul_imp.simps mul_imp_time.simps split: if_splits)[1]
+    done
 qed
+
+lemma mul_IMP_minus_correct':
+  shows
+   "\<lbrakk>s_HOL = (mul_imp_to_HOL_state p s)\<rbrakk> \<Longrightarrow>
+   (mul_IMP_minus p, s) 
+    \<Rightarrow>\<^bsup>(mul_imp_time s_HOL 0)\<^esup> 
+      mul_IMP_Minus_state_transformer p (mul_imp s_HOL) s"
+  using mul_IMP_minus_correct
+  by (auto simp del: mul_imp.simps)
 
 definition mul_iteration where
 "mul_iteration = 

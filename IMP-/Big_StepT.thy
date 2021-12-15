@@ -1,6 +1,6 @@
 \<^marker>\<open>creator Bilel Ghorbel, Florian Kessler\<close>
 section "Big step semantics of IMP-"
-theory Big_StepT imports Main Com begin
+theory Big_StepT imports Main Com "HOL-Eisbach.Eisbach_Tools" begin
 
 paragraph "Summary"
 text\<open>We define big step semantics with time for IMP-. 
@@ -22,7 +22,32 @@ WhileFalse: "\<lbrakk> s b = 0 \<rbrakk> \<Longrightarrow> (WHILE b \<noteq>0 DO
 WhileTrue: "\<lbrakk> s1 b \<noteq> 0;  (c,s1) \<Rightarrow>\<^bsup> x \<^esup> s2;  (WHILE b \<noteq>0 DO c, s2) \<Rightarrow>\<^bsup> y \<^esup> s3; 1+x+y=z  \<rbrakk> 
     \<Longrightarrow> (WHILE b \<noteq>0 DO c, s1) \<Rightarrow>\<^bsup> z \<^esup> s3" 
 
-bundle big_step_syntax 
+lemma WhileI: 
+"\<lbrakk>(s1 b \<noteq> 0 \<Longrightarrow> (c,s1) \<Rightarrow>\<^bsup> x \<^esup> s2 \<and> (WHILE b \<noteq>0 DO c, s2) \<Rightarrow>\<^bsup> y \<^esup> s3);
+  (s1 b = 0 \<Longrightarrow> s1 = s3);
+  z = (if s1 b \<noteq> 0 then 1+x+y else 2)\<rbrakk>
+        \<Longrightarrow> (WHILE b \<noteq>0 DO c, s1) \<Rightarrow>\<^bsup> z \<^esup> s3" 
+  by (auto simp add: WhileTrue WhileFalse numeral_2_eq_2)
+
+lemma IfI: 
+"\<lbrakk>s b \<noteq> 0 \<Longrightarrow> (c1,s) \<Rightarrow>\<^bsup> x1 \<^esup> t1;
+  s b = 0 \<Longrightarrow> (c2,s) \<Rightarrow>\<^bsup> x2 \<^esup> t2;
+  y = (if s b \<noteq> 0 then x1 else x2) + 1;
+  t = (if s b \<noteq> 0 then t1 else t2)\<rbrakk>
+        \<Longrightarrow> (IF b \<noteq>0 THEN c1 ELSE c2, s) \<Rightarrow>\<^bsup> y \<^esup> t" 
+  by (auto simp add: IfTrue IfFalse)
+
+lemma AssignI: 
+"\<lbrakk>s' = s (x:= aval a s)\<rbrakk>
+        \<Longrightarrow> (x ::= a, s) \<Rightarrow>\<^bsup> Suc (Suc 0) \<^esup> s'" 
+  by (auto simp add: Assign)
+
+lemma AssignI': 
+"\<lbrakk>s' = s (x:= aval a s)\<rbrakk>
+        \<Longrightarrow> (x ::= a, s) \<Rightarrow>\<^bsup> 2 \<^esup> s'" 
+  by (auto simp add: Assign eval_nat_numeral)
+
+bundle big_step_syntax
 begin
 notation big_step_t ("_ \<Rightarrow>\<^bsup> _ \<^esup> _" 55)
 end
@@ -203,6 +228,14 @@ lemma terminates_in_state_intro: "(c, s) \<Rightarrow>\<^bsup>t\<^esup> s' \<Lon
 lemma terminates_in_time_state_intro: "(c, s) \<Rightarrow>\<^bsup>t\<^esup> s' \<Longrightarrow> t = t' \<Longrightarrow> s' = s'' 
   \<Longrightarrow> (c, s) \<Rightarrow>\<^bsup>t'\<^esup> s''"
   by simp
+
+lemma terminates_in_time_state_intro': "(c', s) \<Rightarrow>\<^bsup>t\<^esup> s' \<Longrightarrow> t = t' \<Longrightarrow> s' = s'' \<Longrightarrow> c' = c
+  \<Longrightarrow> (c, s) \<Rightarrow>\<^bsup>t'\<^esup> s''"
+  by simp
+
+method dest_com  = 
+  (match premises in a: "\<lbrakk>loop_cond; state_upd\<rbrakk> \<Longrightarrow> (_, s) \<Rightarrow>\<^bsup>t\<^esup> s'"
+    for s s' t loop_cond state_upd \<Rightarrow> \<open>rule terminates_in_time_state_intro'[OF a]\<close>)
 
 lemma terminates_split_if : "(P s \<Longrightarrow> (c, s) \<Rightarrow>\<^bsup>t1\<^esup> s1 ) \<Longrightarrow> 
 (\<not> P s \<Longrightarrow> (c, s) \<Rightarrow>\<^bsup>t2\<^esup> s2 ) \<Longrightarrow> (c,s) \<Rightarrow>\<^bsup>if P s then t1 else t2\<^esup>  if P s then s1 else s2"

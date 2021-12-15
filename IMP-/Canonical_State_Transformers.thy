@@ -97,15 +97,16 @@ lemma add_prefix_equal_iff[simp]: "add_prefix p a = add_prefix p' b \<longleftri
   by blast
 
 definition state_transformer :: "string \<Rightarrow> (vname * nat) list \<Rightarrow> state \<Rightarrow> state" where
-"state_transformer p vs s = 
-  (\<lambda>v. (case (map_of (map (\<lambda>(i, j). (add_prefix p i, j)) vs)) v of
-    (Some y) \<Rightarrow> y |
-    None \<Rightarrow> s v))"
+  "state_transformer p vs s = 
+    (\<lambda>v. (case 
+           (map_of (map (\<lambda>(i, j). (add_prefix p i, j)) vs)) v of
+             (Some y) \<Rightarrow> y
+             | None \<Rightarrow> s v))"
 
-lemma "state_transformer p xs o state_transformer p ys = state_transformer "
 (* Only use for intermediate states. State transformer definitions of sub-programs
    should not depend on the state before the program invocation, because we do not
-   want to compute that when composing state transformers *) 
+   want to compute that when composing state transformers *)
+
 abbreviation state_transformer' where "state_transformer' p vs s \<equiv>
   state_transformer p (vs (\<lambda>v. s (add_prefix p v))) s"
 

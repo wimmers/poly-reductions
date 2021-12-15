@@ -7,13 +7,164 @@ begin
 
 unbundle IMP_Minus_Minus_Com.no_com_syntax
 unbundle Com.no_com_syntax
+                                                 
+record triangle_state = triangle_mul_state::mul_state triangle_a::nat triangle_triangle::nat
+                                            
+term Nat_Bijection.triangle
 
-definition triangle_IMP_Minus where "triangle_IMP_Minus \<equiv>
+(*definition triangle_IMP_Minus where "triangle_IMP_Minus \<equiv>
   [''a''] ''a'' ::= (A (V ''a'')) ;;
   [''a''] ''b'' ::= ((V ''a'') \<oplus> (N 1)) ;;
   invoke_subprogram ''a'' mul_IMP_minus ;;
   ''triangle'' ::= [''a''] ((V ''c'') \<then>) ;;
   ''a'' ::= (A (N 0))"
+*)
+
+definition "triangle_state_upd (s::triangle_state) \<equiv>
+      let
+        mul_a' = triangle_a s;
+        mul_b' = (triangle_a s) + 1;
+        mul_c' = 0;
+        mul_d' = 0;
+        (triangle_mul_state::mul_state) = \<lparr>mul_a = mul_a', mul_b = mul_b', mul_c = mul_c', mul_d = mul_d'\<rparr>;
+        mul_ret = (mul_imp triangle_mul_state);
+        triangle_triangle = (mul_c mul_ret) div 2;
+        ret = \<lparr>triangle_mul_state = mul_ret, triangle_a = triangle_a s,triangle_triangle = triangle_triangle\<rparr>
+      in
+        ret
+"
+
+fun triangle_imp:: "triangle_state \<Rightarrow> triangle_state" where
+"triangle_imp s = 
+  (let
+     ret = triangle_state_upd s
+   in
+     ret
+  )"
+
+lemma triangle_imp_correct: "triangle_triangle (triangle_imp s) = Nat_Bijection.triangle (triangle_a s)"
+proof (induction s rule: triangle_imp.induct)
+  case (1 s)
+  then show ?case
+    by (auto simp: triangle_def triangle_state_upd_def Let_def mul_imp_correct simp del: mul_imp.simps split: if_splits)
+qed 
+
+fun triangle_imp_time:: "triangle_state \<Rightarrow> nat \<Rightarrow> nat" where
+"triangle_imp_time s t = 
+  (let
+     mul_a' = triangle_a s;
+     t = t + 2;
+     mul_b' = (triangle_a s) + 1;
+     t = t + 2;
+     mul_c' = 0;
+     t = t + 2;
+     mul_d' = 0;
+     t = t + 2;
+     (triangle_mul_state::mul_state) = \<lparr>mul_a = mul_a', mul_b = mul_b', mul_c = mul_c', mul_d = mul_d'\<rparr>;
+     mul_ret = (mul_imp triangle_mul_state);
+     t = t + mul_imp_time triangle_mul_state 0;
+     triangle_triangle = mul_c mul_ret div 2;
+     t = t + 2;
+     triangle_a = triangle_a s;
+     t = t + 2;
+     ret = t
+   in
+     ret
+  )"
+
+
+lemma triangle_imp_time_acc: "(triangle_imp_time s (Suc t)) = Suc (triangle_imp_time s t)"
+  by (induction s "t" arbitrary:  rule: triangle_imp_time.induct)
+     (auto simp add: mul_state_upd_def Let_def eval_nat_numeral split: if_splits)
+
+definition triangle_IMP_minus where
+"triangle_IMP_minus \<equiv>
+  (
+   \<comment> \<open>mul_a' = triangle_a s;\<close>
+   [''mul''] ''a'' ::= (A (V ''a'')) ;;
+   \<comment> \<open>mul_b' = (triangle_a s) + 1;\<close>
+   [''mul''] ''b'' ::= ((V ''a'') \<oplus> (N 1));;
+   \<comment> \<open>mul_c' = 0;\<close>
+   [''mul''] ''c'' ::= (A (N 0)) ;;
+   \<comment> \<open>mul_d' = 0;\<close>
+   [''mul''] ''d'' ::= (A (N 0));;
+   \<comment> \<open>(mul_state::mul_state) = \<lparr>mul_a = mul_a, mul_b = mul_b, mul_c = 0, mul_d = 0\<rparr>;\<close>
+   \<comment> \<open>mul_ret = (mul_imp mul_state);\<close>
+   invoke_subprogram ''mul'' mul_IMP_minus ;;
+   \<comment> \<open>triangle_triangle = mul_c mul_ret div 2;\<close>
+  ''triangle'' ::= [''mul''] ((V ''c'') \<then>);;
+  ''a'' ::= A (V ''a'')
+  )"
+
+
+definition triangle_IMP_Minus_state_transformer where "triangle_IMP_Minus_state_transformer p s \<equiv>
+ (mul_IMP_Minus_state_transformer (''mul'' @ p) (triangle_mul_state s)) o
+ (state_transformer p [(''a'',  triangle_a s), (''triangle'',  triangle_triangle s)])"
+
+definition "triangle_imp_to_HOL_state p s =
+              \<lparr>triangle_mul_state = mul_imp_to_HOL_state (''mul'' @ p) s, 
+               triangle_a = s (add_prefix p ''a''), triangle_triangle = (s (add_prefix p ''triangle''))\<rparr>"
+
+(*notation add_prefix ("_ _" [1000, 61] 61) *)
+
+(*lemma xxx: "aval e (s (y:= v)) = aval e s"
+  sorry*)
+
+lemma triangle_IMP_Minus_correct: 
+   "(triangle_IMP_minus p, s) 
+      \<Rightarrow>\<^bsup>triangle_imp_time (triangle_imp_to_HOL_state p s) 0\<^esup> 
+      triangle_IMP_Minus_state_transformer p (triangle_imp (triangle_imp_to_HOL_state p s)) s"
+  apply(subst triangle_imp.simps)
+  apply(subst triangle_imp_time.simps)
+  apply(subst Let_def)+
+  apply(subst triangle_IMP_minus_def)
+  apply(rule Seq')
+   apply(rule Seq')
+    apply(rule Seq')
+     apply(rule Seq')
+      apply(rule Seq')
+       apply(rule Seq')
+        apply(subst add_0)
+        apply(rule AssignI')
+        apply rule
+       apply(rule AssignI')
+       apply rule
+      apply(rule AssignI')
+      apply rule
+     apply(rule AssignI')
+     apply rule
+    apply(rule mul_IMP_minus_correct')
+    apply(simp add: triangle_imp_to_HOL_state_def mul_imp_to_HOL_state_def)
+   apply(rule AssignI')
+   apply rule
+  apply(subst triangle_IMP_Minus_state_transformer_def)
+  apply(subst comp_def)
+  apply(rule AssignI')
+  apply(subst mul_IMP_Minus_state_transformer_def)+
+  apply(subst state_transformer_commutes')
+   apply(simp add: triangle_imp_to_HOL_state_def triangle_state_upd_def Let_def
+              del: mul_imp.simps)+
+  done
+
+lemma triangle_IMP_Minus_correct': 
+  shows
+   "\<lbrakk>s_HOL = (triangle_imp_to_HOL_state p s)\<rbrakk> \<Longrightarrow>
+   (triangle_IMP_minus p, s) 
+    \<Rightarrow>\<^bsup>(triangle_imp_time s_HOL 0)\<^esup> 
+      triangle_IMP_Minus_state_transformer p (triangle_imp s_HOL) s"
+  using triangle_IMP_Minus_correct
+  by (auto simp del: mul_imp.simps)
+
+
+(*definition triangle_IMP_Minus where "triangle_IMP_Minus \<equiv>
+  [''a''] ''a'' ::= (A (V ''a'')) ;;
+  [''a''] ''b'' ::= ((V ''a'') \<oplus> (N 1)) ;;
+  invoke_subprogram ''a'' mul_IMP_minus ;;
+  ''triangle'' ::= [''a''] ((V ''c'') \<then>) ;;
+  ''a'' ::= (A (N 0))"
+
+
+
 
 thm add.commute
 lemma comp_add:"(\<lambda>x::'a::ab_semigroup_add. f (x +c)) = f o ((+) c)"
@@ -53,7 +204,7 @@ lemma triangle_IMP_Minus_correct[intro]:
       \<Rightarrow>\<^bsup>triangle_IMP_Minus_time (s (add_prefix p ''a''))\<^esup> 
       triangle_IMP_Minus_state_transformer p (s (add_prefix p ''a'')) s"
   unfolding triangle_IMP_Minus_def triangle_def triangle_IMP_Minus_time_def
-  by (fastforce intro!: terminates_in_time_state_intro[OF Seq])
+  by (fastforce intro!: terminates_in_t ime_state_intro[OF Seq])
 
 definition prod_encode_IMP_Minus where "prod_encode_IMP_Minus \<equiv>
   [''a''] ''a'' ::= ((V ''a'') \<oplus> (V ''b'')) ;;
@@ -215,11 +366,11 @@ lemma snd_nat_IMP_Minus_correct[intro]:
       terminates_in_time_state_intro[OF Seq'])
 
 definition tl_IMP where "tl_IMP \<equiv>
-  [''snd''] ''a'' ::=  (V ''xs'' \<ominus> N 1) ;;
+  [''snd''] ''a'' ::=  (V ''input1'' \<ominus> N 1) ;;
   invoke_subprogram ''snd'' snd_nat_IMP_Minus ;;
   ''ans'' ::= [''snd''] A (V ''snd_nat'');;
   [''snd''] ''snd_nat'' ::= A (N 0);;
-  ''xs'' ::= A (N 0)
+  ''input1'' ::= A (N 0)
 "
 
 
@@ -647,5 +798,5 @@ lemma reverse_nat_acc_IMP_Minus_correct:
       intro!: HOL.ext terminates_in_time_state_intro[OF Seq'] 
       zero_variables_correct reverse_nat_acc_IMP_Minus_loop_correct
       intro:  reverse_nat_acc_IMP_Minus_loop_correct)+
-  
+  *)
 end
