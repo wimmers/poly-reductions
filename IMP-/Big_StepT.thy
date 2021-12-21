@@ -1,6 +1,6 @@
-\<^marker>\<open>creator Bilel Ghorbel, Florian Kessler\<close>
+\<^marker>\<open>creator Mohammad Abdulaziz, Bilel Ghorbel, Florian Kessler\<close>
 section "Big step semantics of IMP-"
-theory Big_StepT imports Main Com "HOL-Eisbach.Eisbach_Tools" begin
+theory Big_StepT imports Main Max_Constant Com "HOL-Eisbach.Eisbach_Tools" begin
 
 paragraph "Summary"
 text\<open>We define big step semantics with time for IMP-. 
@@ -21,31 +21,6 @@ IfFalse: "\<lbrakk> s b = 0; (c2,s) \<Rightarrow>\<^bsup> x \<^esup> t; y=x+1  \
 WhileFalse: "\<lbrakk> s b = 0 \<rbrakk> \<Longrightarrow> (WHILE b \<noteq>0 DO c,s) \<Rightarrow>\<^bsup> Suc (Suc 0) \<^esup> s" |
 WhileTrue: "\<lbrakk> s1 b \<noteq> 0;  (c,s1) \<Rightarrow>\<^bsup> x \<^esup> s2;  (WHILE b \<noteq>0 DO c, s2) \<Rightarrow>\<^bsup> y \<^esup> s3; 1+x+y=z  \<rbrakk> 
     \<Longrightarrow> (WHILE b \<noteq>0 DO c, s1) \<Rightarrow>\<^bsup> z \<^esup> s3" 
-
-lemma WhileI: 
-"\<lbrakk>(s1 b \<noteq> 0 \<Longrightarrow> (c,s1) \<Rightarrow>\<^bsup> x \<^esup> s2 \<and> (WHILE b \<noteq>0 DO c, s2) \<Rightarrow>\<^bsup> y \<^esup> s3);
-  (s1 b = 0 \<Longrightarrow> s1 = s3);
-  z = (if s1 b \<noteq> 0 then 1+x+y else 2)\<rbrakk>
-        \<Longrightarrow> (WHILE b \<noteq>0 DO c, s1) \<Rightarrow>\<^bsup> z \<^esup> s3" 
-  by (auto simp add: WhileTrue WhileFalse numeral_2_eq_2)
-
-lemma IfI: 
-"\<lbrakk>s b \<noteq> 0 \<Longrightarrow> (c1,s) \<Rightarrow>\<^bsup> x1 \<^esup> t1;
-  s b = 0 \<Longrightarrow> (c2,s) \<Rightarrow>\<^bsup> x2 \<^esup> t2;
-  y = (if s b \<noteq> 0 then x1 else x2) + 1;
-  t = (if s b \<noteq> 0 then t1 else t2)\<rbrakk>
-        \<Longrightarrow> (IF b \<noteq>0 THEN c1 ELSE c2, s) \<Rightarrow>\<^bsup> y \<^esup> t" 
-  by (auto simp add: IfTrue IfFalse)
-
-lemma AssignI: 
-"\<lbrakk>s' = s (x:= aval a s)\<rbrakk>
-        \<Longrightarrow> (x ::= a, s) \<Rightarrow>\<^bsup> Suc (Suc 0) \<^esup> s'" 
-  by (auto simp add: Assign)
-
-lemma AssignI': 
-"\<lbrakk>s' = s (x:= aval a s)\<rbrakk>
-        \<Longrightarrow> (x ::= a, s) \<Rightarrow>\<^bsup> 2 \<^esup> s'" 
-  by (auto simp add: Assign eval_nat_numeral)
 
 bundle big_step_syntax
 begin
@@ -237,8 +212,81 @@ method dest_com  =
   (match premises in a: "\<lbrakk>loop_cond; state_upd\<rbrakk> \<Longrightarrow> (_, s) \<Rightarrow>\<^bsup>t\<^esup> s'"
     for s s' t loop_cond state_upd \<Rightarrow> \<open>rule terminates_in_time_state_intro'[OF a]\<close>)
 
+method dest_com' = 
+  (match premises in a[thin]: "\<lbrakk>loop_cond; state_upd; (_, s) \<Rightarrow>\<^bsup>t\<^esup> s'\<rbrakk> \<Longrightarrow> P" 
+    for s s' t loop_cond state_upd P  \<Rightarrow>
+   \<open>match premises in b[thin]: "(While _ _, s2) \<Rightarrow>\<^bsup>t2\<^esup> s2'"
+      for s2 s2' t2 \<Rightarrow> \<open>insert a[OF _ _ b]\<close>\<close>)
+
+
 lemma terminates_split_if : "(P s \<Longrightarrow> (c, s) \<Rightarrow>\<^bsup>t1\<^esup> s1 ) \<Longrightarrow> 
 (\<not> P s \<Longrightarrow> (c, s) \<Rightarrow>\<^bsup>t2\<^esup> s2 ) \<Longrightarrow> (c,s) \<Rightarrow>\<^bsup>if P s then t1 else t2\<^esup>  if P s then s1 else s2"
   by auto
+
+lemma AssignD': 
+"(x ::= a, s) \<Rightarrow>\<^bsup> 2 \<^esup> s' \<Longrightarrow> s' = s (x:= aval a s)"
+  by (auto simp add: eval_nat_numeral)
+
+lemma com_only_vars: "\<lbrakk>(c, s) \<Rightarrow>\<^bsup> t \<^esup> s'; x \<notin> set (Max_Constant.all_variables c)\<rbrakk> \<Longrightarrow> s x = s' x"
+  by (induction arbitrary: t rule: big_step_t_induct)  auto
+
+lemma Seq'': "\<lbrakk> (c1,s1) \<Rightarrow>\<^bsup> x \<^esup> s2 \<and> P s2; P s2 \<Longrightarrow> (c2,s2) \<Rightarrow>\<^bsup> y \<^esup> s3 \<and> Q s3; Q s3 \<Longrightarrow> R s3 \<rbrakk>
+             \<Longrightarrow> (c1;;c2, s1) \<Rightarrow>\<^bsup> x + y \<^esup> s3 \<and> R s3"
+  by auto
+
+lemma WhileI:
+"\<lbrakk>(s1 b \<noteq> 0 \<Longrightarrow> (c,s1) \<Rightarrow>\<^bsup> x \<^esup> s2 \<and> (WHILE b \<noteq>0 DO c, s2) \<Rightarrow>\<^bsup> y \<^esup> s3);
+  (s1 b = 0 \<Longrightarrow> s1 = s3);
+  z = (if s1 b \<noteq> 0 then 1+x+y else 2)\<rbrakk>
+        \<Longrightarrow> (WHILE b \<noteq>0 DO c, s1) \<Rightarrow>\<^bsup> z \<^esup> s3" 
+  by (auto simp add: WhileTrue WhileFalse numeral_2_eq_2)
+
+lemma IfI:
+"\<lbrakk>s b \<noteq> 0 \<Longrightarrow> (c1,s) \<Rightarrow>\<^bsup> x1 \<^esup> t1;
+  s b = 0 \<Longrightarrow> (c2,s) \<Rightarrow>\<^bsup> x2 \<^esup> t2;
+  y = (if s b \<noteq> 0 then x1 else x2) + 1;
+  t = (if s b \<noteq> 0 then t1 else t2)\<rbrakk>
+        \<Longrightarrow> (IF b \<noteq>0 THEN c1 ELSE c2, s) \<Rightarrow>\<^bsup> y \<^esup> t" 
+  by (auto simp add: IfTrue IfFalse)
+
+lemma IfE: 
+"(IF b \<noteq>0 THEN c1 ELSE c2, s) \<Rightarrow>\<^bsup> (if s b \<noteq> 0 then x1 else x2) + 1 \<^esup> (if s b \<noteq> 0 then s1 else s2) \<Longrightarrow> 
+ \<lbrakk>\<lbrakk>s b \<noteq> 0; (if s b \<noteq> 0 then x1 else x2) + 1 = x1 + 1; 
+  (if s b \<noteq> 0 then s1 else s2) = s1; (c1,s) \<Rightarrow>\<^bsup> x1 \<^esup> s1\<rbrakk> \<Longrightarrow> P;
+  \<lbrakk>s b = 0; (if s b \<noteq> 0 then x1 else x2) + 1 = x2 + 1;
+   (if s b \<noteq> 0 then s1 else s2) = s2; (c2,s) \<Rightarrow>\<^bsup> x2 \<^esup> s2\<rbrakk> \<Longrightarrow> P\<rbrakk>
+        \<Longrightarrow> P"
+  by (auto simp add: IfTrue IfFalse)
+
+thm Seq_tE
+
+lemma IfD:
+"(IF b \<noteq>0 THEN c1 ELSE c2, s) \<Rightarrow>\<^bsup> (if s b \<noteq> 0 then x1 else x2) + 1 \<^esup> (if s b \<noteq> 0 then t1 else t2) \<Longrightarrow> 
+ \<lbrakk>\<lbrakk>s b \<noteq> 0; (c1,s) \<Rightarrow>\<^bsup> x1 \<^esup> t1\<rbrakk> \<Longrightarrow> P;
+  \<lbrakk>s b = 0; (c2,s) \<Rightarrow>\<^bsup> x2 \<^esup> t2\<rbrakk> \<Longrightarrow> P\<rbrakk>
+        \<Longrightarrow> P" 
+  by (auto simp add: IfTrue IfFalse)
+
+
+
+
+lemma AssignI:
+"\<lbrakk>s' = s (x:= aval a s)\<rbrakk>
+        \<Longrightarrow> (x ::= a, s) \<Rightarrow>\<^bsup> Suc (Suc 0) \<^esup> s'" 
+  by (auto simp add: Assign)
+
+lemma AssignI': 
+"\<lbrakk>s' = s (x:= aval a s)\<rbrakk>
+        \<Longrightarrow> (x ::= a, s) \<Rightarrow>\<^bsup> 2 \<^esup> s'" 
+  by (auto simp add: Assign eval_nat_numeral)
+
+lemma AssignI'': 
+"\<lbrakk>s' = s (x:= aval a s)\<rbrakk>
+        \<Longrightarrow> (x ::= a, s) \<Rightarrow>\<^bsup> 2 \<^esup> s' \<and> s' = s'" 
+  by (auto simp add: Assign eval_nat_numeral)
+thm Assign_tE
+
+lemma AssignD: "(x ::= a, s) \<Rightarrow>\<^bsup> t \<^esup> s' \<Longrightarrow> t = 2 \<and> s' = s(x := aval a s)"
+  sorry
 
 end

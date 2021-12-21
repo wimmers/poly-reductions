@@ -1,8 +1,10 @@
+(*Authors: Mohammad Abdulaziz, Florian Keßler*)
+
 theory Canonical_State_Transformers
-  imports Com
+  imports Com Big_StepT
 begin
 
-definition add_prefix :: "string \<Rightarrow> vname \<Rightarrow> vname" where
+(*definition add_prefix :: "string \<Rightarrow> vname \<Rightarrow> vname" where
 "add_prefix p s = (concat (map (\<lambda>i. i # ''!'') p)) @ ''**'' @ s"
 
 lemma length_concat_map[simp]: 
@@ -452,8 +454,12 @@ lemma updated_state_as_state_transformer[simp]:
   "s(add_prefix p x := y) = state_transformer p [(x, y)] s"
   unfolding state_transformer_def
   by auto
+*)
 
-type_synonym pcom = "string \<Rightarrow> com"
+abbreviation add_prefix :: "string \<Rightarrow> vname \<Rightarrow> vname" where
+"add_prefix p s \<equiv> p @ s"
+
+(*type_synonym pcom = "string \<Rightarrow> com"*)
 
 fun atomExp_add_prefix where
 "atomExp_add_prefix p (N a) = N a" |
@@ -466,6 +472,13 @@ fun aexp_add_prefix where
 "aexp_add_prefix p (Parity a) = Parity (atomExp_add_prefix p a)" |
 "aexp_add_prefix p (RightShift a) = RightShift (atomExp_add_prefix p a)"
 
+fun com_add_prefix where
+"com_add_prefix p SKIP = SKIP"
+|"com_add_prefix p (Assign v aexp) = (Assign (add_prefix p v) (aexp_add_prefix p aexp))"
+|"com_add_prefix p (Seq c1 c2) = (Seq (com_add_prefix p c1) (com_add_prefix p c2))"
+|"com_add_prefix p (If v c1 c2) = (If (add_prefix p v) (com_add_prefix p c1) (com_add_prefix p c2))"
+|"com_add_prefix p (While v c) = (While (add_prefix p v) (com_add_prefix p c))"
+
 abbreviation pcom_SKIP where "pcom_SKIP p \<equiv> SKIP"
 
 abbreviation pcom_Assign where "pcom_Assign v aexp p \<equiv>
@@ -477,9 +490,6 @@ abbreviation pcom_If where "pcom_If v a b p \<equiv>
   If (add_prefix p v) (a p) (b p)"
 
 abbreviation pcom_While where "pcom_While v a p \<equiv> While (add_prefix p v) (a p)"
-
-abbreviation invoke_subprogram :: "string \<Rightarrow> pcom \<Rightarrow> pcom" 
-  where "invoke_subprogram p' c \<equiv> (\<lambda>p. c (p' @ p))"
 
 abbreviation write_subprogram_param where "write_subprogram_param p' a  b \<equiv>
   (\<lambda>p. Assign (add_prefix (p' @ p) a) (aexp_add_prefix p b))"
@@ -517,5 +527,25 @@ no_notation pcom_SKIP ("SKIP" [] 61) and
 end
 
 unbundle pcom_syntax
+
+lemma atomExp_add_prefix_valid: "(\<And>v. v \<in> set (atomExp_var x1) \<Longrightarrow> s1 v = s1' (add_prefix p v)) \<Longrightarrow>
+          atomVal x1 s1 = atomVal (atomExp_add_prefix p x1) s1'"
+  by (cases x1) auto
+
+lemma aexp_add_prefix_valid: "(\<And>v. v \<in> set (aexp_vars aexp) \<Longrightarrow> s1 v = s1' (add_prefix p v)) \<Longrightarrow>
+       aval aexp s1 = aval (aexp_add_prefix p aexp) s1'"
+  by (cases aexp) (auto simp: atomExp_add_prefix_valid)
+
+lemma atomExp_add_prefix_valid': "v \<in> set (atomExp_var (atomExp_add_prefix p x1)) \<Longrightarrow> \<exists>v'. v = p @ v'"
+  by (cases x1) (auto simp:)
+
+lemma aexp_add_prefix_valid':"v \<in> set (aexp_vars (aexp_add_prefix p aexp)) \<Longrightarrow> \<exists>v'. v = p @ v'"
+  by (cases aexp) (auto simp: atomExp_add_prefix_valid')
+
+lemma invoke_subprogram_valid: "v \<in> set (all_variables (com_add_prefix p c)) \<Longrightarrow> \<exists>v'. v = p @ v'"
+  by (induction p c rule: com_add_prefix.induct) (auto simp: aexp_add_prefix_valid')
+
+abbreviation invoke_subprogram 
+  where "invoke_subprogram p c \<equiv> (c o (add_prefix p))"
 
 end
