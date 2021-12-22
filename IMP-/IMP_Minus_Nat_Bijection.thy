@@ -142,7 +142,7 @@ lemma triangle_IMP_Minus_correct_function:
   apply(erule Seq_tE)+
   \<comment> \<open>Variables that we want to preserve: variables of this program minus the variables of the
      program we call. If automation fails, this should be manually chosen variables.\<close>
-  apply(erule mul_IMP_minus_correct[where vars = "{''traingle''}"])
+  apply(erule mul_IMP_minus_correct[where vars = "{p @ ''traingle''}"])
   apply(drule AssignD)+
   apply(elim conjE impE)
   apply(auto simp: triangle_state_upd_def Let_def triangle_imp_to_HOL_state_def)[1]
@@ -158,7 +158,7 @@ lemma triangle_IMP_Minus_correct_time:
    apply(drule AssignD)+
    apply(elim conjE)
    apply(subst triangle_imp_time.simps)
-  apply(erule mul_IMP_minus_correct[where vars = "{''triangle''}"])
+  apply(erule mul_IMP_minus_correct[where vars = "{p @ ''triangle''}"])
   \<comment> \<open>Warning: in the following, I am unfolding mul_imp_to_HOL_state_def. With more experiments, it
       should become clear if this will cascade down multiple layers\<close>
   apply(simp add: triangle_imp_time_acc triangle_imp_to_HOL_state_def triangle_state_upd_def)[1]

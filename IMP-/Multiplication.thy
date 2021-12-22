@@ -203,14 +203,15 @@ lemma mul_IMP_minus_correct_function:
   done
 
 lemma mul_IMP_minus_correct_effects:
-  "(invoke_subprogram p mul_IMP_minus, s) \<Rightarrow>\<^bsup>t\<^esup> s' \<Longrightarrow> (vars \<inter> set (all_variables (invoke_subprogram p mul_IMP_minus)) = {} \<longrightarrow> (\<forall>v\<in>vars. s v = s' v))"
- by (auto intro: com_only_vars)
+  "(invoke_subprogram (p @ mul_pref) mul_IMP_minus, s) \<Rightarrow>\<^bsup>t\<^esup> s' \<Longrightarrow> p @ v \<in> vars \<Longrightarrow> \<not> (set mul_pref \<subseteq> set v) \<Longrightarrow> s (add_prefix p v) = s' (add_prefix p v)"
+  using com_add_prefix_valid_subset com_only_vars
+  by blast
 
-lemma mul_IMP_minus_correct':
-  "\<lbrakk>(invoke_subprogram p mul_IMP_minus, s) \<Rightarrow>\<^bsup>t\<^esup> s';
-     \<lbrakk>t = (mul_imp_time 0 (mul_imp_to_HOL_state p s));
-      s' (add_prefix p ''c'') = mul_c (mul_imp (mul_imp_to_HOL_state p s));
-      (vars \<inter> set (all_variables (invoke_subprogram p mul_IMP_minus)) = {} \<Longrightarrow> (\<forall>v\<in>vars. s v = s' v))\<rbrakk>
+lemma mul_IMP_minus_correct:
+  "\<lbrakk>(invoke_subprogram (p1 @ p2) mul_IMP_minus, s) \<Rightarrow>\<^bsup>t\<^esup> s';
+     \<lbrakk>t = (mul_imp_time 0 (mul_imp_to_HOL_state (p1 @ p2) s));
+      s' (add_prefix (p1 @ p2) ''c'') = mul_c (mul_imp (mul_imp_to_HOL_state (p1 @ p2) s));
+      \<And>v. p1 @ v \<in> vars \<Longrightarrow> \<not> (set p2 \<subseteq> set v) \<Longrightarrow> s (add_prefix p1 v) = s' (add_prefix p1 v)\<rbrakk>
      \<Longrightarrow> P\<rbrakk> \<Longrightarrow> P"
   using mul_IMP_minus_correct_time mul_IMP_minus_correct_function mul_IMP_minus_correct_effects
   by auto
