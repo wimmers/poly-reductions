@@ -287,6 +287,6 @@ lemma AssignI'':
 thm Assign_tE
 
 lemma AssignD: "(x ::= a, s) \<Rightarrow>\<^bsup> t \<^esup> s' \<Longrightarrow> t = 2 \<and> s' = s(x := aval a s)"
-  sorry
+  by auto
 
 end

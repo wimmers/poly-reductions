@@ -479,6 +479,8 @@ fun com_add_prefix where
 |"com_add_prefix p (If v c1 c2) = (If (add_prefix p v) (com_add_prefix p c1) (com_add_prefix p c2))"
 |"com_add_prefix p (While v c) = (While (add_prefix p v) (com_add_prefix p c))"
 
+
+(*
 abbreviation pcom_SKIP where "pcom_SKIP p \<equiv> SKIP"
 
 abbreviation pcom_Assign where "pcom_Assign v aexp p \<equiv>
@@ -526,7 +528,7 @@ no_notation pcom_SKIP ("SKIP" [] 61) and
             pcom_While ("(WHILE _/\<noteq>0 DO _)"  [0, 61] 61)
 end
 
-unbundle pcom_syntax
+unbundle pcom_syntax*)
 
 lemma atomExp_add_prefix_valid: "(\<And>v. v \<in> set (atomExp_var x1) \<Longrightarrow> s1 v = s1' (add_prefix p v)) \<Longrightarrow>
           atomVal x1 s1 = atomVal (atomExp_add_prefix p x1) s1'"
@@ -542,10 +544,72 @@ lemma atomExp_add_prefix_valid': "v \<in> set (atomExp_var (atomExp_add_prefix p
 lemma aexp_add_prefix_valid':"v \<in> set (aexp_vars (aexp_add_prefix p aexp)) \<Longrightarrow> \<exists>v'. v = p @ v'"
   by (cases aexp) (auto simp: atomExp_add_prefix_valid')
 
-lemma invoke_subprogram_valid: "v \<in> set (all_variables (com_add_prefix p c)) \<Longrightarrow> \<exists>v'. v = p @ v'"
+lemma com_add_prefix_valid': "v \<in> set (all_variables (com_add_prefix p c)) \<Longrightarrow> \<exists>v'. v = p @ v'"
   by (induction p c rule: com_add_prefix.induct) (auto simp: aexp_add_prefix_valid')
 
-abbreviation invoke_subprogram 
+lemma atomExp_add_prefix_valid'': "add_prefix p1 v \<in> set (atomExp_var (atomExp_add_prefix (p1 @ p2) x1)) \<Longrightarrow> \<exists>v'. v = p2 @ v'"
+  by (cases x1) (auto simp:)
+
+lemma aexp_add_prefix_valid'':"add_prefix p1 v \<in> set (aexp_vars (aexp_add_prefix (p1 @ p2) aexp)) \<Longrightarrow> \<exists>v'. v = p2 @ v'"
+  by (cases aexp) (auto simp: atomExp_add_prefix_valid'')
+
+
+lemma com_add_prefix_valid'': "add_prefix p1 v \<in> set (all_variables (com_add_prefix (p1 @ p2) c)) \<Longrightarrow> \<exists>v'. v = p2 @ v'"
+  by (induction "p1 @ p2" c arbitrary: p1 p2 rule: com_add_prefix.induct) (auto simp: aexp_add_prefix_valid'')
+
+
+(*lemma com_add_prefix_valid: "v \<in> set (all_variables (com_add_prefix (p1 @ p2) c)) \<Longrightarrow> \<exists>v'. rev v = (rev p2) @ v'"
+  sledgehammer
+  by (induction p c rule: com_add_prefix.induct) (auto simp: aexp_add_prefix_valid')
+*)
+
+lemma com_add_prefix_valid_subset: "add_prefix p1 v \<in> set (all_variables (com_add_prefix (p1 @ p2) c)) \<Longrightarrow> set p2 \<subseteq> set v"
+  using com_add_prefix_valid''
+  by (metis set_append sup_ge1)
+
+abbreviation invoke_subprogram
+  where "invoke_subprogram \<equiv> com_add_prefix"
+
+lemma atomExp_add_prefix_append: "atomExp_add_prefix p1 (atomExp_add_prefix p2 x1) = atomExp_add_prefix (add_prefix p1 p2) x1"
+  by (cases x1) auto
+
+lemma aexp_add_prefix_append: "aexp_add_prefix p1 (aexp_add_prefix p2 aexp) = (aexp_add_prefix (add_prefix p1 p2) aexp)"
+  by (cases aexp) (auto simp: atomExp_add_prefix_append) 
+
+lemma invoke_subprogram_append: "invoke_subprogram p1 (invoke_subprogram p2 c) = (invoke_subprogram (p1 @ p2) c)"
+  by (induction "(p1 @ p2)" c arbitrary: p1 p2 rule: com_add_prefix.induct) (auto simp: aexp_add_prefix_append)
+
+(*abbreviation invoke_subprogram
   where "invoke_subprogram p c \<equiv> (c o (add_prefix p))"
+
+lemma all_variables_append: "(all_variables (c (p1 @ p2))) = map (\<lambda>v. p1 @ v) (all_variables (c p2))"
+proof (induction "(c (p1 @ p2))" arbitrary: c p1 p2 rule: all_variables.induct)
+  case 1
+  then show ?case
+
+    by auto
+next
+  case (2 v aexp)
+  then show ?case sorry
+next
+case (3 c1 c2)
+  then show ?case sorry
+next
+  case (4 v c1 c2)
+then show ?case sorry
+next
+case (5 v c)
+  then show ?case sorry
+qed
+  apply (auto simp: )
+
+
+lemma all_variables_valid: "v \<in> set (all_variables (c p2)) \<Longrightarrow> \<exists>v'. v = add_prefix p2 v'"
+  apply (induction p2)
+  apply (auto simp: aexp_add_prefix_valid')
+
+lemma invoke_subprogram_valid: "v \<in> set (all_variables ((invoke_subprogram p1 c) p2)) \<Longrightarrow> \<exists>v'. v = p1 @ p2 @ v'"
+  apply (induction p1)
+  apply (auto simp: aexp_add_prefix_valid')*)
 
 end

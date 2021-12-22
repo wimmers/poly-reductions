@@ -5,10 +5,147 @@ begin
 unbundle IMP_Minus_Minus_Com.no_com_syntax
 unbundle Com.no_com_syntax
 
+
 fun nth_bit_of_num_nat :: "nat \<Rightarrow> nat \<Rightarrow> nat" where
-"nth_bit_of_num_nat x n  = (if x = 0 then (if n = 0 then 1 else 0) else
-                            if n = 0 then (if hd_nat x = 0 then 0 else 1) else
-                            nth_bit_of_num_nat (tl_nat x) (n-1)) "
+"nth_bit_of_num_nat x n  = 
+  (if x = 0 then
+    (if n = 0 then
+       1
+     else
+       0)
+   else
+     if n = 0 then
+       (if hd_nat x = 0 then
+          0
+        else
+          1)
+     else
+        nth_bit_of_num_nat (tl_nat x) (n-1)
+   )"
+
+fun nth_bit_of_num_nat_imp :: "nat \<Rightarrow> nat \<Rightarrow> nat" where
+"nth_bit_of_num_nat_imp x n  = 
+(
+  let
+    next_iteration = (0::nat)
+  in
+    (if x \<noteq> 0 then
+       if n \<noteq> 0 then
+         (let
+            x = tl_nat x;
+            n = n - 1;
+            next_iteration = nth_bit_of_num_nat x n
+          in 
+            next_iteration
+         )
+       else
+         let
+           hd_x = hd_nat x
+         in
+           (if hd_x \<noteq> 0 then
+             (let
+                ret = 1
+              in 
+                ret
+             )
+            else
+             (let
+                ret = 0
+              in 
+                ret
+             )
+           )
+     else
+       if n \<noteq> 0 then
+         (let
+            ret = 0
+          in 
+            ret
+         )
+       else
+         (let
+            ret = 1
+          in 
+            ret
+         )
+     )
+)"
+
+lemma nth_bit_of_num_nat_imp_correct:
+  "nth_bit_of_num_nat x n = nth_bit_of_num_nat_imp x n"
+  by (auto simp: Let_def)
+
+
+(* [''tl''] ''xs'' ::=  (A ( V ''x'')) ;;
+   invoke_subprogram ''tl'' tl_IMP;;
+   ''x'' ::= [''tl''] (A (V ''ans''));;
+   [''tl''] ''ans'' ::= A (N 0);;
+   ''n'' ::= (V ''n'' \<ominus> N 1 );; 
+   IF ''x''\<noteq>0 THEN 
+        (IF ''n''\<noteq>0 THEN ''b''::= A (N 1) ELSE ''b''::= A (N 0)) 
+        ELSE ''b''::= A (N 0) 
+   
+*)
+
+term invoke_subprogram
+
+abbreviation "invoke_program_1 pfx prog input1 output \<equiv>
+          [pfx] ''input1'' ::=  (A ( V input1)) ;;
+          invoke_subprogram pfx tl_IMP;;
+          output ::= [pfx] (A (V ''ans''));;
+          [pfx] ''ans'' ::= A (N 0)
+"
+
+
+definition nth_bit_of_num_iteration::pcom  where "nth_bit_of_num_iteration \<equiv>
+     ''next_iteration'' ::= A (N 0);;
+     IF ''x''\<noteq>0 THEN
+       IF ''n''\<noteq>0 THEN
+            invoke_program_1 ''tl'' tl_IMP ''x'' ''x'';;
+            ''n'' ::= (V ''n'' \<ominus> N 1 );;
+            ''next_iteration'' ::= A(N 1)
+       ELSE
+            invoke_program_1 ''hd'' hd_IMP ''x'' ''hd_x'';;
+            IF ''hd_x''\<noteq>0 THEN
+                ''ret'' ::= A (N 1)
+            ELSE
+                ''ret'' ::= A (N 0)
+     ELSE
+       IF ''n''\<noteq>0 THEN
+            ''ret'' ::= A (N 0)
+       ELSE
+            ''ret'' ::= A (N 1)
+"
+
+definition nth_bit_of_num_loop :: "pcom" where 
+"nth_bit_of_num_loop \<equiv> WHILE ''b''\<noteq>0 DO nth_bit_of_num_iteration"
+
+lemma tl_nat_le: "tl_nat x \<le> x"
+  sorry
+
+function (sequential) nth_bit_of_num_loop_t':: "nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat" where
+"nth_bit_of_num_loop_t' 0 _ _  = 2 "|
+"nth_bit_of_num_loop_t' (Suc b) x n  = (let
+  x' = tl_nat x; n' = n - 1; b' = (if x'>0 \<and> n'>0 then Suc 0 else 0)
+in
+  b' + (nth_bit_of_num_iteration_t x n + nth_bit_of_num_loop_t' b' x' n')) "
+  by pat_completeness simp_all
+termination (* Proof proceeds by noticing that the sum of the three arguments is always decreasing, rest is hammering *)
+  by(relation "measure (\<lambda>(b, x, n) . b+x+n)") (auto simp add: add.commute add_increasing le_imp_less_Suc tl_nat_le)
+
+
+function (sequential) nth_bit_of_num_loop_state_transformer' ::
+    "char list \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> (char list \<Rightarrow> nat) \<Rightarrow> char list \<Rightarrow> nat" where
+  "nth_bit_of_num_loop_state_transformer' p 0 x n = id "|
+  "nth_bit_of_num_loop_state_transformer' p b x n = (let
+    x' = tl_nat x; n' = n-1;
+    b' = (if x'>0 \<and> n'>0 then Suc 0 else 0)
+  in
+    nth_bit_of_num_iteration_state_transformer p x n o nth_bit_of_num_loop_state_transformer' p b' x' n')"
+ by pat_completeness simp_all
+termination (* Proof proceeds by noticing that the sum of the last three arguments is always decreasing, rest is hammering *)
+  by (relation "measure (\<lambda>(p, b, x, n) . b+x+n)") (auto simp add: add.commute add_increasing le_imp_less_Suc tl_nat_le) 
+
 
 definition nth_bit_of_num_if ::pcom where "nth_bit_of_num_if \<equiv>
  IF ''x''\<noteq>0 THEN 
@@ -67,7 +204,6 @@ nth_bit_of_num_if_state_transformer p x n s "
   by simp
   
 definition nth_bit_of_num_iteration::pcom  where "nth_bit_of_num_iteration \<equiv>
-
   [''tl''] ''xs'' ::=  (A ( V ''x'')) ;;
    invoke_subprogram ''tl'' tl_IMP;;
    ''x'' ::= [''tl''] (A (V ''ans''));;
@@ -113,6 +249,32 @@ by fastforce
 
 definition nth_bit_of_num_loop :: "pcom" where 
 "nth_bit_of_num_loop \<equiv> WHILE ''b''\<noteq>0 DO nth_bit_of_num_iteration"
+
+lemma tl_nat_le: "tl_nat x \<le> x"
+  sorry
+
+function (sequential) nth_bit_of_num_loop_t':: "nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat" where
+"nth_bit_of_num_loop_t' 0 _ _  = 2 "|
+"nth_bit_of_num_loop_t' (Suc b) x n  = (let
+  x' = tl_nat x; n' = n - 1; b' = (if x'>0 \<and> n'>0 then Suc 0 else 0)
+in
+  b' + (nth_bit_of_num_iteration_t x n + nth_bit_of_num_loop_t' b' x' n')) "
+  by pat_completeness simp_all
+termination (* Proof proceeds by noticing that the sum of the three arguments is always decreasing, rest is hammering *)
+  by(relation "measure (\<lambda>(b, x, n) . b+x+n)") (auto simp add: add.commute add_increasing le_imp_less_Suc tl_nat_le)
+
+
+function (sequential) nth_bit_of_num_loop_state_transformer' ::
+    "char list \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> (char list \<Rightarrow> nat) \<Rightarrow> char list \<Rightarrow> nat" where
+  "nth_bit_of_num_loop_state_transformer' p 0 x n = id "|
+  "nth_bit_of_num_loop_state_transformer' p b x n = (let
+    x' = tl_nat x; n' = n-1;
+    b' = (if x'>0 \<and> n'>0 then Suc 0 else 0)
+  in
+    nth_bit_of_num_iteration_state_transformer p x n o nth_bit_of_num_loop_state_transformer' p b' x' n')"
+ by pat_completeness simp_all
+termination (* Proof proceeds by noticing that the sum of the last three arguments is always decreasing, rest is hammering *)
+  by (relation "measure (\<lambda>(p, b, x, n) . b+x+n)") (auto simp add: add.commute add_increasing le_imp_less_Suc tl_nat_le) 
 
 fun nth_bit_of_num_loop_t:: "nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat" where 
 "nth_bit_of_num_loop_t 0 _ _  = 2 "|

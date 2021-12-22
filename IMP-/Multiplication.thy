@@ -6,7 +6,7 @@ theory Multiplication
 begin
 
 
-unbundle no_com_syntax
+(*unbundle no_com_syntax*)
 
 (*definition max_a_min_b_IMP_Minus where "max_a_min_b_IMP_Minus =
   ''c'' ::= ((V ''a'') \<ominus> (V ''b'')) ;;
@@ -51,15 +51,15 @@ next
     by (fastforce intro!: terminates_in_time_state_intro[OF Seq'])+
 qed*)
 
-record mul_state = mul_a::nat mul_b::nat mul_c::nat mul_d::nat
+record mul_state = mul_a::nat mul_b::nat mul_c::nat
 
 definition "mul_state_upd s \<equiv>
       let
-        mul_d = (mul_b s) mod 2;
-        mul_c = (if mul_d \<noteq> 0 then mul_c s + mul_a s else mul_c s);
+        d = (mul_b s) mod 2;
+        mul_c = (if d \<noteq> 0 then mul_c s + mul_a s else mul_c s);
         mul_a = mul_a s + mul_a s;
         mul_b = (mul_b s) div 2;
-        ret = \<lparr>mul_a = mul_a, mul_b = mul_b, mul_c = mul_c, mul_d = mul_d\<rparr>
+        ret = \<lparr>mul_a = mul_a, mul_b = mul_b, mul_c = mul_c\<rparr>
       in
         ret
 "
@@ -156,7 +156,7 @@ definition mul_IMP_minus where
 
 definition "mul_imp_to_HOL_state p s =
   \<lparr>mul_a = s (add_prefix p ''a''), mul_b = (s (add_prefix p ''b'')),
-   mul_c = (s (add_prefix p ''c'')), mul_d =  (s (add_prefix p ''d''))\<rparr>"
+   mul_c = (s (add_prefix p ''c''))\<rparr>"
 
 lemma mul_imp_to_HOL_state_add_prefix: 
   "mul_imp_to_HOL_state (add_prefix p1 p2) s = mul_imp_to_HOL_state p2 (s o (add_prefix p1))"
@@ -167,7 +167,7 @@ lemma mul_imp_to_HOL_state_add_prefix':
   by (auto simp: mul_imp_to_HOL_state_def)
 
 lemma mul_IMP_minus_correct_time:
-  "(mul_IMP_minus p, s) \<Rightarrow>\<^bsup>t\<^esup> s' \<Longrightarrow> t = (mul_imp_time 0 (mul_imp_to_HOL_state p s))"
+  "(invoke_subprogram p mul_IMP_minus, s) \<Rightarrow>\<^bsup>t\<^esup> s' \<Longrightarrow> t = (mul_imp_time 0 (mul_imp_to_HOL_state p s))"
   apply(induction "mul_imp_to_HOL_state p s" arbitrary: s s' t rule: mul_imp.induct)
   apply(simp only: mul_IMP_minus_def com_add_prefix.simps)
   apply(erule While_tE)
@@ -185,7 +185,7 @@ lemma mul_IMP_minus_correct_time:
   done
 
 lemma mul_IMP_minus_correct_function:
-  "(mul_IMP_minus p, s) \<Rightarrow>\<^bsup>t\<^esup> s' \<Longrightarrow> s' (add_prefix p ''c'') = mul_c (mul_imp (mul_imp_to_HOL_state p s))"
+  "(invoke_subprogram p mul_IMP_minus, s) \<Rightarrow>\<^bsup>t\<^esup> s' \<Longrightarrow> s' (add_prefix p ''c'') = mul_c (mul_imp (mul_imp_to_HOL_state p s))"
   apply(induction "mul_imp_to_HOL_state p s" arbitrary: s s' t rule: mul_imp.induct)
   apply(simp only: mul_IMP_minus_def com_add_prefix.simps)
   apply(erule While_tE)
@@ -203,14 +203,14 @@ lemma mul_IMP_minus_correct_function:
   done
 
 lemma mul_IMP_minus_correct_effects:
-  "(mul_IMP_minus p, s) \<Rightarrow>\<^bsup>t\<^esup> s' \<Longrightarrow> (vars \<inter> set (all_variables (mul_IMP_minus p)) = {} \<longrightarrow> (\<forall>v\<in>vars. s v = s' v))"
+  "(invoke_subprogram p mul_IMP_minus, s) \<Rightarrow>\<^bsup>t\<^esup> s' \<Longrightarrow> (vars \<inter> set (all_variables (invoke_subprogram p mul_IMP_minus)) = {} \<longrightarrow> (\<forall>v\<in>vars. s v = s' v))"
  by (auto intro: com_only_vars)
 
 lemma mul_IMP_minus_correct':
-  "\<lbrakk>(mul_IMP_minus p, s) \<Rightarrow>\<^bsup>t\<^esup> s';
+  "\<lbrakk>(invoke_subprogram p mul_IMP_minus, s) \<Rightarrow>\<^bsup>t\<^esup> s';
      \<lbrakk>t = (mul_imp_time 0 (mul_imp_to_HOL_state p s));
       s' (add_prefix p ''c'') = mul_c (mul_imp (mul_imp_to_HOL_state p s));
-      (vars \<inter> set (all_variables (mul_IMP_minus p)) = {} \<Longrightarrow> (\<forall>v\<in>vars. s v = s' v))\<rbrakk>
+      (vars \<inter> set (all_variables (invoke_subprogram p mul_IMP_minus)) = {} \<Longrightarrow> (\<forall>v\<in>vars. s v = s' v))\<rbrakk>
      \<Longrightarrow> P\<rbrakk> \<Longrightarrow> P"
   using mul_IMP_minus_correct_time mul_IMP_minus_correct_function mul_IMP_minus_correct_effects
   by auto

@@ -682,5 +682,5 @@ lemma main_lemma_hol_tail:
        \<and> (\<forall>x. \<exists>f.  bit_length (encode_sat f) \<le> s_red ( bit_length x ) \<and> imp_to_sat_tail(com_encode c) (prod_encode pt) (prod_encode p_cer) x = sat_formula_encode f
                    \<and> (Sema.sat {f}  \<longleftrightarrow> in_lang x = 0))"
   using assms main_lemma_hol_nat by (auto simp add:subtail_imp_to_sat inj_formula_simp)
-
+                                 
 end
