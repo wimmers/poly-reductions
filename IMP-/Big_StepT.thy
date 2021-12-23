@@ -305,9 +305,10 @@ lemma AssignD: "(x ::= a, s) \<Rightarrow>\<^bsup> t \<^esup> s' \<Longrightarro
 
 thm Seq_tE
 
-lemma Seq_tE2: 
+lemma Seq_tE_While_init: 
   "(WHILE v \<noteq>0 DO c2, s2) \<Rightarrow>\<^bsup> y \<^esup> s3 \<Longrightarrow> (c1, s1) \<Rightarrow>\<^bsup> x \<^esup> s2 \<Longrightarrow> 
     ((c1;; WHILE v \<noteq>0 DO c2, s1) \<Rightarrow>\<^bsup> x + y \<^esup> s3 \<Longrightarrow> P)
    \<Longrightarrow> P"
   by auto
+
 end

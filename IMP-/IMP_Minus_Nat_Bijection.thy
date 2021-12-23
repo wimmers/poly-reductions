@@ -301,21 +301,20 @@ lemma prod_encode_IMP_Minus_correct:
         prod_encode_IMP_Minus_correct_effects 
   by auto
 
-record prod_decode_state = prod_decode_k::nat prod_decode_m::nat
-
+record prod_decode_aux_state = prod_decode_aux_k::nat prod_decode_aux_m::nat
 
 definition "prod_decode_aux_state_upd s \<equiv>
       let
-        prod_decode_k' = Suc (prod_decode_k s);
-        prod_decode_m' = (prod_decode_m s) - prod_decode_k';
-        ret = \<lparr>prod_decode_k = prod_decode_k', prod_decode_m = prod_decode_m'\<rparr>
+        prod_decode_aux_k' = Suc (prod_decode_aux_k s);
+        prod_decode_aux_m' = (prod_decode_aux_m s) - prod_decode_aux_k';
+        ret = \<lparr>prod_decode_aux_k = prod_decode_aux_k', prod_decode_aux_m = prod_decode_aux_m'\<rparr>
       in
         ret
 "
 
-function prod_decode_aux_imp :: "prod_decode_state \<Rightarrow> prod_decode_state"
+function prod_decode_aux_imp :: "prod_decode_aux_state \<Rightarrow> prod_decode_aux_state"
   where "prod_decode_aux_imp s =    
-    (if prod_decode_m s - prod_decode_k s  \<noteq> 0 \<comment> \<open>while condition\<close>
+    (if prod_decode_aux_m s - prod_decode_aux_k s  \<noteq> 0 \<comment> \<open>while condition\<close>
      then
        let
          next_iteration = prod_decode_aux_imp (prod_decode_aux_state_upd s)
@@ -325,32 +324,44 @@ function prod_decode_aux_imp :: "prod_decode_state \<Rightarrow> prod_decode_sta
        s)"
   by pat_completeness auto
 termination
-  by  (relation "measure (\<lambda>s. prod_decode_m s)")  (auto simp: prod_decode_aux_state_upd_def Let_def split: if_splits)
+  by  (relation "measure (\<lambda>s. prod_decode_aux_m s)")  (auto simp: prod_decode_aux_state_upd_def Let_def split: if_splits)
 
 declare prod_decode_aux_imp.simps [simp del]
 
-lemma prod_decode_imp_correct:
-   "(prod_decode_m (prod_decode_aux_imp s), prod_decode_k (prod_decode_aux_imp s) - prod_decode_m (prod_decode_aux_imp s)) =
-      (prod_decode_aux (prod_decode_k s) (prod_decode_m s))"
-proof (induction s rule: prod_decode_aux_imp.induct)
-  case (1 s)
-  then show ?case
-    apply(subst prod_decode_aux_imp.simps)
-    apply (auto simp: prod_decode_aux_state_upd_def Let_def split: if_splits)
-    apply (metis diff_is_0_eq prod_decode_aux.simps prod_decode_aux_imp.simps prod_decode_aux_state_upd_def)
-    by (simp add: prod_decode_aux.simps prod_decode_aux_imp.simps)
+lemma prod_decode_aux_imp_correct:
+  "prod_decode_aux_m (prod_decode_aux_imp s) = fst (prod_decode_aux (prod_decode_aux_k s) (prod_decode_aux_m s))"(is ?g1)
+  "prod_decode_aux_k (prod_decode_aux_imp s) - prod_decode_aux_m (prod_decode_aux_imp s) = snd (prod_decode_aux (prod_decode_aux_k s) (prod_decode_aux_m s))" (is ?g2)
+proof-
+  show ?g1
+  proof (induction s rule: prod_decode_aux_imp.induct)
+    case (1 s)
+    then show ?case
+      apply(subst prod_decode_aux_imp.simps)
+      apply (auto simp: prod_decode_aux_state_upd_def Let_def split: if_splits)
+       apply (metis diff_is_0_eq prod_decode_aux.simps prod_decode_aux_imp.simps prod_decode_aux_state_upd_def)
+      by (simp add: prod_decode_aux.simps prod_decode_aux_imp.simps)
+  qed
+  show ?g2
+  proof (induction s rule: prod_decode_aux_imp.induct)
+    case (1 s)
+    then show ?case
+      apply(subst prod_decode_aux_imp.simps)
+      apply (auto simp: prod_decode_aux_state_upd_def Let_def split: if_splits)
+       apply (metis diff_is_0_eq prod_decode_aux.simps prod_decode_aux_imp.simps prod_decode_aux_state_upd_def)
+      by (simp add: prod_decode_aux.simps prod_decode_aux_imp.simps)
+  qed
 qed 
 
-function prod_decode_aux_imp_time:: "nat \<Rightarrow> prod_decode_state\<Rightarrow> nat" where
+function prod_decode_aux_imp_time:: "nat \<Rightarrow> prod_decode_aux_state\<Rightarrow> nat" where
 "prod_decode_aux_imp_time t s = 
 (
-    (if prod_decode_m s - prod_decode_k s \<noteq> 0 then \<comment> \<open>While\<close>
+    (if prod_decode_aux_m s - prod_decode_aux_k s \<noteq> 0 then \<comment> \<open>While\<close>
       (
         let
           t = t + 3; \<comment> \<open>To account for while loop condition checking and difference computation\<close>
-          prod_decode_k' = Suc (prod_decode_k s);
+          prod_decode_aux_k' = Suc (prod_decode_aux_k s);
           t = t + 2;
-          prod_decode_m' = (prod_decode_m s) - prod_decode_k';
+          prod_decode_aux_m' = (prod_decode_aux_m s) - prod_decode_aux_k';
           t = t + 2;
           next_iteration = prod_decode_aux_imp_time t (prod_decode_aux_state_upd s)
         in
@@ -369,7 +380,7 @@ function prod_decode_aux_imp_time:: "nat \<Rightarrow> prod_decode_state\<Righta
 )"
   by pat_completeness auto
 termination
-  by  (relation "measure (\<lambda>(t, s). prod_decode_m s)")  (auto simp: prod_decode_aux_state_upd_def Let_def split: if_splits)
+  by  (relation "measure (\<lambda>(t, s). prod_decode_aux_m s)")  (auto simp: prod_decode_aux_state_upd_def Let_def split: if_splits)
 
 lemmas [simp del] = prod_decode_aux_imp_time.simps
 
@@ -379,23 +390,23 @@ lemma prod_decode_aux_imp_time_acc: "(prod_decode_aux_imp_time (Suc t) s) = Suc 
 
 definition prod_decode_aux_IMP_Minus where
 "prod_decode_aux_IMP_Minus \<equiv>
-  (\<comment> \<open>if prod_decode_m s - prod_decode_k s \<noteq> 0 then\<close>
+  (\<comment> \<open>if prod_decode_aux_m s - prod_decode_aux_k s \<noteq> 0 then\<close>
    ''diff'' ::= ((V ''m'') \<ominus> (V ''k''));;
    WHILE ''diff''\<noteq>0 DO (
-        \<comment> \<open>prod_decode_k' = Suc (prod_decode_k s);\<close>
+        \<comment> \<open>prod_decode_aux_k' = Suc (prod_decode_aux_k s);\<close>
         ''k'' ::= ((V ''k'') \<oplus> (N 1));;
-        \<comment> \<open>prod_decode_m' = (prod_decode_m s) - prod_decode_k';\<close>
+        \<comment> \<open>prod_decode_aux_m' = (prod_decode_aux_m s) - prod_decode_aux_k';\<close>
         ''m'' ::= ((V ''m'') \<ominus> (V ''k''));;
         ''diff'' ::= ((V ''m'') \<ominus> (V ''k'')))
   )"
 
 definition "prod_decode_aux_imp_to_HOL_state p s =
-  \<lparr>prod_decode_k = s (add_prefix p ''k''), prod_decode_m = (s (add_prefix p ''m''))\<rparr>"
+  \<lparr>prod_decode_aux_k = s (add_prefix p ''k''), prod_decode_aux_m = (s (add_prefix p ''m''))\<rparr>"
 
-lemma prod_decode_aux_correct_functional_1: 
+lemma prod_decode_aux_IMP_Minus_correct_function_1: 
   "(invoke_subprogram p prod_decode_aux_IMP_Minus, s) \<Rightarrow>\<^bsup>t\<^esup> s' \<Longrightarrow>
      s' (add_prefix p ''m'') = 
-       prod_decode_m (prod_decode_aux_imp (prod_decode_aux_imp_to_HOL_state p s))"
+       prod_decode_aux_m (prod_decode_aux_imp (prod_decode_aux_imp_to_HOL_state p s))"
   apply(induction "prod_decode_aux_imp_to_HOL_state p s" arbitrary: s s' t rule: prod_decode_aux_imp.induct)
   apply(simp only: prod_decode_aux_IMP_Minus_def com_add_prefix.simps aexp_add_prefix.simps atomExp_add_prefix.simps)
   apply(erule Seq_tE)
@@ -404,7 +415,7 @@ lemma prod_decode_aux_correct_functional_1:
    apply(subst prod_decode_aux_imp.simps)
    apply(auto simp: prod_decode_aux_imp_to_HOL_state_def)[1]
   apply(erule Seq_tE)
-  apply(erule Seq_tE2)
+  apply(erule Seq_tE_While_init)
   apply simp
   apply(dest_com_init_while)
   apply(erule Seq_tE)+
@@ -414,10 +425,10 @@ lemma prod_decode_aux_correct_functional_1:
    apply(auto simp: prod_decode_aux_imp_to_HOL_state_def prod_decode_aux_state_upd_def)[1]
   done
 
-lemma prod_decode_aux_correct_functional_2: 
+lemma prod_decode_aux_IMP_Minus_correct_function_2: 
   "(invoke_subprogram p prod_decode_aux_IMP_Minus, s) \<Rightarrow>\<^bsup>t\<^esup> s' \<Longrightarrow>
      s' (add_prefix p ''k'') = 
-       prod_decode_k (prod_decode_aux_imp (prod_decode_aux_imp_to_HOL_state p s))"
+       prod_decode_aux_k (prod_decode_aux_imp (prod_decode_aux_imp_to_HOL_state p s))"
   apply(induction "prod_decode_aux_imp_to_HOL_state p s" arbitrary: s s' t rule: prod_decode_aux_imp.induct)
   apply(simp only: prod_decode_aux_IMP_Minus_def com_add_prefix.simps aexp_add_prefix.simps atomExp_add_prefix.simps)
   apply(erule Seq_tE)
@@ -426,8 +437,8 @@ lemma prod_decode_aux_correct_functional_2:
    apply(subst prod_decode_aux_imp.simps)
    apply(auto simp: prod_decode_aux_imp_to_HOL_state_def)[1]
   apply(erule Seq_tE)
-  apply(erule Seq_tE2)
-  apply simp
+  apply(erule Seq_tE_While_init)
+  apply assumption
   apply(dest_com_init_while)
   apply(erule Seq_tE)+
    apply(drule AssignD)+
@@ -436,7 +447,7 @@ lemma prod_decode_aux_correct_functional_2:
    apply(auto simp: prod_decode_aux_imp_to_HOL_state_def prod_decode_aux_state_upd_def)[1]
   done
 
-lemma prod_decode_aux_correct_time: 
+lemma prod_decode_aux_IMP_Minus_correct_time: 
   "(invoke_subprogram p prod_decode_aux_IMP_Minus, s) \<Rightarrow>\<^bsup>t\<^esup> s' \<Longrightarrow>
      t = 
        prod_decode_aux_imp_time 0 (prod_decode_aux_imp_to_HOL_state p s)"
@@ -448,8 +459,8 @@ lemma prod_decode_aux_correct_time:
    apply(subst prod_decode_aux_imp_time.simps)
    apply(auto simp: prod_decode_aux_imp_to_HOL_state_def)[1]
   apply(erule Seq_tE)
-  apply(erule Seq_tE2)
-  apply simp
+  apply(erule Seq_tE_While_init)
+  apply assumption
   apply(dest_com_init_while)
   apply(erule Seq_tE)+
    apply(drule AssignD)+
@@ -459,5 +470,376 @@ lemma prod_decode_aux_correct_time:
                    eval_nat_numeral prod_decode_aux_imp_time_acc)[1]
   done
 
+lemma prod_decode_aux_IMP_Minus_correct_effects:
+  "(invoke_subprogram (p @ prod_decode_aux_pref) prod_decode_aux_IMP_Minus, s) \<Rightarrow>\<^bsup>t\<^esup> s' \<Longrightarrow> p @ v \<in> vars \<Longrightarrow> \<not> (set prod_decode_aux_pref \<subseteq> set v) \<Longrightarrow> s (add_prefix p v) = s' (add_prefix p v)"
+  using com_add_prefix_valid_subset com_only_vars
+  by blast
+
+lemma prod_decode_aux_IMP_Minus_correct:
+  "\<lbrakk>(invoke_subprogram (p1 @ p2) prod_decode_aux_IMP_Minus, s) \<Rightarrow>\<^bsup>t\<^esup> s';
+     \<lbrakk>t = (prod_decode_aux_imp_time 0 (prod_decode_aux_imp_to_HOL_state (p1 @ p2) s));
+      s' (add_prefix (p1 @ p2) ''m'') = prod_decode_aux_m (prod_decode_aux_imp (prod_decode_aux_imp_to_HOL_state (p1 @ p2) s));
+      s' (add_prefix (p1 @ p2) ''k'') = prod_decode_aux_k (prod_decode_aux_imp (prod_decode_aux_imp_to_HOL_state (p1 @ p2) s));      \<And>v. p1 @ v \<in> vars \<Longrightarrow> \<not> (set p2 \<subseteq> set v) \<Longrightarrow> s (add_prefix p1 v) = s' (add_prefix p1 v)\<rbrakk>
+     \<Longrightarrow> P\<rbrakk> \<Longrightarrow> P"
+  using prod_decode_aux_IMP_Minus_correct_time prod_decode_aux_IMP_Minus_correct_function_1
+        prod_decode_aux_IMP_Minus_correct_function_2
+        prod_decode_aux_IMP_Minus_correct_effects 
+  by auto
+
+record prod_decode_state = prod_decode_m::nat prod_decode_fst_ret::nat prod_decode_snd_ret::nat
+
+definition "prod_decode_state_upd s \<equiv>
+      let
+        prod_decode_aux_k' = 0;
+        prod_decode_aux_m' = (prod_decode_m s);
+        prod_decode_aux_state = \<lparr>prod_decode_aux_k = prod_decode_aux_k', prod_decode_aux_m = prod_decode_aux_m'\<rparr>;
+        prod_decode_aux_ret = prod_decode_aux_imp prod_decode_aux_state;
+        fst_ret' = prod_decode_aux_m prod_decode_aux_ret;
+        snd_ret' = prod_decode_aux_k prod_decode_aux_ret - prod_decode_aux_m prod_decode_aux_ret;
+        ret = \<lparr>prod_decode_m = prod_decode_m s, fst_ret = fst_ret', snd_ret = snd_ret'\<rparr>
+      in
+        ret
+"
+
+fun prod_decode_imp :: "prod_decode_state \<Rightarrow> prod_decode_state"
+  where "prod_decode_imp s =    
+    (let
+       ret = (prod_decode_state_upd s)
+     in
+         ret)
+"
+
+declare prod_decode_imp.simps [simp del]
+
+lemma prod_decode_imp_correct:
+   "prod_decode_fst_ret (prod_decode_imp s) = fst (prod_decode (prod_decode_m s))"
+   "prod_decode_snd_ret (prod_decode_imp s) = snd (prod_decode (prod_decode_m s))"
+   apply(subst prod_decode_imp.simps)
+  apply (auto simp: prod_decode_aux_imp_correct(1) prod_decode_def prod_decode_imp.simps prod_decode_state_upd_def  Let_def split: if_splits)[1]
+   apply(subst prod_decode_imp.simps)
+  apply (auto simp: prod_decode_aux_imp_correct(2) prod_decode_def prod_decode_imp.simps prod_decode_state_upd_def  Let_def split: if_splits)[1]
+  done
+
+
+fun prod_decode_imp_time:: "nat \<Rightarrow> prod_decode_state\<Rightarrow> nat" where
+  "prod_decode_imp_time t s = 
+(
+        let
+          prod_decode_aux_k' = 0;
+          t = t + 2;
+          prod_decode_aux_m' = (prod_decode_m s);
+          t = t + 2;
+          prod_decode_aux_state = \<lparr>prod_decode_aux_k = prod_decode_aux_k', prod_decode_aux_m = prod_decode_aux_m'\<rparr>;
+          prod_decode_aux_ret = prod_decode_aux_imp prod_decode_aux_state;
+          t = t + prod_decode_aux_imp_time 0 prod_decode_aux_state;
+          fst_ret' = prod_decode_aux_m prod_decode_aux_ret;
+          t = t + 2;
+          snd_ret' = prod_decode_aux_k prod_decode_aux_ret - prod_decode_aux_m prod_decode_aux_ret;
+          t = t + 2;
+          ret = t
+        in
+          ret
+      )
+"
+
+lemmas [simp del] = prod_decode_imp_time.simps
+
+lemma prod_decode_imp_time_acc: "(prod_decode_imp_time (Suc t) s) = Suc (prod_decode_imp_time t s)"
+  by (induction t s arbitrary:  rule: prod_decode_imp_time.induct)
+     (auto simp add: prod_decode_imp_time.simps prod_decode_state_upd_def Let_def eval_nat_numeral split: if_splits)
+
+definition prod_decode_IMP_Minus where
+"prod_decode_IMP_Minus \<equiv>
+  (     \<comment> \<open>prod_decode_aux_k' = 0;\<close>
+   (''prod_decode_aux.'' @ ''k'') ::= (A (N 0));;
+        \<comment> \<open>prod_decode_aux_m' = (prod_decode_m s);\<close>
+   (''prod_decode_aux.'' @ ''m'') ::= (A (V ''m''));;
+        \<comment> \<open>prod_decode_aux_state = \<lparr>prod_decode_aux_k = prod_decode_aux_k', prod_decode_aux_m = prod_decode_aux_m'\<rparr>;\<close>
+        \<comment> \<open>prod_decode_aux_ret = prod_decode_aux_imp prod_decode_aux_state;\<close>
+   invoke_subprogram ''prod_decode_aux.'' prod_decode_aux_IMP_Minus;;
+        \<comment> \<open>fst_ret' = prod_decode_aux_m prod_decode_aux_ret;\<close>
+   ''fst_ret'' ::= (A (V (''prod_decode_aux.'' @ ''m'')));;
+        \<comment> \<open>snd_ret' = prod_decode_aux_k prod_decode_aux_ret - prod_decode_aux_m prod_decode_aux_ret;\<close>
+   ''snd_ret'' ::= ((V (''prod_decode_aux.'' @ ''k'')) \<ominus> (V (''prod_decode_aux.'' @ ''m'')))
+  )"
+
+definition "prod_decode_imp_to_HOL_state p s =
+  \<lparr>prod_decode_m = (s (add_prefix p ''m'')), prod_decode_fst_ret = (s (add_prefix p ''fst_ret'')) , prod_decode_snd_ret = (s (add_prefix p ''snd_ret''))\<rparr>"
+
+lemma prod_decode_IMP_Minus_correct_function_1: 
+  "(invoke_subprogram p prod_decode_IMP_Minus, s) \<Rightarrow>\<^bsup>t\<^esup> s' \<Longrightarrow>
+     s' (add_prefix p ''fst_ret'') = prod_decode_fst_ret (prod_decode_imp (prod_decode_imp_to_HOL_state p s))"
+  apply(simp only: prod_decode_IMP_Minus_def prod_decode_imp.simps com_add_prefix.simps aexp_add_prefix.simps atomExp_add_prefix.simps invoke_subprogram_append)
+  apply(erule Seq_tE)+
+  apply(erule prod_decode_aux_IMP_Minus_correct[where vars = "{p @ ''m''}"])
+   apply(drule AssignD)+
+  apply(elim conjE impE)
+  apply(auto simp: prod_decode_state_upd_def Let_def prod_decode_aux_imp_to_HOL_state_def)[1]
+  apply(auto simp: prod_decode_imp_to_HOL_state_def)[1]
+  done
+
+lemma prod_decode_IMP_Minus_correct_function_2: 
+  "(invoke_subprogram p prod_decode_IMP_Minus, s) \<Rightarrow>\<^bsup>t\<^esup> s' \<Longrightarrow>
+     s' (add_prefix p ''snd_ret'') = prod_decode_snd_ret (prod_decode_imp (prod_decode_imp_to_HOL_state p s))"
+  apply(simp only: prod_decode_IMP_Minus_def prod_decode_imp.simps com_add_prefix.simps aexp_add_prefix.simps atomExp_add_prefix.simps invoke_subprogram_append)
+  apply(erule Seq_tE)+
+  apply(erule prod_decode_aux_IMP_Minus_correct[where vars = "{p @ ''m''}"])
+   apply(drule AssignD)+
+  apply(elim conjE impE)
+  apply(auto simp: prod_decode_state_upd_def Let_def prod_decode_aux_imp_to_HOL_state_def)[1]
+  apply(auto simp: prod_decode_imp_to_HOL_state_def)[1]
+  done
+
+lemma prod_decode_IMP_Minus_correct_time: 
+  "(invoke_subprogram p prod_decode_IMP_Minus, s) \<Rightarrow>\<^bsup>t\<^esup> s' \<Longrightarrow>
+     t = (prod_decode_imp_time 0 (prod_decode_imp_to_HOL_state p s))"
+  apply(simp only: prod_decode_IMP_Minus_def prod_decode_imp_time.simps com_add_prefix.simps aexp_add_prefix.simps atomExp_add_prefix.simps invoke_subprogram_append)
+  apply(erule Seq_tE)+
+  apply(erule prod_decode_aux_IMP_Minus_correct[where vars = "{p @ ''m''}"])
+   apply(drule AssignD)+
+  apply(elim conjE impE)
+  apply(auto simp: prod_decode_state_upd_def Let_def prod_decode_aux_imp_to_HOL_state_def)[1]
+  apply(auto simp: prod_decode_imp_to_HOL_state_def)[1]
+  done
+
+lemma prod_decode_IMP_Minus_correct_effects:
+  "(invoke_subprogram (p @ prod_decode_pref) prod_decode_IMP_Minus, s) \<Rightarrow>\<^bsup>t\<^esup> s' \<Longrightarrow> p @ v \<in> vars \<Longrightarrow> \<not> (set prod_decode_pref \<subseteq> set v) \<Longrightarrow> s (add_prefix p v) = s' (add_prefix p v)"
+  using com_add_prefix_valid_subset com_only_vars
+  by blast
+
+lemma prod_decode_IMP_Minus_correct:
+  "\<lbrakk>(invoke_subprogram (p1 @ p2) prod_decode_IMP_Minus, s) \<Rightarrow>\<^bsup>t\<^esup> s';
+     \<lbrakk>t = (prod_decode_imp_time 0 (prod_decode_imp_to_HOL_state (p1 @ p2) s));
+      s' (add_prefix (p1 @ p2) ''fst_ret'') = prod_decode_fst_ret (prod_decode_imp (prod_decode_imp_to_HOL_state (p1 @ p2) s));
+      s' (add_prefix (p1 @ p2) ''snd_ret'') = prod_decode_snd_ret (prod_decode_imp (prod_decode_imp_to_HOL_state (p1 @ p2) s));      \<And>v. p1 @ v \<in> vars \<Longrightarrow> \<not> (set p2 \<subseteq> set v) \<Longrightarrow> s (add_prefix p1 v) = s' (add_prefix p1 v)\<rbrakk>
+     \<Longrightarrow> P\<rbrakk> \<Longrightarrow> P"
+  using prod_decode_IMP_Minus_correct_time prod_decode_IMP_Minus_correct_function_1
+        prod_decode_IMP_Minus_correct_function_2
+        prod_decode_IMP_Minus_correct_effects 
+  by auto
+
+record hd_state = hd_xs::nat hd_ret::nat
+
+definition "hd_state_upd s \<equiv>
+      let
+        prod_decode_m' = hd_xs s - 1;
+        prod_decode_fst_ret' = 0;
+        prod_decode_snd_ret' = 0;
+        prod_decode_state = \<lparr>prod_decode_m = prod_decode_m', prod_decode_fst_ret = prod_decode_fst_ret', prod_decode_snd_ret = prod_decode_snd_ret'\<rparr>;
+        prod_decode_ret = prod_decode_imp prod_decode_state;
+        hd_ret' = prod_decode_fst_ret prod_decode_ret;
+        ret = \<lparr>hd_xs = hd_xs s, hd_ret = hd_ret'\<rparr>
+      in
+        ret
+"
+
+fun hd_imp :: "hd_state \<Rightarrow> hd_state"
+  where "hd_imp s =    
+    (let
+       ret = (hd_state_upd s)
+     in
+         ret)
+"
+
+declare hd_imp.simps [simp del]
+
+lemma hd_imp_correct:
+   "hd_ret (hd_imp s) = hd_nat (hd_xs s)"
+  by (subst hd_imp.simps) (auto simp: prod_decode_imp_correct hd_nat_def fst_nat_def hd_imp.simps hd_state_upd_def Let_def split: if_splits)[1]
+
+fun hd_imp_time:: "nat \<Rightarrow> hd_state\<Rightarrow> nat" where
+  "hd_imp_time t s = 
+(
+      let
+        prod_decode_m' = hd_xs s - 1;
+        t = t + 2;
+        prod_decode_fst_ret' = 0;
+        t = t + 2;
+        prod_decode_snd_ret' = 0;
+        t = t + 2;
+        prod_decode_state = \<lparr>prod_decode_m = prod_decode_m', prod_decode_fst_ret = prod_decode_fst_ret', prod_decode_snd_ret = prod_decode_snd_ret'\<rparr>;
+        prod_decode_ret = prod_decode_imp prod_decode_state;
+        t = t + prod_decode_imp_time 0 prod_decode_state;
+        hd_ret' = prod_decode_fst_ret prod_decode_ret;
+        t = t + 2;
+        ret = t
+      in
+        ret
+      )
+"
+
+lemmas [simp del] = hd_imp_time.simps
+
+lemma hd_imp_time_acc: "(hd_imp_time (Suc t) s) = Suc (hd_imp_time t s)"
+  by (induction t s arbitrary:  rule: hd_imp_time.induct)
+     (auto simp add: hd_imp_time.simps split: if_splits)
+
+definition hd_IMP_Minus where
+"hd_IMP_Minus \<equiv>
+  (     \<comment> \<open>prod_decode_m' = hd_xs s - 1;\<close>
+        (''prod_decode.'' @ ''m'') ::= ((V ''xs'') \<ominus> (N 1));;
+        \<comment> \<open>prod_decode_fst_ret' = 0;\<close>
+        (''prod_decode.'' @ ''fst_ret'') ::= (A (N 0));;
+        \<comment> \<open>prod_decode_snd_ret' = 0;\<close>
+        (''prod_decode.'' @ ''snd_ret'') ::= (A (N 0));;
+        \<comment> \<open>prod_decode_state = \<lparr>prod_decode_m = prod_decode_m', prod_decode_fst_ret = prod_decode_fst_ret', prod_decode_snd_ret = prod_decode_snd_ret'\<rparr>;\<close>
+        \<comment> \<open>prod_decode_ret = prod_decode_imp prod_decode_state;\<close>
+        invoke_subprogram ''prod_decode.'' prod_decode_IMP_Minus;;
+        \<comment> \<open>hd_ret' = prod_decode_fst_ret prod_decode_ret;\<close>
+        (''hd_ret'') ::= (A (V (''prod_decode.'' @ ''fst_ret'')))
+  )"
+
+definition "hd_imp_to_HOL_state p s =
+  \<lparr>hd_xs = (s (add_prefix p ''xs'')), hd_ret = (s (add_prefix p ''hd_ret''))\<rparr>"
+
+lemma hd_IMP_Minus_correct_function: 
+  "(invoke_subprogram p hd_IMP_Minus, s) \<Rightarrow>\<^bsup>t\<^esup> s' \<Longrightarrow>
+     s' (add_prefix p ''hd_ret'') = hd_ret (hd_imp (hd_imp_to_HOL_state p s))"
+  apply(simp only: hd_IMP_Minus_def hd_imp.simps com_add_prefix.simps aexp_add_prefix.simps atomExp_add_prefix.simps invoke_subprogram_append)
+  apply(erule Seq_tE)+
+  apply(erule prod_decode_IMP_Minus_correct[where vars = "{p @ ''xs''}"])
+   apply(drule AssignD)+
+  apply(elim conjE impE)
+  apply(auto simp: hd_state_upd_def Let_def hd_imp_to_HOL_state_def)[1]
+  apply(auto simp: prod_decode_imp_to_HOL_state_def)[1]
+  done
+
+lemma hd_IMP_Minus_correct_time: 
+  "(invoke_subprogram p hd_IMP_Minus, s) \<Rightarrow>\<^bsup>t\<^esup> s' \<Longrightarrow>
+     t = hd_imp_time 0 (hd_imp_to_HOL_state p s)"
+  apply(simp only: hd_IMP_Minus_def hd_imp_time.simps com_add_prefix.simps aexp_add_prefix.simps atomExp_add_prefix.simps invoke_subprogram_append)
+  apply(erule Seq_tE)+
+  apply(erule prod_decode_IMP_Minus_correct[where vars = "{p @ ''xs''}"])
+   apply(drule AssignD)+
+  apply(elim conjE impE)
+  apply(auto simp: hd_state_upd_def Let_def hd_imp_to_HOL_state_def)[1]
+  apply(auto simp: prod_decode_imp_to_HOL_state_def)[1]
+  done
+
+lemma hd_IMP_Minus_correct_effects:
+  "(invoke_subprogram (p @ hd_pref) hd_IMP_Minus, s) \<Rightarrow>\<^bsup>t\<^esup> s' \<Longrightarrow> p @ v \<in> vars \<Longrightarrow> \<not> (set hd_pref \<subseteq> set v) \<Longrightarrow> s (add_prefix p v) = s' (add_prefix p v)"
+  using com_add_prefix_valid_subset com_only_vars
+  by blast
+
+lemma hd_IMP_Minus_correct:
+  "\<lbrakk>(invoke_subprogram (p1 @ p2) hd_IMP_Minus, s) \<Rightarrow>\<^bsup>t\<^esup> s';
+     \<lbrakk>t = (hd_imp_time 0 (hd_imp_to_HOL_state (p1 @ p2) s));
+      s' (add_prefix (p1 @ p2) ''hd_ret'') = hd_ret (hd_imp (hd_imp_to_HOL_state (p1 @ p2) s))\<rbrakk>
+     \<Longrightarrow> P\<rbrakk> \<Longrightarrow> P"
+  using hd_IMP_Minus_correct_time hd_IMP_Minus_correct_function
+        hd_IMP_Minus_correct_effects 
+  by auto
+
+record tl_state = tl_xs::nat tl_ret::nat
+
+definition "tl_state_upd s \<equiv>
+      let
+        prod_decode_m' = tl_xs s - 1;
+        prod_decode_fst_ret' = 0;
+        prod_decode_snd_ret' = 0;
+        prod_decode_state = \<lparr>prod_decode_m = prod_decode_m', prod_decode_fst_ret = prod_decode_fst_ret', prod_decode_snd_ret = prod_decode_snd_ret'\<rparr>;
+        prod_decode_ret = prod_decode_imp prod_decode_state;
+        tl_ret' = prod_decode_snd_ret prod_decode_ret;
+        ret = \<lparr>tl_xs = tl_xs s, tl_ret = tl_ret'\<rparr>
+      in
+        ret
+"
+
+fun tl_imp :: "tl_state \<Rightarrow> tl_state"
+  where "tl_imp s =    
+    (let
+       ret = (tl_state_upd s)
+     in
+         ret)
+"
+
+declare tl_imp.simps [simp del]
+
+lemma tl_imp_correct:
+   "tl_ret (tl_imp s) = tl_nat (tl_xs s)"
+  by (subst tl_imp.simps) (auto simp: prod_decode_imp_correct tl_nat_def snd_nat_def tl_imp.simps tl_state_upd_def Let_def split: if_splits)[1]
+
+fun tl_imp_time:: "nat \<Rightarrow> tl_state\<Rightarrow> nat" where
+  "tl_imp_time t s = 
+(
+      let
+        prod_decode_m' = tl_xs s - 1;
+        t = t + 2;
+        prod_decode_fst_ret' = 0;
+        t = t + 2;
+        prod_decode_snd_ret' = 0;
+        t = t + 2;
+        prod_decode_state = \<lparr>prod_decode_m = prod_decode_m', prod_decode_fst_ret = prod_decode_fst_ret', prod_decode_snd_ret = prod_decode_snd_ret'\<rparr>;
+        prod_decode_ret = prod_decode_imp prod_decode_state;
+        t = t + prod_decode_imp_time 0 prod_decode_state;
+        tl_ret' = prod_decode_snd_ret prod_decode_ret;
+        t = t + 2;
+        ret = t
+      in
+        ret
+      )
+"
+
+lemmas [simp del] = tl_imp_time.simps
+
+lemma tl_imp_time_acc: "(tl_imp_time (Suc t) s) = Suc (tl_imp_time t s)"
+  by (induction t s arbitrary:  rule: tl_imp_time.induct)
+     (auto simp add: tl_imp_time.simps split: if_splits)
+
+definition tl_IMP_Minus where
+"tl_IMP_Minus \<equiv>
+  (     \<comment> \<open>prod_decode_m' = tl_xs s - 1;\<close>
+        (''prod_decode.'' @ ''m'') ::= ((V ''xs'') \<ominus> (N 1));;
+        \<comment> \<open>prod_decode_snd_ret' = 0;\<close>
+        (''prod_decode.'' @ ''fst_ret'') ::= (A (N 0));;
+        \<comment> \<open>prod_decode_snd_ret' = 0;\<close>
+        (''prod_decode.'' @ ''snd_ret'') ::= (A (N 0));;
+        \<comment> \<open>prod_decode_state = \<lparr>prod_decode_m = prod_decode_m', prod_decode_snd_ret = prod_decode_snd_ret', prod_decode_snd_ret = prod_decode_snd_ret'\<rparr>;\<close>
+        \<comment> \<open>prod_decode_ret = prod_decode_imp prod_decode_state;\<close>
+        invoke_subprogram ''prod_decode.'' prod_decode_IMP_Minus;;
+        \<comment> \<open>tl_ret' = prod_decode_snd_ret prod_decode_ret;\<close>
+        (''tl_ret'') ::= (A (V (''prod_decode.'' @ ''snd_ret'')))
+  )"
+
+definition "tl_imp_to_HOL_state p s =
+  \<lparr>tl_xs = (s (add_prefix p ''xs'')), tl_ret = (s (add_prefix p ''tl_ret''))\<rparr>"
+
+lemma tl_IMP_Minus_correct_function: 
+  "(invoke_subprogram p tl_IMP_Minus, s) \<Rightarrow>\<^bsup>t\<^esup> s' \<Longrightarrow>
+     s' (add_prefix p ''tl_ret'') = tl_ret (tl_imp (tl_imp_to_HOL_state p s))"
+  apply(simp only: tl_IMP_Minus_def tl_imp.simps com_add_prefix.simps aexp_add_prefix.simps atomExp_add_prefix.simps invoke_subprogram_append)
+  apply(erule Seq_tE)+
+  apply(erule prod_decode_IMP_Minus_correct[where vars = "{p @ ''xs''}"])
+   apply(drule AssignD)+
+  apply(elim conjE impE)
+  apply(auto simp: tl_state_upd_def Let_def tl_imp_to_HOL_state_def)[1]
+  apply(auto simp: prod_decode_imp_to_HOL_state_def)[1]
+  done
+
+lemma tl_IMP_Minus_correct_time: 
+  "(invoke_subprogram p tl_IMP_Minus, s) \<Rightarrow>\<^bsup>t\<^esup> s' \<Longrightarrow>
+     t = tl_imp_time 0 (tl_imp_to_HOL_state p s)"
+  apply(simp only: tl_IMP_Minus_def tl_imp_time.simps com_add_prefix.simps aexp_add_prefix.simps atomExp_add_prefix.simps invoke_subprogram_append)
+  apply(erule Seq_tE)+
+  apply(erule prod_decode_IMP_Minus_correct[where vars = "{p @ ''xs''}"])
+   apply(drule AssignD)+
+  apply(elim conjE impE)
+  apply(auto simp: tl_state_upd_def Let_def tl_imp_to_HOL_state_def)[1]
+  apply(auto simp: prod_decode_imp_to_HOL_state_def)[1]
+  done
+
+lemma tl_IMP_Minus_correct_effects:
+  "(invoke_subprogram (p @ tl_pref) tl_IMP_Minus, s) \<Rightarrow>\<^bsup>t\<^esup> s' \<Longrightarrow> p @ v \<in> vars \<Longrightarrow> \<not> (set tl_pref \<subseteq> set v) \<Longrightarrow> s (add_prefix p v) = s' (add_prefix p v)"
+  using com_add_prefix_valid_subset com_only_vars
+  by blast
+
+lemma tl_IMP_Minus_correct:
+  "\<lbrakk>(invoke_subprogram (p1 @ p2) tl_IMP_Minus, s) \<Rightarrow>\<^bsup>t\<^esup> s';
+     \<lbrakk>t = (tl_imp_time 0 (tl_imp_to_HOL_state (p1 @ p2) s));
+      s' (add_prefix (p1 @ p2) ''tl_ret'') = tl_ret (tl_imp (tl_imp_to_HOL_state (p1 @ p2) s))\<rbrakk>
+     \<Longrightarrow> P\<rbrakk> \<Longrightarrow> P"
+  using tl_IMP_Minus_correct_time tl_IMP_Minus_correct_function
+        tl_IMP_Minus_correct_effects 
+  by auto
 
 end
