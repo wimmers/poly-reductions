@@ -182,12 +182,6 @@ lemma triangle_IMP_Minus_correct:
 
 record prod_encode_state = prod_encode_a::nat prod_encode_b::nat prod_encode_ret::nat
 
-(*  [''a''] ''a'' ::= ((V ''a'') \<oplus> (V ''b'')) ;;
-  invoke_subprogram ''a'' triangle_IMP_Minus ;;
-  ''prod_encode'' ::= [''a''] (A (V ''triangle'')) ;;
-  [''a''] ''triangle'' ::= (A (N 0)) ;;
-  ''prod_encode'' ::= ((V ''a'') \<oplus> (V ''prod_encode''))"*)
-
 definition "prod_encode_state_upd (s::prod_encode_state) \<equiv>
       let
         triangle_a = prod_encode_a s + prod_encode_b s;
@@ -306,5 +300,164 @@ lemma prod_encode_IMP_Minus_correct:
   using prod_encode_IMP_Minus_correct_time prod_encode_IMP_Minus_correct_function
         prod_encode_IMP_Minus_correct_effects 
   by auto
+
+record prod_decode_state = prod_decode_k::nat prod_decode_m::nat
+
+
+definition "prod_decode_aux_state_upd s \<equiv>
+      let
+        prod_decode_k' = Suc (prod_decode_k s);
+        prod_decode_m' = (prod_decode_m s) - prod_decode_k';
+        ret = \<lparr>prod_decode_k = prod_decode_k', prod_decode_m = prod_decode_m'\<rparr>
+      in
+        ret
+"
+
+function prod_decode_aux_imp :: "prod_decode_state \<Rightarrow> prod_decode_state"
+  where "prod_decode_aux_imp s =    
+    (if prod_decode_m s - prod_decode_k s  \<noteq> 0 \<comment> \<open>while condition\<close>
+     then
+       let
+         next_iteration = prod_decode_aux_imp (prod_decode_aux_state_upd s)
+       in
+         next_iteration
+     else
+       s)"
+  by pat_completeness auto
+termination
+  by  (relation "measure (\<lambda>s. prod_decode_m s)")  (auto simp: prod_decode_aux_state_upd_def Let_def split: if_splits)
+
+declare prod_decode_aux_imp.simps [simp del]
+
+lemma prod_decode_imp_correct:
+   "(prod_decode_m (prod_decode_aux_imp s), prod_decode_k (prod_decode_aux_imp s) - prod_decode_m (prod_decode_aux_imp s)) =
+      (prod_decode_aux (prod_decode_k s) (prod_decode_m s))"
+proof (induction s rule: prod_decode_aux_imp.induct)
+  case (1 s)
+  then show ?case
+    apply(subst prod_decode_aux_imp.simps)
+    apply (auto simp: prod_decode_aux_state_upd_def Let_def split: if_splits)
+    apply (metis diff_is_0_eq prod_decode_aux.simps prod_decode_aux_imp.simps prod_decode_aux_state_upd_def)
+    by (simp add: prod_decode_aux.simps prod_decode_aux_imp.simps)
+qed 
+
+function prod_decode_aux_imp_time:: "nat \<Rightarrow> prod_decode_state\<Rightarrow> nat" where
+"prod_decode_aux_imp_time t s = 
+(
+    (if prod_decode_m s - prod_decode_k s \<noteq> 0 then \<comment> \<open>While\<close>
+      (
+        let
+          t = t + 3; \<comment> \<open>To account for while loop condition checking and difference computation\<close>
+          prod_decode_k' = Suc (prod_decode_k s);
+          t = t + 2;
+          prod_decode_m' = (prod_decode_m s) - prod_decode_k';
+          t = t + 2;
+          next_iteration = prod_decode_aux_imp_time t (prod_decode_aux_state_upd s)
+        in
+          next_iteration
+      )
+    else
+      (
+         \<comment> \<open>To account for the two steps of checking the condition, skipping the loop, and the difference computation\<close>
+        let
+          t = t + 4;
+          ret = t
+        in
+          ret
+      )
+    )
+)"
+  by pat_completeness auto
+termination
+  by  (relation "measure (\<lambda>(t, s). prod_decode_m s)")  (auto simp: prod_decode_aux_state_upd_def Let_def split: if_splits)
+
+lemmas [simp del] = prod_decode_aux_imp_time.simps
+
+lemma prod_decode_aux_imp_time_acc: "(prod_decode_aux_imp_time (Suc t) s) = Suc (prod_decode_aux_imp_time t s)"
+  by (induction t s arbitrary:  rule: prod_decode_aux_imp_time.induct)
+     (auto simp add: prod_decode_aux_imp_time.simps prod_decode_aux_state_upd_def Let_def eval_nat_numeral split: if_splits)
+
+definition prod_decode_aux_IMP_Minus where
+"prod_decode_aux_IMP_Minus \<equiv>
+  (\<comment> \<open>if prod_decode_m s - prod_decode_k s \<noteq> 0 then\<close>
+   ''diff'' ::= ((V ''m'') \<ominus> (V ''k''));;
+   WHILE ''diff''\<noteq>0 DO (
+        \<comment> \<open>prod_decode_k' = Suc (prod_decode_k s);\<close>
+        ''k'' ::= ((V ''k'') \<oplus> (N 1));;
+        \<comment> \<open>prod_decode_m' = (prod_decode_m s) - prod_decode_k';\<close>
+        ''m'' ::= ((V ''m'') \<ominus> (V ''k''));;
+        ''diff'' ::= ((V ''m'') \<ominus> (V ''k'')))
+  )"
+
+definition "prod_decode_aux_imp_to_HOL_state p s =
+  \<lparr>prod_decode_k = s (add_prefix p ''k''), prod_decode_m = (s (add_prefix p ''m''))\<rparr>"
+
+lemma prod_decode_aux_correct_functional_1: 
+  "(invoke_subprogram p prod_decode_aux_IMP_Minus, s) \<Rightarrow>\<^bsup>t\<^esup> s' \<Longrightarrow>
+     s' (add_prefix p ''m'') = 
+       prod_decode_m (prod_decode_aux_imp (prod_decode_aux_imp_to_HOL_state p s))"
+  apply(induction "prod_decode_aux_imp_to_HOL_state p s" arbitrary: s s' t rule: prod_decode_aux_imp.induct)
+  apply(simp only: prod_decode_aux_IMP_Minus_def com_add_prefix.simps aexp_add_prefix.simps atomExp_add_prefix.simps)
+  apply(erule Seq_tE)
+  apply(erule While_tE)
+   apply(drule AssignD)+
+   apply(subst prod_decode_aux_imp.simps)
+   apply(auto simp: prod_decode_aux_imp_to_HOL_state_def)[1]
+  apply(erule Seq_tE)
+  apply(erule Seq_tE2)
+  apply simp
+  apply(dest_com_init_while)
+  apply(erule Seq_tE)+
+   apply(drule AssignD)+
+   apply(elim conjE)
+   apply(subst prod_decode_aux_imp.simps mul_imp_time.simps)
+   apply(auto simp: prod_decode_aux_imp_to_HOL_state_def prod_decode_aux_state_upd_def)[1]
+  done
+
+lemma prod_decode_aux_correct_functional_2: 
+  "(invoke_subprogram p prod_decode_aux_IMP_Minus, s) \<Rightarrow>\<^bsup>t\<^esup> s' \<Longrightarrow>
+     s' (add_prefix p ''k'') = 
+       prod_decode_k (prod_decode_aux_imp (prod_decode_aux_imp_to_HOL_state p s))"
+  apply(induction "prod_decode_aux_imp_to_HOL_state p s" arbitrary: s s' t rule: prod_decode_aux_imp.induct)
+  apply(simp only: prod_decode_aux_IMP_Minus_def com_add_prefix.simps aexp_add_prefix.simps atomExp_add_prefix.simps)
+  apply(erule Seq_tE)
+  apply(erule While_tE)
+   apply(drule AssignD)+
+   apply(subst prod_decode_aux_imp.simps)
+   apply(auto simp: prod_decode_aux_imp_to_HOL_state_def)[1]
+  apply(erule Seq_tE)
+  apply(erule Seq_tE2)
+  apply simp
+  apply(dest_com_init_while)
+  apply(erule Seq_tE)+
+   apply(drule AssignD)+
+   apply(elim conjE)
+   apply(subst prod_decode_aux_imp.simps mul_imp_time.simps)
+   apply(auto simp: prod_decode_aux_imp_to_HOL_state_def prod_decode_aux_state_upd_def)[1]
+  done
+
+lemma prod_decode_aux_correct_time: 
+  "(invoke_subprogram p prod_decode_aux_IMP_Minus, s) \<Rightarrow>\<^bsup>t\<^esup> s' \<Longrightarrow>
+     t = 
+       prod_decode_aux_imp_time 0 (prod_decode_aux_imp_to_HOL_state p s)"
+  apply(induction "prod_decode_aux_imp_to_HOL_state p s" arbitrary: s s' t rule: prod_decode_aux_imp.induct)
+  apply(simp only: prod_decode_aux_IMP_Minus_def com_add_prefix.simps aexp_add_prefix.simps atomExp_add_prefix.simps)
+  apply(erule Seq_tE)
+  apply(erule While_tE)
+   apply(drule AssignD)+
+   apply(subst prod_decode_aux_imp_time.simps)
+   apply(auto simp: prod_decode_aux_imp_to_HOL_state_def)[1]
+  apply(erule Seq_tE)
+  apply(erule Seq_tE2)
+  apply simp
+  apply(dest_com_init_while)
+  apply(erule Seq_tE)+
+   apply(drule AssignD)+
+   apply(elim conjE)
+   apply(subst prod_decode_aux_imp_time.simps mul_imp_time.simps)
+  apply(auto simp: prod_decode_aux_imp_to_HOL_state_def prod_decode_aux_state_upd_def
+                   eval_nat_numeral prod_decode_aux_imp_time_acc)[1]
+  done
+
 
 end

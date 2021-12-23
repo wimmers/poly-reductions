@@ -219,6 +219,20 @@ method dest_com' =
       for s2 s2' t2 \<Rightarrow> \<open>insert a[OF _ _ b]\<close>\<close>)
 
 
+method dest_com_init_while = 
+  (match premises in a[thin]: "\<lbrakk>loop_cond; state_upd; ((_ ;; While _ _), s) \<Rightarrow>\<^bsup>t\<^esup> s'\<rbrakk> \<Longrightarrow> P" 
+    for s s' t loop_cond state_upd P  \<Rightarrow>
+   \<open>match premises in b[thin]: "((_ ;; While _ _), s2) \<Rightarrow>\<^bsup>t2\<^esup> s2'"
+      for s2 s2' t2 \<Rightarrow> \<open>insert a[OF _ _ b]\<close>\<close>)
+
+(*method dest_com_init_while = 
+  (match premises in a[thin]: "\<lbrakk>loop_cond; state_upd; (v ::= a;; WHILE v \<noteq>0 DO _, s) \<Rightarrow>\<^bsup>t\<^esup> s'\<rbrakk> \<Longrightarrow> P" 
+    for v a s s' t loop_cond state_upd P  \<Rightarrow>
+   \<open>match premises in b[thin]: "(v ::= a;; WHILE v \<noteq>0 DO _, s2) \<Rightarrow>\<^bsup>t2\<^esup> s2'"
+      for s2 s2' t2 \<Rightarrow> \<open>insert a\<close>\<close>)*)
+
+
+
 lemma terminates_split_if : "(P s \<Longrightarrow> (c, s) \<Rightarrow>\<^bsup>t1\<^esup> s1 ) \<Longrightarrow> 
 (\<not> P s \<Longrightarrow> (c, s) \<Rightarrow>\<^bsup>t2\<^esup> s2 ) \<Longrightarrow> (c,s) \<Rightarrow>\<^bsup>if P s then t1 else t2\<^esup>  if P s then s1 else s2"
   by auto
@@ -289,4 +303,11 @@ thm Assign_tE
 lemma AssignD: "(x ::= a, s) \<Rightarrow>\<^bsup> t \<^esup> s' \<Longrightarrow> t = 2 \<and> s' = s(x := aval a s)"
   by auto
 
+thm Seq_tE
+
+lemma Seq_tE2: 
+  "(WHILE v \<noteq>0 DO c2, s2) \<Rightarrow>\<^bsup> y \<^esup> s3 \<Longrightarrow> (c1, s1) \<Rightarrow>\<^bsup> x \<^esup> s2 \<Longrightarrow> 
+    ((c1;; WHILE v \<noteq>0 DO c2, s1) \<Rightarrow>\<^bsup> x + y \<^esup> s3 \<Longrightarrow> P)
+   \<Longrightarrow> P"
+  by auto
 end
