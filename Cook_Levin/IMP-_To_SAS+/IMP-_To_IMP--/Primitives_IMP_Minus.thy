@@ -5,31 +5,9 @@ theory IMP_Minus_Nat_Bijection
     "../Cook_Levin/IMP-_To_SAS+/IMP-_To_IMP--/Primitives"
 begin
 
-lemma xxx: "x \<noteq> y \<Longrightarrow> (s (x := aval a s)) y = s y"
-  by auto
-
-(*lemma AssignI'': 
-  "\<exists>s'.((x ::= a, s) \<Rightarrow>\<^bsup> 2 \<^esup> s' \<and> (s' = s (x := aval a s)))"
-  by (auto simp add: Assign eval_nat_numeral)
-*)
-
-(*unbundle IMP_Minus_Minus_Com.no_com_syntax
-
-unbundle Com.no_com_syntax*)
+subsection \<open>Encoding and decoding natural numbers\<close>
 
 record triangle_state = triangle_a::nat triangle_triangle::nat
-
-term Nat_Bijection.triangle
-
-find_theorems Max_Constant.all_variables
-
-(*definition triangle_IMP_Minus where "triangle_IMP_Minus \<equiv>
-  [''a''] ''a'' ::= (A (V ''a'')) ;;
-  [''a''] ''b'' ::= ((V ''a'') \<oplus> (N 1)) ;;
-  invoke_subprogram ''a'' mul_IMP_minus ;;
-  ''triangle'' ::= [''a''] ((V ''c'') \<then>) ;;
-  ''a'' ::= (A (N 0))"
-*)
 
 definition "triangle_state_upd (s::triangle_state) \<equiv>
       let
@@ -618,6 +596,8 @@ lemma prod_decode_IMP_Minus_correct:
         prod_decode_IMP_Minus_correct_effects 
   by auto
 
+subsection \<open>Head and tail of lists\<close>
+
 record hd_state = hd_xs::nat hd_ret::nat
 
 definition "hd_state_upd s \<equiv>
@@ -841,5 +821,99 @@ lemma tl_IMP_Minus_correct:
   using tl_IMP_Minus_correct_time tl_IMP_Minus_correct_function
         tl_IMP_Minus_correct_effects 
   by auto
+
+subsection \<open>Nth Natural number\<close>
+
+term nth_nat
+
+fun nth_nat_imp :: "nat \<Rightarrow> nat\<Rightarrow> nat" where 
+"nth_nat 0 x = hd_nat x "|
+"nth_nat (Suc n) x = nth_nat n (tl_nat x)"
+
+
+
+(*
+definition nth_nat_iteration where "nth_nat_iteration \<equiv>
+  [''a''] ''a'' ::= ((V ''a'') \<ominus> (N 1)) ;;
+  invoke_subprogram ''a'' snd_nat_IMP_Minus ;;
+  ''a'' ::= [''a''] (A (V ''snd_nat'')) ;;
+  [''a''] ''snd_nat'' ::= (A (N 0)) ;;
+  ''nth_nat'' ::= ((V ''nth_nat'') \<ominus> (N 1))"
+
+fun nth_nat_loop_time :: "nat \<Rightarrow> nat \<Rightarrow> nat" where
+"nth_nat_loop_time 0 x = 2" |
+"nth_nat_loop_time (Suc n) x = 9 + snd_nat_IMP_Minus_time (x - 1) 
+  + nth_nat_loop_time n (tl_nat x)"
+
+fun drop_n_nat :: "nat \<Rightarrow> nat\<Rightarrow> nat" where 
+"drop_n_nat 0 x = x "|
+"drop_n_nat (Suc n) x = drop_n_nat n (tl_nat x)"
+
+lemma nth_nat_is_hd_of_drop_n_nat:
+  "nth_nat n x = fst_nat (drop_n_nat n x - Suc 0)"
+  by (induction n arbitrary: x)
+    (auto simp: hd_nat_def)
+
+abbreviation nth_nat_loop_state_transformer where "nth_nat_loop_state_transformer p k x \<equiv>
+  (if k = 0 then (\<lambda>s. s)
+   else 
+        state_transformer p [
+        (''a'', drop_n_nat k x),
+        (''nth_nat'',  0)]
+        \<circ> state_transformer (''a'' @ p) [
+          (''snd_nat'', 0)]
+        \<circ> snd_nat_IMP_Minus_state_transformer (''a'' @ p) 0)"
+
+lemma nth_nat_loop_correct:
+  "s (add_prefix p ''nth_nat'') = k
+  \<Longrightarrow> ((WHILE ''nth_nat'' \<noteq>0 DO nth_nat_iteration) p, s) 
+      \<Rightarrow>\<^bsup>nth_nat_loop_time k (s (add_prefix p ''a''))\<^esup>
+      nth_nat_loop_state_transformer p k (s (add_prefix p ''a'')) s "
+proof(induction k arbitrary: s)
+  case 0
+  then show ?case
+    by(auto simp: numeral_eq_Suc fun_eq_iff 
+        intro!: terminates_in_state_intro[OF Big_StepT.WhileFalse])
+next
+  case (Suc k)
+  show ?case
+    apply(rule terminates_in_time_state_intro[OF Big_StepT.WhileTrue[OF _ _ Suc.IH]])
+    using \<open>s (add_prefix p ''nth_nat'') = Suc k\<close>
+    unfolding nth_nat_iteration_def
+    by (fastforce simp: tl_nat_def)+
+qed
+
+
+definition nth_nat_IMP_Minus where "nth_nat_IMP_Minus \<equiv>
+  ''nth_nat'' ::= (A (V ''a'')) ;;
+  ''a'' ::= (A (V ''b'')) ;;
+  WHILE ''nth_nat'' \<noteq>0 DO nth_nat_iteration ;;
+  [''b''] ''a'' ::= ((V ''a'') \<ominus> (N 1)) ;;
+  invoke_subprogram ''b'' fst_nat_IMP_Minus ;;
+  ''nth_nat'' ::= [''b''] (A (V ''fst_nat'')) ;;
+  [''b''] ''fst_nat'' ::= (A (N 0)) ;;
+  zero_variables [''a'', ''b'']"
+
+definition nth_nat_IMP_Minus_time where "nth_nat_IMP_Minus_time n x \<equiv>
+  10 + nth_nat_loop_time n x + fst_nat_IMP_Minus_time ((drop_n_nat n x) - 1)
+  + zero_variables_time [''a'', ''b'']"
+
+abbreviation nth_nat_IMP_Minus_state_transformer where "nth_nat_IMP_Minus_state_transformer p k x
+  \<equiv> state_transformer p [(''nth_nat'', nth_nat k x), (''a'', 0), (''b'', 0)]
+     \<circ> state_transformer (''b'' @ p) [(''fst_nat'', 0)]
+     \<circ> fst_nat_IMP_Minus_state_transformer (''b'' @ p) 0
+     \<circ> nth_nat_loop_state_transformer p k x"
+
+lemma nth_nat_IMP_Minus_correct:
+  "(nth_nat_IMP_Minus p, s) 
+    \<Rightarrow>\<^bsup>nth_nat_IMP_Minus_time (s (add_prefix p ''a'')) (s (add_prefix p ''b''))\<^esup>
+    nth_nat_IMP_Minus_state_transformer p (s (add_prefix p ''a'')) (s (add_prefix p ''b'')) s"
+  unfolding nth_nat_IMP_Minus_def nth_nat_IMP_Minus_time_def tl_nat_def 
+  by (cases "s (add_prefix p ''a'') = 0") (fastforce 
+      simp: hd_nat_def nth_nat_is_hd_of_drop_n_nat
+      intro!: terminates_in_time_state_intro[OF Seq']
+      intro: nth_nat_loop_correct)+
+*)
+
 
 end
