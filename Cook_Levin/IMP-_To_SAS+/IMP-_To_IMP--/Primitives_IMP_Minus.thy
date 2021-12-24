@@ -1472,6 +1472,9 @@ lemma append_imp_time_acc_2: "(append_imp_time x s) = x + (append_imp_time 0 s)"
      (auto simp add: append_imp_time_acc append_state_upd_def Let_def eval_nat_numeral split: if_splits)
 
 
+\<comment> \<open>The following separation is due to parsing time, whic grows exponentially in the length of IMP-
+    programs.\<close>
+
 abbreviation "append_IMP_Minus_1 \<equiv>
         \<comment> \<open>hd_xs' = append_xs s;\<close>
         ((hd_prefix @ hd_xs_str) ::= (A (V append_xs_str)));;
