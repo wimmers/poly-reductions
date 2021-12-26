@@ -3,9 +3,9 @@
 section "IMP- to SAS+"
 
 theory IMP_Minus_To_SAS_Plus
-  imports "IMP-_To_IMP--/IMP_Minus_To_IMP_Minus_Minus" 
-    "IMP--_To_SAS++/IMP_Minus_Minus_To_SAS_Plus_Plus_Correctness"
-    "SAS++_To_SAS+/SAS_Plus_Plus_To_SAS_Plus"
+  imports IMP_Minus_To_IMP_Minus_Minus
+    IMP_Minus_Minus_To_SAS_Plus_Plus_Correctness
+    SAS_Plus_Plus_To_SAS_Plus
 begin
 
 text \<open> We combine our reduction steps from IMP- to IMP--, then from IMP-- to SAS++ and finally 
@@ -113,6 +113,7 @@ lemma map_le_IMP_Minus_State_To_IMP_Minus_Minus_2:
    apply (smt domI map_comp_Some_iff option.inject)
   apply(intro bit_geq_bit_length_is_Zero[symmetric])
   by (metis bit_length_monotonic leI le_less less_le_trans)
+
 
 
 
@@ -429,5 +430,5 @@ proof -
   show ?thesis using \<open>t'' \<le> t\<close> \<open>(c, ?s1') \<Rightarrow>\<^bsup>t''\<^esup> s2''\<close> \<open>I \<subseteq>\<^sub>m Some \<circ> ?s1'\<close> \<open>G \<subseteq>\<^sub>m Some \<circ> s2''\<close>
     by auto
 qed
-
+ 
 end

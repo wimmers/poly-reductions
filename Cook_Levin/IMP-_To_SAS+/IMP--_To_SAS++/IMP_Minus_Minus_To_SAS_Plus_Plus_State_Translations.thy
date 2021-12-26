@@ -3,7 +3,7 @@
 section "IMP-- to SAS++ State Translations"
 
 theory IMP_Minus_Minus_To_SAS_Plus_Plus_State_Translations 
-  imports "../SAS_Plus_Plus" "../IMP_Minus_Minus_Small_StepT"
+  imports SAS_Plus_Plus IMP_Minus_Minus_Small_StepT
 begin
 
 text \<open> We define a translation between IMP-- states and SAS++ states. For this purpose, it is useful
@@ -23,6 +23,7 @@ definition imp_minus_state_to_sas_plus :: "(com \<times> imp_state) \<Rightarrow
 "imp_minus_state_to_sas_plus ci = ((\<lambda>x. Some (EV x)) \<circ>\<^sub>m (snd ci)
   \<circ>\<^sub>m (\<lambda>x. (case x of VN v \<Rightarrow> Some v)))
   (PC \<mapsto> PCV (fst ci))"
+
 
 definition sas_plus_state_to_imp_minus:: "sas_state \<Rightarrow> (com \<times> imp_state)" where
 "sas_plus_state_to_imp_minus ss = ((case (the (ss PC)) of (PCV c) \<Rightarrow> c), 
