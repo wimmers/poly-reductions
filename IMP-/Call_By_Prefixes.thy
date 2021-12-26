@@ -121,4 +121,7 @@ lemma aexp_add_prefix_append: "aexp_add_prefix p1 (aexp_add_prefix p2 aexp) = (a
 lemma invoke_subprogram_append: "invoke_subprogram p1 (invoke_subprogram p2 c) = (invoke_subprogram (p1 @ p2) c)"
   by (induction "(p1 @ p2)" c arbitrary: p1 p2 rule: com_add_prefix.induct) (auto simp: aexp_add_prefix_append)
 
+lemmas prefix_simps = com_add_prefix.simps aexp_add_prefix.simps atomExp_add_prefix.simps
+                      invoke_subprogram_append
+
 end
